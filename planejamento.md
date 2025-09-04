@@ -9,6 +9,7 @@
 
 ### Ferramentas de Desenvolvimento:
 - VS Code com extensão `Python` da Microsoft.
+- Terminal `OSGeo4W Shell` do próprio QGIS para não ter problemas de compatibilidade.
 - QGIS: Para testar o plugin em tempo real.
 - Plugin Reloader: Plugin para o QGIS essencial para desenvolvimento. Ele permite recarregar seu plugin sem precisar reiniciar o QGIS a cada alteração no código. Instale-o pelo gerenciador de plugins do QGIS.
 - pb_tool: Uma ferramenta de linha de comando para criar a estrutura básica do plugin, compilar a interface e empacotar para distribuição. É um padrão da comunidade.
