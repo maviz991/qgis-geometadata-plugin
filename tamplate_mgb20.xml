@@ -236,55 +236,6 @@
           </gmd:role>
         </gmd:CI_ResponsibleParty>
       </gmd:pointOfContact>
-      <gmd:pointOfContact>
-        <gmd:CI_ResponsibleParty uuid="176ef54e-d52f-46ec-89a7-ec7c99366273">
-          <gmd:individualName>
-            <gco:CharacterString>FIPE</gco:CharacterString>
-          </gmd:individualName>
-          <gmd:organisationName>
-            <gco:CharacterString>Fundação Instituto de Pesquisas Econômicas</gco:CharacterString>
-          </gmd:organisationName>
-          <gmd:positionName>
-            <gco:CharacterString />
-          </gmd:positionName>
-          <gmd:contactInfo>
-            <gmd:CI_Contact>
-              <gmd:phone>
-                <gmd:CI_Telephone>
-                  <gmd:voice>
-                    <gco:CharacterString>+55 11 3767-1700</gco:CharacterString>
-                  </gmd:voice>
-                </gmd:CI_Telephone>
-              </gmd:phone>
-              <gmd:address>
-                <gmd:CI_Address>
-                  <gmd:deliveryPoint>
-                    <gco:CharacterString>Avenida Corifeu de Azevedo Marques, 5677 Vila São Francisco</gco:CharacterString>
-                  </gmd:deliveryPoint>
-                  <gmd:city>
-                    <gco:CharacterString>São Paulo</gco:CharacterString>
-                  </gmd:city>
-                  <gmd:administrativeArea>
-                    <gco:CharacterString>São Paulo</gco:CharacterString>
-                  </gmd:administrativeArea>
-                  <gmd:postalCode>
-                    <gco:CharacterString>05339-005</gco:CharacterString>
-                  </gmd:postalCode>
-                  <gmd:country>
-                    <gco:CharacterString>Brasil</gco:CharacterString>
-                  </gmd:country>
-                  <gmd:electronicMailAddress>
-                    <gco:CharacterString>fipe@fipe.org.br</gco:CharacterString>
-                  </gmd:electronicMailAddress>
-                </gmd:CI_Address>
-              </gmd:address>
-            </gmd:CI_Contact>
-          </gmd:contactInfo>
-          <gmd:role>
-            <gmd:CI_RoleCode codeList="./resources/codeList.xml#CI_RoleCode" codeListValue="author" />
-          </gmd:role>
-        </gmd:CI_ResponsibleParty>
-      </gmd:pointOfContact>
       <gmd:descriptiveKeywords>
         <gmd:MD_Keywords>
           <gmd:keyword>

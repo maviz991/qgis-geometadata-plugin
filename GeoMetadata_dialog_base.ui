@@ -571,19 +571,6 @@
     <string>Título da camada</string>
    </property>
   </widget>
-  <widget class="QPushButton" name="pushButton_preencherbbox">
-   <property name="geometry">
-    <rect>
-     <x>470</x>
-     <y>480</y>
-     <width>121</width>
-     <height>23</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Preencher BoundBox</string>
-   </property>
-  </widget>
   <widget class="QLineEdit" name="lineEdit_contact_individualName">
    <property name="geometry">
     <rect>

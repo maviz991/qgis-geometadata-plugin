@@ -54,7 +54,8 @@ def atualizar_bloco_de_contato(contato_node, data_dict, ns_map):
 # ---------------------------- ESTA É A NOSSA NOVA FUNÇÃO PRINCIPAL ----------------------------
 def generate_xml_from_template(data_dict, template_path):
     """
-    Gera uma string XML a partir de um dicionário de dados e um template.
+    Gera uma string XML a partir de um dicionário de dados e um template,
+    garantindo que o primeiro autor seja sempre a CDHU em AMBAS as seções de contato.
     """
     if not os.path.exists(template_path):
         raise FileNotFoundError(f"Template XML não encontrado em '{template_path}'")
@@ -63,36 +64,44 @@ def generate_xml_from_template(data_dict, template_path):
     tree = ET.parse(template_path, parser)
     root = tree.getroot()
     ns = root.nsmap
+
+    # --- ATUALIZAÇÃO DOS BLOCOS DE CONTATO (LÓGICA ESPECÍFICA) ---
     
-    # --- PREENCHIMENTO DOS METADADOS GERAIS ---
+    # Lista 1: Contatos no nível raiz (gmd:contact)
+    contatos_raiz = root.findall('./gmd:contact/gmd:CI_ResponsibleParty', namespaces=ns)
+    if len(contatos_raiz) >= 2:
+        atualizar_bloco_de_contato(contatos_raiz[0], CDHU_CONTACT_DATA, ns)
+        atualizar_bloco_de_contato(contatos_raiz[1], data_dict, ns)
+        # Opcional: remover os contatos extras desta lista, se houver
+        for extra_contact_wrapper in contatos_raiz[2:]:
+            extra_contact_wrapper.getparent().remove(extra_contact_wrapper)
+
+
+    # Lista 2: Contatos na seção de identificação (gmd:pointOfContact)
+    id_info = root.find('.//gmd:identificationInfo/gmd:MD_DataIdentification', namespaces=ns)
+    if id_info is not None:
+        contatos_id = id_info.findall('./gmd:pointOfContact/gmd:CI_ResponsibleParty', namespaces=ns)
+        if len(contatos_id) >= 2:
+            atualizar_bloco_de_contato(contatos_id[0], CDHU_CONTACT_DATA, ns)
+            atualizar_bloco_de_contato(contatos_id[1], data_dict, ns)
+            # Opcional: remover os contatos extras desta lista, se houver
+            for extra_contact_wrapper in contatos_id[2:]:
+                extra_contact_wrapper.getparent().remove(extra_contact_wrapper)
+
+    # --- PREENCHIMENTO DO RESTO DO DOCUMENTO (SEU CÓDIGO PERFEITO) ---
     set_element_text(root, './gmd:fileIdentifier/gco:CharacterString', str(uuid.uuid4()), ns)
     set_element_text(root, './gmd:dateStamp/gco:DateTime', data_dict.get('dateStamp'), ns)
     set_element_attribute(root, './gmd:language/gmd:LanguageCode', 'codeListValue', data_dict.get('LanguageCode'), ns)
     set_element_attribute(root, './gmd:characterSet/gmd:MD_CharacterSetCode', 'codeListValue', data_dict.get('characterSet'), ns)
     set_element_attribute(root, './gmd:hierarchyLevel/gmd:MD_ScopeCode', 'codeListValue', data_dict.get('hierarchyLevel'), ns)
 
-    # --- ATUALIZA O BLOCO DE CONTATO PRINCIPAL ---
-    # Encontra o primeiro bloco de contato no nível raiz e o atualiza
-    main_contact = root.find('./gmd:contact/gmd:CI_ResponsibleParty', namespaces=ns)
-    if main_contact is not None:
-        atualizar_bloco_de_contato(main_contact, data_dict, ns)
-
-    # --- PREENCHIMENTO DAS INFORMAÇÕES DE IDENTIFICAÇÃO ---
-    id_info = root.find('.//gmd:identificationInfo/gmd:MD_DataIdentification', namespaces=ns)
     if id_info is not None:
-        # Atualiza o bloco de contato DENTRO da seção de identificação
-        id_contact = id_info.find('./gmd:pointOfContact/gmd:CI_ResponsibleParty', namespaces=ns)
-        if id_contact is not None:
-            atualizar_bloco_de_contato(id_contact, data_dict, ns)
-
-        # Preenche os outros campos
         set_element_text(id_info, './/gmd:citation//gmd:title/gco:CharacterString', data_dict.get('title'), ns)
         set_element_text(id_info, './/gmd:citation//gmd:edition/gco:CharacterString', data_dict.get('edition'), ns)
         set_element_text(id_info, './/gmd:citation//gmd:date/gmd:CI_Date/gmd:date/gco:DateTime', data_dict.get('date_creation'), ns)
         set_element_text(id_info, './gmd:abstract/gco:CharacterString', data_dict.get('abstract'), ns)
         set_element_attribute(id_info, './gmd:status/gmd:MD_ProgressCode', 'codeListValue', data_dict.get('status_codeListValue'), ns)
         
-        # Lógica das Palavras-Chave
         keyword_container = id_info.find('./gmd:descriptiveKeywords', namespaces=ns)
         if keyword_container is not None:
             for node in keyword_container.findall('gmd:MD_Keywords', namespaces=ns):
@@ -105,17 +114,14 @@ def generate_xml_from_template(data_dict, template_path):
                     char_string = ET.SubElement(keyword_node, f"{{{ns['gco']}}}CharacterString")
                     char_string.text = keyword_text
 
-        # Preenchimento final
         set_element_attribute(id_info, './/gmd:spatialRepresentationType/gmd:MD_SpatialRepresentationTypeCode', 'codeListValue', data_dict.get('MD_SpatialRepresentationTypeCode'), ns)
         set_element_text(id_info, './/gmd:spatialResolution//gmd:denominator/gco:Integer', data_dict.get('spatialResolution_denominator'), ns)
         set_element_text(id_info, './/gmd:topicCategory/gmd:MD_TopicCategoryCode', data_dict.get('topicCategory'), ns)
         
-        # BBOX
         set_element_text(id_info, './/gmd:extent//gmd:westBoundLongitude/gco:Decimal', data_dict.get('westBoundLongitude'), ns)
         set_element_text(id_info, './/gmd:extent//gmd:eastBoundLongitude/gco:Decimal', data_dict.get('eastBoundLongitude'), ns)
         set_element_text(id_info, './/gmd:extent//gmd:southBoundLatitude/gco:Decimal', data_dict.get('southBoundLatitude'), ns)
         set_element_text(id_info, './/gmd:extent//gmd:northBoundLatitude/gco:Decimal', data_dict.get('northBoundLatitude'), ns)
 
-    # Converte a árvore XML final para uma string bonita e retorna
     xml_output_string = ET.tostring(root, pretty_print=True, xml_declaration=True, encoding='utf-8').decode('utf-8')
     return xml_output_string
