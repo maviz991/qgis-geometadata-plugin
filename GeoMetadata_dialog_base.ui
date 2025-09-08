@@ -57,6 +57,9 @@
      <height>22</height>
     </rect>
    </property>
+   <property name="toolTip">
+    <string>Data e hora de criação da camada</string>
+   </property>
    <property name="dateTime">
     <datetime>
      <hour>12</hour>
@@ -113,6 +116,9 @@
      <height>71</height>
     </rect>
    </property>
+   <property name="toolTip">
+    <string>Resumo descritivo da camada, bem como geoprocessos aplicados, escala etc...</string>
+   </property>
    <property name="placeholderText">
     <string>Resumo descritivo da camada</string>
    </property>
@@ -139,6 +145,9 @@
      <height>22</height>
     </rect>
    </property>
+   <property name="toolTip">
+    <string>arquivo histórico (O recurso foi arquivado, não é mais atualizado, mas mantido para referência), concluído (O recurso foi produzido e todos os dados estão presentes), em andamento (O recurso está em processo de atualização ou coleta contínua), em desenvolvimento (O recurso está sendo criado, mas ainda não está completo ou disponível para uso geral), necessário (O recurso é necessário para um projeto ou atividade, mas ainda não foi produzido), obsoleto (O recurso foi substituído ou não é mais recomendado para uso), planejado (Existe a intenção de produzir o recurso no futuro).</string>
+   </property>
    <property name="placeholderText">
     <string>Selecione o status</string>
    </property>
@@ -151,6 +160,9 @@
      <width>111</width>
      <height>22</height>
     </rect>
+   </property>
+   <property name="toolTip">
+    <string>Selecione um setor para preencher os campos ao lado</string>
    </property>
    <property name="placeholderText">
     <string>Selecione o setor</string>
@@ -191,6 +203,9 @@
      <height>20</height>
     </rect>
    </property>
+   <property name="toolTip">
+    <string>Palavra tag para localizar a camada (Não pode conter palavra repetida do Título)</string>
+   </property>
    <property name="placeholderText">
     <string>Palavra-chave 1, Palavra-chave 2, Palavra-chave 3...</string>
    </property>
@@ -203,6 +218,14 @@
      <width>211</width>
      <height>22</height>
     </rect>
+   </property>
+   <property name="toolTip">
+    <string>vetorial (Dados representados por coordenadas e geometrias de pontos, linhas e polígonos, como ruas, rios ou limites municipais).
+grade (Dados representados por uma matriz de células ou pixels, onde cada célula possui um valor, como imagens de satélite ou modelos de elevação).
+estereoscópico (Modelo tridimensional derivado de um par de imagens sobrepostas, usado para visualização 3D e extração de feições).
+malha triangular irregular (TIN) (Modelo de superfície 3D criado a partir de uma rede de triângulos não sobrepostos, geralmente para representar relevo).
+texto/tabela (Dados em formato de texto ou tabela, sem componente geométrica, como um relatório, documento ou uma planilha de censo).
+vídeo (Gravação de imagens em movimento que podem conter informações geográficas, como vídeos de drones com coordenadas).</string>
    </property>
    <property name="placeholderText">
     <string>Selecione o tipo</string>
@@ -243,6 +266,9 @@
      <height>22</height>
     </rect>
    </property>
+   <property name="toolTip">
+    <string>Selecione o idioma da camada</string>
+   </property>
    <property name="placeholderText">
     <string>Selecione o idioma</string>
    </property>
@@ -269,6 +295,9 @@
      <height>22</height>
     </rect>
    </property>
+   <property name="toolTip">
+    <string>Mandatório em UTF-8</string>
+   </property>
    <property name="placeholderText">
     <string>Selecione o Encoding</string>
    </property>
@@ -294,6 +323,9 @@
      <width>211</width>
      <height>22</height>
     </rect>
+   </property>
+   <property name="toolTip">
+    <string>imagens, mapas base e cobertura terrestre (Dados de mapas base, cobertura do solo e imagens, como ortofotos e imagens de satélite), planejamento e cadastro (Dados usados para o planejamento do uso da terra, como zoneamento e cadastro territorial), agricultura (Dados sobre criação de animais e/ou cultivo de plantas), biota (Dados sobre a flora e/ou fauna em seu ambiente natural, como ecossistemas e espécies), limites (Dados sobre descrições legais de terras e limites políticos ou administrativos), climatologia, meteorologia e atmosfera (Dados sobre processos e fenômenos da atmosfera, como clima e tempo), economia (Dados sobre atividades econômicas, condições e emprego), elevação (Dados sobre altitude acima ou abaixo do nível do mar, como relevo e curvas de nível), meio ambiente (Dados sobre recursos ambientais, proteção e conservação), informações geocientíficas (Dados pertencentes às geociências, como geologia, solos e sismologia), saúde (Dados sobre saúde, serviços de saúde e segurança humana), inteligência e militar (Dados sobre bases, estruturas e atividades militares), águas interiores (Dados sobre feições de águas continentais, como rios, lagos e bacias hidrográficas), localização (Dados sobre informações e serviços de posicionamento, como endereços e redes geodésicas), oceanos (Dados sobre feições e características de corpos de água salgada), sociedade (Dados sobre características da sociedade e cultura, como demografia e arqueologia), estruturas (Dados sobre construções feitas pelo homem, como prédios, pontes e barragens), transportes (Dados sobre meios para o transporte de pessoas e/ou mercadorias, como rodovias, ferrovias e aeroportos), serviços de utilidade pública e comunicação (Dados sobre sistemas de energia, água, esgoto e infraestruturas de comunicação).</string>
    </property>
    <property name="placeholderText">
     <string>Selecione a categoria</string>
@@ -462,6 +494,9 @@
      <height>22</height>
     </rect>
    </property>
+   <property name="toolTip">
+    <string>atributo (Elemento que descreve uma característica de uma feição, como o nome de um rio ou o número de habitantes de uma cidade), feição (Representação de um objeto ou fenômeno do mundo real em um mapa, como um ponto, linha ou polígono), conjunto de dados (Coleção organizada de dados, como um arquivo shapefile, uma imagem de satélite ou uma tabela), dado não geográfico (Dados tabulares ou textuais sem geometria própria, mas que podem ser relacionados a feições geográficas), dimensão (Eixo ou variável adicional em dados geoespaciais, como tempo, profundidade ou altitude), coleção (Agrupamento de recursos que podem ser descritos em conjunto, como uma série de mapas), modelo (Representação lógica, conceitual ou de aplicação que descreve a estrutura dos dados), serviço (Operação que provê acesso a dados ou funcionalidades geoespaciais, como um serviço de mapas WMS), sessão de campo (Informações sobre uma atividade de coleta de dados realizada em campo), software (Aplicação ou programa de computador usado para criar ou processar os dados), série (Conjunto de dados que compartilham uma mesma especificação de produto), tile (Divisão ou &quot;ladrilho&quot; de um conjunto de dados espaciais, usado para otimizar o desempenho e a visualização), tipo de atributo (Definição de uma propriedade de um tipo de feição, como o nome e o tipo de dado da coluna &quot;nome_da_rua&quot;), tipo de feição (Classe que define um conjunto de feições com características comuns, como a classe &quot;Hidrografia&quot; que agrupa todos os rios), tipo de propriedade (Descrição genérica de uma característica ou atributo de um recurso qualquer nos metadados).</string>
+   </property>
    <property name="placeholderText">
     <string>Selecione o tipo da camada</string>
    </property>
@@ -474,6 +509,9 @@
      <width>211</width>
      <height>22</height>
     </rect>
+   </property>
+   <property name="toolTip">
+    <string>Data de criação do metado, preencha somente quando for enviar o metadado</string>
    </property>
    <property name="dateTime">
     <datetime>
@@ -518,15 +556,36 @@
      <height>22</height>
     </rect>
    </property>
+   <property name="toolTip">
+    <string>Selecione a edição da camada</string>
+   </property>
+   <property name="autoFillBackground">
+    <bool>false</bool>
+   </property>
+   <property name="wrapping">
+    <bool>false</bool>
+   </property>
+   <property name="frame">
+    <bool>false</bool>
+   </property>
+   <property name="readOnly">
+    <bool>true</bool>
+   </property>
+   <property name="showGroupSeparator" stdset="0">
+    <bool>false</bool>
+   </property>
   </widget>
   <widget class="QPushButton" name="btn_exp_xml">
    <property name="geometry">
     <rect>
-     <x>570</x>
+     <x>460</x>
      <y>590</y>
      <width>111</width>
      <height>31</height>
     </rect>
+   </property>
+   <property name="toolTip">
+    <string>Salve um arquivo XML MGB 2.0</string>
    </property>
    <property name="text">
     <string>Exportar para XML</string>
@@ -535,11 +594,14 @@
   <widget class="QPushButton" name="btn_exp_geo">
    <property name="geometry">
     <rect>
-     <x>690</x>
+     <x>580</x>
      <y>590</y>
      <width>131</width>
      <height>31</height>
     </rect>
+   </property>
+   <property name="toolTip">
+    <string>Envie para o Geohab</string>
    </property>
    <property name="text">
     <string>Exportar para o Geohab</string>
@@ -554,6 +616,9 @@
      <height>20</height>
     </rect>
    </property>
+   <property name="toolTip">
+    <string>Escala da camada ex: 1:5000 → 5000</string>
+   </property>
    <property name="placeholderText">
     <string>5000</string>
    </property>
@@ -563,9 +628,12 @@
     <rect>
      <x>100</x>
      <y>10</y>
-     <width>671</width>
+     <width>551</width>
      <height>20</height>
     </rect>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Nome descritivo e sucinto da camada&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
    <property name="placeholderText">
     <string>Título da camada</string>
@@ -843,6 +911,9 @@
      <height>22</height>
     </rect>
    </property>
+   <property name="toolTip">
+    <string>autor (Parte que criou o recurso), custodiante (Parte com a responsabilidade pela guarda, manutenção e arquivamento dos dados), distribuidor (Parte que disponibiliza o recurso para os usuários), proprietário (Parte que detém os direitos legais sobre o recurso), provedor do recurso (Parte que fornece o recurso), investigador principal (Principal responsável pela pesquisa que gerou os dados), processador (Parte que realizou alguma etapa de processamento nos dados), autor/criador (Parte que desenvolveu o recurso, sinônimo de &quot;autor&quot;), ponto de contato (Parte a ser contatada para obter informações sobre o recurso), publicador (Parte que publicou o recurso, tornando-o acessível), usuário (Parte que utiliza o recurso).</string>
+   </property>
    <property name="placeholderText">
     <string>Selecione</string>
    </property>
@@ -858,6 +929,54 @@
    </property>
    <property name="placeholderText">
     <string>Selecione</string>
+   </property>
+  </widget>
+  <widget class="QFrame" name="frame">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>440</y>
+     <width>381</width>
+     <height>111</height>
+    </rect>
+   </property>
+   <property name="frameShape">
+    <enum>QFrame::StyledPanel</enum>
+   </property>
+   <property name="frameShadow">
+    <enum>QFrame::Raised</enum>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_2">
+   <property name="geometry">
+    <rect>
+     <x>670</x>
+     <y>10</y>
+     <width>151</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+   <property name="pixmap">
+    <pixmap>:/plugins/GeoMetadata/icons/logo.png</pixmap>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="btn_salvar">
+   <property name="geometry">
+    <rect>
+     <x>720</x>
+     <y>590</y>
+     <width>75</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="toolTip">
+    <string>Salve para continuar depois o preenchimento</string>
+   </property>
+   <property name="text">
+    <string>Salvar</string>
    </property>
   </widget>
  </widget>

@@ -26,9 +26,8 @@ from datetime import datetime
 from qgis.PyQt.QtCore import Qt
 from . import xml_generator
 from qgis.core import Qgis
-
-from . import resources as resources_rc
-
+from . import xml_parser
+from qgis.PyQt.QtCore import QDateTime
 
 CONTATOS_PREDEFINIDOS = {
         'cdhu': {
@@ -115,6 +114,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
 
         # Conecta a mudança do ComboBox de presets à função de preenchimento
         self.comboBox_contact_presets.currentIndexChanged.connect(self.on_contact_preset_changed)
+        self.btn_salvar.clicked.connect(self.salvar_metadados_sidecar) #SALVAR
 
 
 
@@ -348,35 +348,43 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
     
     # ---------------------------- FUNÇÃO PARA PREENCHER TÍTULO E BBOX ----------------------------
     def auto_fill_from_layer(self):
-        """Preenche campos do formulário automaticamente com base na camada ativa."""
+        """Tenta carregar de um XML 'sidecar', senão preenche da camada."""
         
-        # Verificação de segurança: se o iface não foi passado, não faz nada.
         if not self.iface:
             return
             
-        # 1. Pega a camada que o usuário selecionou no QGIS
         layer = self.iface.activeLayer()
-        
-        # 2. VERIFICAÇÃO DE SEGURANÇA: Se nenhuma camada estiver selecionada, para a execução.
         if not layer:
-            print("Nenhuma camada ativa para preencher os metadados.")
-            # Aqui poderíamos desabilitar os campos de BBOX para o usuário saber o porquê.
-            # Por enquanto, apenas retornamos para evitar erros.
             return
 
-        print(f"Preenchendo formulário com dados da camada: '{layer.name()}'")
-
-        # --- PREENCHIMENTO AUTOMÁTICO ---
-
-        # 3. Preenche o TÍTULO com o nome da camada
+        # --- NOVA LÓGICA DE CARREGAMENTO ---
+        # 1. Constrói o caminho para o possível arquivo .xml
+        data_uri = layer.dataProvider().dataSourceUri()
+        base_path = data_uri.split('|')[0].split(' ')[0]
+        if '.zip' in base_path.lower():
+            zip_index = base_path.lower().find('.zip')
+            base_path = base_path[:zip_index + 4]
+        metadata_path = base_path + ".xml"
+        
+        # 2. Se o arquivo existir, tenta usá-lo
+        if os.path.exists(metadata_path):
+            print(f"Arquivo de metadados encontrado: {metadata_path}")
+            # Chama nosso novo parser para ler o XML e transformá-lo em um dicionário
+            data_from_xml = xml_parser.parse_xml_to_dict(metadata_path)
+            
+            # Se o parser funcionou, preenche o formulário com os dados e termina
+            if data_from_xml:
+                self.populate_form_from_dict(data_from_xml)
+                return # IMPORTANTE: Para a execução aqui!
+        
+        # --- LÓGICA ANTIGA (SÓ EXECUTA SE O XML NÃO FOR ENCONTRADO) ---
+        print("Nenhum arquivo XML encontrado. Preenchendo com dados padrão da camada.")
+        
+        # Preenche o TÍTULO com o nome da camada
         self.lineEdit_title.setText(layer.name())
         
-        # 4. Preenche a BBOX (Extensão Geográfica)
+        # Preenche a BBOX (Extensão Geográfica)
         extent = layer.extent()
-        
-        # IMPORTANTE: Verifique os objectNames dos seus campos de BBOX!
-        # O código abaixo usa a convenção que discutimos.
-        # A formatação ':.6f' garante que o número terá 6 casas decimais.
         self.lineEdit_westBoundLongitude.setText(f"{extent.xMinimum():.6f}")
         self.lineEdit_eastBoundLongitude.setText(f"{extent.xMaximum():.6f}")
         self.lineEdit_southBoundLatitude.setText(f"{extent.yMinimum():.6f}")
@@ -486,7 +494,108 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         self.set_combobox_by_data(self.comboBox_contact_administrativeArea, contact_data.get('contact_administrativeArea', ''))
         self.set_combobox_by_data(self.comboBox_contact_role, contact_data.get('contact_role', ''))
 
+    # ---------------------------- FUNÇÃO SALVAR ----------------------------
+    def salvar_metadados_sidecar(self):
+        """Gera o XML e o salva como um arquivo .xml ao lado da camada."""
+        
+        try:
+            layer = self.iface.activeLayer()
+            if not layer:
+                self.iface.messageBar().pushMessage("Aviso", "Nenhuma camada selecionada.", level=Qgis.Warning)
+                return
+
+            # --- LÓGICA DE DETECÇÃO DE CAMINHO ---
+            # Usar dataSourceUri() que é mais confiável para fontes complexas
+            data_uri = layer.dataProvider().dataSourceUri()
+            
+            # O caminho base será o URI até a primeira pipe ou espaço (mais robusto)
+            base_path = data_uri.split('|')[0].split(' ')[0]
+            
+            # Se o caminho for de um arquivo ZIP (contém .zip), 
+            # removemos a parte interna do SHP para ter o caminho do ZIP real
+            if '.zip' in base_path.lower():
+                # Acha a posição do .zip e pega tudo até ali
+                zip_index = base_path.lower().find('.zip')
+                base_path = base_path[:zip_index + 4]
+
+            # Constrói o nome do arquivo de metadados
+            # Ex: 'C:/caminho/para/SP_UF_2023.zip.xml'
+            metadata_path = base_path + ".xml"
+            
+            # --- O RESTO DA FUNÇÃO É IDÊNTICO ---
+            metadata_dict = self.collect_data()
+            plugin_dir = os.path.dirname(__file__)
+            template_path = os.path.join(plugin_dir, 'tamplate_mgb20.xml')
+            xml_content = xml_generator.generate_xml_from_template(metadata_dict, template_path)
+            
+            with open(metadata_path, 'w', encoding='utf-8') as f:
+                f.write(xml_content)
+                
+            self.iface.messageBar().pushMessage("Sucesso", 
+                                                f"Metadados salvos em: {metadata_path}", 
+                                                level=Qgis.Success, 
+                                                duration=4)
+
+        except Exception as e:
+            print(f"Erro ao salvar arquivo de metadados sidecar: {e}")
+            import traceback
+            traceback.print_exc()
+            self.iface.messageBar().pushMessage("Erro", 
+                                                f"Falha ao salvar metadados: {e}", 
+                                                level=Qgis.Critical)
+
+    # ---------------------------- FUNÇÃO CARREGAR XML ----------------------------
+    def populate_form_from_dict(self, data_dict):
+        """Preenche os widgets do formulário a partir de um dicionário."""
+        if not data_dict:
+            return
+
+        # --- PREENCHE CAMPOS DE TEXTO ---
+        self.lineEdit_title.setText(data_dict.get('title', ''))
+        edition_str = data_dict.get('edition', '1') 
+        try:
+            # Tenta converter a string para um inteiro
+            edition_int = int(edition_str) 
+            # Define o valor do SpinBox
+            self.spinBox_edition.setValue(edition_int) 
+        except (ValueError, TypeError):
+            # Se a conversão falhar, define um valor padrão seguro (ex: 1)
+            self.spinBox_edition.setValue(1)
+        self.textEdit_abstract.setText(data_dict.get('abstract', ''))
+        self.lineEdit_MD_Keywords.setText(data_dict.get('MD_Keywords', ''))
+        self.lineEdit_textEdit_spatialResolution_denominator.setText(data_dict.get('spatialResolution_denominator', ''))
+        self.lineEdit_contact_individualName.setText(data_dict.get('contact_individualName', ''))
+        self.lineEdit_contact_organisationName.setText(data_dict.get('contact_organisationName', ''))
+        self.lineEdit_contact_positionName.setText(data_dict.get('contact_positionName', ''))
+        self.lineEdit_contact_phone.setText(data_dict.get('contact_phone', ''))
+        self.lineEdit_contact_deliveryPoint.setText(data_dict.get('contact_deliveryPoint', ''))
+        self.lineEdit_contact_city.setText(data_dict.get('contact_city', ''))
+        self.lineEdit_contact_postalCode.setText(data_dict.get('contact_postalCode', ''))
+        self.lineEdit_contact_country.setText(data_dict.get('contact_country', ''))
+        self.lineEdit_contact_email.setText(data_dict.get('contact_email', ''))
+      
+
+        # --- PREENCHE COMBOBOXES ---
+        self.set_combobox_by_data(self.comboBox_status_codeListValue, data_dict.get('status_codeListValue'))
+        self.set_combobox_by_data(self.comboBox_MD_SpatialRepresentationTypeCode, data_dict.get('MD_SpatialRepresentationTypeCode'))
+        self.set_combobox_by_data(self.comboBox_LanguageCode, data_dict.get('LanguageCode'))
+        self.set_combobox_by_data(self.comboBox_characterSet, data_dict.get('characterSet'))
+        self.set_combobox_by_data(self.comboBox_topicCategory, data_dict.get('topicCategory'))
+        self.set_combobox_by_data(self.comboBox_hierarchyLevel, data_dict.get('hierarchyLevel'))
+        self.set_combobox_by_data(self.comboBox_contact_administrativeArea, data_dict.get('contact_administrativeArea'))
+        self.set_combobox_by_data(self.comboBox_contact_role, data_dict.get('contact_role'))
+
+        # --- PREENCHE DATAS (requer conversão de string para QDateTime) ---
+        date_creation_str = data_dict.get('date_creation')
+        if date_creation_str:
+            # Precisamos importar QDateTime from PyQt5.QtCore
+            self.dateTimeEdit_date_creation.setDateTime(QDateTime.fromString(date_creation_str, Qt.ISODate))
+            
+        print("Formulário preenchido com dados de um arquivo XML existente.")
+        
 
 
+    
+        
 
              
