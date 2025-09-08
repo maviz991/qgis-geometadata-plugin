@@ -22,12 +22,17 @@
 import os
 from qgis.PyQt import uic
 from qgis.PyQt import QtWidgets
+from datetime import datetime
+from qgis.PyQt.QtCore import Qt
 from . import xml_generator
 from qgis.core import Qgis
+
+from . import resources as resources_rc
 
 
 CONTATOS_PREDEFINIDOS = {
         'cdhu': {
+            'uuid': 'b98c4847-4d5c-43e1-a5eb-bd0228f6903a',
             'contact_individualName': 'CDHU',
             'contact_organisationName': 'Companhia de Desenvolvimento Habitacional e Urbano',
             'contact_positionName': '/',
@@ -41,6 +46,7 @@ CONTATOS_PREDEFINIDOS = {
             'contact_role': 'owner'
         },
         'dpdu': {
+            'uuid': 'a44bfd3a-a9f4-4caf-ba04-6ca36ab44111',
             'contact_individualName': 'DPDU',
             'contact_organisationName': 'Diretoria de Planejamento e Desenvolvimento Urbano',
             'contact_positionName': '/',
@@ -54,6 +60,7 @@ CONTATOS_PREDEFINIDOS = {
             'contact_role': 'processor'
         },
         'ssaru': {
+            'uuid': '648b9e9f-5b88-4e50-8cce-efa78199515e',
             'contact_individualName': 'SSARU',
             'contact_organisationName': 'Superintendecia de Recuperação Social',
             'contact_positionName': '/',
@@ -85,7 +92,6 @@ CONTATOS_PREDEFINIDOS = {
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'GeoMetadata_dialog_base.ui'))
-
 
 class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
     # ---------------------------- FUNÇÃO INIT ----------------------------
@@ -381,9 +387,19 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
     # ---------------------------- FUNÇÃO DE COLETA PARA SAÍDA DE DADOS ----------------------------
     def collect_data(self):
         """Lê todos os widgets do formulário e retorna um dicionário com os dados."""
-        
         data = {}
+            
+        # --- LÓGICA DE UUID PARA PRESETS ---
+        # 1. Pega a chave do preset que o usuário selecionou (ex: 'ssaru')
+        preset_key = self.comboBox_contact_presets.currentData()
         
+        # 2. Se um preset válido foi selecionado...
+        if preset_key and preset_key != 'nenhum':
+            # ...busca os dados completos desse preset no nosso dicionário...
+            preset_data = CONTATOS_PREDEFINIDOS.get(preset_key, {})
+            # ...e adiciona o UUID fixo dele ao nosso dicionário de dados final.
+            data['uuid'] = preset_data.get('uuid')
+
         # --- Campos de Texto (QLineEdit e QTextEdit) ---
         data['title'] = self.lineEdit_title.text()
         data['edition'] = str(self.spinBox_edition.value())
@@ -405,7 +421,16 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
  
         # --- Campos de Data/Hora (QDateTimeEdit) ---
         data['dateStamp'] = self.dateTimeEdit_dateStamp.dateTime().toUTC().toString("yyyy-MM-ddTHH:mm:ss'Z'")
-        data['date_creation'] = self.dateTimeEdit_date_creation.dateTime().toString("yyyy-MM-ddTHH:mm:sszzz")
+        # Pega o QDateTime do widget
+        qdt_creation = self.dateTimeEdit_date_creation.dateTime()
+        # Converte para um objeto datetime "ingênuo" do Python
+        naive_datetime = qdt_creation.toPyDateTime()
+        # Pega o fuso horário local do sistema e torna o datetime "consciente"
+        aware_datetime = naive_datetime.astimezone()
+        # Formata no padrão ISO 8601 completo, que inclui o fuso
+        data['date_creation'] = aware_datetime.isoformat()
+        #data['date_creation'] = self.dateTimeEdit_date_creation.dateTime().toString(Qt.ISODate)
+        #data['date_creation'] = self.dateTimeEdit_date_creation.dateTime().toString("yyyy-MM-ddTHH:mm:sszzz")
         
         # --- ComboBoxes ---
         data['status_codeListValue'] = self.comboBox_status_codeListValue.currentData()
@@ -418,14 +443,13 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         data['contact_administrativeArea'] = self.comboBox_contact_administrativeArea.currentData()
         data['contact_role'] = self.comboBox_contact_role.currentData()
         
-        
         # --- BBOX (lendo dos campos que preenchemos) ---
         data['westBoundLongitude'] = self.lineEdit_westBoundLongitude.text()
         data['eastBoundLongitude'] = self.lineEdit_eastBoundLongitude.text()
         data['southBoundLatitude'] = self.lineEdit_southBoundLatitude.text()
         data['northBoundLatitude'] = self.lineEdit_northBoundLatitude.text()
                 
-        return data
+        return data    
     
 
 

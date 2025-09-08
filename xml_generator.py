@@ -5,6 +5,7 @@ from qgis.core import Qgis
 
 # --- FONTE DE DADOS FIXA PARA O PRIMEIRO AUTOR ---
 CDHU_CONTACT_DATA = {
+    'uuid': 'b98c4847-4d5c-43e1-a5eb-bd0228f6903a',
     'contact_individualName': 'CDHU',
     'contact_organisationName': 'Companhia de Desenvolvimento Habitacional e Urbano',
     'contact_positionName': '/',
@@ -30,12 +31,26 @@ def set_element_attribute(parent_element, xpath, attr_name, attr_value, ns_map):
         element.set(attr_name, str(attr_value))
 
 def atualizar_bloco_de_contato(contato_node, data_dict, ns_map):
-    if contato_node is None: return
+    """
+    Preenche um nó XML de CI_ResponsibleParty com dados de um dicionário.
+    Usa um UUID fornecido ou gera um novo.
+    """
+    if contato_node is None:
+        return
     
-    # Define um UUID único para este bloco de contato
-    contato_node.set('uuid', str(uuid.uuid4()))
+    # --- LÓGICA DE UUID APRIMORADA ---
+    # 1. Verifica se um UUID foi fornecido no dicionário.
+    uuid_fornecido = data_dict.get('uuid')
     
-    # Preenche todos os campos de texto diretamente do dicionário
+    if uuid_fornecido:
+        # 2. Se foi, usa o UUID fixo.
+        contato_node.set('uuid', uuid_fornecido)
+    else:
+        # 3. Se não, gera um novo UUID aleatório.
+        #    Isso acontecerá para contatos preenchidos manualmente.
+        contato_node.set('uuid', str(uuid.uuid4()))
+    
+    # --- PREENCHIMENTO DOS CAMPOS ---
     set_element_text(contato_node, './/gmd:individualName/gco:CharacterString', data_dict.get('contact_individualName'), ns_map)
     set_element_text(contato_node, './/gmd:organisationName/gco:CharacterString', data_dict.get('contact_organisationName'), ns_map)
     set_element_text(contato_node, './/gmd:positionName/gco:CharacterString', data_dict.get('contact_positionName'), ns_map)

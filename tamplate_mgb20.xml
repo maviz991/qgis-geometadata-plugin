@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gmd:MD_Metadata xmlns:gmd="http://www.isotc211.org/2005/gmd" xmlns:gco="http://www.isotc211.org/2005/gco" xmlns:srv="http://www.isotc211.org/2005/srv" xmlns:gmx="http://www.isotc211.org/2005/gmx" xmlns:gts="http://www.isotc211.org/2005/gts" xmlns:gsr="http://www.isotc211.org/2005/gsr" xmlns:gmi="http://www.isotc211.org/2005/gmi" xmlns:gml="http://www.opengis.net/gml/3.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.isotc211.org/2005/gmd http://schemas.opengis.net/csw/2.0.2/profiles/apiso/1.0.0/apiso.xsd">
   <gmd:fileIdentifier>
-    <gco:CharacterString>3072bcf3-601f-4178-8a01-251abf57ba5e</gco:CharacterString>
+    <gco:CharacterString></gco:CharacterString>
   </gmd:fileIdentifier>
   <gmd:language>
     <gmd:LanguageCode codeList="http://www.loc.gov/standards/iso639-2/" codeListValue="por" />
@@ -13,44 +13,44 @@
     <gmd:MD_ScopeCode codeList="http://standards.iso.org/iso/19139/resources/gmxCodelists.xml#MD_ScopeCode" codeListValue="dataset" />
   </gmd:hierarchyLevel>
   <gmd:contact>
-    <gmd:CI_ResponsibleParty uuid="b98c4847-4d5c-43e1-a5eb-bd0228f6903a">
+    <gmd:CI_ResponsibleParty uuid="">
       <gmd:individualName>
-        <gco:CharacterString>CDHU</gco:CharacterString>
+        <gco:CharacterString></gco:CharacterString>
       </gmd:individualName>
       <gmd:organisationName>
-        <gco:CharacterString>Companhia de Desenvolvimento Habitacional e Urbano</gco:CharacterString>
+        <gco:CharacterString></gco:CharacterString>
       </gmd:organisationName>
       <gmd:contactInfo>
         <gmd:CI_Contact>
           <gmd:phone>
             <gmd:CI_Telephone>
               <gmd:voice>
-                <gco:CharacterString>+55 11 2505-2479</gco:CharacterString>
+                <gco:CharacterString></gco:CharacterString>
               </gmd:voice>
             </gmd:CI_Telephone>
           </gmd:phone>
           <gmd:address>
             <gmd:CI_Address>
               <gmd:deliveryPoint>
-                <gco:CharacterString>Rua Boa Vista, 170</gco:CharacterString>
+                <gco:CharacterString></gco:CharacterString>
               </gmd:deliveryPoint>
               <gmd:deliveryPoint>
-                <gco:CharacterString>Bloco 1, 11º Andar</gco:CharacterString>
+                <gco:CharacterString></gco:CharacterString>
               </gmd:deliveryPoint>
               <gmd:city>
-                <gco:CharacterString>São Paulo</gco:CharacterString>
+                <gco:CharacterString></gco:CharacterString>
               </gmd:city>
               <gmd:administrativeArea>
-                <gco:CharacterString>Sé</gco:CharacterString>
+                <gco:CharacterString></gco:CharacterString>
               </gmd:administrativeArea>
               <gmd:postalCode>
-                <gco:CharacterString>01014-930</gco:CharacterString>
+                <gco:CharacterString></gco:CharacterString>
               </gmd:postalCode>
               <gmd:country>
-                <gco:CharacterString>Brasil</gco:CharacterString>
+                <gco:CharacterString></gco:CharacterString>
               </gmd:country>
               <gmd:electronicMailAddress>
-                <gco:CharacterString>geo@cdhu.sp.gov.br</gco:CharacterString>
+                <gco:CharacterString></gco:CharacterString>
               </gmd:electronicMailAddress>
             </gmd:CI_Address>
           </gmd:address>
@@ -62,41 +62,41 @@
     </gmd:CI_ResponsibleParty>
   </gmd:contact>
   <gmd:contact>
-    <gmd:CI_ResponsibleParty uuid="a44bfd3a-a9f4-4caf-ba04-6ca36ab44111">
+    <gmd:CI_ResponsibleParty uuid="">
       <gmd:individualName>
-        <gco:CharacterString>NOME</gco:CharacterString>
+        <gco:CharacterString></gco:CharacterString>
       </gmd:individualName>
       <gmd:organisationName>
-        <gco:CharacterString>Nome completo</gco:CharacterString>
+        <gco:CharacterString></gco:CharacterString>
       </gmd:organisationName>
       <gmd:contactInfo>
         <gmd:CI_Contact>
           <gmd:phone>
             <gmd:CI_Telephone>
               <gmd:voice>
-                <gco:CharacterString>+55 11 2505-0000</gco:CharacterString>
+                <gco:CharacterString></gco:CharacterString>
               </gmd:voice>
             </gmd:CI_Telephone>
           </gmd:phone>
           <gmd:address>
             <gmd:CI_Address>
               <gmd:deliveryPoint>
-                <gco:CharacterString>Rua Boa Vista, 170</gco:CharacterString>
+                <gco:CharacterString></gco:CharacterString>
               </gmd:deliveryPoint>
               <gmd:city>
-                <gco:CharacterString>São Paulo</gco:CharacterString>
+                <gco:CharacterString></gco:CharacterString>
               </gmd:city>
               <gmd:administrativeArea>
                 <gco:CharacterString />
               </gmd:administrativeArea>
               <gmd:postalCode>
-                <gco:CharacterString>01014-930</gco:CharacterString>
+                <gco:CharacterString></gco:CharacterString>
               </gmd:postalCode>
               <gmd:country>
-                <gco:CharacterString>Brasil</gco:CharacterString>
+                <gco:CharacterString></gco:CharacterString>
               </gmd:country>
               <gmd:electronicMailAddress>
-                <gco:CharacterString>cdhu@cdhu.sp.gov.br</gco:CharacterString>
+                <gco:CharacterString></gco:CharacterString>
               </gmd:electronicMailAddress>
             </gmd:CI_Address>
           </gmd:address>
@@ -108,7 +108,7 @@
     </gmd:CI_ResponsibleParty>
   </gmd:contact>
   <gmd:dateStamp>
-    <gco:DateTime>2025-09-03T15:16:04.550578Z</gco:DateTime>
+    <gco:DateTime></gco:DateTime>
   </gmd:dateStamp>
   <gmd:metadataStandardName>
     <gco:CharacterString>ISO 19115-3:2014</gco:CharacterString>
@@ -121,12 +121,12 @@
       <gmd:citation>
         <gmd:CI_Citation>
           <gmd:title>
-            <gco:CharacterString>Template para recurso do tipo CDG ou série do SCN - MGB 2.0</gco:CharacterString>
+            <gco:CharacterString></gco:CharacterString>
           </gmd:title>
           <gmd:date>
             <gmd:CI_Date>
               <gmd:date>
-                <gco:DateTime>2025-09-03T12:15:00-03:00</gco:DateTime>
+                <gco:DateTime></gco:DateTime>
               </gmd:date>
               <gmd:dateType>
                 <gmd:CI_DateTypeCode codeList="http://standards.iso.org/iso/19139/resources/gmxCodelists.xml#CI_DateTypeCode" codeListValue="creation" />
@@ -136,50 +136,50 @@
         </gmd:CI_Citation>
       </gmd:citation>
       <gmd:abstract>
-        <gco:CharacterString>Resumo descritivo do recurso do tipo CDG ou série do SCN</gco:CharacterString>
+        <gco:CharacterString></gco:CharacterString>
       </gmd:abstract>
       <gmd:status>
         <gmd:MD_ProgressCode codeList="http://standards.iso.org/iso/19139/resources/gmxCodelists.xml#MD_ProgressCode" codeListValue="underDevelopment" />
       </gmd:status>
       <gmd:pointOfContact>
-        <gmd:CI_ResponsibleParty uuid="b98c4847-4d5c-43e1-a5eb-bd0228f6903a">
+        <gmd:CI_ResponsibleParty uuid="">
           <gmd:individualName>
-            <gco:CharacterString>CDHU</gco:CharacterString>
+            <gco:CharacterString></gco:CharacterString>
           </gmd:individualName>
           <gmd:organisationName>
-            <gco:CharacterString>Companhia de Desenvolvimento Habitacional e Urbano</gco:CharacterString>
+            <gco:CharacterString></gco:CharacterString>
           </gmd:organisationName>
           <gmd:contactInfo>
             <gmd:CI_Contact>
               <gmd:phone>
                 <gmd:CI_Telephone>
                   <gmd:voice>
-                    <gco:CharacterString>+55 11 2505-2479</gco:CharacterString>
+                    <gco:CharacterString></gco:CharacterString>
                   </gmd:voice>
                 </gmd:CI_Telephone>
               </gmd:phone>
               <gmd:address>
                 <gmd:CI_Address>
                   <gmd:deliveryPoint>
-                    <gco:CharacterString>Rua Boa Vista, 170</gco:CharacterString>
+                    <gco:CharacterString></gco:CharacterString>
                   </gmd:deliveryPoint>
                   <gmd:deliveryPoint>
-                    <gco:CharacterString>Bloco 1, 11º Andar</gco:CharacterString>
+                    <gco:CharacterString></gco:CharacterString>
                   </gmd:deliveryPoint>
                   <gmd:city>
-                    <gco:CharacterString>São Paulo</gco:CharacterString>
+                    <gco:CharacterString></gco:CharacterString>
                   </gmd:city>
                   <gmd:administrativeArea>
-                    <gco:CharacterString>Sé</gco:CharacterString>
+                    <gco:CharacterString></gco:CharacterString>
                   </gmd:administrativeArea>
                   <gmd:postalCode>
-                    <gco:CharacterString>01014-930</gco:CharacterString>
+                    <gco:CharacterString></gco:CharacterString>
                   </gmd:postalCode>
                   <gmd:country>
-                    <gco:CharacterString>Brasil</gco:CharacterString>
+                    <gco:CharacterString></gco:CharacterString>
                   </gmd:country>
                   <gmd:electronicMailAddress>
-                    <gco:CharacterString>geo@cdhu.sp.gov.br</gco:CharacterString>
+                    <gco:CharacterString></gco:CharacterString>
                   </gmd:electronicMailAddress>
                 </gmd:CI_Address>
               </gmd:address>
@@ -191,41 +191,41 @@
         </gmd:CI_ResponsibleParty>
       </gmd:pointOfContact>
       <gmd:pointOfContact>
-        <gmd:CI_ResponsibleParty uuid="a44bfd3a-a9f4-4caf-ba04-6ca36ab44111">
+        <gmd:CI_ResponsibleParty uuid="">
           <gmd:individualName>
-            <gco:CharacterString>DPDU</gco:CharacterString>
+            <gco:CharacterString></gco:CharacterString>
           </gmd:individualName>
           <gmd:organisationName>
-            <gco:CharacterString>Diretoria de Planejamento e Desenvolvimento Urbano</gco:CharacterString>
+            <gco:CharacterString></gco:CharacterString>
           </gmd:organisationName>
           <gmd:contactInfo>
             <gmd:CI_Contact>
               <gmd:phone>
                 <gmd:CI_Telephone>
                   <gmd:voice>
-                    <gco:CharacterString>+55 11 2505-0000</gco:CharacterString>
+                    <gco:CharacterString></gco:CharacterString>
                   </gmd:voice>
                 </gmd:CI_Telephone>
               </gmd:phone>
               <gmd:address>
                 <gmd:CI_Address>
                   <gmd:deliveryPoint>
-                    <gco:CharacterString>Rua Boa Vista, 170</gco:CharacterString>
+                    <gco:CharacterString></gco:CharacterString>
                   </gmd:deliveryPoint>
                   <gmd:city>
-                    <gco:CharacterString>São Paulo</gco:CharacterString>
+                    <gco:CharacterString></gco:CharacterString>
                   </gmd:city>
                   <gmd:administrativeArea>
                     <gco:CharacterString />
                   </gmd:administrativeArea>
                   <gmd:postalCode>
-                    <gco:CharacterString>01014-930</gco:CharacterString>
+                    <gco:CharacterString></gco:CharacterString>
                   </gmd:postalCode>
                   <gmd:country>
-                    <gco:CharacterString>Brasil</gco:CharacterString>
+                    <gco:CharacterString></gco:CharacterString>
                   </gmd:country>
                   <gmd:electronicMailAddress>
-                    <gco:CharacterString>hub_habitacao@cdhu.sp.gov.br</gco:CharacterString>
+                    <gco:CharacterString></gco:CharacterString>
                   </gmd:electronicMailAddress>
                 </gmd:CI_Address>
               </gmd:address>
@@ -239,16 +239,16 @@
       <gmd:descriptiveKeywords>
         <gmd:MD_Keywords>
           <gmd:keyword>
-            <gco:CharacterString>Palavra1</gco:CharacterString>
+            <gco:CharacterString></gco:CharacterString>
           </gmd:keyword>
           <gmd:keyword>
-            <gco:CharacterString>Palavra2</gco:CharacterString>
+            <gco:CharacterString></gco:CharacterString>
           </gmd:keyword>
           <gmd:keyword>
-            <gco:CharacterString>Palavra3</gco:CharacterString>
+            <gco:CharacterString></gco:CharacterString>
           </gmd:keyword>
           <gmd:keyword>
-            <gco:CharacterString>Palavra4</gco:CharacterString>
+            <gco:CharacterString></gco:CharacterString>
           </gmd:keyword>
           <gmd:type>
             <gmd:MD_KeywordTypeCode codeList="http://standards.iso.org/iso/19139/resources/gmxCodelists.xml#MD_KeywordTypeCode" codeListValue="" />
@@ -263,7 +263,7 @@
           <gmd:equivalentScale>
             <gmd:MD_RepresentativeFraction>
               <gmd:denominator>
-                <gco:Integer>5000</gco:Integer>
+                <gco:Integer></gco:Integer>
               </gmd:denominator>
             </gmd:MD_RepresentativeFraction>
           </gmd:equivalentScale>
@@ -276,23 +276,23 @@
         <gmd:MD_CharacterSetCode codeList="http://standards.iso.org/iso/19139/resources/gmxCodelists.xml#MD_CharacterSetCode" codeListValue="utf8" />
       </gmd:characterSet>
       <gmd:topicCategory>
-        <gmd:MD_TopicCategoryCode>imageryBaseMapsEarthCover</gmd:MD_TopicCategoryCode>
+        <gmd:MD_TopicCategoryCode></gmd:MD_TopicCategoryCode>
       </gmd:topicCategory>
       <gmd:extent>
         <gmd:EX_Extent>
           <gmd:geographicElement>
             <gmd:EX_GeographicBoundingBox>
               <gmd:westBoundLongitude>
-                <gco:Decimal>-53.11</gco:Decimal>
+                <gco:Decimal></gco:Decimal>
               </gmd:westBoundLongitude>
               <gmd:eastBoundLongitude>
-                <gco:Decimal>-44.1667</gco:Decimal>
+                <gco:Decimal></gco:Decimal>
               </gmd:eastBoundLongitude>
               <gmd:southBoundLatitude>
-                <gco:Decimal>-25.3333</gco:Decimal>
+                <gco:Decimal></gco:Decimal>
               </gmd:southBoundLatitude>
               <gmd:northBoundLatitude>
-                <gco:Decimal>-19.7667</gco:Decimal>
+                <gco:Decimal></gco:Decimal>
               </gmd:northBoundLatitude>
             </gmd:EX_GeographicBoundingBox>
           </gmd:geographicElement>
