@@ -28,6 +28,10 @@ from . import xml_generator
 from qgis.core import Qgis
 from . import xml_parser
 from qgis.PyQt.QtCore import QDateTime
+#Seção API GN
+import requests
+import json
+from qgis.core import Qgis
 
 CONTATOS_PREDEFINIDOS = {
         'cdhu': {
@@ -178,12 +182,12 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
 
 
     # ---------------------------- FUNÇÃO DE CONEXÃO DE BOTÃO ----------------------------
-    def exportar_to_geo(self):
-        print("--- EXPORTANDO PARA O GEOHAB ---")
-        titulo =  self.lineEdit_title.text()
-        print(f"Título:: '{titulo}'")
+    #def exportar_to_geo(self):
+    #    print("--- EXPORTANDO PARA O GEOHAB ---")
+    #    titulo =  self.lineEdit_title.text()
+    #    print(f"Título:: '{titulo}'")
 
-    # FUNÇÃO PARA POPULAR COMBOBOXEIS
+    # ---------------------------- FUNÇÃO PARA POPULAR COMBOBOXEIS ----------------------------
     def populate_comboboxes(self):        
         # --- Preenche o ComboBox de Status ---
         status_options = [
@@ -594,8 +598,76 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         print("Formulário preenchido com dados de um arquivo XML existente.")
         
 
+    # ---------------------------- FUNÇÃO CARREGAR PARA O GEOHAB ---------------------------
+# Em GeoMetadata_dialog.py
 
-    
-        
+    def exportar_to_geo(self):
+        """
+        Autentica com o gateway do DataHub/GeoOrchestra e envia os metadados
+        para o GeoNetwork.
+        """
+        try:
+            # --- ETAPA 1: PREPARAÇÃO ---
+            print("Coletando dados e gerando XML...")
+            metadata_dict = self.collect_data()
+            plugin_dir = os.path.dirname(__file__)
+            template_path = os.path.join(plugin_dir, 'tamplate_mgb20.xml')
+            xml_payload = xml_generator.generate_xml_from_template(metadata_dict, template_path)
+            
+            # --- ETAPA 2: CONFIGURAÇÃO ---
+            # URLs confirmadas pela sua captura
+            LOGIN_URL = "https://geo.cdhu.sp.gov.br/login"
+            RECORDS_URL = "https://geo.cdhu.sp.gov.br/geonetwork/srv/api/records"
+            
+            # !! AÇÃO: Insira suas credenciais aqui !!
+            USER = "administrador"
+            PASSWORD = "He3F9PfRt&"
 
-             
+            self.iface.messageBar().pushMessage("Info", "Autenticando...", level=Qgis.Info)
+
+            # --- ETAPA 3: LOGIN SIMPLIFICADO ---
+            with requests.Session() as session:
+                session.verify = False # Para o erro de certificado SSL
+
+                # !! AÇÃO: Verifique os nomes dos campos no Form Data do seu navegador e ajuste aqui se necessário !!
+                login_data = {
+                    'username': USER,
+                    'password': PASSWORD
+                }
+                
+                print(f"Enviando POST de login para: {LOGIN_URL}")
+                login_response = session.post(LOGIN_URL, data=login_data)
+
+                # Um login bem-sucedido nos dá um cookie de sessão e um status de redirecionamento (302)
+                if 'SESSION' not in session.cookies or login_response.status_code != 302:
+                    raise Exception(f"Falha na autenticação: Status {login_response.status_code}. Verifique a URL de login e as credenciais.")
+                
+                print("Autenticação bem-sucedida. Sessão estabelecida.")
+
+                # --- ETAPA 4: ENVIAR PARA O GEONETWORK ---
+                headers = { 'Content-Type': 'application/xml', 'Accept': 'application/json' }
+                params = {'publishToAll': 'true'}
+                
+                # Pega o token CSRF do GeoNetwork, que pode ser necessário mesmo com a sessão
+                session.get("https://geo.cdhu.sp.gov.br/geonetwork/srv/api/me")
+                csrf_token = session.cookies.get('XSRF-TOKEN')
+                if csrf_token:
+                    headers['X-XSRF-TOKEN'] = csrf_token
+                
+                gn_response = session.post(RECORDS_URL, params=params, data=xml_payload.encode('utf-8'), headers=headers, verify=False )
+
+                # --- ETAPA 5: TRATAR A RESPOSTA FINAL ---
+                if gn_response.status_code == 201:
+                    self.iface.messageBar().pushMessage("Sucesso!", "Metadados enviados com sucesso para o GeoNetwork!", level=Qgis.Success)
+                else:
+                    print(f"ERRO do GeoNetwork: {gn_response.status_code} - {gn_response.text}")
+                    self.iface.messageBar().pushMessage("Erro", f"Falha no envio para o GeoNetwork. Veja o log para detalhes.", level=Qgis.Critical)
+
+        except requests.exceptions.RequestException as e:
+            print(f"ERRO DE REDE: {e}")
+            self.iface.messageBar().pushMessage("Erro de Rede", f"Não foi possível conectar: {e}", level=Qgis.Critical)
+        except Exception as e:
+            print(f"ERRO INESPERADO: {e}")
+            import traceback
+            traceback.print_exc()
+            self.iface.messageBar().pushMessage("Erro Inesperado", f"Ocorreu um erro no plugin: {e}", level=Qgis.Critical)
