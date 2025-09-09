@@ -32,9 +32,9 @@ from qgis.PyQt.QtCore import QDateTime
 import requests
 import json
 from qgis.core import Qgis
-from bs4 import BeautifulSoup
 from . import xml_generator
-from playwright.sync_api import sync_playwright
+#Integração login
+from .login_dialog import LoginDialog
 
 CONTATOS_PREDEFINIDOS = {
         'cdhu': {
@@ -602,141 +602,165 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         
 
     # ---------------------------- FUNÇÃO CARREGAR PARA O GEOHAB --------------------------- tamplate_mgb20
-# Em GeoMetadata_dialog.py
-# (NÃO precisa do import 'from bs4 import BeautifulSoup')
-
     def exportar_to_geo(self):
         """
-        Autentica com o gateway da CDHU, simulando um navegador com precisão
-        (User-Agent, Referer, Origin) e envia os metadados.
+        Abre uma janela de login, obtém as credenciais e então executa o fluxo
+        de autenticação e envio de metadados.
         """
         try:
-            # --- ETAPA 1: PREPARAÇÃO ---
-            print("Coletando dados e gerando XML...")
-            metadata_dict = self.collect_data()
-            plugin_dir = os.path.dirname(__file__)
-            template_path = os.path.join(plugin_dir, 'tamplate_mgb20.xml')
-            xml_payload = xml_generator.generate_xml_from_template(metadata_dict, template_path)
+            # --- ETAPA DE LOGIN DO USUÁRIO ---
+            from .login_dialog import LoginDialog
+            login_dialog = LoginDialog(self)
             
-            # --- ETAPA 2: CONFIGURAÇÃO ---
-            LOGIN_URL = "https://geo.cdhu.sp.gov.br/login"
-            GEONETWORK_CATALOG_URL = "https://geo.cdhu.sp.gov.br/geonetwork/srv/eng/catalog.search"
-            RECORDS_URL = "https://geo.cdhu.sp.gov.br/geonetwork/srv/api/records"
-            ORIGIN_URL = "https://geo.cdhu.sp.gov.br"
+            # Mostra o diálogo e espera o usuário clicar em "Login" ou "Cancel"
+            if login_dialog.exec_() == QtWidgets.QDialog.Accepted:
+                # Pega as credenciais que o usuário digitou
+                USER, PASSWORD = login_dialog.getCredentials()
+                
+                # Validação
+                if not USER or not PASSWORD:
+                    self.iface.messageBar().pushMessage("Aviso", "Usuário e senha são obrigatórios.", level=Qgis.Warning)
+                    return
+
+                # --- A LÓGICA DE EXPORTAÇÃO COMEÇA AQUI ---
+                
+                # --- ETAPA 1: PREPARAÇÃO ---
+                print("Coletando dados e gerando XML...")
+                metadata_dict = self.collect_data()
+                plugin_dir = os.path.dirname(__file__)
+                template_path = os.path.join(plugin_dir, 'tamplate_mgb20.xml')
+                xml_payload = xml_generator.generate_xml_from_template(metadata_dict, template_path)
+                
+                # --- ETAPA 2: CONFIGURAÇÃO ---
+                LOGIN_URL = "https://geo.cdhu.sp.gov.br/login"
+                GEONETWORK_CATALOG_URL = "https://geo.cdhu.sp.gov.br/geonetwork/srv/eng/catalog.search"
+                RECORDS_URL = "https://geo.cdhu.sp.gov.br/geonetwork/srv/api/records"
+                ORIGIN_URL = "https://geo.cdhu.sp.gov.br"
+                
+                self.iface.messageBar().pushMessage("Info", f"Autenticando como {USER}...", level=Qgis.Info)
+
+                # --- ETAPA 3: LOGIN SIMULADO ---
+                with requests.Session() as session:
+                    session.headers.update({
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36'
+                    })
+                    session.get(LOGIN_URL, verify=False)
+
+                    # Usa as credenciais obtidas da janela de login
+                    login_data = {'username': USER, 'password': PASSWORD}
+                    login_headers = {'Referer': LOGIN_URL, 'Origin': ORIGIN_URL}
+                    
+                    print(f"Enviando POST de login para: {LOGIN_URL}")
+                    login_response = session.post(LOGIN_URL, data=login_data, headers=login_headers, verify=False)
+
+                    # Verificação de autenticação robusta (corrigida)
+                    print(f"Status da resposta de login: {login_response.status_code}")
+                    print(f"URL final após login: {login_response.url}")
+                    print(f"Cookies da sessão: {list(session.cookies.keys())}")
+                    
+                    # Verifica se a autenticação foi bem-sucedida
+                    auth_success = False
+                    
+                    # Método 1: Verifica cookies de sessão
+                    session_cookies = ['SESSION', 'JSESSIONID', 'session', 'auth']
+                    for cookie_name in session_cookies:
+                        if cookie_name in session.cookies:
+                            auth_success = True
+                            print(f"Autenticação detectada: cookie '{cookie_name}' encontrado.")
+                            break
+                    
+                    # Método 2: Verifica se há redirecionamento ou se a URL mudou
+                    if login_response.status_code in [200, 302] and login_response.url != LOGIN_URL:
+                        auth_success = True
+                        print("Autenticação detectada: redirecionamento para URL diferente.")
+                    
+                    # Método 3: Para status 200, verifica se não há indicadores de erro
+                    if not auth_success and login_response.status_code == 200:
+                        error_indicators = ['error', 'invalid', 'incorrect', 'failed', 'login', 'senha', 'usuario']
+                        response_text = login_response.text.lower()
+                        has_error = any(indicator in response_text for indicator in error_indicators)
+                        
+                        if not has_error:
+                            auth_success = True
+                            print("Autenticação detectada: status 200 sem indicadores de erro.")
+                    
+                    if not auth_success:
+                        # Salva a resposta para debug
+                        debug_file = os.path.join(plugin_dir, 'login_response_debug.html')
+                        with open(debug_file, 'w', encoding='utf-8') as f:
+                            f.write(login_response.text)
+                        print(f"Resposta de login salva em: {debug_file}")
+                        
+                        raise Exception(f"Falha na autenticação: Status {login_response.status_code}. Verifique suas credenciais.")
+                    
+                    print("Autenticação bem-sucedida.")
+
+                    # --- ETAPA 4: ENVIAR PARA O GEONETWORK ---
+                    print(f"Acessando catálogo: {GEONETWORK_CATALOG_URL}")
+                    catalog_response = session.get(GEONETWORK_CATALOG_URL, verify=False)
+                    print(f"Status do acesso ao catálogo: {catalog_response.status_code}")
+                    
+                    # Busca o token CSRF de forma mais robusta
+                    csrf_token = None
+                    for cookie in session.cookies:
+                        if cookie.name == 'XSRF-TOKEN':
+                            csrf_token = cookie.value
+                            print(f"Token CSRF encontrado: {csrf_token[:20]}...")
+                            break
+                    
+                    # Se não encontrou o token no caminho específico, tenta buscar genericamente
+                    if not csrf_token:
+                        csrf_token = session.cookies.get('XSRF-TOKEN')
+                        if csrf_token:
+                            print(f"Token CSRF encontrado (genérico): {csrf_token[:20]}...")
+                    
+                    if not csrf_token:
+                        print("Aviso: Cookie XSRF-TOKEN não encontrado. Tentando prosseguir sem ele.")
+                    
+                    gn_headers = {
+                        'Accept': 'application/json',
+                        'Referer': GEONETWORK_CATALOG_URL
+                    }
+                    
+                    # Adiciona o token CSRF apenas se encontrado
+                    if csrf_token:
+                        gn_headers['X-XSRF-TOKEN'] = csrf_token
+                    
+                    params = {'publishToAll': 'true'}
+                    files_payload = {'file': ('metadata.xml', xml_payload.encode('utf-8'), 'application/xml')}
+                    
+                    print("Enviando metadados para o GeoNetwork...")
+                    gn_response = session.post(
+                        RECORDS_URL, params=params, files=files_payload, headers=gn_headers, verify=False
+                    )
+
+                    # --- ETAPA 5: TRATAR A RESPOSTA FINAL ---
+                    print(f"Status do envio de metadados: {gn_response.status_code}")
+                    print(f"Resposta do servidor: {gn_response.text[:200]}...")
+                    
+                    if gn_response.status_code == 201:
+                        try:
+                            response_data = gn_response.json()
+                            uuid_criado = response_data.get('uuid', 'N/A')
+                            self.iface.messageBar().pushMessage("SUCESSO!", f"Metadados publicados! UUID: {uuid_criado}", level=Qgis.Success, duration=15)
+                        except:
+                            self.iface.messageBar().pushMessage("SUCESSO!", "Metadados publicados com sucesso!", level=Qgis.Success, duration=15)
+                    else:
+                        print(f"ERRO do GeoNetwork: {gn_response.status_code} - {gn_response.text}")
+                        self.iface.messageBar().pushMessage("Erro", f"Falha no envio (Status: {gn_response.status_code}). Veja o log do console.", level=Qgis.Critical, duration=10)
             
-            # !! AÇÃO: Insira suas credenciais aqui !!
-            USER = "administrador"
-            PASSWORD = "He3F9PfRt&"
-
-            self.iface.messageBar().pushMessage("Info", "Autenticando com o servidor...", level=Qgis.Info)
-
-            # --- ETAPA 3: LOGIN SIMULADO ---
-            with requests.Session() as session:
-                
-                # 3a. Define um User-Agent para toda a sessão
-                session.headers.update({
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36'
-                })
-                
-                # 3b. Visita a página de login para obter o cookie de sessão inicial
-                session.get(LOGIN_URL, verify=False)
-                
-                # 3c. Prepara os dados e os cabeçalhos para o POST de login
-                login_data = {'username': USER, 'password': PASSWORD}
-                login_headers = {
-                    'Referer': LOGIN_URL,
-                    'Origin': ORIGIN_URL
-                }
-                
-                print(f"Enviando POST de login para: {LOGIN_URL}")
-                login_response = session.post(
-                    LOGIN_URL, 
-                    data=login_data, 
-                    headers=login_headers,
-                    verify=False
-                )
-
-                # CORREÇÃO: Verifica autenticação de forma mais robusta
-                print(f"Status da resposta de login: {login_response.status_code}")
-                print(f"URL final após login: {login_response.url}")
-                print(f"Cookies da sessão: {list(session.cookies.keys())}")
-                
-                # Verifica se a autenticação foi bem-sucedida
-                auth_success = False
-                
-                # Método 1: Verifica se há redirecionamento ou se a URL mudou
-                if login_response.status_code in [200, 302] and login_response.url != LOGIN_URL:
-                    auth_success = True
-                    print("Autenticação detectada: redirecionamento para URL diferente.")
-                
-                # Método 2: Verifica cookies de sessão (adaptável)
-                session_cookies = ['SESSION', 'JSESSIONID', 'session', 'auth']
-                for cookie_name in session_cookies:
-                    if cookie_name in session.cookies:
-                        auth_success = True
-                        print(f"Autenticação detectada: cookie '{cookie_name}' encontrado.")
-                        break
-                
-                # Método 3: Verifica se não há indicadores de erro na resposta
-                if login_response.status_code == 200:
-                    # Se a resposta contém indicadores de erro, falhou
-                    error_indicators = ['error', 'invalid', 'incorrect', 'failed', 'login']
-                    response_text = login_response.text.lower()
-                    has_error = any(indicator in response_text for indicator in error_indicators)
-                    
-                    if not has_error:
-                        auth_success = True
-                        print("Autenticação detectada: status 200 sem indicadores de erro.")
-                
-                if not auth_success:
-                    # Salva a resposta para debug
-                    debug_file = os.path.join(plugin_dir, 'login_response_debug.html')
-                    with open(debug_file, 'w', encoding='utf-8') as f:
-                        f.write(login_response.text)
-                    print(f"Resposta de login salva em: {debug_file}")
-                    
-                    raise Exception(f"Falha na autenticação: Status {login_response.status_code}. Verifique as credenciais. Debug salvo em {debug_file}")
-                
-                print("Autenticação bem-sucedida.")
-
-                # --- ETAPA 4: ENVIAR PARA O GEONETWORK ---
-                print(f"Acessando catálogo: {GEONETWORK_CATALOG_URL}")
-                catalog_response = session.get(GEONETWORK_CATALOG_URL, verify=False)
-                print(f"Status do acesso ao catálogo: {catalog_response.status_code}")
-                
-                csrf_token = session.cookies.get('XSRF-TOKEN', path='/geonetwork')
-                print(f"Token CSRF encontrado: {'Sim' if csrf_token else 'Não'}")
-                
-                gn_headers = {
-                    'Accept': 'application/json',
-                    'Referer': GEONETWORK_CATALOG_URL
-                }
-                if csrf_token:
-                    gn_headers['X-XSRF-TOKEN'] = csrf_token
-                
-                params = {'publishToAll': 'true'}
-                files_payload = {'file': ('metadata.xml', xml_payload.encode('utf-8'), 'application/xml')}
-                
-                print("Enviando metadados para o GeoNetwork...")
-                gn_response = session.post(
-                    RECORDS_URL, params=params, files=files_payload, headers=gn_headers, verify=False
-                )
-
-                # --- ETAPA 5: TRATAR A RESPOSTA FINAL ---
-                print(f"Status do envio de metadados: {gn_response.status_code}")
-                print(f"Resposta do servidor: {gn_response.text[:200]}...")
-                
-                if gn_response.status_code == 201:
-                    self.iface.messageBar().pushMessage("SUCESSO!", "Metadados publicados!", level=Qgis.Success)
-                else:
-                    print(f"ERRO do GeoNetwork: {gn_response.status_code} - {gn_response.text}")
-                    self.iface.messageBar().pushMessage("Erro", f"Falha no envio (Status: {gn_response.status_code}). Veja o log.", level=Qgis.Critical)
+            else:
+                # O usuário clicou em "Cancel"
+                self.iface.messageBar().pushMessage("Info", "Exportação cancelada pelo usuário.", level=Qgis.Info)
+                return
 
         except requests.exceptions.RequestException as e:
             print(f"ERRO DE REDE: {e}")
             self.iface.messageBar().pushMessage("Erro de Rede", f"Não foi possível conectar: {e}", level=Qgis.Critical)
+
         except Exception as e:
             print(f"ERRO INESPERADO: {e}")
             import traceback
             traceback.print_exc()
             self.iface.messageBar().pushMessage("Erro Inesperado", f"Ocorreu um erro no plugin: {e}", level=Qgis.Critical)
+
