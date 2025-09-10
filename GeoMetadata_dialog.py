@@ -685,7 +685,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
                     login_data = {'username': USER, 'password': PASSWORD}
                     login_headers = {'Referer': LOGIN_URL, 'Origin': ORIGIN_URL}
                     
-                    print(f"Enviando POST de login para: {LOGIN_URL}")
+                    #print(f"Enviando POST de login para: {LOGIN_URL}")
                     login_response = session.post(LOGIN_URL, data=login_data, headers=login_headers, verify=False) #SSL cetificado atual da CDHU estar dando falha
 
                     # Verificação de autenticação
@@ -740,7 +740,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
                     for cookie in session.cookies:
                         if cookie.name == 'XSRF-TOKEN': # Geohab gera token para o Gateway e para o GeoNetwork
                             csrf_token = cookie.value
-                            print(f"Token CSRF encontrado: {csrf_token[:20]}...")
+                            #print(f"Token CSRF encontrado: {csrf_token[:20]}...")
                             break
                     
                     # Se não encontrou o token no caminho específico, tenta buscar genericamente
