@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """
 /***************************************************************************
- GeoMetadataDialog
+ GeoMetadataDialog | CDHU
                                  A QGIS plugin
  Description
                              -------------------
-        copyright            : (C) 2025 by Matheus Aviz
+        copyright            : (C) 2025 by Matheus Aviz | CDHU
         email                : mdaviz@apoiocdhu.sp.gov.br
  ***************************************************************************/
 
@@ -19,21 +19,19 @@
  ***************************************************************************/
 """
 
+# --- 1. Imports da Biblioteca Padrão Python ---
 import os
-from qgis.PyQt import uic
-from qgis.PyQt import QtWidgets
-from datetime import datetime
-from qgis.PyQt.QtCore import Qt
-from . import xml_generator
-from qgis.core import Qgis
-from . import xml_parser
-from qgis.PyQt.QtCore import QDateTime
-#Seção API GN
-import requests
 import json
+from datetime import datetime
+import traceback
+# --- 2. Imports de Bibliotecas de Terceiros ---
+import requests
+from qgis.PyQt import uic, QtWidgets
+from qgis.PyQt.QtCore import Qt, QDateTime
 from qgis.core import Qgis
+# --- 3. Imports de Módulos Locais do Plugin ---
 from . import xml_generator
-#Integração login
+from . import xml_parser
 from .login_dialog import LoginDialog
 
 CONTATOS_PREDEFINIDOS = {
@@ -56,7 +54,7 @@ CONTATOS_PREDEFINIDOS = {
             'contact_individualName': 'DPDU',
             'contact_organisationName': 'Diretoria de Planejamento e Desenvolvimento Urbano',
             'contact_positionName': '/',
-            'contact_phone': '+55 11 2505-0000',
+            'contact_phone': '+55 11 2505-2553',
             'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé, 9º andar',
             'contact_city': 'São Paulo',
             'contact_postalCode': '01014-930',
@@ -77,7 +75,7 @@ CONTATOS_PREDEFINIDOS = {
             'contact_country': 'Brasil',
             'contact_email': 'mapeamento.ssaru@cdhu.sp.gov.br',
             'contact_administrativeArea': 'SP',
-            'contact_role': 'processor'
+            'contact_role': 'author'
         },
         'terras': {
             'uuid': '14e0f9a4-81a6-430e-9165-8af35481d8ac',
@@ -91,19 +89,19 @@ CONTATOS_PREDEFINIDOS = {
             'contact_country': 'Brasil',
             'contact_email': 'terras@cdhu.sp.gov.br',
             'contact_administrativeArea': 'SP',
-            'contact_role': 'processor'
+            'contact_role': 'author'
         },
         'sphu': {
-            'uuid': '14e0f9a4-81a6-430e-9165-8af35481d8ac',
+            'uuid': '7d1bd2ec-ceee-4f35-a10c-4c37c37355fe',
             'contact_individualName': 'SPHU',
-            'contact_organisationName': 'Superintendecia de Terras',
+            'contact_organisationName': 'Superintendência de Projetos Habitacionais e Urbanos',
             'contact_positionName': '/',
             'contact_phone': '+55 11 2505-0000',
-            'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé, 6º andar',
+            'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé',
             'contact_city': 'São Paulo',
             'contact_postalCode': '01014-930',
             'contact_country': 'Brasil',
-            'contact_email': 'terras@cdhu.sp.gov.br',
+            'contact_email': 'sphu@cdhu.sp.gov.br',
             'contact_administrativeArea': 'SP',
             'contact_role': 'processor'
         },
@@ -128,7 +126,7 @@ FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'GeoMetadata_dialog_base.ui'))
 
 class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
-    # ---------------------------- FUNÇÃO INIT ----------------------------
+    # -------------------------------------------- FUNÇÃO INIT ------------------------------------------ #
     def __init__(self, parent=None, iface=None):
         """Constructor."""
         super(GeoMetadataDialog, self).__init__(parent)
@@ -147,7 +145,8 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         # Conecta a mudança do ComboBox de presets à função de preenchimento
         self.comboBox_contact_presets.currentIndexChanged.connect(self.on_contact_preset_changed)
 
-    # ---------------------------- FUNÇÃO DE CONEXÃO DE BOTÃO ----------------------------
+
+    # ------------------------------------- FUNÇÃO DE CONEXÃO DE BOTÃO ---------------------------------- #
     def exportar_to_xml(self):
         """Coleta dados, gera o XML e pede ao usuário para salvá-lo."""
         
@@ -191,7 +190,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
                 level=Qgis.Critical
             )
 
-    # ---------------------------- FUNÇÃO PARA POPULAR COMBOBOXEIS ---------------------------- #
+    # ----------------------------------- FUNÇÃO PARA POPULAR COMBOBOXEIS ------------------------------- #
     def populate_comboboxes(self):        
         # --- Preenche o ComboBox de Status ---
         status_options = [
@@ -210,7 +209,6 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
             self.comboBox_status_codeListValue.addItem(text, data)
 
         setorList_options = [  
-            ('', 'nenhum'),           
             ('CDHU', 'cdhu'),
             ('DPDU', 'dpdu'),
             ('SPHU', 'sphu'),
@@ -354,7 +352,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
             self.comboBox_contact_administrativeArea.addItem(text, data)
 
     
-    # ---------------------------- FUNÇÃO PARA PREENCHER TÍTULO E BBOX ---------------------------- #
+    # -------------------------------- FUNÇÃO PARA PREENCHER TÍTULO E BBOX ------------------------------ #
     def auto_fill_from_layer(self):
         """
         Tenta carregar os dados de um arquivo XML 'sidecar'. Se não encontrar,
@@ -394,10 +392,9 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         self.lineEdit_eastBoundLongitude.setText(f"{extent.xMaximum():.6f}")
         self.lineEdit_southBoundLatitude.setText(f"{extent.yMinimum():.6f}")
         self.lineEdit_northBoundLatitude.setText(f"{extent.yMaximum():.6f}")
-        
 
 
-    # ---------------------------- FUNÇÃO DE COLETA PARA SAÍDA DE DADOS ---------------------------- #
+    # ------------------------------- FUNÇÃO DE COLETA PARA SAÍDA DE DADOS ------------------------------ #
     def collect_data(self):
         """Lê todos os widgets do formulário e retorna um dicionário com os dados."""
         data = {}
@@ -457,7 +454,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         return data    
     
 
-    # ---------------------------- FUNÇÃO PREENCHIMENTO DE CONTATO AUTOMÁTICO ----------------------------
+    # --------------------------- FUNÇÃO PREENCHIMENTO DE CONTATO AUTOMÁTICO ---------------------------- #
     def set_combobox_by_data(self, combo_box, data_value):
         """Encontra e seleciona um item em um ComboBox pelo userData."""
         for index in range(combo_box.count()):
@@ -465,6 +462,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
                 combo_box.setCurrentIndex(index)
                 return
     
+
     def on_contact_preset_changed(self):
         """Preenche os campos de contato com base no preset selecionado."""
         
@@ -490,49 +488,58 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         self.set_combobox_by_data(self.comboBox_contact_administrativeArea, contact_data.get('contact_administrativeArea', ''))
         self.set_combobox_by_data(self.comboBox_contact_role, contact_data.get('contact_role', ''))
 
-    #----------------------------------------------------------------------------------------------------------#
-    #                                                 Bugfix 1                                                 #
-    #----------------------------------------------------------------------------------------------------------#
+    #----------------------------------------------------------------------------------------------------#
+    #                                                Bugfix 1                                            #
+    #----------------------------------------------------------------------------------------------------#
 
-    # --------------------------- FUNÇÃO GET PATH --------------------------- #
+
+    # ---------------------------------------- FUNÇÃO GET PATH ----------------------------------------- #
     def get_sidecar_metadata_path(self):
         """
-        Obtém o caminho esperado para o arquivo XML sidecar da camada ativa.
-        Retorna o caminho ou None se a camada não for baseada em arquivo.
+        Obtém o caminho esperado para o arquivo XML sidecar, usando layer.source()
+        para compatibilidade com GPKG e SHP, com lógica aprimorada para ZIP.
         """
         layer = self.iface.activeLayer()
         if not layer:
             return None
 
-        # layer.source() é o mais confiável para obter o caminho do arquivo
+        # Usa layer.source(), que se mostrou compatível com o seu caso de uso do GPKG.
         source_path = layer.source()
-        
-        # Lógica para lidar com camadas dentro de ZIPs (---- Bug 2 - não resolvido ----)
+
+        # --- LÓGICA DE MANIPULAÇÃO DE CAMINHO ---
+
+        # Para fontes como GPKG, o caminho é 'C:/.../dados.gpkg|layername=minha_camada'.
+        # A linha abaixo extrai apenas 'C:/.../dados.gpkg'.
+        # A verificação de '|' garante que isso não afete caminhos de shapefile.
         if '|' in source_path:
-            source_path = source_path.split('|')[0]
-        
-        if 'vsizip' in source_path:
-            path_parts = source_path.split('/')
-            zip_path_parts = []
-            for part in path_parts:
-                if '.zip' in part:
-                    zip_path_parts.append(part)
-                    break
-                if part != 'vsizip' and part != '':
-                    zip_path_parts.append(part)
-            source_path = os.path.join(*zip_path_parts)
-            if ':' in zip_path_parts[0]:
-                source_path = zip_path_parts[0] + os.sep + os.path.join(*zip_path_parts[1:])
-
-        # Verifica se o caminho é realmente um arquivo antes de continuar
-        if os.path.isfile(os.path.splitext(source_path)[0] + os.path.splitext(source_path)[1]):
-            return source_path + ".xml"
+            base_path = source_path.split('|')[0]
         else:
-            print(f"A camada '{layer.name()}' não parece ser baseada em um arquivo local. Não foi possível determinar o caminho para o metadado.")
+            base_path = source_path
+            
+        # --- LÓGICA ESPECÍFICA E CORRETA PARA ZIP ---
+        # Se o caminho original (não o base_path) vier de um ZIP virtual...
+        if 'vsizip' in source_path.lower():
+            # ...então precisamos encontrar o caminho real para o arquivo .zip.
+            # Ex: /vsizip/C:/caminho/arquivo.zip/camada.shp -> C:/caminho/arquivo.zip
+            
+            # Remove o prefixo /vsizip/
+            path_sem_vsizip = source_path.replace('/vsizip/', '')
+            
+            # Encontra a posição do .zip e corta a string ali.
+            zip_index = path_sem_vsizip.lower().find('.zip')
+            if zip_index != -1:
+                base_path = path_sem_vsizip[:zip_index + 4]
+
+        # A verificação final deve ser feita no base_path limpo
+        if os.path.isfile(base_path):
+            return base_path + ".xml"
+        else:
+            print(f"O caminho da fonte '{base_path}' para a camada '{layer.name()}' não é um arquivo válido.")
             return None
+    
 
 
-    # ---------------------------- FUNÇÃO SALVAR ---------------------------- #
+    # ----------------------------------------- FUNÇÃO SALVAR ------------------------------------------ #
     def salvar_metadados_sidecar(self):
         """
         Coleta os dados, gera o XML e o salva como um arquivo .xml 'sidecar'
@@ -546,9 +553,9 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
             if not metadata_path:
                 self.iface.messageBar().pushMessage(
                     "Aviso", 
-                    "A camada selecionada não é baseada em arquivo ou seu caminho não pôde ser determinado. Metadados não foram salvos.", 
+                    "A camada selecionada não é baseada em arquivo local. Tente: Selecionar uma camada, Exportar em '.gpkg' ou use 'Exportar para XML'| Metadados não foram salvos", 
                     level=Qgis.Warning,
-                    duration=6
+                    duration=40
                 )
                 return
             
@@ -578,7 +585,8 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
                 level=Qgis.Critical
             )
 
-    # ---------------------------- FUNÇÃO CARREGAR XML ---------------------------- #
+
+    # --------------------------------------- FUNÇÃO CARREGAR XML -------------------------------------- #
     def populate_form_from_dict(self, data_dict):
         """Preenche os widgets do formulário a partir de um dicionário."""
         if not data_dict:
@@ -630,7 +638,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         print("Formulário preenchido com dados de um Metadado existente.")
         
 
-    # ---------------------------- FUNÇÃO CARREGAR PARA O GEOHAB ---------------------------
+    # --------------------------------- FUNÇÃO CARREGAR PARA O GEOHAB ---------------------------------- #
     def exportar_to_geo(self):
         """
         Abre uma janela de login, obtém as credenciais e então executa o fluxo
@@ -774,7 +782,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
                             self.iface.messageBar().pushMessage("SUCESSO!", "Metadados publicados com sucesso no Geohab! Nome do metadado: {metadata_dict['title']} | UUID: {uuid_criado}", level=Qgis.Success, duration=15)
                     else:
                         print(f"ERRO do GeoNetwork: {gn_response.status_code} - {gn_response.text}")
-                        self.iface.messageBar().pushMessage("Erro", f"Falha no envio (Status: {gn_response.status_code}). Veja o log do console.", level=Qgis.Critical, duration=10)
+                        self.iface.messageBar().pushMessage("Erro", f"Falha no envio (Status: {gn_response.status_code}). Verifique as suas credenciais ou você não tem permissão | Veja o log do console Python.", level=Qgis.Critical, duration=10)
             
             else:
                 # O usuário clicou em "Cancel"

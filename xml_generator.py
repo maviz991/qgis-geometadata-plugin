@@ -66,7 +66,7 @@ def atualizar_bloco_de_contato(contato_node, data_dict, ns_map):
     set_element_attribute(contato_node, './/gmd:role/gmd:CI_RoleCode', 'codeListValue', data_dict.get('contact_role'), ns_map)
 
 
-# ---------------------------- ESTA É A NOSSA NOVA FUNÇÃO PRINCIPAL ----------------------------
+# ---------------------------- FUNÇÃO PRINCIPAL ----------------------------
 def generate_xml_from_template(data_dict, template_path):
     """
     Gera uma string XML a partir de um dicionário de dados e um template,
@@ -87,7 +87,7 @@ def generate_xml_from_template(data_dict, template_path):
     if len(contatos_raiz) >= 2:
         atualizar_bloco_de_contato(contatos_raiz[0], CDHU_CONTACT_DATA, ns)
         atualizar_bloco_de_contato(contatos_raiz[1], data_dict, ns)
-        # Opcional: remover os contatos extras desta lista, se houver
+        # Remover os contatos extras desta lista, se houver
         for extra_contact_wrapper in contatos_raiz[2:]:
             extra_contact_wrapper.getparent().remove(extra_contact_wrapper)
 
@@ -97,9 +97,9 @@ def generate_xml_from_template(data_dict, template_path):
     if id_info is not None:
         contatos_id = id_info.findall('./gmd:pointOfContact/gmd:CI_ResponsibleParty', namespaces=ns)
         if len(contatos_id) >= 2:
-            atualizar_bloco_de_contato(contatos_id[0], CDHU_CONTACT_DATA, ns)
-            atualizar_bloco_de_contato(contatos_id[1], data_dict, ns)
-            # Opcional: remover os contatos extras desta lista, se houver
+            atualizar_bloco_de_contato(contatos_id[0], data_dict, ns)
+            atualizar_bloco_de_contato(contatos_id[1], CDHU_CONTACT_DATA, ns)
+            # Remove os contatos extras desta lista, se houver
             for extra_contact_wrapper in contatos_id[2:]:
                 extra_contact_wrapper.getparent().remove(extra_contact_wrapper)
 

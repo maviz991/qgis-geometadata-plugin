@@ -1,24 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>Dialog</class>
- <widget class="QDialog" name="Dialog">
+ <class>Login</class>
+ <widget class="QDialog" name="Login">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>261</width>
-    <height>259</height>
+    <width>250</width>
+    <height>248</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Dialog</string>
+   <string>Login Geohab | CDHU</string>
+  </property>
+  <property name="sizeGripEnabled">
+   <bool>true</bool>
+  </property>
+  <property name="modal">
+   <bool>false</bool>
   </property>
   <widget class="QDialogButtonBox" name="buttonBox">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>210</y>
-     <width>221</width>
+     <x>0</x>
+     <y>200</y>
+     <width>251</width>
      <height>41</height>
     </rect>
    </property>
@@ -27,6 +33,9 @@
    </property>
    <property name="standardButtons">
     <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+   </property>
+   <property name="centerButtons">
+    <bool>true</bool>
    </property>
   </widget>
   <widget class="QLabel" name="label">
@@ -57,14 +66,14 @@
     </rect>
    </property>
    <property name="placeholderText">
-    <string>Usário de rede CDHU</string>
+    <string>Usuário de rede CDHU</string>
    </property>
   </widget>
   <widget class="QLabel" name="label_2">
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>160</y>
+     <y>140</y>
      <width>47</width>
      <height>13</height>
     </rect>
@@ -82,7 +91,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>180</y>
+     <y>160</y>
      <width>231</width>
      <height>20</height>
     </rect>
@@ -100,9 +109,9 @@
   <widget class="QLabel" name="label_3">
    <property name="geometry">
     <rect>
-     <x>40</x>
-     <y>50</y>
-     <width>191</width>
+     <x>0</x>
+     <y>60</y>
+     <width>251</width>
      <height>31</height>
     </rect>
    </property>
@@ -114,11 +123,48 @@
    </property>
    <property name="font">
     <font>
-     <pointsize>12</pointsize>
+     <pointsize>10</pointsize>
     </font>
    </property>
    <property name="text">
-    <string>Favor é necessário login</string>
+    <string>Faça o  login no Geohab</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignCenter</set>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_4">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>10</y>
+     <width>251</width>
+     <height>51</height>
+    </rect>
+   </property>
+   <property name="frameShape">
+    <enum>QFrame::NoFrame</enum>
+   </property>
+   <property name="frameShadow">
+    <enum>QFrame::Plain</enum>
+   </property>
+   <property name="lineWidth">
+    <number>1</number>
+   </property>
+   <property name="midLineWidth">
+    <number>0</number>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+   <property name="pixmap">
+    <pixmap>icons/logo.png</pixmap>
+   </property>
+   <property name="scaledContents">
+    <bool>false</bool>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignCenter</set>
    </property>
   </widget>
  </widget>
@@ -127,32 +173,32 @@
   <connection>
    <sender>buttonBox</sender>
    <signal>accepted()</signal>
-   <receiver>Dialog</receiver>
+   <receiver>Login</receiver>
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>248</x>
-     <y>254</y>
+     <x>240</x>
+     <y>200</y>
     </hint>
     <hint type="destinationlabel">
      <x>157</x>
-     <y>274</y>
+     <y>238</y>
     </hint>
    </hints>
   </connection>
   <connection>
    <sender>buttonBox</sender>
    <signal>rejected()</signal>
-   <receiver>Dialog</receiver>
+   <receiver>Login</receiver>
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>316</x>
-     <y>260</y>
+     <x>240</x>
+     <y>200</y>
     </hint>
     <hint type="destinationlabel">
-     <x>286</x>
-     <y>274</y>
+     <x>248</x>
+     <y>238</y>
     </hint>
    </hints>
   </connection>

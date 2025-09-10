@@ -1,5 +1,3 @@
-# Em xml_parser.py
-
 from lxml import etree as ET
 
 def get_element_text(parent_element, xpath, ns_map):
@@ -63,7 +61,7 @@ def parse_xml_to_dict(xml_path):
             data['southBoundLatitude'] = get_element_text(id_info, './/gmd:extent//gmd:southBoundLatitude/gco:Decimal', ns)
             data['northBoundLatitude'] = get_element_text(id_info, './/gmd:extent//gmd:northBoundLatitude/gco:Decimal', ns)
 
-        # --- CONTATO (pegamos o segundo contato, que corresponde ao formulário) ---
+        # --- CONTATO (pega o segundo contato, que corresponde ao formulário) ---
         # Isso busca em todo o documento e pega o segundo CI_ResponsibleParty encontrado
         all_contacts = root.findall('.//gmd:CI_ResponsibleParty', namespaces=ns)
         if len(all_contacts) > 1:
