@@ -70,18 +70,32 @@ CONTATOS_PREDEFINIDOS = {
             'contact_individualName': 'SSARU',
             'contact_organisationName': 'Superintendecia Social de Ação em Recuperação Urbana',
             'contact_positionName': '/',
-            'contact_phone': '+55 11 2505-0000',
+            'contact_phone': '+55 11 2505-2352',
             'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé, 7º andar',
             'contact_city': 'São Paulo',
             'contact_postalCode': '01014-930',
             'contact_country': 'Brasil',
-            'contact_email': 'ssaru@cdhu.sp.gov.br',
+            'contact_email': 'mapeamento.ssaru@cdhu.sp.gov.br',
             'contact_administrativeArea': 'SP',
             'contact_role': 'processor'
         },
         'terras': {
             'uuid': '14e0f9a4-81a6-430e-9165-8af35481d8ac',
             'contact_individualName': 'TERRAS',
+            'contact_organisationName': 'Superintendecia de Terras',
+            'contact_positionName': '/',
+            'contact_phone': '+55 11 2505-0000',
+            'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé, 6º andar',
+            'contact_city': 'São Paulo',
+            'contact_postalCode': '01014-930',
+            'contact_country': 'Brasil',
+            'contact_email': 'terras@cdhu.sp.gov.br',
+            'contact_administrativeArea': 'SP',
+            'contact_role': 'processor'
+        },
+        'sphu': {
+            'uuid': '14e0f9a4-81a6-430e-9165-8af35481d8ac',
+            'contact_individualName': 'SPHU',
             'contact_organisationName': 'Superintendecia de Terras',
             'contact_positionName': '/',
             'contact_phone': '+55 11 2505-0000',
@@ -136,7 +150,6 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         # Conecta a mudança do ComboBox de presets à função de preenchimento
         self.comboBox_contact_presets.currentIndexChanged.connect(self.on_contact_preset_changed)
         self.btn_salvar.clicked.connect(self.salvar_metadados_sidecar) #SALVAR
-
 
 
     # ---------------------------- FUNÇÃO DE CONEXÃO DE BOTÃO ----------------------------
