@@ -66,9 +66,16 @@
      <minute>0</minute>
      <second>0</second>
      <year>2025</year>
-     <month>1</month>
-     <day>1</day>
+     <month>9</month>
+     <day>10</day>
     </datetime>
+   </property>
+   <property name="date">
+    <date>
+     <year>2025</year>
+     <month>9</month>
+     <day>10</day>
+    </date>
    </property>
    <property name="minimumDateTime">
     <datetime>
@@ -79,6 +86,12 @@
      <month>9</month>
      <day>14</day>
     </datetime>
+   </property>
+   <property name="displayFormat">
+    <string>dd/MM/yyyy HH:mm:ss</string>
+   </property>
+   <property name="calendarPopup">
+    <bool>true</bool>
    </property>
   </widget>
   <widget class="QLabel" name="label_label_label_edition">
@@ -357,7 +370,7 @@ vídeo (Gravação de imagens em movimento que podem conter informações geogr�
     <bool>true</bool>
    </property>
    <property name="placeholderText">
-    <string>-53.11</string>
+    <string/>
    </property>
   </widget>
   <widget class="QLabel" name="label_westBoundLongitude">
@@ -437,7 +450,7 @@ vídeo (Gravação de imagens em movimento que podem conter informações geogr�
     <bool>true</bool>
    </property>
    <property name="placeholderText">
-    <string>-19.7667</string>
+    <string/>
    </property>
   </widget>
   <widget class="QLineEdit" name="lineEdit_southBoundLatitude">
@@ -453,7 +466,7 @@ vídeo (Gravação de imagens em movimento que podem conter informações geogr�
     <bool>true</bool>
    </property>
    <property name="placeholderText">
-    <string>-25.3333</string>
+    <string/>
    </property>
   </widget>
   <widget class="QLineEdit" name="lineEdit_eastBoundLongitude">
@@ -469,7 +482,7 @@ vídeo (Gravação de imagens em movimento que podem conter informações geogr�
     <bool>true</bool>
    </property>
    <property name="placeholderText">
-    <string>-44.1667</string>
+    <string/>
    </property>
   </widget>
   <widget class="QLabel" name="label_label_label_hierarchyLevel">
@@ -513,15 +526,22 @@ vídeo (Gravação de imagens em movimento que podem conter informações geogr�
    <property name="toolTip">
     <string>Data de criação do metado, preencha somente quando for enviar o metadado</string>
    </property>
-   <property name="dateTime">
-    <datetime>
+   <property name="showGroupSeparator" stdset="0">
+    <bool>false</bool>
+   </property>
+   <property name="date">
+    <date>
+     <year>2025</year>
+     <month>9</month>
+     <day>1</day>
+    </date>
+   </property>
+   <property name="time">
+    <time>
      <hour>12</hour>
      <minute>0</minute>
      <second>0</second>
-     <year>2025</year>
-     <month>1</month>
-     <day>1</day>
-    </datetime>
+    </time>
    </property>
    <property name="minimumDateTime">
     <datetime>
@@ -532,6 +552,15 @@ vídeo (Gravação de imagens em movimento que podem conter informações geogr�
      <month>9</month>
      <day>14</day>
     </datetime>
+   </property>
+   <property name="displayFormat">
+    <string>dd/MM/yyyy HH:mm:ss</string>
+   </property>
+   <property name="calendarPopup">
+    <bool>true</bool>
+   </property>
+   <property name="timeSpec">
+    <enum>Qt::LocalTime</enum>
    </property>
   </widget>
   <widget class="QLabel" name="label_label_label_dateStamp">
@@ -578,8 +607,8 @@ vídeo (Gravação de imagens em movimento que podem conter informações geogr�
   <widget class="QPushButton" name="btn_exp_xml">
    <property name="geometry">
     <rect>
-     <x>460</x>
-     <y>590</y>
+     <x>620</x>
+     <y>580</y>
      <width>111</width>
      <height>31</height>
     </rect>
@@ -594,8 +623,8 @@ vídeo (Gravação de imagens em movimento que podem conter informações geogr�
   <widget class="QPushButton" name="btn_exp_geo">
    <property name="geometry">
     <rect>
-     <x>580</x>
-     <y>590</y>
+     <x>480</x>
+     <y>580</y>
      <width>131</width>
      <height>31</height>
     </rect>
@@ -931,22 +960,6 @@ vídeo (Gravação de imagens em movimento que podem conter informações geogr�
     <string>Selecione</string>
    </property>
   </widget>
-  <widget class="QFrame" name="frame">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>440</y>
-     <width>381</width>
-     <height>111</height>
-    </rect>
-   </property>
-   <property name="frameShape">
-    <enum>QFrame::StyledPanel</enum>
-   </property>
-   <property name="frameShadow">
-    <enum>QFrame::Raised</enum>
-   </property>
-  </widget>
   <widget class="QLabel" name="label_2">
    <property name="geometry">
     <rect>
@@ -966,8 +979,8 @@ vídeo (Gravação de imagens em movimento que podem conter informações geogr�
   <widget class="QPushButton" name="btn_salvar">
    <property name="geometry">
     <rect>
-     <x>720</x>
-     <y>590</y>
+     <x>740</x>
+     <y>580</y>
      <width>75</width>
      <height>31</height>
     </rect>

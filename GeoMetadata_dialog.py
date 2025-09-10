@@ -68,7 +68,7 @@ CONTATOS_PREDEFINIDOS = {
         'ssaru': {
             'uuid': '648b9e9f-5b88-4e50-8cce-efa78199515e',
             'contact_individualName': 'SSARU',
-            'contact_organisationName': 'Superintendecia de Recuperação Social',
+            'contact_organisationName': 'Superintendecia Social de Ação em Recuperação Urbana',
             'contact_positionName': '/',
             'contact_phone': '+55 11 2505-0000',
             'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé, 7º andar',
@@ -76,6 +76,20 @@ CONTATOS_PREDEFINIDOS = {
             'contact_postalCode': '01014-930',
             'contact_country': 'Brasil',
             'contact_email': 'ssaru@cdhu.sp.gov.br',
+            'contact_administrativeArea': 'SP',
+            'contact_role': 'processor'
+        },
+        'terras': {
+            'uuid': '14e0f9a4-81a6-430e-9165-8af35481d8ac',
+            'contact_individualName': 'TERRAS',
+            'contact_organisationName': 'Superintendecia de Terras',
+            'contact_positionName': '/',
+            'contact_phone': '+55 11 2505-0000',
+            'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé, 6º andar',
+            'contact_city': 'São Paulo',
+            'contact_postalCode': '01014-930',
+            'contact_country': 'Brasil',
+            'contact_email': 'terras@cdhu.sp.gov.br',
             'contact_administrativeArea': 'SP',
             'contact_role': 'processor'
         },
@@ -355,37 +369,41 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
     
     # ---------------------------- FUNÇÃO PARA PREENCHER TÍTULO E BBOX ----------------------------
     def auto_fill_from_layer(self):
-        """Tenta carregar de um XML 'sidecar', senão preenche da camada."""
+        """
+        Tenta carregar os dados de um arquivo XML 'sidecar'. Se não encontrar,
+        preenche os campos Título e BBOX com os dados padrão da camada.
+        """
         
+        # Primeiro, verifica se temos a interface do QGIS e uma camada ativa.
         if not self.iface:
             return
-            
         layer = self.iface.activeLayer()
         if not layer:
+            # Se nenhuma camada estiver ativa, não há nada a fazer.
             return
 
         # --- NOVA LÓGICA DE CARREGAMENTO ---
-        # 1. Constrói o caminho para o possível arquivo .xml
-        data_uri = layer.dataProvider().dataSourceUri()
-        base_path = data_uri.split('|')[0].split(' ')[0]
-        if '.zip' in base_path.lower():
-            zip_index = base_path.lower().find('.zip')
-            base_path = base_path[:zip_index + 4]
-        metadata_path = base_path + ".xml"
         
-        # 2. Se o arquivo existir, tenta usá-lo
-        if os.path.exists(metadata_path):
+        # 1. Tenta obter um caminho válido para o arquivo .xml da camada.
+        #    Esta função retorna um caminho de arquivo ou None.
+        metadata_path = self.get_sidecar_metadata_path()
+        
+        # 2. Se um caminho válido foi encontrado E o arquivo XML de fato existe...
+        if metadata_path and os.path.exists(metadata_path):
             print(f"Arquivo de metadados encontrado: {metadata_path}")
-            # Chama nosso novo parser para ler o XML e transformá-lo em um dicionário
+            
+            # ...chama nosso parser para ler o XML e transformá-lo em um dicionário.
             data_from_xml = xml_parser.parse_xml_to_dict(metadata_path)
             
-            # Se o parser funcionou, preenche o formulário com os dados e termina
+            # Se o parser funcionou e retornou dados...
             if data_from_xml:
+                # ...preenche o formulário com os dados do XML...
                 self.populate_form_from_dict(data_from_xml)
-                return # IMPORTANTE: Para a execução aqui!
+                # ...e PARA a execução aqui. A tarefa está concluída.
+                return
         
-        # --- LÓGICA ANTIGA (SÓ EXECUTA SE O XML NÃO FOR ENCONTRADO) ---
-        print("Nenhum arquivo XML encontrado. Preenchendo com dados padrão da camada.")
+        # --- LÓGICA PADRÃO (SÓ EXECUTA SE O XML NÃO FOR CARREGADO) ---
+        print("Nenhum arquivo XML válido encontrado. Preenchendo com dados padrão da camada.")
         
         # Preenche o TÍTULO com o nome da camada
         self.lineEdit_title.setText(layer.name())
@@ -396,7 +414,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         self.lineEdit_eastBoundLongitude.setText(f"{extent.xMaximum():.6f}")
         self.lineEdit_southBoundLatitude.setText(f"{extent.yMinimum():.6f}")
         self.lineEdit_northBoundLatitude.setText(f"{extent.yMaximum():.6f}")
-    
+        
 
 
     # ---------------------------- FUNÇÃO DE COLETA PARA SAÍDA DE DADOS ----------------------------
@@ -501,35 +519,76 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         self.set_combobox_by_data(self.comboBox_contact_administrativeArea, contact_data.get('contact_administrativeArea', ''))
         self.set_combobox_by_data(self.comboBox_contact_role, contact_data.get('contact_role', ''))
 
+    #-----------------------------------------------------------------------#
+    #------------------------------ Bugfix 1 -------------------------------#
+    #-----------------------------------------------------------------------#
+
+    # --------------------------- FUNÇÃO GET PATH ---------------------------
+    def get_sidecar_metadata_path(self):
+        """
+        Obtém o caminho esperado para o arquivo XML sidecar da camada ativa.
+        Retorna o caminho ou None se a camada não for baseada em arquivo.
+        """
+        layer = self.iface.activeLayer()
+        if not layer:
+            return None
+
+        # layer.source() é geralmente o mais confiável para obter o caminho do arquivo
+        source_path = layer.source()
+        
+        # Lógica para lidar com camadas dentro de ZIPs
+        if '|' in source_path:
+            source_path = source_path.split('|')[0]
+        
+        if 'vsizip' in source_path:
+            # Extrai o caminho real do .zip de um caminho virtual
+            # Ex: /vsizip/C:/caminho/arquivo.zip/camada.shp -> C:/caminho/arquivo.zip
+            path_parts = source_path.split('/')
+            zip_path_parts = []
+            for part in path_parts:
+                if '.zip' in part:
+                    zip_path_parts.append(part)
+                    break
+                if part != 'vsizip' and part != '':
+                    zip_path_parts.append(part)
+            source_path = os.path.join(*zip_path_parts)
+            # No Windows, pode precisar de um ajuste para a letra da unidade
+            if ':' in zip_path_parts[0]:
+                source_path = zip_path_parts[0] + os.sep + os.path.join(*zip_path_parts[1:])
+                
+
+        # Verifica se o caminho é realmente um arquivo antes de continuar
+        if os.path.isfile(os.path.splitext(source_path)[0] + os.path.splitext(source_path)[1]):
+            return source_path + ".xml"
+        else:
+            print(f"A camada '{layer.name()}' não parece ser baseada em um arquivo local. Não foi possível determinar o caminho para o metadado.")
+            return None
+
+
+
     # ---------------------------- FUNÇÃO SALVAR ----------------------------
     def salvar_metadados_sidecar(self):
-        """Gera o XML e o salva como um arquivo .xml ao lado da camada."""
-        
+        """
+        Coleta os dados, gera o XML e o salva como um arquivo .xml 'sidecar'
+        ao lado do arquivo da camada ativa.
+        """
         try:
-            layer = self.iface.activeLayer()
-            if not layer:
-                self.iface.messageBar().pushMessage("Aviso", "Nenhuma camada selecionada.", level=Qgis.Warning)
-                return
-
-            # --- LÓGICA DE DETECÇÃO DE CAMINHO ---
-            # Usar dataSourceUri() que é mais confiável para fontes complexas
-            data_uri = layer.dataProvider().dataSourceUri()
+            # 1. Usa a nova função centralizada para obter o caminho de forma segura.
+            #    Toda a lógica de detecção de caminho (ZIP, etc.) está dentro dela.
+            metadata_path = self.get_sidecar_metadata_path()
             
-            # O caminho base será o URI até a primeira pipe ou espaço (mais robusto)
-            base_path = data_uri.split('|')[0].split(' ')[0]
+            # 2. Se a função retornou None, a camada não é adequada. Mostra um aviso e para.
+            if not metadata_path:
+                self.iface.messageBar().pushMessage(
+                    "Aviso", 
+                    "A camada selecionada não é baseada em arquivo ou seu caminho não pôde ser determinado. Metadados não foram salvos.", 
+                    level=Qgis.Warning,
+                    duration=6
+                )
+                return # Para a execução da função aqui.
             
-            # Se o caminho for de um arquivo ZIP (contém .zip), 
-            # removemos a parte interna do SHP para ter o caminho do ZIP real
-            if '.zip' in base_path.lower():
-                # Acha a posição do .zip e pega tudo até ali
-                zip_index = base_path.lower().find('.zip')
-                base_path = base_path[:zip_index + 4]
-
-            # Constrói o nome do arquivo de metadados
-            # Ex: 'C:/caminho/para/SP_UF_2023.zip.xml'
-            metadata_path = base_path + ".xml"
-            
-            # --- O RESTO DA FUNÇÃO É IDÊNTICO ---
+            # 3. O resto da lógica para coletar dados, gerar e salvar o XML.
+            #    Este bloco continua exatamente o mesmo de antes.
             metadata_dict = self.collect_data()
             plugin_dir = os.path.dirname(__file__)
             template_path = os.path.join(plugin_dir, 'tamplate_mgb20.xml')
@@ -538,18 +597,23 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
             with open(metadata_path, 'w', encoding='utf-8') as f:
                 f.write(xml_content)
                 
-            self.iface.messageBar().pushMessage("Sucesso", 
-                                                f"Metadados salvos em: {metadata_path}", 
-                                                level=Qgis.Success, 
-                                                duration=4)
+            self.iface.messageBar().pushMessage(
+                "Sucesso", 
+                f"Metadados salvos em: {metadata_path}", 
+                level=Qgis.Success, 
+                duration=9
+            )
 
         except Exception as e:
+            # Bloco de tratamento de erros, caso algo dê errado.
             print(f"Erro ao salvar arquivo de metadados sidecar: {e}")
             import traceback
             traceback.print_exc()
-            self.iface.messageBar().pushMessage("Erro", 
-                                                f"Falha ao salvar metadados: {e}", 
-                                                level=Qgis.Critical)
+            self.iface.messageBar().pushMessage(
+                "Erro", 
+                f"Falha ao salvar metadados: {e}", 
+                level=Qgis.Critical
+            )
 
     # ---------------------------- FUNÇÃO CARREGAR XML ----------------------------
     def populate_form_from_dict(self, data_dict):
@@ -591,6 +655,12 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         self.set_combobox_by_data(self.comboBox_hierarchyLevel, data_dict.get('hierarchyLevel'))
         self.set_combobox_by_data(self.comboBox_contact_administrativeArea, data_dict.get('contact_administrativeArea'))
         self.set_combobox_by_data(self.comboBox_contact_role, data_dict.get('contact_role'))
+
+        # --- PREENCHE BBOX ---
+        self.lineEdit_westBoundLongitude.setText(data_dict.get('westBoundLongitude', ''))
+        self.lineEdit_eastBoundLongitude.setText(data_dict.get('eastBoundLongitude', ''))
+        self.lineEdit_southBoundLatitude.setText(data_dict.get('southBoundLatitude', ''))
+        self.lineEdit_northBoundLatitude.setText(data_dict.get('northBoundLatitude', ''))
 
         # --- PREENCHE DATAS (requer conversão de string para QDateTime) ---
         date_creation_str = data_dict.get('date_creation')
