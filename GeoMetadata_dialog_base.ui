@@ -6,9 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>832</width>
-    <height>641</height>
+    <width>1308</width>
+    <height>675</height>
    </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
   </property>
   <property name="mouseTracking">
    <bool>false</bool>
@@ -22,339 +28,252 @@
   <property name="sizeGripEnabled">
    <bool>false</bool>
   </property>
-  <widget class="QLabel" name="label_title">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>10</y>
-     <width>81</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Título:</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_label_label_date_creation">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>44</y>
-     <width>77</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Data de Criação</string>
-   </property>
-  </widget>
-  <widget class="QDateTimeEdit" name="dateTimeEdit_date_creation">
-   <property name="geometry">
-    <rect>
-     <x>100</x>
-     <y>40</y>
-     <width>200</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="toolTip">
-    <string>Data e hora de criação da camada</string>
-   </property>
-   <property name="dateTime">
-    <datetime>
-     <hour>12</hour>
-     <minute>0</minute>
-     <second>0</second>
-     <year>2025</year>
-     <month>9</month>
-     <day>10</day>
-    </datetime>
-   </property>
-   <property name="date">
-    <date>
-     <year>2025</year>
-     <month>9</month>
-     <day>10</day>
-    </date>
-   </property>
-   <property name="minimumDateTime">
-    <datetime>
-     <hour>0</hour>
-     <minute>0</minute>
-     <second>0</second>
-     <year>1800</year>
-     <month>9</month>
-     <day>14</day>
-    </datetime>
-   </property>
-   <property name="displayFormat">
-    <string>dd/MM/yyyy HH:mm:ss</string>
-   </property>
-   <property name="calendarPopup">
-    <bool>true</bool>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_label_label_edition">
-   <property name="geometry">
-    <rect>
-     <x>310</x>
-     <y>44</y>
-     <width>47</width>
-     <height>13</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Edição</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_abstract">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>70</y>
-     <width>47</width>
-     <height>13</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Resumo</string>
-   </property>
-  </widget>
-  <widget class="QTextEdit" name="textEdit_abstract">
-   <property name="geometry">
-    <rect>
-     <x>100</x>
-     <y>70</y>
-     <width>551</width>
-     <height>91</height>
-    </rect>
-   </property>
-   <property name="toolTip">
-    <string>Resumo descritivo da camada, bem como geoprocessos aplicados, escala etc...</string>
-   </property>
-   <property name="placeholderText">
-    <string>Resumo descritivo da camada</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_status_codeListValue">
-   <property name="geometry">
-    <rect>
-     <x>480</x>
-     <y>45</y>
-     <width>47</width>
-     <height>13</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Status</string>
-   </property>
-  </widget>
-  <widget class="QComboBox" name="comboBox_status_codeListValue">
-   <property name="geometry">
-    <rect>
-     <x>520</x>
-     <y>40</y>
-     <width>131</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="toolTip">
-    <string>• Arquivo histórico (O recurso foi arquivado, não é mais atualizado, mas mantido para referência).
-• Concluído (O recurso foi produzido e todos os dados estão presentes).
-• Em andamento (O recurso está em processo de atualização ou coleta contínua).
-• Em desenvolvimento (O recurso está sendo criado, mas ainda não está completo ou disponível para uso geral).
-• Necessário (O recurso é necessário para um projeto ou atividade, mas ainda não foi produzido).
-• Obsoleto (O recurso foi substituído ou não é mais recomendado para uso).
-• Planejado (Existe a intenção de produzir o recurso no futuro).</string>
-   </property>
-   <property name="placeholderText">
-    <string>Selecione o status</string>
-   </property>
-  </widget>
-  <widget class="QComboBox" name="comboBox_contact_presets">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>180</y>
-     <width>110</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="toolTip">
-    <string>Selecione um setor para preencher os campos ao lado</string>
-   </property>
-   <property name="placeholderText">
-    <string>Selecione</string>
-   </property>
-   <property name="frame">
-    <bool>true</bool>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_label_label_label_contact_individualName">
-   <property name="geometry">
-    <rect>
-     <x>22</x>
-     <y>162</y>
-     <width>121</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Setores CDHU</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_MD_Keywords_5">
-   <property name="geometry">
-    <rect>
-     <x>22</x>
-     <y>252</y>
-     <width>101</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Palavra-chave</string>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="lineEdit_MD_Keywords">
-   <property name="geometry">
-    <rect>
-     <x>100</x>
-     <y>250</y>
-     <width>631</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="toolTip">
-    <string>Palavra tag para localizar a camada.
-    (Não deve conter palavra repetida do Título)</string>
-   </property>
-   <property name="placeholderText">
-    <string>Palavra-chave 1, Palavra-chave 2, Palavra-chave 3, [...]</string>
-   </property>
-  </widget>
-  <widget class="QComboBox" name="comboBox_MD_SpatialRepresentationTypeCode">
-   <property name="geometry">
-    <rect>
-     <x>180</x>
-     <y>290</y>
-     <width>210</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="toolTip">
-    <string>• Vetorial (Dados representados por coordenadas e geometrias de pontos, linhas e polígonos, como ruas, rios ou limites municipais).
+  <layout class="QGridLayout" name="gridLayout_2">
+   <item row="5" column="0">
+    <layout class="QGridLayout" name="gridLayout_21">
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_MD_Keywords_5">
+       <property name="text">
+        <string>Palavra-chave</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="1" column="4">
+    <layout class="QGridLayout" name="gridLayout_30">
+     <property name="sizeConstraint">
+      <enum>QLayout::SetFixedSize</enum>
+     </property>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_status_codeListValue">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Status</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="2" column="6" rowspan="4">
+    <layout class="QGridLayout" name="gridLayout_43">
+     <property name="sizeConstraint">
+      <enum>QLayout::SetFixedSize</enum>
+     </property>
+     <item row="0" column="0">
+      <widget class="QTextBrowser" name="textBrowser">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Ignored" vsizetype="Minimum">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="cursor" stdset="0">
+        <cursorShape>WhatsThisCursor</cursorShape>
+       </property>
+       <property name="html">
+        <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'MS Shell Dlg 2'; font-size:8.25pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:10pt; font-weight:600;&quot;&gt;GeoMetadata|CDHU Plugin&lt;/span&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;!&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:8pt;&quot;&gt;Este plugin auxilia no preenchimento e exportação de metadados no padrão MGB 2.0.&lt;/span&gt;&lt;/p&gt;
+&lt;ul style=&quot;margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; -qt-list-indent: 1;&quot;&gt;&lt;li style=&quot; font-size:8pt;&quot; style=&quot; margin-top:12px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Preencha os campos abaixo com as informações da camada selecionada. &lt;/li&gt;
+&lt;li style=&quot; font-size:8pt;&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Use &lt;span style=&quot; font-weight:600;&quot;&gt;Salvar&lt;/span&gt; para criar um arquivo de metadados (.xml) ao lado da sua camada. &lt;/li&gt;
+&lt;li style=&quot; font-size:8pt;&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Use &lt;span style=&quot; font-weight:600;&quot;&gt;Exportar para XML&lt;/span&gt; para salvar o arquivo em um local de sua escolha. &lt;/li&gt;
+&lt;li style=&quot; font-size:8pt;&quot; style=&quot; margin-top:0px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Use &lt;span style=&quot; font-weight:600;&quot;&gt;Exportar para Geohab&lt;/span&gt; para salvar no Geohab.&lt;/li&gt;&lt;/ul&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="6" column="1" rowspan="5">
+    <layout class="QGridLayout" name="gridLayout_18">
+     <property name="sizeConstraint">
+      <enum>QLayout::SetFixedSize</enum>
+     </property>
+     <item row="6" column="0">
+      <widget class="QDateTimeEdit" name="dateTimeEdit_dateStamp">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="toolTip">
+        <string>Data de criação do metado, preencha somente quando for enviar o metadado</string>
+       </property>
+       <property name="showGroupSeparator" stdset="0">
+        <bool>false</bool>
+       </property>
+       <property name="dateTime">
+        <datetime>
+         <hour>12</hour>
+         <minute>0</minute>
+         <second>0</second>
+         <year>2025</year>
+         <month>9</month>
+         <day>10</day>
+        </datetime>
+       </property>
+       <property name="date">
+        <date>
+         <year>2025</year>
+         <month>9</month>
+         <day>10</day>
+        </date>
+       </property>
+       <property name="time">
+        <time>
+         <hour>12</hour>
+         <minute>0</minute>
+         <second>0</second>
+        </time>
+       </property>
+       <property name="minimumDateTime">
+        <datetime>
+         <hour>0</hour>
+         <minute>0</minute>
+         <second>0</second>
+         <year>1800</year>
+         <month>9</month>
+         <day>14</day>
+        </datetime>
+       </property>
+       <property name="displayFormat">
+        <string>dd/MM/yyyy HH:mm:ss</string>
+       </property>
+       <property name="calendarPopup">
+        <bool>true</bool>
+       </property>
+       <property name="timeSpec">
+        <enum>Qt::LocalTime</enum>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="0">
+      <widget class="QComboBox" name="comboBox_hierarchyLevel">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="toolTip">
+        <string>• Atributo (Elemento que descreve uma característica de uma feição, como o nome de um rio ou o número de habitantes de uma cidade).
+• Feição (Representação de um objeto ou fenômeno do mundo real em um mapa, como um ponto, linha ou polígono).
+• Conjunto de dados (Coleção organizada de dados, como um arquivo shapefile, uma imagem de satélite ou uma tabela).
+• Dado não geográfico (Dados tabulares ou textuais sem geometria própria, mas que podem ser relacionados a feições geográficas).
+• Dimensão (Eixo ou variável adicional em dados geoespaciais, como tempo, profundidade ou altitude).
+• Coleção (Agrupamento de recursos que podem ser descritos em conjunto, como uma série de mapas).
+• Modelo (Representação lógica, conceitual ou de aplicação que descreve a estrutura dos dados).
+• Serviço (Operação que provê acesso a dados ou funcionalidades geoespaciais, como um serviço de mapas WMS).
+• Sessão de campo (Informações sobre uma atividade de coleta de dados realizada em campo).
+• Software (Aplicação ou programa de computador usado para criar ou processar os dados).
+• Série (Conjunto de dados que compartilham uma mesma especificação de produto).
+• Tile (Divisão ou &quot;ladrilho&quot; de um conjunto de dados espaciais, usado para otimizar o desempenho e a visualização).
+• Tipo de atributo (Definição de uma propriedade de um tipo de feição, como o nome e o tipo de dado da coluna &quot;nome_da_rua&quot;).
+• Tipo de feição (Classe que define um conjunto de feições com características comuns, como a classe &quot;Hidrografia&quot; que agrupa todos os rios).
+• Tipo de propriedade (Descrição genérica de uma característica ou atributo de um recurso qualquer nos metadados).</string>
+       </property>
+       <property name="placeholderText">
+        <string>Selecione o tipo da camada</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="0">
+      <widget class="QComboBox" name="comboBox_MD_SpatialRepresentationTypeCode">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="toolTip">
+        <string>• Vetorial (Dados representados por coordenadas e geometrias de pontos, linhas e polígonos, como ruas, rios ou limites municipais).
 • Grid ou Raster (Dados representados por uma matriz de células ou pixels, onde cada célula possui um valor, como imagens de satélite ou modelos de elevação).
 • Estereoscópico (Modelo tridimensional derivado de um par de imagens sobrepostas, usado para visualização 3D e extração de feições).
 • Malha triangular irregular (TIN) (Modelo de superfície 3D criado a partir de uma rede de triângulos não sobrepostos, geralmente para representar relevo).
 • Texto/tabela (Dados em formato de texto ou tabela, sem componente geométrica, como um relatório, documento ou uma planilha de censo).
 • Vídeo (Gravação de imagens em movimento que podem conter informações geográficas, como vídeos de drones com coordenadas).</string>
-   </property>
-   <property name="placeholderText">
-    <string>Selecione o tipo</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_MD_SpatialRepresentationTypeCode">
-   <property name="geometry">
-    <rect>
-     <x>22</x>
-     <y>292</y>
-     <width>161</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="sizePolicy">
-    <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-     <horstretch>0</horstretch>
-     <verstretch>0</verstretch>
-    </sizepolicy>
-   </property>
-   <property name="text">
-    <string>Tipo de Representação Espacial</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_spatialResolution_denominator">
-   <property name="geometry">
-    <rect>
-     <x>22</x>
-     <y>322</y>
-     <width>47</width>
-     <height>13</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Escala</string>
-   </property>
-  </widget>
-  <widget class="QComboBox" name="comboBox_LanguageCode">
-   <property name="geometry">
-    <rect>
-     <x>80</x>
-     <y>350</y>
-     <width>210</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="toolTip">
-    <string>Selecione o idioma da camada</string>
-   </property>
-   <property name="placeholderText">
-    <string>Selecione o idioma</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_LanguageCode">
-   <property name="geometry">
-    <rect>
-     <x>22</x>
-     <y>352</y>
-     <width>47</width>
-     <height>13</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Idioma</string>
-   </property>
-  </widget>
-  <widget class="QComboBox" name="comboBox_characterSet">
-   <property name="geometry">
-    <rect>
-     <x>80</x>
-     <y>380</y>
-     <width>210</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="toolTip">
-    <string>Mandatório em UTF-8</string>
-   </property>
-   <property name="placeholderText">
-    <string>Selecione o Encoding</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_characterSet">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>380</y>
-     <width>61</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Codificação</string>
-   </property>
-  </widget>
-  <widget class="QComboBox" name="comboBox_topicCategory">
-   <property name="geometry">
-    <rect>
-     <x>120</x>
-     <y>410</y>
-     <width>210</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="toolTip">
-    <string>• Imagens, mapas base e cobertura terrestre (Dados de mapas base, cobertura do solo e imagens, como ortofotos e imagens de satélite).
+       </property>
+       <property name="placeholderText">
+        <string>Selecione o tipo</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QComboBox" name="comboBox_characterSet">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="toolTip">
+        <string>Mandatório em UTF-8</string>
+       </property>
+       <property name="placeholderText">
+        <string>Selecione o Encoding</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QComboBox" name="comboBox_LanguageCode">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="toolTip">
+        <string>Selecione o idioma da camada</string>
+       </property>
+       <property name="placeholderText">
+        <string>Selecione o idioma</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLineEdit" name="lineEdit_textEdit_spatialResolution_denominator">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="toolTip">
+        <string>Escala da camada ex: 1:5000 → 5000</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+       </property>
+       <property name="placeholderText">
+        <string>5000</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="0">
+      <widget class="QComboBox" name="comboBox_topicCategory">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="toolTip">
+        <string>• Imagens, mapas base e cobertura terrestre (Dados de mapas base, cobertura do solo e imagens, como ortofotos e imagens de satélite).
 • Planejamento e cadastro (Dados usados para o planejamento do uso da terra, como zoneamento e cadastro territorial).
 • Agricultura (Dados sobre criação de animais e/ou cultivo de plantas).
 • Biota (Dados sobre a flora e/ou fauna em seu ambiente natural, como ecossistemas e espécies).
@@ -373,630 +292,534 @@
 • Estruturas (Dados sobre construções feitas pelo homem, como prédios, pontes e barragens). 
 • Transportes (Dados sobre meios para o transporte de pessoas e/ou mercadorias, como rodovias, ferrovias e aeroportos).
 • Serviços de utilidade pública e comunicação (Dados sobre sistemas de energia, água, esgoto e infraestruturas de comunicação).</string>
-   </property>
-   <property name="placeholderText">
-    <string>Selecione a categoria</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_topicCategory">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>410</y>
-     <width>101</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Categoria Temática</string>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="lineEdit_westBoundLongitude">
-   <property name="geometry">
-    <rect>
-     <x>290</x>
-     <y>490</y>
-     <width>100</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="readOnly">
-    <bool>true</bool>
-   </property>
-   <property name="placeholderText">
-    <string/>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_westBoundLongitude">
-   <property name="geometry">
-    <rect>
-     <x>296</x>
-     <y>470</y>
-     <width>90</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Oeste</string>
-   </property>
-   <property name="alignment">
-    <set>Qt::AlignCenter</set>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_northBoundLatitude">
-   <property name="geometry">
-    <rect>
-     <x>166</x>
-     <y>440</y>
-     <width>90</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Norte</string>
-   </property>
-   <property name="alignment">
-    <set>Qt::AlignCenter</set>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_southBoundLatitude">
-   <property name="geometry">
-    <rect>
-     <x>166</x>
-     <y>540</y>
-     <width>90</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Sul</string>
-   </property>
-   <property name="alignment">
-    <set>Qt::AlignCenter</set>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_label_label_eastBoundLongitude">
-   <property name="geometry">
-    <rect>
-     <x>36</x>
-     <y>470</y>
-     <width>90</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Leste</string>
-   </property>
-   <property name="alignment">
-    <set>Qt::AlignCenter</set>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="lineEdit_northBoundLatitude">
-   <property name="geometry">
-    <rect>
-     <x>160</x>
-     <y>460</y>
-     <width>100</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="readOnly">
-    <bool>true</bool>
-   </property>
-   <property name="placeholderText">
-    <string/>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="lineEdit_southBoundLatitude">
-   <property name="geometry">
-    <rect>
-     <x>160</x>
-     <y>520</y>
-     <width>100</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="readOnly">
-    <bool>true</bool>
-   </property>
-   <property name="placeholderText">
-    <string/>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="lineEdit_eastBoundLongitude">
-   <property name="geometry">
-    <rect>
-     <x>30</x>
-     <y>490</y>
-     <width>100</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="readOnly">
-    <bool>true</bool>
-   </property>
-   <property name="placeholderText">
-    <string/>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_label_label_hierarchyLevel">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>560</y>
-     <width>91</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Nível Hierárquico</string>
-   </property>
-  </widget>
-  <widget class="QComboBox" name="comboBox_hierarchyLevel">
-   <property name="geometry">
-    <rect>
-     <x>110</x>
-     <y>560</y>
-     <width>210</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="toolTip">
-    <string>• Atributo (Elemento que descreve uma característica de uma feição, como o nome de um rio ou o número de habitantes de uma cidade).
-• Feição (Representação de um objeto ou fenômeno do mundo real em um mapa, como um ponto, linha ou polígono).
-• Conjunto de dados (Coleção organizada de dados, como um arquivo shapefile, uma imagem de satélite ou uma tabela).
-• Dado não geográfico (Dados tabulares ou textuais sem geometria própria, mas que podem ser relacionados a feições geográficas).
-• Dimensão (Eixo ou variável adicional em dados geoespaciais, como tempo, profundidade ou altitude).
-• Coleção (Agrupamento de recursos que podem ser descritos em conjunto, como uma série de mapas).
-• Modelo (Representação lógica, conceitual ou de aplicação que descreve a estrutura dos dados).
-• Serviço (Operação que provê acesso a dados ou funcionalidades geoespaciais, como um serviço de mapas WMS).
-• Sessão de campo (Informações sobre uma atividade de coleta de dados realizada em campo).
-• Software (Aplicação ou programa de computador usado para criar ou processar os dados).
-• Série (Conjunto de dados que compartilham uma mesma especificação de produto).
-• Tile (Divisão ou &quot;ladrilho&quot; de um conjunto de dados espaciais, usado para otimizar o desempenho e a visualização).
-• Tipo de atributo (Definição de uma propriedade de um tipo de feição, como o nome e o tipo de dado da coluna &quot;nome_da_rua&quot;).
-• Tipo de feição (Classe que define um conjunto de feições com características comuns, como a classe &quot;Hidrografia&quot; que agrupa todos os rios).
-• Tipo de propriedade (Descrição genérica de uma característica ou atributo de um recurso qualquer nos metadados).</string>
-   </property>
-   <property name="placeholderText">
-    <string>Selecione o tipo da camada</string>
-   </property>
-  </widget>
-  <widget class="QDateTimeEdit" name="dateTimeEdit_dateStamp">
-   <property name="geometry">
-    <rect>
-     <x>113</x>
-     <y>600</y>
-     <width>210</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="toolTip">
-    <string>Data de criação do metado, preencha somente quando for enviar o metadado</string>
-   </property>
-   <property name="showGroupSeparator" stdset="0">
-    <bool>false</bool>
-   </property>
-   <property name="date">
-    <date>
-     <year>2025</year>
-     <month>9</month>
-     <day>1</day>
-    </date>
-   </property>
-   <property name="time">
-    <time>
-     <hour>12</hour>
-     <minute>0</minute>
-     <second>0</second>
-    </time>
-   </property>
-   <property name="minimumDateTime">
-    <datetime>
-     <hour>0</hour>
-     <minute>0</minute>
-     <second>0</second>
-     <year>1800</year>
-     <month>9</month>
-     <day>14</day>
-    </datetime>
-   </property>
-   <property name="displayFormat">
-    <string>dd/MM/yyyy HH:mm:ss</string>
-   </property>
-   <property name="calendarPopup">
-    <bool>true</bool>
-   </property>
-   <property name="timeSpec">
-    <enum>Qt::LocalTime</enum>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_label_label_dateStamp">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>600</y>
-     <width>91</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Data do metadado</string>
-   </property>
-  </widget>
-  <widget class="QSpinBox" name="spinBox_edition">
-   <property name="geometry">
-    <rect>
-     <x>350</x>
-     <y>40</y>
-     <width>71</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="toolTip">
-    <string>Selecione a edição da camada</string>
-   </property>
-   <property name="autoFillBackground">
-    <bool>false</bool>
-   </property>
-   <property name="wrapping">
-    <bool>false</bool>
-   </property>
-   <property name="frame">
-    <bool>false</bool>
-   </property>
-   <property name="readOnly">
-    <bool>true</bool>
-   </property>
-   <property name="showGroupSeparator" stdset="0">
-    <bool>false</bool>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="btn_exp_xml">
-   <property name="geometry">
-    <rect>
-     <x>550</x>
-     <y>580</y>
-     <width>135</width>
-     <height>30</height>
-    </rect>
-   </property>
-   <property name="toolTip">
-    <string>Salve um arquivo XML MGB 2.0</string>
-   </property>
-   <property name="text">
-    <string>Exportar para XML</string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="btn_exp_geo">
-   <property name="geometry">
-    <rect>
-     <x>394</x>
-     <y>580</y>
-     <width>151</width>
-     <height>30</height>
-    </rect>
-   </property>
-   <property name="contextMenuPolicy">
-    <enum>Qt::DefaultContextMenu</enum>
-   </property>
-   <property name="toolTip">
-    <string>Envie para o Geohab</string>
-   </property>
-   <property name="text">
-    <string>Exportar para o Geohab</string>
-   </property>
-   <property name="icon">
-    <iconset>
-     <selectedon>icon.png</selectedon>
-    </iconset>
-   </property>
-   <property name="iconSize">
-    <size>
-     <width>18</width>
-     <height>18</height>
-    </size>
-   </property>
-   <property name="checkable">
-    <bool>false</bool>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="lineEdit_textEdit_spatialResolution_denominator">
-   <property name="geometry">
-    <rect>
-     <x>82</x>
-     <y>320</y>
-     <width>210</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="toolTip">
-    <string>Escala da camada ex: 1:5000 → 5000</string>
-   </property>
-   <property name="alignment">
-    <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-   </property>
-   <property name="placeholderText">
-    <string>5000</string>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="lineEdit_title">
-   <property name="geometry">
-    <rect>
-     <x>100</x>
-     <y>10</y>
-     <width>551</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Nome descritivo e sucinto da camada&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-   </property>
-   <property name="placeholderText">
-    <string>Título da camada</string>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="lineEdit_contact_individualName">
-   <property name="geometry">
-    <rect>
-     <x>140</x>
-     <y>180</y>
-     <width>110</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="placeholderText">
-    <string>CDHU</string>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="lineEdit_contact_organisationName">
-   <property name="geometry">
-    <rect>
-     <x>260</x>
-     <y>180</y>
-     <width>110</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="placeholderText">
-    <string>Companhia de Desenvolvimento Habitacional e Urbano</string>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="lineEdit_contact_positionName">
-   <property name="geometry">
-    <rect>
-     <x>380</x>
-     <y>180</y>
-     <width>110</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="readOnly">
-    <bool>true</bool>
-   </property>
-   <property name="placeholderText">
-    <string>/</string>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="lineEdit_contact_phone">
-   <property name="geometry">
-    <rect>
-     <x>500</x>
-     <y>180</y>
-     <width>110</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="placeholderText">
-    <string>+55 11 0000-0000</string>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="lineEdit_contact_postalCode">
-   <property name="geometry">
-    <rect>
-     <x>260</x>
-     <y>220</y>
-     <width>110</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="placeholderText">
-    <string>01014-930</string>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="lineEdit_contact_country">
-   <property name="geometry">
-    <rect>
-     <x>380</x>
-     <y>220</y>
-     <width>110</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="placeholderText">
-    <string>Brasil</string>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="lineEdit_contact_email">
-   <property name="geometry">
-    <rect>
-     <x>500</x>
-     <y>220</y>
-     <width>110</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="placeholderText">
-    <string>cdhu@cdhu.sp.gov.br</string>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="lineEdit_contact_city">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>220</y>
-     <width>110</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="placeholderText">
-    <string>São Paulo</string>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="lineEdit_contact_deliveryPoint">
-   <property name="geometry">
-    <rect>
-     <x>620</x>
-     <y>180</y>
-     <width>110</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="placeholderText">
-    <string>Rua Boa Vista, 170, Sé</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_label_label_label_contact_individualName_2">
-   <property name="geometry">
-    <rect>
-     <x>142</x>
-     <y>162</y>
-     <width>61</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Nome/Sigla</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_label_label_label_contact_individualName_3">
-   <property name="geometry">
-    <rect>
-     <x>262</x>
-     <y>162</y>
-     <width>111</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Nome completo</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_label_label_label_contact_individualName_4">
-   <property name="geometry">
-    <rect>
-     <x>382</x>
-     <y>162</y>
-     <width>111</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Posição</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_label_label_label_contact_individualName_5">
-   <property name="geometry">
-    <rect>
-     <x>502</x>
-     <y>162</y>
-     <width>111</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Telefone</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_label_label_label_contact_individualName_6">
-   <property name="geometry">
-    <rect>
-     <x>622</x>
-     <y>162</y>
-     <width>111</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Rua, nº, complemento</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_label_label_label_contact_individualName_7">
-   <property name="geometry">
-    <rect>
-     <x>22</x>
-     <y>202</y>
-     <width>111</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Cidade</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_label_label_label_contact_individualName_8">
-   <property name="geometry">
-    <rect>
-     <x>142</x>
-     <y>202</y>
-     <width>111</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Estado</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_label_label_label_contact_individualName_9">
-   <property name="geometry">
-    <rect>
-     <x>382</x>
-     <y>202</y>
-     <width>111</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>País</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_label_label_label_contact_individualName_10">
-   <property name="geometry">
-    <rect>
-     <x>502</x>
-     <y>202</y>
-     <width>111</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Email</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_label_label_label_contact_individualName_11">
-   <property name="geometry">
-    <rect>
-     <x>622</x>
-     <y>202</y>
-     <width>111</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Responsabilidade</string>
-   </property>
-  </widget>
-  <widget class="QComboBox" name="comboBox_contact_role">
-   <property name="geometry">
-    <rect>
-     <x>620</x>
-     <y>220</y>
-     <width>110</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="toolTip">
-    <string>• Autor (Parte que criou o recurso)
+       </property>
+       <property name="placeholderText">
+        <string>Selecione a categoria</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="4" column="0" colspan="6">
+    <widget class="Line" name="line">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="11" column="6">
+    <layout class="QVBoxLayout" name="verticalLayout_3">
+     <property name="sizeConstraint">
+      <enum>QLayout::SetFixedSize</enum>
+     </property>
+     <item>
+      <widget class="QPushButton" name="btn_salvar">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="sizeIncrement">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="toolTip">
+        <string>Salve para continuar o preenchimento mais tarde</string>
+       </property>
+       <property name="text">
+        <string>Salvar</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btn_exp_xml">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="toolTip">
+        <string>Salve um arquivo XML MGB 2.0</string>
+       </property>
+       <property name="text">
+        <string>Exportar para XML</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btn_exp_geo">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="contextMenuPolicy">
+        <enum>Qt::DefaultContextMenu</enum>
+       </property>
+       <property name="toolTip">
+        <string>Envie para o Geohab</string>
+       </property>
+       <property name="text">
+        <string> Exportar para  Geohab</string>
+       </property>
+       <property name="icon">
+        <iconset>
+         <normaloff>favcon_cdhu.png</normaloff>favcon_cdhu.png</iconset>
+       </property>
+       <property name="iconSize">
+        <size>
+         <width>18</width>
+         <height>18</height>
+        </size>
+       </property>
+       <property name="checkable">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="3" column="3">
+    <layout class="QGridLayout" name="gridLayout_14">
+     <property name="sizeConstraint">
+      <enum>QLayout::SetFixedSize</enum>
+     </property>
+     <item row="1" column="0">
+      <widget class="QLineEdit" name="lineEdit_contact_phone">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="placeholderText">
+        <string>+55 11 0000-0000</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_label_label_label_contact_individualName_5">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Telefone</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QLineEdit" name="lineEdit_contact_email">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="placeholderText">
+        <string>cdhu@cdhu.sp.gov.br</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QLabel" name="label_label_label_label_contact_individualName_10">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Email</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="1" column="1">
+    <layout class="QGridLayout" name="gridLayout_26">
+     <property name="sizeConstraint">
+      <enum>QLayout::SetFixedSize</enum>
+     </property>
+     <item row="0" column="0">
+      <widget class="QDateTimeEdit" name="dateTimeEdit_date_creation">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="toolTip">
+        <string>Data e hora de criação da camada</string>
+       </property>
+       <property name="dateTime">
+        <datetime>
+         <hour>12</hour>
+         <minute>0</minute>
+         <second>0</second>
+         <year>2025</year>
+         <month>9</month>
+         <day>10</day>
+        </datetime>
+       </property>
+       <property name="date">
+        <date>
+         <year>2025</year>
+         <month>9</month>
+         <day>10</day>
+        </date>
+       </property>
+       <property name="minimumDateTime">
+        <datetime>
+         <hour>0</hour>
+         <minute>0</minute>
+         <second>0</second>
+         <year>1800</year>
+         <month>9</month>
+         <day>14</day>
+        </datetime>
+       </property>
+       <property name="displayFormat">
+        <string>dd/MM/yyyy HH:mm:ss</string>
+       </property>
+       <property name="calendarPopup">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="3" column="1">
+    <layout class="QGridLayout" name="gridLayout_4">
+     <property name="sizeConstraint">
+      <enum>QLayout::SetFixedSize</enum>
+     </property>
+     <item row="3" column="0">
+      <widget class="QComboBox" name="comboBox_contact_administrativeArea">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="placeholderText">
+        <string>Selecione</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QLabel" name="label_label_label_label_contact_individualName_8">
+       <property name="text">
+        <string>Estado</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLineEdit" name="lineEdit_contact_individualName">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="placeholderText">
+        <string>CDHU</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_label_label_label_contact_individualName_2">
+       <property name="text">
+        <string>Nome/Sigla</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="2" column="1" colspan="5">
+    <layout class="QGridLayout" name="gridLayout_33">
+     <item row="0" column="0">
+      <widget class="QTextEdit" name="textEdit_abstract">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="toolTip">
+        <string>Resumo descritivo da camada, bem como geoprocessos aplicados, escala etc...</string>
+       </property>
+       <property name="html">
+        <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'MS Shell Dlg 2'; font-size:8.25pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="placeholderText">
+        <string>Resumo descritivo da camada</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="1" column="0">
+    <layout class="QGridLayout" name="gridLayout_25">
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_label_label_date_creation">
+       <property name="text">
+        <string>Data de Criação</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="1" column="5">
+    <layout class="QGridLayout" name="gridLayout_31">
+     <item row="0" column="0">
+      <widget class="QComboBox" name="comboBox_status_codeListValue">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="toolTip">
+        <string>• Arquivo histórico (O recurso foi arquivado, não é mais atualizado, mas mantido para referência).
+• Concluído (O recurso foi produzido e todos os dados estão presentes).
+• Em andamento (O recurso está em processo de atualização ou coleta contínua).
+• Em desenvolvimento (O recurso está sendo criado, mas ainda não está completo ou disponível para uso geral).
+• Necessário (O recurso é necessário para um projeto ou atividade, mas ainda não foi produzido).
+• Obsoleto (O recurso foi substituído ou não é mais recomendado para uso).
+• Planejado (Existe a intenção de produzir o recurso no futuro).</string>
+       </property>
+       <property name="placeholderText">
+        <string>Selecione o status</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="6" column="0" rowspan="5">
+    <layout class="QGridLayout" name="gridLayout_17">
+     <item row="2" column="0">
+      <widget class="QLabel" name="label_LanguageCode">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Idioma</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item row="6" column="0">
+      <widget class="QLabel" name="label_label_label_dateStamp">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Data do metadado</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="0">
+      <widget class="QLabel" name="label_label_label_hierarchyLevel">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Nível Hierárquico</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="0">
+      <widget class="QLabel" name="label_topicCategory">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Categoria Temática</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QLabel" name="label_characterSet">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Codificação</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="label_spatialResolution_denominator">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Escala</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_MD_SpatialRepresentationTypeCode">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Tipo de Representação Espacial</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="1" column="2">
+    <layout class="QGridLayout" name="gridLayout_28">
+     <item row="1" column="0">
+      <widget class="QLabel" name="label_label_label_edition">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="layoutDirection">
+        <enum>Qt::LeftToRight</enum>
+       </property>
+       <property name="text">
+        <string>             Edição</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="0" column="0">
+    <layout class="QGridLayout" name="gridLayout_19">
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_title">
+       <property name="text">
+        <string>Título</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="3" column="5">
+    <layout class="QGridLayout" name="gridLayout_24">
+     <item row="1" column="0">
+      <widget class="QLineEdit" name="lineEdit_contact_deliveryPoint">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="placeholderText">
+        <string>Rua Boa Vista, 170, Sé</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_label_label_label_contact_individualName_6">
+       <property name="text">
+        <string>Rua, nº, complemento</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QLabel" name="label_label_label_label_contact_individualName_11">
+       <property name="text">
+        <string>Responsabilidade</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QComboBox" name="comboBox_contact_role">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Ignored" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="toolTip">
+        <string>• Autor (Parte que criou o recurso)
 • Custodiante (Parte com a responsabilidade pela guarda, manutenção e arquivamento dos dados).
 • Distribuidor (Parte que disponibiliza o recurso para os usuários).
 • Proprietário (Parte que detém os direitos legais sobre o recurso).
@@ -1007,72 +830,546 @@
 • Ponto de contato (Parte a ser contatada para obter informações sobre o recurso).
 • Publicador (Parte que publicou o recurso, tornando-o acessível).
 • Usuário (Parte que utiliza o recurso).</string>
-   </property>
-   <property name="placeholderText">
-    <string>Selecione</string>
-   </property>
-  </widget>
-  <widget class="QComboBox" name="comboBox_contact_administrativeArea">
-   <property name="geometry">
-    <rect>
-     <x>140</x>
-     <y>220</y>
-     <width>110</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="placeholderText">
-    <string>Selecione</string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="btn_salvar">
-   <property name="geometry">
-    <rect>
-     <x>690</x>
-     <y>580</y>
-     <width>135</width>
-     <height>30</height>
-    </rect>
-   </property>
-   <property name="toolTip">
-    <string>Salve, para continuar o preenchimento mais tarde</string>
-   </property>
-   <property name="text">
-    <string>Salvar</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_2">
-   <property name="geometry">
-    <rect>
-     <x>660</x>
-     <y>50</y>
-     <width>171</width>
-     <height>51</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string/>
-   </property>
-   <property name="pixmap">
-    <pixmap>logo.png</pixmap>
-   </property>
-   <property name="alignment">
-    <set>Qt::AlignCenter</set>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_label_label_label_contact_individualName_12">
-   <property name="geometry">
-    <rect>
-     <x>262</x>
-     <y>202</y>
-     <width>111</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>CEP</string>
-   </property>
-  </widget>
+       </property>
+       <property name="placeholderText">
+        <string>Selecione</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="3" column="2">
+    <layout class="QGridLayout" name="gridLayout_9">
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_label_label_label_contact_individualName_3">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Nome completo</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLineEdit" name="lineEdit_contact_organisationName">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="placeholderText">
+        <string>Companhia de Des...</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QLabel" name="label_label_label_label_contact_individualName_12">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>CEP</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QLineEdit" name="lineEdit_contact_postalCode">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="placeholderText">
+        <string>01014-930</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="3" column="0">
+    <layout class="QGridLayout" name="gridLayout">
+     <item row="2" column="0">
+      <widget class="QLabel" name="label_label_label_label_contact_individualName_7">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Cidade</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_label_label_label_contact_individualName">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Setores CDHU</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QComboBox" name="comboBox_contact_presets">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="toolTip">
+        <string>Selecione um setor para preencher os campos ao lado</string>
+       </property>
+       <property name="placeholderText">
+        <string>Selecione</string>
+       </property>
+       <property name="frame">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QLineEdit" name="lineEdit_contact_city">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="placeholderText">
+        <string>São Paulo</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="2" column="0">
+    <layout class="QGridLayout" name="gridLayout_32">
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_abstract">
+       <property name="text">
+        <string>Resumo</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTop|Qt::AlignTrailing</set>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="1" column="3">
+    <layout class="QGridLayout" name="gridLayout_29">
+     <property name="sizeConstraint">
+      <enum>QLayout::SetFixedSize</enum>
+     </property>
+     <item row="0" column="0">
+      <widget class="QSpinBox" name="spinBox_edition">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="toolTip">
+        <string>Selecione a edição da camada</string>
+       </property>
+       <property name="autoFillBackground">
+        <bool>false</bool>
+       </property>
+       <property name="wrapping">
+        <bool>false</bool>
+       </property>
+       <property name="frame">
+        <bool>false</bool>
+       </property>
+       <property name="readOnly">
+        <bool>false</bool>
+       </property>
+       <property name="showGroupSeparator" stdset="0">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="3" column="4">
+    <layout class="QGridLayout" name="gridLayout_23">
+     <property name="sizeConstraint">
+      <enum>QLayout::SetFixedSize</enum>
+     </property>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_label_label_label_contact_individualName_4">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Cargo|Posição</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QLabel" name="label_label_label_label_contact_individualName_9">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>País</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLineEdit" name="lineEdit_contact_positionName">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="cursor">
+        <cursorShape>ForbiddenCursor</cursorShape>
+       </property>
+       <property name="readOnly">
+        <bool>true</bool>
+       </property>
+       <property name="placeholderText">
+        <string>/</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QLineEdit" name="lineEdit_contact_country">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="placeholderText">
+        <string>Brasil</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="5" column="1" colspan="5">
+    <layout class="QGridLayout" name="gridLayout_20">
+     <item row="0" column="0">
+      <widget class="QLineEdit" name="lineEdit_MD_Keywords">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="toolTip">
+        <string>Palavra tag para localizar a camada.
+    (Não deve conter palavra repetida do Título)</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+       </property>
+       <property name="placeholderText">
+        <string>Palavra-chave 1, Palavra-chave 2, Palavra-chave 3, [...]</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="0" column="6" rowspan="2">
+    <layout class="QGridLayout" name="gridLayout_42">
+     <property name="sizeConstraint">
+      <enum>QLayout::SetFixedSize</enum>
+     </property>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_2">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="pixmap">
+        <pixmap>logo.png</pixmap>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="0" column="1" colspan="5">
+    <layout class="QGridLayout" name="gridLayout_22">
+     <property name="sizeConstraint">
+      <enum>QLayout::SetFixedSize</enum>
+     </property>
+     <item row="0" column="0">
+      <widget class="QLineEdit" name="lineEdit_title">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Nome descritivo e sucinto da camada&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="placeholderText">
+        <string>Título da camada</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="11" column="3">
+    <layout class="QGridLayout" name="gridLayout_39">
+     <property name="sizeConstraint">
+      <enum>QLayout::SetFixedSize</enum>
+     </property>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_southBoundLatitude">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Sul</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignHCenter|Qt::AlignTop</set>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="10" column="3">
+    <layout class="QGridLayout" name="gridLayout_38">
+     <property name="sizeConstraint">
+      <enum>QLayout::SetFixedSize</enum>
+     </property>
+     <item row="0" column="0">
+      <widget class="QLineEdit" name="lineEdit_southBoundLatitude">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="cursor">
+        <cursorShape>BlankCursor</cursorShape>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+       <property name="readOnly">
+        <bool>true</bool>
+       </property>
+       <property name="placeholderText">
+        <string/>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="9" column="2">
+    <layout class="QGridLayout" name="gridLayout_37">
+     <property name="sizeConstraint">
+      <enum>QLayout::SetFixedSize</enum>
+     </property>
+     <item row="0" column="0">
+      <widget class="QLineEdit" name="lineEdit_eastBoundLongitude">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="cursor">
+        <cursorShape>BlankCursor</cursorShape>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+       <property name="readOnly">
+        <bool>true</bool>
+       </property>
+       <property name="placeholderText">
+        <string/>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="8" column="2">
+    <layout class="QGridLayout" name="gridLayout_36">
+     <property name="sizeConstraint">
+      <enum>QLayout::SetFixedSize</enum>
+     </property>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_label_label_eastBoundLongitude">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Leste</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignBottom|Qt::AlignHCenter</set>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="8" column="3">
+    <layout class="QGridLayout" name="gridLayout_35">
+     <property name="sizeConstraint">
+      <enum>QLayout::SetFixedSize</enum>
+     </property>
+     <item row="0" column="0">
+      <widget class="QLineEdit" name="lineEdit_northBoundLatitude">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="cursor">
+        <cursorShape>BlankCursor</cursorShape>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+       <property name="readOnly">
+        <bool>true</bool>
+       </property>
+       <property name="placeholderText">
+        <string/>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="9" column="4">
+    <layout class="QGridLayout" name="gridLayout_40">
+     <property name="sizeConstraint">
+      <enum>QLayout::SetFixedSize</enum>
+     </property>
+     <item row="0" column="0">
+      <widget class="QLineEdit" name="lineEdit_westBoundLongitude">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="cursor">
+        <cursorShape>BlankCursor</cursorShape>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+       <property name="readOnly">
+        <bool>true</bool>
+       </property>
+       <property name="placeholderText">
+        <string/>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="8" column="4">
+    <layout class="QGridLayout" name="gridLayout_41">
+     <property name="sizeConstraint">
+      <enum>QLayout::SetFixedSize</enum>
+     </property>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_westBoundLongitude">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Oeste</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignBottom|Qt::AlignHCenter</set>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="7" column="3">
+    <layout class="QGridLayout" name="gridLayout_34">
+     <property name="sizeConstraint">
+      <enum>QLayout::SetMinimumSize</enum>
+     </property>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_northBoundLatitude">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Norte</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignBottom|Qt::AlignHCenter</set>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
  </widget>
  <tabstops>
   <tabstop>lineEdit_title</tabstop>
@@ -1083,14 +1380,14 @@
   <tabstop>comboBox_contact_presets</tabstop>
   <tabstop>lineEdit_contact_individualName</tabstop>
   <tabstop>lineEdit_contact_organisationName</tabstop>
-  <tabstop>lineEdit_contact_positionName</tabstop>
   <tabstop>lineEdit_contact_phone</tabstop>
+  <tabstop>lineEdit_contact_positionName</tabstop>
   <tabstop>lineEdit_contact_deliveryPoint</tabstop>
   <tabstop>lineEdit_contact_city</tabstop>
   <tabstop>comboBox_contact_administrativeArea</tabstop>
   <tabstop>lineEdit_contact_postalCode</tabstop>
-  <tabstop>lineEdit_contact_country</tabstop>
   <tabstop>lineEdit_contact_email</tabstop>
+  <tabstop>lineEdit_contact_country</tabstop>
   <tabstop>comboBox_contact_role</tabstop>
   <tabstop>lineEdit_MD_Keywords</tabstop>
   <tabstop>comboBox_MD_SpatialRepresentationTypeCode</tabstop>
@@ -1098,15 +1395,13 @@
   <tabstop>comboBox_LanguageCode</tabstop>
   <tabstop>comboBox_characterSet</tabstop>
   <tabstop>comboBox_topicCategory</tabstop>
-  <tabstop>lineEdit_northBoundLatitude</tabstop>
-  <tabstop>lineEdit_eastBoundLongitude</tabstop>
-  <tabstop>lineEdit_westBoundLongitude</tabstop>
-  <tabstop>lineEdit_southBoundLatitude</tabstop>
   <tabstop>comboBox_hierarchyLevel</tabstop>
   <tabstop>dateTimeEdit_dateStamp</tabstop>
-  <tabstop>btn_exp_geo</tabstop>
-  <tabstop>btn_exp_xml</tabstop>
-  <tabstop>btn_salvar</tabstop>
+  <tabstop>lineEdit_eastBoundLongitude</tabstop>
+  <tabstop>lineEdit_northBoundLatitude</tabstop>
+  <tabstop>lineEdit_southBoundLatitude</tabstop>
+  <tabstop>lineEdit_westBoundLongitude</tabstop>
+  <tabstop>textBrowser</tabstop>
  </tabstops>
  <resources/>
  <connections/>
