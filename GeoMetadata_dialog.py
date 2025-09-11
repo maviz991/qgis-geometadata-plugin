@@ -262,7 +262,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
             ('Altimetria, Batimetria ou Topografia', 'elevation'),
             ('Informação GeoCientífica', 'geoscientificInformation'),
             ('Saúde', 'health'),
-            ('Mapas de base, Coberturas Aéreas, imagens de Satélite', 'imageryBaseMapsEarthCover'),
+            ('Mapas, Coberturas Aéreas, imagens de Satélite', 'imageryBaseMapsEarthCover'),
             ('Informação Militar', 'intelligenceMilitary'),
             ('Águas Interiores', 'inlandWaters'),
             ('Localização', 'location'),
