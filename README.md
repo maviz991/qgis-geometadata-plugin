@@ -2,7 +2,7 @@
 
  # GeoMetadata - Plugin de Metadados para QGIS
 
-![Logo do Plugin](logo.png) | ![Logo do Plugin](icon.png)
+![Logo do Plugin](icon.png)
 
 Um plugin para o QGIS desenhado para simplificar a criação e publicação de metadados no padrão MGB 2.0, com integração direta com o catálogo de metadados Geoportal - Geohah|CDHU (GeoNetwork).
 
@@ -39,5 +39,6 @@ Um plugin para o QGIS desenhado para simplificar a criação e publicação de m
 ## Licença
 
 Este projeto é licenciado sob a licença GPL 2.0.
+
 
 
