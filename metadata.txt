@@ -1,39 +1,24 @@
-# This file contains metadata for your plugin.
-
 [general]
-# --- Informações Principais ---
-name=GeoMetadata
+name=GeoMetadata|CDHU
 qgisMinimumVersion=3.10
 qgisMaximumVersion=3.99
 description=Plugin para criação e publicação de metadados no padrão MGB 2.0, com integração direta ao Geoportal Geohab|CDHU.
-about=Este plugin simplifica o fluxo de trabalho de metadados, permitindo o preenchimento de um formulário, salvamento local e publicação direta no catálogo GeoNetwork.
-author=Matheus Aviz
+about=Este plugin simplifica o fluxo de trabalho de metadados, permitindo o preenchimento de um formulário, salvamento local e publicação direta no catálogo (GeoNetwork) do Geohab.
+version=0.0.9
+author=Matheus Aviz | CDHU
 email=mdaviz@apoiocdhu.sp.gov.br
-version=1.0.0
-
-# --- Links do Projeto ---
 tracker=https://github.com/maviz991/qgis-geometadata-plugin/issues
 repository=https://github.com/maviz991/qgis-geometadata-plugin
-
-# --- Ícone e Categoria ---
 icon=icon.png
 category=Web
-
-# --- Changelog (Log de Mudanças) ---
-changelog=
-Version 1.0.0 (2025-09-10)
-- Lançamento inicial do plugin GeoMetadata|CDHU!
-- Criação e edição de metadados no padrão MGB 2.0.
-- Preenchimento automático de título e BBOX.
-- Persistência de dados com a função "Salvar" (arquivos sidecar).
-- Exportação para arquivo XML.
-- Publicação direta no Geoportal Geohab|CDHU com autenticação.
-
-
-# --- Status do Plugin ---
-# Marcar como 'False' para um lançamento estável
+tags=metadata, mgb, geonetwork, geohab, cdhu, catalog, xml, qgis, plugin, publishing
+changelog=0.0.9 Pré-release (2025-09-10)
+    • Lançamento inicial do plugin GeoMetadata|CDHU
+    • Criação e edição de metadados no padrão MGB 2.0
+    • Preenchimento automático de título e BBOX
+    • Persistência de dados com a função "Salvar" (arquivos sidecar)
+    • Exportação para arquivo XML
+    • Publicação direta no Geoportal Geohab|CDHU com autenticação
 experimental=False
-# Manter como 'False' a menos que o plugin seja descontinuado
 deprecated=False
-# O plugin não é para o QGIS Server
 server=False
