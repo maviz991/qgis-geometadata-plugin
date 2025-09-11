@@ -159,7 +159,13 @@
     </rect>
    </property>
    <property name="toolTip">
-    <string>arquivo histórico (O recurso foi arquivado, não é mais atualizado, mas mantido para referência), concluído (O recurso foi produzido e todos os dados estão presentes), em andamento (O recurso está em processo de atualização ou coleta contínua), em desenvolvimento (O recurso está sendo criado, mas ainda não está completo ou disponível para uso geral), necessário (O recurso é necessário para um projeto ou atividade, mas ainda não foi produzido), obsoleto (O recurso foi substituído ou não é mais recomendado para uso), planejado (Existe a intenção de produzir o recurso no futuro).</string>
+    <string>• Arquivo histórico (O recurso foi arquivado, não é mais atualizado, mas mantido para referência).
+• Concluído (O recurso foi produzido e todos os dados estão presentes).
+• Em andamento (O recurso está em processo de atualização ou coleta contínua).
+• Em desenvolvimento (O recurso está sendo criado, mas ainda não está completo ou disponível para uso geral).
+• Necessário (O recurso é necessário para um projeto ou atividade, mas ainda não foi produzido).
+• Obsoleto (O recurso foi substituído ou não é mais recomendado para uso).
+• Planejado (Existe a intenção de produzir o recurso no futuro).</string>
    </property>
    <property name="placeholderText">
     <string>Selecione o status</string>
@@ -220,10 +226,11 @@
     </rect>
    </property>
    <property name="toolTip">
-    <string>Palavra tag para localizar a camada (Não pode conter palavra repetida do Título)</string>
+    <string>Palavra tag para localizar a camada.
+    (Não deve conter palavra repetida do Título)</string>
    </property>
    <property name="placeholderText">
-    <string>Palavra-chave 1, Palavra-chave 2, Palavra-chave 3...</string>
+    <string>Palavra-chave 1, Palavra-chave 2, Palavra-chave 3, [...]</string>
    </property>
   </widget>
   <widget class="QComboBox" name="comboBox_MD_SpatialRepresentationTypeCode">
@@ -236,12 +243,12 @@
     </rect>
    </property>
    <property name="toolTip">
-    <string>vetorial (Dados representados por coordenadas e geometrias de pontos, linhas e polígonos, como ruas, rios ou limites municipais).
-grade (Dados representados por uma matriz de células ou pixels, onde cada célula possui um valor, como imagens de satélite ou modelos de elevação).
-estereoscópico (Modelo tridimensional derivado de um par de imagens sobrepostas, usado para visualização 3D e extração de feições).
-malha triangular irregular (TIN) (Modelo de superfície 3D criado a partir de uma rede de triângulos não sobrepostos, geralmente para representar relevo).
-texto/tabela (Dados em formato de texto ou tabela, sem componente geométrica, como um relatório, documento ou uma planilha de censo).
-vídeo (Gravação de imagens em movimento que podem conter informações geográficas, como vídeos de drones com coordenadas).</string>
+    <string>• Vetorial (Dados representados por coordenadas e geometrias de pontos, linhas e polígonos, como ruas, rios ou limites municipais).
+• Grid ou Raster (Dados representados por uma matriz de células ou pixels, onde cada célula possui um valor, como imagens de satélite ou modelos de elevação).
+• Estereoscópico (Modelo tridimensional derivado de um par de imagens sobrepostas, usado para visualização 3D e extração de feições).
+• Malha triangular irregular (TIN) (Modelo de superfície 3D criado a partir de uma rede de triângulos não sobrepostos, geralmente para representar relevo).
+• Texto/tabela (Dados em formato de texto ou tabela, sem componente geométrica, como um relatório, documento ou uma planilha de censo).
+• Vídeo (Gravação de imagens em movimento que podem conter informações geográficas, como vídeos de drones com coordenadas).</string>
    </property>
    <property name="placeholderText">
     <string>Selecione o tipo</string>
@@ -347,7 +354,25 @@ vídeo (Gravação de imagens em movimento que podem conter informações geogr�
     </rect>
    </property>
    <property name="toolTip">
-    <string>imagens, mapas base e cobertura terrestre (Dados de mapas base, cobertura do solo e imagens, como ortofotos e imagens de satélite), planejamento e cadastro (Dados usados para o planejamento do uso da terra, como zoneamento e cadastro territorial), agricultura (Dados sobre criação de animais e/ou cultivo de plantas), biota (Dados sobre a flora e/ou fauna em seu ambiente natural, como ecossistemas e espécies), limites (Dados sobre descrições legais de terras e limites políticos ou administrativos), climatologia, meteorologia e atmosfera (Dados sobre processos e fenômenos da atmosfera, como clima e tempo), economia (Dados sobre atividades econômicas, condições e emprego), elevação (Dados sobre altitude acima ou abaixo do nível do mar, como relevo e curvas de nível), meio ambiente (Dados sobre recursos ambientais, proteção e conservação), informações geocientíficas (Dados pertencentes às geociências, como geologia, solos e sismologia), saúde (Dados sobre saúde, serviços de saúde e segurança humana), inteligência e militar (Dados sobre bases, estruturas e atividades militares), águas interiores (Dados sobre feições de águas continentais, como rios, lagos e bacias hidrográficas), localização (Dados sobre informações e serviços de posicionamento, como endereços e redes geodésicas), oceanos (Dados sobre feições e características de corpos de água salgada), sociedade (Dados sobre características da sociedade e cultura, como demografia e arqueologia), estruturas (Dados sobre construções feitas pelo homem, como prédios, pontes e barragens), transportes (Dados sobre meios para o transporte de pessoas e/ou mercadorias, como rodovias, ferrovias e aeroportos), serviços de utilidade pública e comunicação (Dados sobre sistemas de energia, água, esgoto e infraestruturas de comunicação).</string>
+    <string>• Imagens, mapas base e cobertura terrestre (Dados de mapas base, cobertura do solo e imagens, como ortofotos e imagens de satélite).
+• Planejamento e cadastro (Dados usados para o planejamento do uso da terra, como zoneamento e cadastro territorial).
+• Agricultura (Dados sobre criação de animais e/ou cultivo de plantas).
+• Biota (Dados sobre a flora e/ou fauna em seu ambiente natural, como ecossistemas e espécies).
+• Limites (Dados sobre descrições legais de terras e limites políticos ou administrativos).
+• Climatologia, meteorologia e atmosfera (Dados sobre processos e fenômenos da atmosfera, como clima e tempo).
+• Economia (Dados sobre atividades econômicas, condições e emprego).
+• Elevação (Dados sobre altitude acima ou abaixo do nível do mar, como relevo e curvas de nível).
+• Meio ambiente (Dados sobre recursos ambientais, proteção e conservação).
+• Informações geocientíficas (Dados pertencentes às geociências, como geologia, solos e sismologia).
+• Saúde (Dados sobre saúde, serviços de saúde e segurança humana).
+• Inteligência e militar (Dados sobre bases, estruturas e atividades militares).
+• Águas interiores (Dados sobre feições de águas continentais, como rios, lagos e bacias hidrográficas).
+• Localização (Dados sobre informações e serviços de posicionamento, como endereços e redes geodésicas).
+• Oceanos (Dados sobre feições e características de corpos de água salgada).
+• Sociedade (Dados sobre características da sociedade e cultura, como demografia e arqueologia).
+• Estruturas (Dados sobre construções feitas pelo homem, como prédios, pontes e barragens). 
+• Transportes (Dados sobre meios para o transporte de pessoas e/ou mercadorias, como rodovias, ferrovias e aeroportos).
+• Serviços de utilidade pública e comunicação (Dados sobre sistemas de energia, água, esgoto e infraestruturas de comunicação).</string>
    </property>
    <property name="placeholderText">
     <string>Selecione a categoria</string>
@@ -517,7 +542,21 @@ vídeo (Gravação de imagens em movimento que podem conter informações geogr�
     </rect>
    </property>
    <property name="toolTip">
-    <string>atributo (Elemento que descreve uma característica de uma feição, como o nome de um rio ou o número de habitantes de uma cidade), feição (Representação de um objeto ou fenômeno do mundo real em um mapa, como um ponto, linha ou polígono), conjunto de dados (Coleção organizada de dados, como um arquivo shapefile, uma imagem de satélite ou uma tabela), dado não geográfico (Dados tabulares ou textuais sem geometria própria, mas que podem ser relacionados a feições geográficas), dimensão (Eixo ou variável adicional em dados geoespaciais, como tempo, profundidade ou altitude), coleção (Agrupamento de recursos que podem ser descritos em conjunto, como uma série de mapas), modelo (Representação lógica, conceitual ou de aplicação que descreve a estrutura dos dados), serviço (Operação que provê acesso a dados ou funcionalidades geoespaciais, como um serviço de mapas WMS), sessão de campo (Informações sobre uma atividade de coleta de dados realizada em campo), software (Aplicação ou programa de computador usado para criar ou processar os dados), série (Conjunto de dados que compartilham uma mesma especificação de produto), tile (Divisão ou &quot;ladrilho&quot; de um conjunto de dados espaciais, usado para otimizar o desempenho e a visualização), tipo de atributo (Definição de uma propriedade de um tipo de feição, como o nome e o tipo de dado da coluna &quot;nome_da_rua&quot;), tipo de feição (Classe que define um conjunto de feições com características comuns, como a classe &quot;Hidrografia&quot; que agrupa todos os rios), tipo de propriedade (Descrição genérica de uma característica ou atributo de um recurso qualquer nos metadados).</string>
+    <string>• Atributo (Elemento que descreve uma característica de uma feição, como o nome de um rio ou o número de habitantes de uma cidade).
+• Feição (Representação de um objeto ou fenômeno do mundo real em um mapa, como um ponto, linha ou polígono).
+• Conjunto de dados (Coleção organizada de dados, como um arquivo shapefile, uma imagem de satélite ou uma tabela).
+• Dado não geográfico (Dados tabulares ou textuais sem geometria própria, mas que podem ser relacionados a feições geográficas).
+• Dimensão (Eixo ou variável adicional em dados geoespaciais, como tempo, profundidade ou altitude).
+• Coleção (Agrupamento de recursos que podem ser descritos em conjunto, como uma série de mapas).
+• Modelo (Representação lógica, conceitual ou de aplicação que descreve a estrutura dos dados).
+• Serviço (Operação que provê acesso a dados ou funcionalidades geoespaciais, como um serviço de mapas WMS).
+• Sessão de campo (Informações sobre uma atividade de coleta de dados realizada em campo).
+• Software (Aplicação ou programa de computador usado para criar ou processar os dados).
+• Série (Conjunto de dados que compartilham uma mesma especificação de produto).
+• Tile (Divisão ou &quot;ladrilho&quot; de um conjunto de dados espaciais, usado para otimizar o desempenho e a visualização).
+• Tipo de atributo (Definição de uma propriedade de um tipo de feição, como o nome e o tipo de dado da coluna &quot;nome_da_rua&quot;).
+• Tipo de feição (Classe que define um conjunto de feições com características comuns, como a classe &quot;Hidrografia&quot; que agrupa todos os rios).
+• Tipo de propriedade (Descrição genérica de uma característica ou atributo de um recurso qualquer nos metadados).</string>
    </property>
    <property name="placeholderText">
     <string>Selecione o tipo da camada</string>
@@ -957,7 +996,17 @@ vídeo (Gravação de imagens em movimento que podem conter informações geogr�
     </rect>
    </property>
    <property name="toolTip">
-    <string>autor (Parte que criou o recurso), custodiante (Parte com a responsabilidade pela guarda, manutenção e arquivamento dos dados), distribuidor (Parte que disponibiliza o recurso para os usuários), proprietário (Parte que detém os direitos legais sobre o recurso), provedor do recurso (Parte que fornece o recurso), investigador principal (Principal responsável pela pesquisa que gerou os dados), processador (Parte que realizou alguma etapa de processamento nos dados), autor/criador (Parte que desenvolveu o recurso, sinônimo de &quot;autor&quot;), ponto de contato (Parte a ser contatada para obter informações sobre o recurso), publicador (Parte que publicou o recurso, tornando-o acessível), usuário (Parte que utiliza o recurso).</string>
+    <string>• Autor (Parte que criou o recurso)
+• Custodiante (Parte com a responsabilidade pela guarda, manutenção e arquivamento dos dados).
+• Distribuidor (Parte que disponibiliza o recurso para os usuários).
+• Proprietário (Parte que detém os direitos legais sobre o recurso).
+• Provedor do recurso (Parte que fornece o recurso).
+• Investigador principal (Principal responsável pela pesquisa que gerou os dados).
+• Processador (Parte que realizou alguma etapa de processamento nos dados).
+• Criador (Parte que desenvolveu o recurso, sinônimo de &quot;autor&quot;).
+• Ponto de contato (Parte a ser contatada para obter informações sobre o recurso).
+• Publicador (Parte que publicou o recurso, tornando-o acessível).
+• Usuário (Parte que utiliza o recurso).</string>
    </property>
    <property name="placeholderText">
     <string>Selecione</string>
@@ -986,7 +1035,7 @@ vídeo (Gravação de imagens em movimento que podem conter informações geogr�
     </rect>
    </property>
    <property name="toolTip">
-    <string>Salve para continuar depois o preenchimento</string>
+    <string>Salve, para continuar o preenchimento mais tarde</string>
    </property>
    <property name="text">
     <string>Salvar</string>
@@ -1005,7 +1054,7 @@ vídeo (Gravação de imagens em movimento que podem conter informações geogr�
     <string/>
    </property>
    <property name="pixmap">
-    <pixmap>icons/logo.png</pixmap>
+    <pixmap>logo.png</pixmap>
    </property>
    <property name="alignment">
     <set>Qt::AlignCenter</set>
