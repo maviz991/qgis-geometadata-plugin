@@ -34,6 +34,14 @@ from . import xml_generator
 from . import xml_parser
 from .login_dialog import LoginDialog
 
+import pathlib
+from qgis.core import (
+    Qgis,
+    QgsCoordinateReferenceSystem,
+    QgsCoordinateTransform,
+    QgsProject
+)
+
 CONTATOS_PREDEFINIDOS = {
         'cdhu': {
             'uuid': 'b98c4847-4d5c-43e1-a5eb-bd0228f6903a',
@@ -146,13 +154,13 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         self.comboBox_contact_presets.currentIndexChanged.connect(self.on_contact_preset_changed)
 
 
-    # ------------------------------------- FUNÇÃO DE CONEXÃO DE BOTÃO ---------------------------------- #
+    # ------------------------------------- FUNÇÃO EXPORTAR XML ---------------------------------- #
     def exportar_to_xml(self):
         """Coleta dados, gera o XML e pede ao usuário para salvá-lo."""
         
-        metadata_dict = self.collect_data()
-        
         try:
+            metadata_dict = self.collect_data()
+            
             plugin_dir = os.path.dirname(__file__)
             template_path = os.path.join(plugin_dir, 'tamplate_mgb20.xml')
             
@@ -160,6 +168,8 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
             
             safe_title = metadata_dict.get('title', 'metadados').replace(' ', '_')
             suggested_filename = f"{safe_title}.xml"
+
+
 
             file_path, _ = QtWidgets.QFileDialog.getSaveFileName(
                 self, 
@@ -172,6 +182,12 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
                 with open(file_path, 'w', encoding='utf-8') as f:
                     f.write(xml_content)
                 
+                # --- MUDANÇA: Feedback Duplo (Pop-up + Barra do QGIS) ---
+                metadata_uri = pathlib.Path(file_path).as_uri()
+                success_text = (f"Pronto!<br><br>"
+                            f"Metadados salvos com sucesso em:.<br>"
+                            f'<a href="{metadata_uri}">{file_path}</a>')
+                self.show_message("Exportação Concluída", success_text)
                 self.iface.messageBar().pushMessage(
                     "Sucesso", 
                     f"Metadados salvos em: {file_path}", 
@@ -184,6 +200,9 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
             import traceback
             traceback.print_exc()
             
+            # --- MUDANÇA: Feedback Duplo (Pop-up + Barra do QGIS) ---
+            error_text = f"Ocorreu um erro ao gerar ou salvar o arquivo XML:<br><br>{e}"
+            self.show_message("Erro na Exportação", error_text, icon=QtWidgets.QMessageBox.Critical)
             self.iface.messageBar().pushMessage(
                 "Erro", 
                 f"Falha ao gerar XML: {e}", 
@@ -386,12 +405,28 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         # Preenche o TÍTULO com o nome da camada
         self.lineEdit_title.setText(layer.name())
         
-        # Preenche a BBOX (Extensão Geográfica)
-        extent = layer.extent()
-        self.lineEdit_westBoundLongitude.setText(f"{extent.xMinimum():.6f}")
-        self.lineEdit_eastBoundLongitude.setText(f"{extent.xMaximum():.6f}")
-        self.lineEdit_southBoundLatitude.setText(f"{extent.yMinimum():.6f}")
-        self.lineEdit_northBoundLatitude.setText(f"{extent.yMaximum():.6f}")
+        # 1. Pega a extensão e o CRS originais da camada
+        original_extent = layer.extent()
+        source_crs = layer.crs()
+        
+        # 2. Define o nosso CRS de destino: Geográficas WGS 84 (Padrão GeoNetwork)
+        target_crs = QgsCoordinateReferenceSystem("EPSG:4326")
+        
+        geographic_extent = original_extent
+
+        # 3. Verifica se a reprojeção é realmente necessária
+        if source_crs != target_crs:
+            print(f"Reprojetando a extensão de {source_crs.authid()} para {target_crs.authid()}")
+            # Cria o objeto de transformação
+            transform = QgsCoordinateTransform(source_crs, target_crs, QgsProject.instance())
+            # Executa a transformação na extensão
+            geographic_extent = transform.transform(original_extent)
+
+        # 4. Preenche os campos do formulário com a extensão em geográficas
+        self.lineEdit_westBoundLongitude.setText(f"{geographic_extent.xMinimum():.6f}")
+        self.lineEdit_eastBoundLongitude.setText(f"{geographic_extent.xMaximum():.6f}")
+        self.lineEdit_southBoundLatitude.setText(f"{geographic_extent.yMinimum():.6f}")
+        self.lineEdit_northBoundLatitude.setText(f"{geographic_extent.yMaximum():.6f}")
 
 
     # ------------------------------- FUNÇÃO DE COLETA PARA SAÍDA DE DADOS ------------------------------ #
@@ -450,6 +485,9 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         data['eastBoundLongitude'] = self.lineEdit_eastBoundLongitude.text()
         data['southBoundLatitude'] = self.lineEdit_southBoundLatitude.text()
         data['northBoundLatitude'] = self.lineEdit_northBoundLatitude.text()
+
+        #Combobox Preset selecionada (persistênte)
+        data['contact_preset_key'] = self.comboBox_contact_presets.currentData()
                 
         return data    
     
@@ -503,11 +541,10 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         if not layer:
             return None
 
-        # Usa layer.source(), que se mostrou compatível com o seu caso de uso do GPKG.
+        # Usar layer.source(), que se mostrou compatível com arquivos GPKG.
         source_path = layer.source()
 
         # --- LÓGICA DE MANIPULAÇÃO DE CAMINHO ---
-
         # Para fontes como GPKG, o caminho é 'C:/.../dados.gpkg|layername=minha_camada'.
         # A linha abaixo extrai apenas 'C:/.../dados.gpkg'.
         # A verificação de '|' garante que isso não afete caminhos de shapefile.
@@ -539,23 +576,31 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
     
 
 
-    # ----------------------------------------- FUNÇÃO SALVAR ------------------------------------------ #
+    # ------------------------------- FUNÇÃO SALVAR | 'Continuar depois' ------------------------------- #
     def salvar_metadados_sidecar(self):
         """
         Coleta os dados, gera o XML e o salva como um arquivo .xml 'sidecar'
         ao lado do arquivo da camada ativa.
         """
+        layer = self.iface.activeLayer()
+        if not layer:
+            return None
         try:
             # 1. Usa a função get_sidecar_metadata_path para obter o path.
             metadata_path = self.get_sidecar_metadata_path()
             
             # 2. Se a função retornou None, a camada não é adequada. Mostra um aviso e para.
             if not metadata_path:
+                warning_text = (f"A camada '{layer.name()}' não está salva no seu computador!<br><br>"
+                                f"A função 'Continuar depois' não pode salvar um metadado para você preencher mais tarde.<br><br>"
+                                f"SOLUÇÕES:<br>   • Use 'Exportar para XML' para salvar o metadado, mas desvinculado a camada atual.<br>    • Ou salve a camada '{layer.name()}' no seu computador.")
+                # Feedback Duplo (Pop-up + Barra do QGIS)
+                self.show_message("Não é possível salvar para 'Continuar depois'", warning_text, icon=QtWidgets.QMessageBox.Warning)
                 self.iface.messageBar().pushMessage(
                     "Aviso", 
-                    "A camada selecionada não é baseada em arquivo local. Tente: Selecionar uma camada, Exportar em '.gpkg' ou use 'Exportar para XML'| Metadados não foram salvos", 
+                    "Não é possível usar 'Salvar'. A camada não está salva no seu computador.", 
                     level=Qgis.Warning,
-                    duration=40
+                    duration=10
                 )
                 return
             
@@ -564,13 +609,21 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
             plugin_dir = os.path.dirname(__file__)
             template_path = os.path.join(plugin_dir, 'tamplate_mgb20.xml')
             xml_content = xml_generator.generate_xml_from_template(metadata_dict, template_path)
+            metadata_uri = pathlib.Path(metadata_path).as_uri()
+
             
             with open(metadata_path, 'w', encoding='utf-8') as f:
                 f.write(xml_content)
-                
+            
+            # --- MUDANÇA: Feedback Duplo (Pop-up + Barra do QGIS) ---
+            success_text = (f"Pronto!<br><br>"
+                            f"Metadados associados à camada '<b>{layer.name()}</b>'.<br>"
+                            f"O arquivo foi salvo no mesmo local da camada:<br>"
+                            f'<a href="{metadata_uri}">{metadata_path}</a>')
+            self.show_message("Metadados associado a camada corretamente!", success_text)
             self.iface.messageBar().pushMessage(
                 "Sucesso", 
-                f"Metadados salvos em: {metadata_path}", 
+                f"Pronto! Metadados associado a camada ativa<br>Metadados salvos em: {metadata_path}", 
                 level=Qgis.Success, 
                 duration=9
             )
@@ -579,16 +632,22 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
             print(f"Erro ao salvar arquivo de metadados sidecar: {e}")
             import traceback
             traceback.print_exc()
+            
+            # --- MUDANÇA: Feedback Duplo (Pop-up + Barra do QGIS) ---
+            error_text = f"Ocorreu um erro ao tentar salvar o arquivo de metadados:<br><br>{e}"
+            self.show_message("Erro ao Salvar", error_text, icon=QtWidgets.QMessageBox.Critical)
             self.iface.messageBar().pushMessage(
                 "Erro", 
                 f"Falha ao salvar metadados: {e}", 
                 level=Qgis.Critical
             )
 
-
     # --------------------------------------- FUNÇÃO CARREGAR XML -------------------------------------- #
     def populate_form_from_dict(self, data_dict):
-        """Preenche os widgets do formulário a partir de um dicionário."""
+        """
+        Preenche os widgets do formulário a partir de um dicionário e, ao final,
+        deduz qual preset de contato foi usado para ajustar o ComboBox.
+        """
         if not data_dict:
             return
 
@@ -596,7 +655,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         self.lineEdit_title.setText(data_dict.get('title', ''))
         edition_str = data_dict.get('edition', '1') 
         try:
-            edition_int = int(edition_str) #tratamento do campo edição (ainda não usado no template_mgb20.xml em uso hoje)
+            edition_int = int(edition_str) #tratamento do campo edição
             self.spinBox_edition.setValue(edition_int) 
         except (ValueError, TypeError):
             self.spinBox_edition.setValue(1)    # Se a conversão falhar, define um valor padrão seguro (ex: 1)
@@ -614,7 +673,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         self.lineEdit_contact_country.setText(data_dict.get('contact_country', ''))
         self.lineEdit_contact_email.setText(data_dict.get('contact_email', ''))   
 
-        # --- PREENCHE COMBOBOXES ---
+        # PREENCHE COMBOBOXES
         self.set_combobox_by_data(self.comboBox_status_codeListValue, data_dict.get('status_codeListValue'))
         self.set_combobox_by_data(self.comboBox_MD_SpatialRepresentationTypeCode, data_dict.get('MD_SpatialRepresentationTypeCode'))
         self.set_combobox_by_data(self.comboBox_LanguageCode, data_dict.get('LanguageCode'))
@@ -624,18 +683,62 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         self.set_combobox_by_data(self.comboBox_contact_administrativeArea, data_dict.get('contact_administrativeArea'))
         self.set_combobox_by_data(self.comboBox_contact_role, data_dict.get('contact_role'))
 
-        # --- PREENCHE BBOX ---
+        # PREENCHE BBOX
         self.lineEdit_westBoundLongitude.setText(data_dict.get('westBoundLongitude', ''))
         self.lineEdit_eastBoundLongitude.setText(data_dict.get('eastBoundLongitude', ''))
         self.lineEdit_southBoundLatitude.setText(data_dict.get('southBoundLatitude', ''))
         self.lineEdit_northBoundLatitude.setText(data_dict.get('northBoundLatitude', ''))
 
-        # --- PREENCHE DATAS (requer conversão de string para QDateTime) ---
+        # PREENCHE DATAS (requer conversão de string para QDateTime)
         date_creation_str = data_dict.get('date_creation')
         if date_creation_str:
-            self.dateTimeEdit_date_creation.setDateTime(QDateTime.fromString(date_creation_str, Qt.ISODate)) # importar QDateTime from PyQt5.QtCore
+            self.dateTimeEdit_date_creation.setDateTime(QDateTime.fromString(date_creation_str, Qt.ISODate))
             
         print("Formulário preenchido com dados de um Metadado existente.")
+        
+
+        # ETAPA 2: DEDUÇÃO DO PRESET DE CONTATO (LÓGICA ADICIONADA)
+
+        
+        found_preset_key = None
+        # Itera sobre cada preset que conhecemos
+        for preset_key, preset_data in CONTATOS_PREDEFINIDOS.items():
+            if preset_key == 'nenhum': 
+                continue
+
+            # Compara alguns campos-chave para ver se há correspondência
+            if (self.lineEdit_contact_individualName.text() == preset_data.get('contact_individualName') and
+                self.lineEdit_contact_organisationName.text() == preset_data.get('contact_organisationName') and
+                self.lineEdit_contact_email.text() == preset_data.get('contact_email')):
+                
+                found_preset_key = preset_key
+                print(f"Dados de contato carregados correspondem ao preset: '{found_preset_key}'")
+                break
+
+        # Define a seleção do ComboBox de presets com base no que foi encontrado
+        if found_preset_key:
+            self.set_combobox_by_data(self.comboBox_contact_presets, found_preset_key)
+        else:
+            print("Dados de contato não correspondem a nenhum preset conhecido (editado manualmente).")
+            self.set_combobox_by_data(self.comboBox_contact_presets, 'nenhum')
+
+
+    # --------------------------------- FUNÇÃO MSG ALERTAS ---------------------------------- #
+    def show_message(self, title, text, icon=QtWidgets.QMessageBox.Information):
+        """
+        Exibe uma janela de diálogo (MessageBox) padronizada para o usuário.
+
+        :param title: O título da janela.
+        :param text: O texto principal da mensagem.
+        :param icon: O ícone a ser exibido (Information, Warning, Critical).
+        """
+        msg_box = QtWidgets.QMessageBox(self)
+        msg_box.setIcon(icon)
+        msg_box.setTextFormat(Qt.RichText)
+        msg_box.setText(text)
+        msg_box.setWindowTitle(title)
+        msg_box.setStandardButtons(QtWidgets.QMessageBox.Ok)
+        msg_box.exec_()
         
 
     # --------------------------------- FUNÇÃO CARREGAR PARA O GEOHAB ---------------------------------- #
@@ -655,10 +758,11 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
                 
                 # Validação
                 if not USER or not PASSWORD:
-                    self.iface.messageBar().pushMessage("Aviso", "Usuário e senha são obrigatórios.", level=Qgis.Warning)
+                    # MUDANÇA: Usa MessageBox
+                    self.show_message("Aviso", "Usuário e senha são obrigatórios.", icon=QtWidgets.QMessageBox.Warning)
                     return
 
-                # --- A LÓGICA DE EXPORTAÇÃO COMEÇA AQUI ---
+                # LÓGICA DE EXPORTAÇÃO
                 # --- ETAPA 1: PREPARAÇÃO ---
                 print("Coletando dados e gerando XML...")
                 metadata_dict = self.collect_data()
@@ -667,11 +771,12 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
                 xml_payload = xml_generator.generate_xml_from_template(metadata_dict, template_path)
                 
                 # --- ETAPA 2: CONFIGURAÇÃO ---
-                LOGIN_URL = "https://geo.cdhu.sp.gov.br/login"
-                GEONETWORK_CATALOG_URL = "https://geo.cdhu.sp.gov.br/geonetwork/srv/eng/catalog.search"
-                RECORDS_URL = "https://geo.cdhu.sp.gov.br/geonetwork/srv/api/records"
-                ORIGIN_URL = "https://geo.cdhu.sp.gov.br"
+                LOGIN_URL = "https://geohab.cdhu.sp.gov.br/login"
+                GEONETWORK_CATALOG_URL = "https://geohab.cdhu.sp.gov.br/geonetwork/srv/eng/catalog.search"
+                RECORDS_URL = "https://geohab.cdhu.sp.gov.br/geonetwork/srv/api/records"
+                ORIGIN_URL = "https://geohab.cdhu.sp.gov.br"
                 
+                # Mensagem de progresso na barra
                 self.iface.messageBar().pushMessage("Info", f"Autenticando como {USER}...", level=Qgis.Info)
 
                 # --- ETAPA 3: LOGIN SIMULADO ---
@@ -685,8 +790,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
                     login_data = {'username': USER, 'password': PASSWORD}
                     login_headers = {'Referer': LOGIN_URL, 'Origin': ORIGIN_URL}
                     
-                    #print(f"Enviando POST de login para: {LOGIN_URL}")
-                    login_response = session.post(LOGIN_URL, data=login_data, headers=login_headers, verify=False) #SSL cetificado atual da CDHU estar dando falha
+                    login_response = session.post(LOGIN_URL, data=login_data, headers=login_headers, verify=False) # verify: SSL cetificado atual da Goehab|CDHU estar dando falha
 
                     # Verificação de autenticação
                     print(f"Status da resposta de login: {login_response.status_code}")
@@ -752,17 +856,12 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
                     if not csrf_token:
                         print("Aviso: Cookie XSRF-TOKEN não encontrado. Tentando prosseguir sem ele.")
                     
-                    gn_headers = {
-                        'Accept': 'application/json',
-                        'Referer': GEONETWORK_CATALOG_URL
-                    }
-                    
-                    # Adiciona o token CSRF apenas se encontrado
+                    gn_headers = {'Accept': 'application/json', 'Referer': GEONETWORK_CATALOG_URL}
                     if csrf_token:
                         gn_headers['X-XSRF-TOKEN'] = csrf_token
                     
                     params = {'publishToAll': 'false'} #Default para tornar o metadado não publicado - a publicação é feita no console do GN
-                    files_payload = {'file': ('metadata.xml', xml_payload.encode('utf-8'), 'application/xml')} #A API do GN não aceita xml bruto, precisa "embrulhar" em arquivo antes de enviar
+                    files_payload = {'file': ('metadata.xml', xml_payload.encode('utf-8'), 'application/xml')} #A API do GN não aceita xml bruto, precisa "embrulhar" em um arquivo antes de enviar
                     
                     print("Enviando metadados para o GeoNetwork...")
                     gn_response = session.post(
@@ -777,12 +876,21 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
                         try:
                             response_data = gn_response.json()
                             uuid_criado = response_data.get('uuid', 'N/A')
-                            self.iface.messageBar().pushMessage("SUCESSO!", f"Metadados publicados com sucesso no Geohab! Nome do metadado: {metadata_dict['title']} | UUID: {uuid_criado}", level=Qgis.Success, duration=15)
+                            success_text = (f"Metadados publicados com sucesso no Geohab!<br><br>"
+                                            f"Nome do metadado: {metadata_dict['title']}<br>"
+                                            f"UUID: {uuid_criado}<br><br>"
+                                            f'Acesse o <a href="https://geo.cdhu.sp.gov.br">Geohab</a> e finzalize a publicação do metadado!')
+                            # MUDANÇA - pedido Daniel
+                            self.show_message("Sucesso!", success_text)
                         except:
-                            self.iface.messageBar().pushMessage("SUCESSO!", "Metadados publicados com sucesso no Geohab! Nome do metadado: {metadata_dict['title']} | UUID: {uuid_criado}", level=Qgis.Success, duration=15)
+                            success_text = f"Metadados publicados com sucesso no Geohab!<br><br>Nome do metadado: {metadata_dict['title']}"
+                            # MUDANÇA - pedido Daniel
+                            self.show_message("Sucesso!", success_text)
                     else:
                         print(f"ERRO do GeoNetwork: {gn_response.status_code} - {gn_response.text}")
-                        self.iface.messageBar().pushMessage("Erro", f"Falha no envio (Status: {gn_response.status_code}). Verifique as suas credenciais ou você não tem permissão | Veja o log do console Python.", level=Qgis.Critical, duration=10)
+                        error_text = f"Falha no envio (Status: {gn_response.status_code}).<br><br>Verifique as suas credenciais ou você não tem permissão.<br>Veja o log do console Python."
+                        # MUDANÇA - pedido Daniel
+                        self.show_message("Erro no Envio", error_text, icon=QtWidgets.QMessageBox.Critical)
             
             else:
                 # O usuário clicou em "Cancel"
@@ -791,11 +899,12 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
 
         except requests.exceptions.RequestException as e:
             print(f"ERRO DE REDE: {e}")
-            self.iface.messageBar().pushMessage("Erro de Rede", f"Não foi possível conectar: {e}", level=Qgis.Critical)
+            # MUDANÇA
+            self.show_message("Erro de Rede", f"Não foi possível conectar:<br><br>{e}", icon=QtWidgets.QMessageBox.Critical)
 
         except Exception as e:
             print(f"ERRO INESPERADO: {e}")
             import traceback
             traceback.print_exc()
-            self.iface.messageBar().pushMessage("Erro Inesperado", f"Ocorreu um erro no plugin: {e}", level=Qgis.Critical)
-
+            # MUDANÇA - pedido Daniel
+            self.show_message("Erro Inesperado", f"Ocorreu um erro no plugin:<br><br>{e}", icon=QtWidgets.QMessageBox.Critical)
