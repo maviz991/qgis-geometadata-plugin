@@ -1,4 +1,4 @@
-# Login no Geohab
+# Login no Geohab - Para Plugin QGIS
 
 O processo de autenticação no **Geo/CDHU** segue o padrão **form-based login** (login por formulário HTTP).
 
