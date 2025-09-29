@@ -1,4 +1,4 @@
-# 🔐 Login no geo.cdhu.sp.gov.br
+# Login no Geohab
 
 O processo de autenticação no **Geo/CDHU** segue o padrão **form-based login** (login por formulário HTTP).
 
