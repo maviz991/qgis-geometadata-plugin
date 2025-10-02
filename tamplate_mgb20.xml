@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<gmd:MD_Metadata xmlns:gmd="http://www.isotc211.org/2005/gmd" xmlns:gco="http://www.isotc211.org/2005/gco" xmlns:srv="http://www.isotc211.org/2005/srv" xmlns:gmx="http://www.isotc211.org/2005/gmx" xmlns:gts="http://www.isotc211.org/2005/gts" xmlns:gsr="http://www.isotc211.org/2005/gsr" xmlns:gmi="http://www.isotc211.org/2005/gmi" xmlns:gml="http://www.opengis.net/gml/3.2" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.isotc211.org/2005/gmd http://schemas.opengis.net/csw/2.0.2/profiles/apiso/1.0.0/apiso.xsd">
+<gmd:MD_Metadata xmlns:gmd="http://www.isotc211.org/2005/gmd" 
+                 xmlns:gco="http://www.isotc211.org/2005/gco" 
+                 xmlns:srv="http://www.isotc211.org/2005/srv" 
+                 xmlns:gmx="http://www.isotc211.org/2005/gmx" 
+                 xmlns:gts="http://www.isotc211.org/2005/gts" 
+                 xmlns:gsr="http://www.isotc211.org/2005/gsr" 
+                 xmlns:gmi="http://www.isotc211.org/2005/gmi" 
+                 xmlns:xlink="http://www.w3.org/1999/xlink" 
+                 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+xsi:schemaLocation="http://www.isotc211.org/2005/gmd http://schemas.opengis.net/csw/2.0.2/profiles/apiso/1.0.0/apiso.xsd">
   <gmd:fileIdentifier>
     <gco:CharacterString></gco:CharacterString>
   </gmd:fileIdentifier>
@@ -12,7 +21,7 @@
   <gmd:hierarchyLevel>
     <gmd:MD_ScopeCode codeList="http://standards.iso.org/iso/19139/resources/gmxCodelists.xml#MD_ScopeCode" codeListValue="dataset" />
   </gmd:hierarchyLevel>
-  <gmd:contact>
+  <gmd:contact xlink:href="local://srv/api/registries/entries/{uuid}?lang=por&amp;process=gmd:role/gmd:CI_RoleCode/@codeListValue~{contact_role}&amp;schema=iso19139">
     <gmd:CI_ResponsibleParty uuid="">
       <gmd:individualName>
         <gco:CharacterString></gco:CharacterString>
@@ -31,9 +40,6 @@
           </gmd:phone>
           <gmd:address>
             <gmd:CI_Address>
-              <gmd:deliveryPoint>
-                <gco:CharacterString></gco:CharacterString>
-              </gmd:deliveryPoint>
               <gmd:deliveryPoint>
                 <gco:CharacterString></gco:CharacterString>
               </gmd:deliveryPoint>
@@ -61,7 +67,7 @@
       </gmd:role>
     </gmd:CI_ResponsibleParty>
   </gmd:contact>
-  <gmd:contact>
+  <gmd:contact xlink:href="local://srv/api/registries/entries/{uuid}?lang=por&amp;process=gmd:role/gmd:CI_RoleCode/@codeListValue~{contact_role}&amp;schema=iso19139">
     <gmd:CI_ResponsibleParty uuid="">
       <gmd:individualName>
         <gco:CharacterString></gco:CharacterString>
@@ -141,7 +147,7 @@
       <gmd:status>
         <gmd:MD_ProgressCode codeList="http://standards.iso.org/iso/19139/resources/gmxCodelists.xml#MD_ProgressCode" codeListValue="underDevelopment" />
       </gmd:status>
-      <gmd:pointOfContact>
+      <gmd:pointOfContact xlink:href="local://srv/api/registries/entries/{uuid}?lang=por&amp;process=gmd:role/gmd:CI_RoleCode/@codeListValue~{contact_role}&amp;schema=iso19139">
         <gmd:CI_ResponsibleParty uuid="">
           <gmd:individualName>
             <gco:CharacterString></gco:CharacterString>
@@ -160,9 +166,6 @@
               </gmd:phone>
               <gmd:address>
                 <gmd:CI_Address>
-                  <gmd:deliveryPoint>
-                    <gco:CharacterString></gco:CharacterString>
-                  </gmd:deliveryPoint>
                   <gmd:deliveryPoint>
                     <gco:CharacterString></gco:CharacterString>
                   </gmd:deliveryPoint>
@@ -190,7 +193,7 @@
           </gmd:role>
         </gmd:CI_ResponsibleParty>
       </gmd:pointOfContact>
-      <gmd:pointOfContact>
+      <gmd:pointOfContact xlink:href="local://srv/api/registries/entries/{uuid}?lang=por&amp;process=gmd:role/gmd:CI_RoleCode/@codeListValue~{contact_role}&amp;schema=iso19139">
         <gmd:CI_ResponsibleParty uuid="">
           <gmd:individualName>
             <gco:CharacterString></gco:CharacterString>

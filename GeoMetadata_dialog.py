@@ -33,7 +33,6 @@ from qgis.core import Qgis
 from . import xml_generator
 from . import xml_parser
 from .login_dialog import LoginDialog
-
 import pathlib
 from qgis.core import (
     Qgis,
@@ -63,7 +62,7 @@ CONTATOS_PREDEFINIDOS = {
             'contact_organisationName': 'Diretoria de Planejamento e Desenvolvimento Urbano',
             'contact_positionName': '/',
             'contact_phone': '+55 11 2505-2553',
-            'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé, 9º andar',
+            'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé, 8º andar - Bloco 2',
             'contact_city': 'São Paulo',
             'contact_postalCode': '01014-930',
             'contact_country': 'Brasil',
@@ -74,7 +73,7 @@ CONTATOS_PREDEFINIDOS = {
         'ssaru': {
             'uuid': '648b9e9f-5b88-4e50-8cce-efa78199515e',
             'contact_individualName': 'SSARU',
-            'contact_organisationName': 'Superintendecia Social de Ação em Recuperação Urbana',
+            'contact_organisationName': 'Superintendência Social de Ação em Recuperação Urbana',
             'contact_positionName': '/',
             'contact_phone': '+55 11 2505-2352',
             'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé, 7º andar',
@@ -88,10 +87,10 @@ CONTATOS_PREDEFINIDOS = {
         'terras': {
             'uuid': '14e0f9a4-81a6-430e-9165-8af35481d8ac',
             'contact_individualName': 'TERRAS',
-            'contact_organisationName': 'Superintendecia de Terras',
+            'contact_organisationName': 'Superintendência de Terras',
             'contact_positionName': '/',
             'contact_phone': '+55 11 2505-0000',
-            'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé, 6º andar',
+            'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé, 6º andar - Bloco 5',
             'contact_city': 'São Paulo',
             'contact_postalCode': '01014-930',
             'contact_country': 'Brasil',
@@ -298,20 +297,20 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
             self.comboBox_topicCategory.addItem(text, data)
 
         hierarchy_options = [             
-            ('Atributo', 'attribute'),
-            ('Feição', 'feature'),
+            #('Atributo', 'attribute'),
+            #('Feição', 'feature'),
             ('Conjunto de dados', 'dataset'),
-            ('Conjunto de dados não-geográficos', 'nonGeographicDataset'),
-            ('Coleção', 'collectionSession'),
-            ('Modelo', 'model'),
-            ('Serviço', 'service'),
-            ('Seção de coleção', 'fieldSession'),
-            ('Software', 'software'),
-            ('Série', 'series'),
-            ('Tile', 'tile'),
-            ('Tipo de Atributo', 'attributeType'),
-            ('Tipo de Feição', 'featureType'),
-            ('Tipo de Propriedade', 'propertyType')
+            #('Conjunto de dados não-geográficos', 'nonGeographicDataset'),
+            #('Coleção', 'collectionSession'),
+            #('Modelo', 'model'),
+            #('Serviço', 'service'),
+            #('Seção de coleção', 'fieldSession'),
+            #('Software', 'software'),
+            #('Série', 'series'),
+            #('Tile', 'tile'),
+            #('Tipo de Atributo', 'attributeType'),
+            #('Tipo de Feição', 'featureType'),
+            #('Tipo de Propriedade', 'propertyType')
         ]
         
         self.comboBox_hierarchyLevel.clear()
@@ -609,6 +608,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
             plugin_dir = os.path.dirname(__file__)
             template_path = os.path.join(plugin_dir, 'tamplate_mgb20.xml')
             xml_content = xml_generator.generate_xml_from_template(metadata_dict, template_path)
+
             metadata_uri = pathlib.Path(metadata_path).as_uri()
 
             
@@ -771,10 +771,10 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
                 xml_payload = xml_generator.generate_xml_from_template(metadata_dict, template_path)
                 
                 # --- ETAPA 2: CONFIGURAÇÃO ---
-                LOGIN_URL = "https://geohab.cdhu.sp.gov.br/login"
-                GEONETWORK_CATALOG_URL = "https://geohab.cdhu.sp.gov.br/geonetwork/srv/eng/catalog.search"
-                RECORDS_URL = "https://geohab.cdhu.sp.gov.br/geonetwork/srv/api/records"
-                ORIGIN_URL = "https://geohab.cdhu.sp.gov.br"
+                LOGIN_URL = "https://geo.cdhu.sp.gov.br/login"
+                GEONETWORK_CATALOG_URL = "https://geo.cdhu.sp.gov.br/geonetwork/srv/eng/catalog.search"
+                RECORDS_URL = "https://geo.cdhu.sp.gov.br/geonetwork/srv/api/records"
+                ORIGIN_URL = "https://geo.cdhu.sp.gov.br"
                 
                 # Mensagem de progresso na barra
                 self.iface.messageBar().pushMessage("Info", f"Autenticando como {USER}...", level=Qgis.Info)
@@ -844,7 +844,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
                     for cookie in session.cookies:
                         if cookie.name == 'XSRF-TOKEN': # Geohab gera token para o Gateway e para o GeoNetwork
                             csrf_token = cookie.value
-                            #print(f"Token CSRF encontrado: {csrf_token[:20]}...")
+                            print(f"Token CSRF encontrado: {csrf_token[:20]}...")
                             break
                     
                     # Se não encontrou o token no caminho específico, tenta buscar genericamente
@@ -879,7 +879,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
                             success_text = (f"Metadados publicados com sucesso no Geohab!<br><br>"
                                             f"Nome do metadado: {metadata_dict['title']}<br>"
                                             f"UUID: {uuid_criado}<br><br>"
-                                            f'Acesse o <a href="https://geo.cdhu.sp.gov.br">Geohab</a> e finzalize a publicação do metadado!')
+                                            f'Acesse o <a href="https://geohab.cdhu.sp.gov.br/geonetwork/srv/por/catalog.edit#/board">Geohab</a> e finzalize a publicação do metadado!')
                             # MUDANÇA - pedido Daniel
                             self.show_message("Sucesso!", success_text)
                         except:
