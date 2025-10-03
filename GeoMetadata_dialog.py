@@ -492,6 +492,8 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
 
         #Combobox Preset selecionada (persistênte)
         data['contact_preset_key'] = self.comboBox_contact_presets.currentData()
+
+        data.update(self.distribution_data)
                 
         return data    
     
@@ -503,7 +505,6 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
             if combo_box.itemData(index) == data_value:
                 combo_box.setCurrentIndex(index)
                 return
-    
 
     def on_contact_preset_changed(self):
         """Preenche os campos de contato com base no preset selecionado."""
@@ -650,24 +651,25 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
     # --------------------------------------- FUNÇÃO CARREGAR XML -------------------------------------- #
     def populate_form_from_dict(self, data_dict):
         """
-        Preenche os widgets do formulário a partir de um dicionário e, ao final,
-        deduz qual preset de contato foi usado para ajustar o ComboBox.
+        Preenche os widgets do formulário a partir de um dicionário, armazena os dados
+        de distribuição e deduz o preset de contato.
         """
         if not data_dict:
             return
 
-        # --- PREENCHE CAMPOS DE TEXTO ---
+        # --- ETAPA 1: PREENCHE OS CAMPOS DO FORMULÁRIO PRINCIPAL ---
         self.lineEdit_title.setText(data_dict.get('title', ''))
-        edition_str = data_dict.get('edition', '1') 
+        edition_str = data_dict.get('edition', '1')
         try:
-            edition_int = int(edition_str) #tratamento do campo edição
-            self.spinBox_edition.setValue(edition_int) 
+            self.spinBox_edition.setValue(int(edition_str) if edition_str else 1)
         except (ValueError, TypeError):
-            self.spinBox_edition.setValue(1)    # Se a conversão falhar, define um valor padrão seguro (ex: 1)
+            self.spinBox_edition.setValue(1)
 
         self.textEdit_abstract.setText(data_dict.get('abstract', ''))
         self.lineEdit_MD_Keywords.setText(data_dict.get('MD_Keywords', ''))
         self.lineEdit_textEdit_spatialResolution_denominator.setText(data_dict.get('spatialResolution_denominator', ''))
+        
+        # Preenche os campos de contato
         self.lineEdit_contact_individualName.setText(data_dict.get('contact_individualName', ''))
         self.lineEdit_contact_organisationName.setText(data_dict.get('contact_organisationName', ''))
         self.lineEdit_contact_positionName.setText(data_dict.get('contact_positionName', ''))
@@ -676,9 +678,9 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         self.lineEdit_contact_city.setText(data_dict.get('contact_city', ''))
         self.lineEdit_contact_postalCode.setText(data_dict.get('contact_postalCode', ''))
         self.lineEdit_contact_country.setText(data_dict.get('contact_country', ''))
-        self.lineEdit_contact_email.setText(data_dict.get('contact_email', ''))   
+        self.lineEdit_contact_email.setText(data_dict.get('contact_email', ''))
 
-        # PREENCHE COMBOBOXES
+        # Preenche ComboBoxes
         self.set_combobox_by_data(self.comboBox_status_codeListValue, data_dict.get('status_codeListValue'))
         self.set_combobox_by_data(self.comboBox_MD_SpatialRepresentationTypeCode, data_dict.get('MD_SpatialRepresentationTypeCode'))
         self.set_combobox_by_data(self.comboBox_LanguageCode, data_dict.get('LanguageCode'))
@@ -688,44 +690,54 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         self.set_combobox_by_data(self.comboBox_contact_administrativeArea, data_dict.get('contact_administrativeArea'))
         self.set_combobox_by_data(self.comboBox_contact_role, data_dict.get('contact_role'))
 
-        # PREENCHE BBOX
+        # Preenche BBOX
         self.lineEdit_westBoundLongitude.setText(data_dict.get('westBoundLongitude', ''))
         self.lineEdit_eastBoundLongitude.setText(data_dict.get('eastBoundLongitude', ''))
         self.lineEdit_southBoundLatitude.setText(data_dict.get('southBoundLatitude', ''))
         self.lineEdit_northBoundLatitude.setText(data_dict.get('northBoundLatitude', ''))
 
-        # PREENCHE DATAS (requer conversão de string para QDateTime)
+        # Preenche Datas
         date_creation_str = data_dict.get('date_creation')
         if date_creation_str:
-            self.dateTimeEdit_date_creation.setDateTime(QDateTime.fromString(date_creation_str, Qt.ISODate))
-            
-        print("Formulário preenchido com dados de um Metadado existente.")
-        
+            try:
+                dt = QDateTime.fromString(date_creation_str, Qt.ISODateWithMs)
+                if not dt.isValid():
+                    dt = QDateTime.fromString(date_creation_str, Qt.ISODate)
+                self.dateTimeEdit_date_creation.setDateTime(dt)
+            except Exception as e:
+                print(f"Erro ao converter data: {e}")
 
-        # ETAPA 2: DEDUÇÃO DO PRESET DE CONTATO (LÓGICA ADICIONADA)
-
+        # --- ETAPA 2: RESTAURAR DADOS DE DISTRIBUIÇÃO ---
+        dist_keys = ['thumbnail_url', 'geoserver_base_url', 'online_protocol', 'geoserver_layer_name', 'geoserver_layer_title']
+        self.distribution_data = {key: data_dict.get(key) for key in dist_keys}
         
+        layer_name = self.distribution_data.get('geoserver_layer_name')
+        # V-- CORREÇÃO APLICADA AQUI --V
+        if layer_name:
+            self.btn_distribution_info.setText(f"Associado a: {layer_name}")
+        else:
+            self.btn_distribution_info.setText("⚠️ Nenhuma camada associada")
+
+        # --- ETAPA 3: DEDUÇÃO DO PRESET DE CONTATO ---
         found_preset_key = None
-        # Itera sobre cada preset que conhecemos
         for preset_key, preset_data in CONTATOS_PREDEFINIDOS.items():
             if preset_key == 'nenhum': 
                 continue
-
-            # Compara alguns campos-chave para ver se há correspondência
             if (self.lineEdit_contact_individualName.text() == preset_data.get('contact_individualName') and
                 self.lineEdit_contact_organisationName.text() == preset_data.get('contact_organisationName') and
                 self.lineEdit_contact_email.text() == preset_data.get('contact_email')):
-                
                 found_preset_key = preset_key
-                print(f"Dados de contato carregados correspondem ao preset: '{found_preset_key}'")
                 break
 
-        # Define a seleção do ComboBox de presets com base no que foi encontrado
         if found_preset_key:
             self.set_combobox_by_data(self.comboBox_contact_presets, found_preset_key)
         else:
-            print("Dados de contato não correspondem a nenhum preset conhecido (editado manualmente).")
-            self.set_combobox_by_data(self.comboBox_contact_presets, 'nenhum')
+            nenhum_index = self.comboBox_contact_presets.findData('nenhum')
+            if nenhum_index >= 0:
+                self.comboBox_contact_presets.setCurrentIndex(nenhum_index)
+                
+        print("Formulário preenchido com dados de um Metadado existente.")
+
 
 
     # --------------------------------- FUNÇÃO MSG ALERTAS ---------------------------------- #
@@ -943,7 +955,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
                 # Atualiza o feedback na interface principal
                 layer_name = self.distribution_data.get('geoserver_layer_name')
                 if layer_name:
-                    self.label_distribution_status.setText(f"Associado a: {layer_name}")
+                    self.btn_distribution_info.setText(f"Associado a: {layer_name}")
                     self.iface.messageBar().pushMessage("Sucesso", "Informações de distribuição salvas.", level=Qgis.Success)
                 else:
-                    self.label_distribution_status.setText("Nenhuma camada associada.")
+                    self.btn_distribution_info.setText("⚠️ Nenhuma camada associada")

@@ -30,7 +30,7 @@ class GeoServerLoginDialog(QtWidgets.QDialog, FORM_CLASS):
         # Tenta uma requisição simples (WMS GetCapabilities) para validar
         test_url = f"{url}/ows?service=WMS&version=1.3.0&request=GetCapabilities"
         try:
-            response = requests.get(test_url, auth=(user, password), timeout=15)
+            response = requests.get(test_url, auth=(user, password), timeout=15, verify=False)
             response.raise_for_status() # Lança um erro para status 4xx ou 5xx
             
             # Se chegou aqui, o login foi bem-sucedido
