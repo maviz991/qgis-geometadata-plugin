@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>280</width>
-    <height>266</height>
+    <height>312</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -125,7 +125,7 @@
      <item row="0" column="0">
       <widget class="QLineEdit" name="lineEdit_password">
        <property name="echoMode">
-        <enum>QLineEdit::PasswordEchoOnEdit</enum>
+        <enum>QLineEdit::Password</enum>
        </property>
        <property name="placeholderText">
         <string>Senha de rede CDHU</string>

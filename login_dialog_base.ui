@@ -55,7 +55,7 @@
         </font>
        </property>
        <property name="text">
-        <string>Faça login no Geohab</string>
+        <string>Faça login no GeoNetwork</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>

@@ -32,6 +32,9 @@ from qgis.core import Qgis
 # --- 3. Imports de Módulos Locais do Plugin ---
 from . import xml_generator
 from . import xml_parser
+from .geoserver_login_dialog import GeoServerLoginDialog #0210
+from .layer_selection_dialog import LayerSelectionDialog #0210
+from .plugin_config import config_loader #0210
 from .login_dialog import LoginDialog
 import pathlib
 from qgis.core import (
@@ -151,6 +154,8 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         self.btn_salvar.clicked.connect(self.salvar_metadados_sidecar)
         # Conecta a mudança do ComboBox de presets à função de preenchimento
         self.comboBox_contact_presets.currentIndexChanged.connect(self.on_contact_preset_changed)
+        self.btn_distribution_info.clicked.connect(self.open_distribution_workflow) #02/10
+        self.distribution_data = {} # Armazena os dados finais #02/10
 
 
     # ------------------------------------- FUNÇÃO EXPORTAR XML ---------------------------------- #
@@ -771,10 +776,17 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
                 xml_payload = xml_generator.generate_xml_from_template(metadata_dict, template_path)
                 
                 # --- ETAPA 2: CONFIGURAÇÃO ---
-                LOGIN_URL = "https://geo.cdhu.sp.gov.br/login"
-                GEONETWORK_CATALOG_URL = "https://geo.cdhu.sp.gov.br/geonetwork/srv/eng/catalog.search"
-                RECORDS_URL = "https://geo.cdhu.sp.gov.br/geonetwork/srv/api/records"
-                ORIGIN_URL = "https://geo.cdhu.sp.gov.br"
+                #LOGIN_URL = "https://geohab.cdhu.sp.gov.br/login"
+                #GEONETWORK_CATALOG_URL = "https://geohab.cdhu.sp.gov.br/geonetwork/srv/eng/catalog.search"
+                #RECORDS_URL = "https://geohab.cdhu.sp.gov.br/geonetwork/srv/api/records"
+                #ORIGIN_URL = "https://geohab.cdhu.sp.gov.br"
+                gn_urls = config_loader.get_geonetwork_url()
+                RECORDS_URL = gn_urls['records_url']
+                GEONETWORK_CATALOG_URL = gn_urls['catalog_url']
+                # O login e a origem geralmente são a base do domínio
+                base_domain = RECORDS_URL.split('/geonetwork')[0]
+                LOGIN_URL = f"{base_domain}/login"
+                ORIGIN_URL = base_domain
                 
                 # Mensagem de progresso na barra
                 self.iface.messageBar().pushMessage("Info", f"Autenticando como {USER}...", level=Qgis.Info)
@@ -908,3 +920,30 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
             traceback.print_exc()
             # MUDANÇA - pedido Daniel
             self.show_message("Erro Inesperado", f"Ocorreu um erro no plugin:<br><br>{e}", icon=QtWidgets.QMessageBox.Critical)
+
+
+    # --------------------------------- FUNÇÃO LOGIN GEOSERVER ---------------------------------- #
+    def open_distribution_workflow(self):
+        """ Inicia o fluxo de dois passos: Login -> Seleção. """
+        
+        # Passo 1: Diálogo de Login
+        login_dialog = GeoServerLoginDialog(self)
+        
+        # Apenas se o usuário clicar em "Login" e a autenticação for bem-sucedida...
+        if login_dialog.exec_() == QtWidgets.QDialog.Accepted:
+            credentials = login_dialog.get_credentials()
+            
+            # Passo 2: Diálogo de Seleção de Camada
+            selection_dialog = LayerSelectionDialog(credentials, self)
+            
+            # Apenas se o usuário preencher e clicar em "OK"...
+            if selection_dialog.exec_() == QtWidgets.QDialog.Accepted:
+                self.distribution_data = selection_dialog.get_data()
+                
+                # Atualiza o feedback na interface principal
+                layer_name = self.distribution_data.get('geoserver_layer_name')
+                if layer_name:
+                    self.label_distribution_status.setText(f"Associado a: {layer_name}")
+                    self.iface.messageBar().pushMessage("Sucesso", "Informações de distribuição salvas.", level=Qgis.Success)
+                else:
+                    self.label_distribution_status.setText("Nenhuma camada associada.")
