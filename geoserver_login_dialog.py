@@ -12,6 +12,15 @@ class GeoServerLoginDialog(QtWidgets.QDialog, FORM_CLASS):
         super(GeoServerLoginDialog, self).__init__(parent)
         self.setupUi(self)
         self.credentials = None
+        # Definimos a URL a partir da configuração ao inicializar
+
+    # FUNÇÃO DE PREENCHIMENTO DOS DADOS DE CAMADAS PERSISTENTE
+    def set_data(self, data):
+            """Pré-preenche os campos com dados existentes."""
+            if not data:
+                return
+            # Lembra do último nome de usuário digitado
+            self.lineEdit_username.setText(data.get('geoserver_user', ''))
 
     def accept(self):
         """ Sobrescreve o comportamento do botão OK/Login. """
@@ -34,7 +43,7 @@ class GeoServerLoginDialog(QtWidgets.QDialog, FORM_CLASS):
             response.raise_for_status() # Lança um erro para status 4xx ou 5xx
             
             # Se chegou aqui, o login foi bem-sucedido
-            self.credentials = {'url': url, 'user': user, 'password': password}
+            self.credentials = {'url': url, 'user': user, 'password': password, 'geoserver_user': user}
             super().accept() # Fecha o diálogo com status "Aceito"
 
         except requests.exceptions.HTTPError as e:
@@ -46,4 +55,7 @@ class GeoServerLoginDialog(QtWidgets.QDialog, FORM_CLASS):
             QtWidgets.QMessageBox.critical(self, "Erro de Conexão", f"Não foi possível conectar ao GeoServer: {e}")
 
     def get_credentials(self):
-        return self.credentials
+        creds = self.credentials
+        if creds:
+            creds['geoserver_user'] = creds.get('user')
+        return creds

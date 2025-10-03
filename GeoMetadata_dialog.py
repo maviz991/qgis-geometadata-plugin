@@ -493,6 +493,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         #Combobox Preset selecionada (persistênte)
         data['contact_preset_key'] = self.comboBox_contact_presets.currentData()
 
+        #Dados das camadas no dialog dela
         data.update(self.distribution_data)
                 
         return data    
@@ -708,13 +709,13 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
                 print(f"Erro ao converter data: {e}")
 
         # --- ETAPA 2: RESTAURAR DADOS DE DISTRIBUIÇÃO ---
-        dist_keys = ['thumbnail_url', 'geoserver_base_url', 'online_protocol', 'geoserver_layer_name', 'geoserver_layer_title']
+        dist_keys = ['thumbnail_url', 'geoserver_base_url', 'online_protocol', 'geoserver_layer_name', 'geoserver_layer_title', 'geoserver_user']
         self.distribution_data = {key: data_dict.get(key) for key in dist_keys}
         
         layer_name = self.distribution_data.get('geoserver_layer_name')
         # V-- CORREÇÃO APLICADA AQUI --V
         if layer_name:
-            self.btn_distribution_info.setText(f"Associado a: {layer_name}")
+            self.btn_distribution_info.setText(f"🔗 Associado a: {layer_name}")
         else:
             self.btn_distribution_info.setText("⚠️ Nenhuma camada associada")
 
@@ -940,22 +941,28 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         
         # Passo 1: Diálogo de Login
         login_dialog = GeoServerLoginDialog(self)
-        
+        login_dialog.set_data(self.distribution_data) #021025
+
         # Apenas se o usuário clicar em "Login" e a autenticação for bem-sucedida...
         if login_dialog.exec_() == QtWidgets.QDialog.Accepted:
             credentials = login_dialog.get_credentials()
+
+            if credentials and 'geoserver_user' in credentials:
+                self.distribution_data['geoserver_user'] = credentials['geoserver_user'] #021025
             
             # Passo 2: Diálogo de Seleção de Camada
             selection_dialog = LayerSelectionDialog(credentials, self)
-            
+            # Alimenta o diálogo de seleção com os dados existentes
+            selection_dialog.set_data(self.distribution_data) #021025
+
             # Apenas se o usuário preencher e clicar em "OK"...
             if selection_dialog.exec_() == QtWidgets.QDialog.Accepted:
-                self.distribution_data = selection_dialog.get_data()
+                self.distribution_data.update(selection_dialog.get_data())
                 
                 # Atualiza o feedback na interface principal
                 layer_name = self.distribution_data.get('geoserver_layer_name')
                 if layer_name:
-                    self.btn_distribution_info.setText(f"Associado a: {layer_name}")
+                    self.btn_distribution_info.setText(f"🔗 Associado a: {layer_name}")
                     self.iface.messageBar().pushMessage("Sucesso", "Informações de distribuição salvas.", level=Qgis.Success)
                 else:
                     self.btn_distribution_info.setText("⚠️ Nenhuma camada associada")

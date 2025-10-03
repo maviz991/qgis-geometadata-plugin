@@ -1,21 +1,23 @@
+# xml_parser.py (VERSÃO FINAL, LIMPA E CORRIGIDA)
+
 from lxml import etree as ET
 
-# As funções de ajuda (get_element_text, get_element_attribute) continuam perfeitas.
+# --- As funções de ajuda (get_element_text, get_element_attribute) estão perfeitas ---
 def get_element_text(parent_element, xpath, ns_map):
-    """Encontra um elemento via XPath e retorna seu texto, ou None se não encontrar."""
+    if parent_element is None: return None
     element = parent_element.find(xpath, namespaces=ns_map)
     if element is not None and element.text:
         return element.text.strip()
     return None
 
 def get_element_attribute(parent_element, xpath, attr_name, ns_map):
-    """Encontra um elemento e retorna o valor de um de seus atributos."""
+    if parent_element is None: return None
     element = parent_element.find(xpath, namespaces=ns_map)
     if element is not None:
         return element.get(attr_name)
     return None
 
-
+# --- A função principal, agora limpa e corrigida ---
 def parse_xml_to_dict(xml_path):
     """
     Lê um arquivo de metadados XML e o converte para um dicionário de dados,
@@ -25,7 +27,6 @@ def parse_xml_to_dict(xml_path):
         parser = ET.XMLParser(remove_blank_text=True)
         tree = ET.parse(xml_path, parser)
         root = tree.getroot()
-        # <<<< MUDANÇA: Lógica de namespace mais robusta para evitar problemas com namespaces padrão >>>>
         ns = {k if k is not None else 'gmd': v for k, v in root.nsmap.items()}
         
         data = {}
@@ -48,27 +49,32 @@ def parse_xml_to_dict(xml_path):
             data['MD_Keywords'] = ', '.join(keywords)
 
             data['MD_SpatialRepresentationTypeCode'] = get_element_attribute(id_info, './/gmd:spatialRepresentationType/gmd:MD_SpatialRepresentationTypeCode', 'codeListValue', ns)
-            data['spatialResolution_denominator'] = get_element_text(id_info, './/gmd:spatialResolution//gmd:denominator/gco:Integer', ns)
+            data['spatialResolution_denominator'] = get_element_text(id_info, './/gmd:denominator/gco:Integer', ns)
             data['topicCategory'] = get_element_text(id_info, './/gmd:topicCategory/gmd:MD_TopicCategoryCode', ns)
             
-            data['westBoundLongitude'] = get_element_text(id_info, './/gmd:extent//gmd:westBoundLongitude/gco:Decimal', ns)
-            data['eastBoundLongitude'] = get_element_text(id_info, './/gmd:extent//gmd:eastBoundLongitude/gco:Decimal', ns)
-            data['southBoundLatitude'] = get_element_text(id_info, './/gmd:extent//gmd:southBoundLatitude/gco:Decimal', ns)
-            data['northBoundLatitude'] = get_element_text(id_info, './/gmd:extent//gmd:northBoundLatitude/gco:Decimal', ns)
+            data['westBoundLongitude'] = get_element_text(id_info, './/gmd:westBoundLongitude/gco:Decimal', ns)
+            data['eastBoundLongitude'] = get_element_text(id_info, './/gmd:eastBoundLongitude/gco:Decimal', ns)
+            data['southBoundLatitude'] = get_element_text(id_info, './/gmd:southBoundLatitude/gco:Decimal', ns)
+            data['northBoundLatitude'] = get_element_text(id_info, './/gmd:northBoundLatitude/gco:Decimal', ns)
 
-            # <<<< NOVO: Extrai a URL da thumbnail se ela existir >>>>
-            data['thumbnail_url'] = get_element_text(id_info, './/gmd:graphicOverview/gmd:MD_BrowseGraphic/gmd:fileName/gco:CharacterString', ns)
+            # <<< LEITURA DA THUMBNAIL (no lugar correto) >>>
+            data['thumbnail_url'] = get_element_text(id_info, './gmd:graphicOverview/gmd:MD_BrowseGraphic/gmd:fileName/gco:CharacterString', ns)
 
-        # <<<< NOVO: Extrai informações de distribuição se existirem >>>>
-        dist_info = root.find('.//gmd:distributionInfo/gmd:MD_Distribution', namespaces=ns)
+        # <<< LEITURA DOS DADOS DA CAMADA (agora unificado e no lugar correto) >>>
+        dist_info = root.find('./gmd:distributionInfo/gmd:MD_Distribution', namespaces=ns)
         if dist_info:
+            # Pega o primeiro recurso online (assume-se que seja o WMS) para obter os detalhes
             online_resource = dist_info.find('.//gmd:onLine/gmd:CI_OnlineResource', namespaces=ns)
             if online_resource:
                 data['geoserver_layer_name'] = get_element_text(online_resource, './gmd:name/gco:CharacterString', ns)
+                data['geoserver_layer_title'] = get_element_text(online_resource, './gmd:description/gco:CharacterString', ns)
                 data['online_protocol'] = get_element_text(online_resource, './gmd:protocol/gco:CharacterString', ns)
+                
+                linkage_url = get_element_text(online_resource, './gmd:linkage/gmd:URL', ns)
+                if linkage_url and '/ows?' in linkage_url:
+                    data['geoserver_base_url'] = linkage_url.split('/ows?')[0]
 
-        # <<<< MUDANÇA: Lógica de busca de contato mais robusta >>>>
-        # Em vez de pegar o segundo contato, procuramos por um que NÃO seja o da CDHU.
+        # --- LÓGICA DE CONTATO (robusta e no lugar correto) ---
         all_contacts = root.findall('.//gmd:CI_ResponsibleParty', namespaces=ns)
         form_contact = None
         for contact in all_contacts:
@@ -77,10 +83,6 @@ def parse_xml_to_dict(xml_path):
                 form_contact = contact
                 break 
         
-        # Fallback para o método antigo se a lógica acima falhar
-        if form_contact is None and len(all_contacts) > 1:
-            form_contact = all_contacts[1]
-
         if form_contact is not None:
             data['contact_individualName'] = get_element_text(form_contact, './/gmd:individualName/gco:CharacterString', ns)
             data['contact_organisationName'] = get_element_text(form_contact, './/gmd:organisationName/gco:CharacterString', ns)
