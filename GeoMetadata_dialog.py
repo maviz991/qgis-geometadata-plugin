@@ -137,6 +137,7 @@ FORM_CLASS, _ = uic.loadUiType(os.path.join(
 
 class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
     # -------------------------------------------- FUNÇÃO INIT ------------------------------------------ #
+    distribution_data = {} # Armazena os dados finais #02/10
     def __init__(self, parent=None, iface=None):
         """Constructor."""
         super(GeoMetadataDialog, self).__init__(parent)
@@ -155,8 +156,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         # Conecta a mudança do ComboBox de presets à função de preenchimento
         self.comboBox_contact_presets.currentIndexChanged.connect(self.on_contact_preset_changed)
         self.btn_distribution_info.clicked.connect(self.open_distribution_workflow) #02/10
-        self.distribution_data = {} # Armazena os dados finais #02/10
-
+        # Armazena os dados finais (inicializado como atributo de classe)
 
     # ------------------------------------- FUNÇÃO EXPORTAR XML ---------------------------------- #
     def exportar_to_xml(self):
@@ -399,10 +399,10 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
             
             data_from_xml = xml_parser.parse_xml_to_dict(metadata_path) # Chama xml_parser.py para ler o XML e transformá-lo em um dicionário.
             
-            if data_from_xml:
+            
+            if data_from_xml: # Always load from XML if data is available
                 self.populate_form_from_dict(data_from_xml) # preenche o formulário com os dados do XML
                 return
-        
         # --- LÓGICA PADRÃO (SÓ EXECUTA SE O XML NÃO FOR CARREGADO) ---
         print("Nenhum arquivo XML associado a essa camada! Preenchendo com dados padrão da camada.")
         

@@ -165,11 +165,13 @@ def generate_xml_from_template(data_dict, template_path):
                 set_element_text(online_nodes[0], './gmd:CI_OnlineResource/gmd:linkage/gmd:URL', wms_url, ns)
                 set_element_text(online_nodes[0], './gmd:CI_OnlineResource/gmd:name/gco:CharacterString', layer_name, ns)
                 set_element_text(online_nodes[0], './gmd:CI_OnlineResource/gmd:description/gco:CharacterString', layer_title, ns)
+                set_element_text(online_nodes[0], './gmd:CI_OnlineResource/gmd:protocol/gco:CharacterString', 'OGC:WMS', ns)
                 
                 wfs_url = f"{base_url}/wfs"
                 set_element_text(online_nodes[1], './gmd:CI_OnlineResource/gmd:linkage/gmd:URL', wfs_url, ns)
                 set_element_text(online_nodes[1], './gmd:CI_OnlineResource/gmd:name/gco:CharacterString', layer_name, ns)
                 set_element_text(online_nodes[1], './gmd:CI_OnlineResource/gmd:description/gco:CharacterString', layer_title, ns)
+                set_element_text(online_nodes[1], './gmd:CI_OnlineResource/gmd:protocol/gco:CharacterString', 'OGC:WFS', ns)
     elif dist_info is not None:
         root.remove(dist_info)
 

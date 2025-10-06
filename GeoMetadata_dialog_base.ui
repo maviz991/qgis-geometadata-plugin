@@ -254,6 +254,38 @@
    </item>
    <item row="6" column="0" rowspan="5">
     <layout class="QGridLayout" name="gridLayout_17">
+     <item row="4" column="0">
+      <widget class="QLabel" name="label_topicCategory">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Categoria Temática</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_MD_SpatialRepresentationTypeCode">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Tipo de Representação Espacial</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+      </widget>
+     </item>
      <item row="2" column="0">
       <widget class="QLabel" name="label_LanguageCode">
        <property name="sizePolicy">
@@ -286,8 +318,8 @@
        </property>
       </widget>
      </item>
-     <item row="5" column="0">
-      <widget class="QLabel" name="label_label_label_hierarchyLevel">
+     <item row="1" column="0">
+      <widget class="QLabel" name="label_spatialResolution_denominator">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
          <horstretch>0</horstretch>
@@ -295,23 +327,7 @@
         </sizepolicy>
        </property>
        <property name="text">
-        <string>Nível Hierárquico</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="0">
-      <widget class="QLabel" name="label_topicCategory">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="text">
-        <string>Categoria Temática</string>
+        <string>Escala</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -334,8 +350,8 @@
        </property>
       </widget>
      </item>
-     <item row="1" column="0">
-      <widget class="QLabel" name="label_spatialResolution_denominator">
+     <item row="5" column="0">
+      <widget class="QLabel" name="label_label_label_hierarchyLevel">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
          <horstretch>0</horstretch>
@@ -343,23 +359,26 @@
         </sizepolicy>
        </property>
        <property name="text">
-        <string>Escala</string>
+        <string>Nível Hierárquico</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
        </property>
       </widget>
      </item>
-     <item row="0" column="0">
-      <widget class="QLabel" name="label_MD_SpatialRepresentationTypeCode">
+     <item row="7" column="0">
+      <widget class="QLabel" name="label">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
          <horstretch>0</horstretch>
          <verstretch>0</verstretch>
         </sizepolicy>
        </property>
+       <property name="layoutDirection">
+        <enum>Qt::LeftToRight</enum>
+       </property>
        <property name="text">
-        <string>Tipo de Representação Espacial</string>
+        <string>Link Thumbnail</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -386,86 +405,6 @@
        </property>
        <property name="alignment">
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item row="11" column="6">
-    <layout class="QVBoxLayout" name="verticalLayout_3">
-     <property name="sizeConstraint">
-      <enum>QLayout::SetFixedSize</enum>
-     </property>
-     <item>
-      <widget class="QPushButton" name="btn_salvar">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="sizeIncrement">
-        <size>
-         <width>0</width>
-         <height>0</height>
-        </size>
-       </property>
-       <property name="toolTip">
-        <string>Salve para continuar o preenchimento mais tarde</string>
-       </property>
-       <property name="layoutDirection">
-        <enum>Qt::LeftToRight</enum>
-       </property>
-       <property name="text">
-        <string>Continuar depois</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="btn_exp_xml">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="toolTip">
-        <string>Salve um arquivo XML MGB 2.0</string>
-       </property>
-       <property name="text">
-        <string>Exportar para XML</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="btn_exp_geo">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="contextMenuPolicy">
-        <enum>Qt::DefaultContextMenu</enum>
-       </property>
-       <property name="toolTip">
-        <string>Envie para o Geohab</string>
-       </property>
-       <property name="text">
-        <string> Exportar para  Geohab</string>
-       </property>
-       <property name="icon">
-        <iconset>
-         <normaloff>favcon_cdhu.png</normaloff>favcon_cdhu.png</iconset>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>18</width>
-         <height>18</height>
-        </size>
-       </property>
-       <property name="checkable">
-        <bool>false</bool>
        </property>
       </widget>
      </item>
@@ -1062,8 +1001,8 @@ p, li { white-space: pre-wrap; }
      <property name="sizeConstraint">
       <enum>QLayout::SetFixedSize</enum>
      </property>
-     <item row="6" column="0">
-      <widget class="QDateTimeEdit" name="dateTimeEdit_dateStamp">
+     <item row="1" column="0">
+      <widget class="QLineEdit" name="lineEdit_textEdit_spatialResolution_denominator">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
          <horstretch>0</horstretch>
@@ -1071,53 +1010,29 @@ p, li { white-space: pre-wrap; }
         </sizepolicy>
        </property>
        <property name="toolTip">
-        <string>Data de criação do metado, preencha somente quando for enviar o metadado</string>
+        <string>Escala da camada ex: 1:5000 → 5000</string>
        </property>
-       <property name="showGroupSeparator" stdset="0">
-        <bool>false</bool>
+       <property name="alignment">
+        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
        </property>
-       <property name="dateTime">
-        <datetime>
-         <hour>12</hour>
-         <minute>0</minute>
-         <second>0</second>
-         <year>2025</year>
-         <month>9</month>
-         <day>22</day>
-        </datetime>
+       <property name="placeholderText">
+        <string>5000</string>
        </property>
-       <property name="date">
-        <date>
-         <year>2025</year>
-         <month>9</month>
-         <day>22</day>
-        </date>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QComboBox" name="comboBox_LanguageCode">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
        </property>
-       <property name="time">
-        <time>
-         <hour>12</hour>
-         <minute>0</minute>
-         <second>0</second>
-        </time>
+       <property name="toolTip">
+        <string>Selecione o idioma da camada</string>
        </property>
-       <property name="minimumDateTime">
-        <datetime>
-         <hour>0</hour>
-         <minute>0</minute>
-         <second>0</second>
-         <year>1800</year>
-         <month>9</month>
-         <day>14</day>
-        </datetime>
-       </property>
-       <property name="displayFormat">
-        <string>dd/MM/yyyy HH:mm:ss</string>
-       </property>
-       <property name="calendarPopup">
-        <bool>true</bool>
-       </property>
-       <property name="timeSpec">
-        <enum>Qt::LocalTime</enum>
+       <property name="placeholderText">
+        <string>Selecione o idioma</string>
        </property>
       </widget>
      </item>
@@ -1188,41 +1103,6 @@ p, li { white-space: pre-wrap; }
        </property>
       </widget>
      </item>
-     <item row="2" column="0">
-      <widget class="QComboBox" name="comboBox_LanguageCode">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="toolTip">
-        <string>Selecione o idioma da camada</string>
-       </property>
-       <property name="placeholderText">
-        <string>Selecione o idioma</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="0">
-      <widget class="QLineEdit" name="lineEdit_textEdit_spatialResolution_denominator">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="toolTip">
-        <string>Escala da camada ex: 1:5000 → 5000</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-       </property>
-       <property name="placeholderText">
-        <string>5000</string>
-       </property>
-      </widget>
-     </item>
      <item row="4" column="0">
       <widget class="QComboBox" name="comboBox_topicCategory">
        <property name="sizePolicy">
@@ -1254,6 +1134,78 @@ p, li { white-space: pre-wrap; }
        </property>
        <property name="placeholderText">
         <string>Selecione a categoria</string>
+       </property>
+      </widget>
+     </item>
+     <item row="6" column="0">
+      <widget class="QDateTimeEdit" name="dateTimeEdit_dateStamp">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="toolTip">
+        <string>Data de criação do metado, preencha somente quando for enviar o metadado</string>
+       </property>
+       <property name="showGroupSeparator" stdset="0">
+        <bool>false</bool>
+       </property>
+       <property name="dateTime">
+        <datetime>
+         <hour>12</hour>
+         <minute>0</minute>
+         <second>0</second>
+         <year>2025</year>
+         <month>9</month>
+         <day>22</day>
+        </datetime>
+       </property>
+       <property name="date">
+        <date>
+         <year>2025</year>
+         <month>9</month>
+         <day>22</day>
+        </date>
+       </property>
+       <property name="time">
+        <time>
+         <hour>12</hour>
+         <minute>0</minute>
+         <second>0</second>
+        </time>
+       </property>
+       <property name="minimumDateTime">
+        <datetime>
+         <hour>0</hour>
+         <minute>0</minute>
+         <second>0</second>
+         <year>1800</year>
+         <month>9</month>
+         <day>14</day>
+        </datetime>
+       </property>
+       <property name="displayFormat">
+        <string>dd/MM/yyyy HH:mm:ss</string>
+       </property>
+       <property name="calendarPopup">
+        <bool>true</bool>
+       </property>
+       <property name="timeSpec">
+        <enum>Qt::LocalTime</enum>
+       </property>
+      </widget>
+     </item>
+     <item row="7" column="0">
+      <widget class="QLineEdit" name="lineEdit_thumbnail_url">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="placeholderText">
+        <string>https://stor.cdhu.sp.gov.br/public/img.png</string>
        </property>
       </widget>
      </item>
@@ -1372,12 +1324,92 @@ p, li { white-space: pre-wrap; }
      </item>
     </layout>
    </item>
-   <item row="11" column="0">
-    <widget class="QPushButton" name="btn_distribution_info">
+   <item row="14" column="6">
+    <widget class="QPushButton" name="btn_exp_geo">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="contextMenuPolicy">
+      <enum>Qt::DefaultContextMenu</enum>
+     </property>
+     <property name="toolTip">
+      <string>Envie para o Geohab</string>
+     </property>
      <property name="text">
-      <string>Adicionar + Infos</string>
+      <string> Exportar para  Geohab</string>
+     </property>
+     <property name="icon">
+      <iconset>
+       <normaloff>favcon_cdhu.png</normaloff>favcon_cdhu.png</iconset>
+     </property>
+     <property name="iconSize">
+      <size>
+       <width>18</width>
+       <height>18</height>
+      </size>
+     </property>
+     <property name="checkable">
+      <bool>false</bool>
      </property>
     </widget>
+   </item>
+   <item row="9" column="6">
+    <widget class="QPushButton" name="btn_salvar">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="sizeIncrement">
+      <size>
+       <width>0</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="toolTip">
+      <string>Salve para continuar o preenchimento mais tarde</string>
+     </property>
+     <property name="layoutDirection">
+      <enum>Qt::LeftToRight</enum>
+     </property>
+     <property name="text">
+      <string>Continuar depois</string>
+     </property>
+    </widget>
+   </item>
+   <item row="10" column="6">
+    <widget class="QPushButton" name="btn_exp_xml">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="toolTip">
+      <string>Salve um arquivo XML MGB 2.0</string>
+     </property>
+     <property name="text">
+      <string>Exportar para XML</string>
+     </property>
+    </widget>
+   </item>
+   <item row="11" column="6">
+    <widget class="QPushButton" name="btn_distribution_info">
+     <property name="text">
+      <string>Associar Camada</string>
+     </property>
+    </widget>
+   </item>
+   <item row="8" column="6">
+    <layout class="QVBoxLayout" name="verticalLayout_3">
+     <property name="sizeConstraint">
+      <enum>QLayout::SetFixedSize</enum>
+     </property>
+    </layout>
    </item>
   </layout>
  </widget>
@@ -1406,8 +1438,6 @@ p, li { white-space: pre-wrap; }
   <tabstop>comboBox_topicCategory</tabstop>
   <tabstop>comboBox_hierarchyLevel</tabstop>
   <tabstop>dateTimeEdit_dateStamp</tabstop>
-  <tabstop>btn_exp_xml</tabstop>
-  <tabstop>btn_exp_geo</tabstop>
   <tabstop>lineEdit_eastBoundLongitude</tabstop>
   <tabstop>lineEdit_northBoundLatitude</tabstop>
   <tabstop>lineEdit_southBoundLatitude</tabstop>
