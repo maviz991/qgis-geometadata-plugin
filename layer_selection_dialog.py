@@ -102,8 +102,6 @@ class LayerSelectionDialog(QtWidgets.QDialog, FORM_CLASS):
             return
         
         print(f"DEBUG: set_data received data: {data}") # DEBUG
-        self.lineEdit_thumbnail_url.setText(data.get('thumbnail_url', ''))
-        
         self.previously_selected_layer_name = data.get('geoserver_layer_name')
         self.previously_selected_layer_title = data.get('geoserver_layer_title')
         self.previously_selected_online_protocol = data.get('online_protocol')
@@ -125,7 +123,6 @@ class LayerSelectionDialog(QtWidgets.QDialog, FORM_CLASS):
         selected_layer = self.comboBox_layers.currentData()
         
         self.data = {
-            'thumbnail_url': self.lineEdit_thumbnail_url.text(),
             'geoserver_base_url': self.creds['url'],
             'online_protocol': self.comboBox_service_type.currentData().upper() if self.comboBox_service_type.currentData() else None
         }

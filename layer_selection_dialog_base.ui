@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>429</width>
-    <height>320</height>
+    <width>421</width>
+    <height>338</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,8 +16,8 @@
   <widget class="QDialogButtonBox" name="buttonBox">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>270</y>
+     <x>90</x>
+     <y>290</y>
      <width>221</width>
      <height>41</height>
     </rect>
@@ -28,6 +28,9 @@
    <property name="standardButtons">
     <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
    </property>
+   <property name="centerButtons">
+    <bool>true</bool>
+   </property>
   </widget>
   <widget class="QGroupBox" name="groupBox">
    <property name="geometry">
@@ -35,7 +38,7 @@
      <x>10</x>
      <y>20</y>
      <width>401</width>
-     <height>241</height>
+     <height>161</height>
     </rect>
    </property>
    <property name="title">
@@ -85,7 +88,7 @@
       <x>0</x>
       <y>90</y>
       <width>391</width>
-      <height>21</height>
+      <height>94</height>
      </rect>
     </property>
     <layout class="QGridLayout" name="gridLayout_3">
@@ -120,44 +123,54 @@
      </item>
     </layout>
    </widget>
-   <widget class="QWidget" name="gridLayoutWidget_5">
+   <widget class="QLabel" name="label_3">
     <property name="geometry">
      <rect>
-      <x>0</x>
-      <y>160</y>
-      <width>391</width>
-      <height>21</height>
+      <x>350</x>
+      <y>10</y>
+      <width>31</width>
+      <height>31</height>
      </rect>
     </property>
-    <layout class="QGridLayout" name="gridLayout_5">
-     <item row="0" column="0">
-      <widget class="QLabel" name="label_3">
-       <property name="text">
-        <string>URL Thumbnail</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </widget>
-   <widget class="QWidget" name="gridLayoutWidget_6">
-    <property name="geometry">
-     <rect>
-      <x>0</x>
-      <y>189</y>
-      <width>391</width>
-      <height>22</height>
-     </rect>
+    <property name="text">
+     <string/>
     </property>
-    <layout class="QGridLayout" name="gridLayout_6">
-     <item row="0" column="0">
-      <widget class="QLineEdit" name="lineEdit_thumbnail_url">
-       <property name="placeholderText">
-        <string>https://stor.cdhu.sp.gov.br/public/img.png</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
+    <property name="pixmap">
+     <pixmap>img/geoserver_logo.svg</pixmap>
+    </property>
    </widget>
+  </widget>
+  <widget class="QPushButton" name="pushButton">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>40</x>
+     <y>200</y>
+     <width>161</width>
+     <height>81</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Nenhum WMS</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="pushButton_2">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>200</x>
+     <y>200</y>
+     <width>161</width>
+     <height>81</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Nenhum WFS</string>
+   </property>
   </widget>
  </widget>
  <resources/>

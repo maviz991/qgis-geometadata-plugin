@@ -257,11 +257,11 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
             self.comboBox_MD_SpatialRepresentationTypeCode.addItem(text, data) 
 
         language_options = [             
-            ('Português', 'por'),
-            ('Inglês', 'eng'),
-            ('Espanhol', 'spa'),
-            ('Françês', 'fra'),
-            ('Alemão', 'ger')
+            ('🇧🇷 Português', 'por'),
+            ('🇺🇸 Inglês', 'eng'),
+            ('🇪🇸 Espanhol', 'spa'),
+            ('🇫🇷 Françês', 'fra'),
+            ('🇩🇪 Alemão', 'ger')
         ]
         
         self.comboBox_LanguageCode.clear()
@@ -495,8 +495,9 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
 
         #Dados das camadas no dialog dela
         data.update(self.distribution_data)
-                
-        return data    
+        data['thumbnail_url'] = self.lineEdit_thumbnail_url.text()
+                 
+        return data
     
 
     # --------------------------- FUNÇÃO PREENCHIMENTO DE CONTATO AUTOMÁTICO ---------------------------- #
@@ -709,8 +710,9 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
                 print(f"Erro ao converter data: {e}")
 
         # --- ETAPA 2: RESTAURAR DADOS DE DISTRIBUIÇÃO ---
-        dist_keys = ['thumbnail_url', 'geoserver_base_url', 'online_protocol', 'geoserver_layer_name', 'geoserver_layer_title', 'geoserver_user']
+        dist_keys = ['geoserver_base_url', 'online_protocol', 'geoserver_layer_name', 'geoserver_layer_title', 'geoserver_user']
         self.distribution_data = {key: data_dict.get(key) for key in dist_keys}
+        self.lineEdit_thumbnail_url.setText(data_dict.get('thumbnail_url', ''))
         
         layer_name = self.distribution_data.get('geoserver_layer_name')
         # V-- CORREÇÃO APLICADA AQUI --V

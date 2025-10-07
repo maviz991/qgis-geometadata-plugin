@@ -1327,7 +1327,7 @@ p, li { white-space: pre-wrap; }
    <item row="14" column="6">
     <widget class="QPushButton" name="btn_exp_geo">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+      <sizepolicy hsizetype="Minimum" vsizetype="Maximum">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
@@ -1347,8 +1347,8 @@ p, li { white-space: pre-wrap; }
      </property>
      <property name="iconSize">
       <size>
-       <width>18</width>
-       <height>18</height>
+       <width>16</width>
+       <height>16</height>
       </size>
      </property>
      <property name="checkable">
@@ -1399,17 +1399,28 @@ p, li { white-space: pre-wrap; }
    </item>
    <item row="11" column="6">
     <widget class="QPushButton" name="btn_distribution_info">
+     <property name="layoutDirection">
+      <enum>Qt::LeftToRight</enum>
+     </property>
+     <property name="autoFillBackground">
+      <bool>false</bool>
+     </property>
      <property name="text">
       <string>Associar Camada</string>
      </property>
-    </widget>
-   </item>
-   <item row="8" column="6">
-    <layout class="QVBoxLayout" name="verticalLayout_3">
-     <property name="sizeConstraint">
-      <enum>QLayout::SetFixedSize</enum>
+     <property name="checkable">
+      <bool>false</bool>
      </property>
-    </layout>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
+     <property name="default">
+      <bool>false</bool>
+     </property>
+     <property name="flat">
+      <bool>false</bool>
+     </property>
+    </widget>
    </item>
   </layout>
  </widget>
