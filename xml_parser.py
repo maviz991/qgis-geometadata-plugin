@@ -63,16 +63,32 @@ def parse_xml_to_dict(xml_path):
         # <<< LEITURA DOS DADOS DA CAMADA (agora unificado e no lugar correto) >>>
         dist_info = root.find('./gmd:distributionInfo/gmd:MD_Distribution', namespaces=ns)
         if dist_info:
-            # Pega o primeiro recurso online (assume-se que seja o WMS) para obter os detalhes
-            online_resource = dist_info.find('.//gmd:onLine/gmd:CI_OnlineResource', namespaces=ns)
-            if online_resource:
-                data['geoserver_layer_name'] = get_element_text(online_resource, './gmd:name/gco:CharacterString', ns)
-                data['geoserver_layer_title'] = get_element_text(online_resource, './gmd:description/gco:CharacterString', ns)
-                data['online_protocol'] = get_element_text(online_resource, './gmd:protocol/gco:CharacterString', ns)
-                
-                linkage_url = get_element_text(online_resource, './gmd:linkage/gmd:URL', ns)
-                if linkage_url and '/ows?' in linkage_url:
-                    data['geoserver_base_url'] = linkage_url.split('/ows?')[0]
+            online_resources = dist_info.findall('.//gmd:onLine/gmd:CI_OnlineResource', namespaces=ns)
+            
+            wms_data = {}
+            wfs_data = {}
+
+            for online_resource in online_resources:
+                protocol = get_element_text(online_resource, './gmd:protocol/gco:CharacterString', ns)
+                if protocol == 'OGC:WMS':
+                    wms_data['geoserver_layer_name'] = get_element_text(online_resource, './gmd:name/gco:CharacterString', ns)
+                    wms_data['geoserver_layer_title'] = get_element_text(online_resource, './gmd:description/gco:CharacterString', ns)
+                    wms_data['online_protocol'] = protocol
+                    
+                    linkage_url = get_element_text(online_resource, './gmd:linkage/gmd:URL', ns)
+                    if linkage_url and '/ows?' in linkage_url:
+                        wms_data['geoserver_base_url'] = linkage_url.split('/ows?')[0]
+                elif protocol == 'OGC:WFS':
+                    wfs_data['geoserver_layer_name'] = get_element_text(online_resource, './gmd:name/gco:CharacterString', ns)
+                    wfs_data['geoserver_layer_title'] = get_element_text(online_resource, './gmd:description/gco:CharacterString', ns)
+                    wfs_data['online_protocol'] = protocol
+                    
+                    linkage_url = get_element_text(online_resource, './gmd:linkage/gmd:URL', ns)
+                    if linkage_url and '/wfs' in linkage_url:
+                        wfs_data['geoserver_base_url'] = linkage_url.split('/wfs')[0]
+
+            data['wms_data'] = wms_data
+            data['wfs_data'] = wfs_data
 
         # --- LÓGICA DE CONTATO (robusta e no lugar correto) ---
         all_contacts = root.findall('.//gmd:CI_ResponsibleParty', namespaces=ns)

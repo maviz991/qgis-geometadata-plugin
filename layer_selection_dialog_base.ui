@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>421</width>
-    <height>338</height>
+    <width>420</width>
+    <height>315</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,7 +17,7 @@
    <property name="geometry">
     <rect>
      <x>90</x>
-     <y>290</y>
+     <y>265</y>
      <width>221</width>
      <height>41</height>
     </rect>
@@ -44,32 +44,13 @@
    <property name="title">
     <string>Seleção de Serviço e Camada</string>
    </property>
-   <widget class="QWidget" name="gridLayoutWidget">
-    <property name="geometry">
-     <rect>
-      <x>0</x>
-      <y>20</y>
-      <width>391</width>
-      <height>21</height>
-     </rect>
-    </property>
-    <layout class="QGridLayout" name="gridLayout">
-     <item row="1" column="0">
-      <widget class="QLabel" name="label">
-       <property name="text">
-        <string>Tipo de Serviço</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </widget>
    <widget class="QWidget" name="gridLayoutWidget_2">
     <property name="geometry">
      <rect>
       <x>0</x>
-      <y>50</y>
-      <width>391</width>
-      <height>31</height>
+      <y>30</y>
+      <width>401</width>
+      <height>41</height>
      </rect>
     </property>
     <layout class="QGridLayout" name="gridLayout_2">
@@ -80,22 +61,10 @@
        </property>
       </widget>
      </item>
-    </layout>
-   </widget>
-   <widget class="QWidget" name="gridLayoutWidget_3">
-    <property name="geometry">
-     <rect>
-      <x>0</x>
-      <y>90</y>
-      <width>391</width>
-      <height>94</height>
-     </rect>
-    </property>
-    <layout class="QGridLayout" name="gridLayout_3">
-     <item row="1" column="0">
-      <widget class="QLabel" name="label_2">
+     <item row="0" column="0">
+      <widget class="QLabel" name="label">
        <property name="text">
-        <string>Camada disponível</string>
+        <string>Tipo de Serviço</string>
        </property>
       </widget>
      </item>
@@ -105,13 +74,20 @@
     <property name="geometry">
      <rect>
       <x>0</x>
-      <y>120</y>
-      <width>391</width>
-      <height>31</height>
+      <y>90</y>
+      <width>401</width>
+      <height>41</height>
      </rect>
     </property>
     <layout class="QGridLayout" name="gridLayout_4">
-     <item row="0" column="0">
+     <item row="2" column="0">
+      <widget class="QLabel" name="label_2">
+       <property name="text">
+        <string>Camada disponível</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
       <widget class="QComboBox" name="comboBox_layers">
        <property name="enabled">
         <bool>false</bool>
@@ -140,36 +116,49 @@
     </property>
    </widget>
   </widget>
-  <widget class="QPushButton" name="pushButton">
+  <widget class="QPushButton" name="btn_wms">
    <property name="enabled">
     <bool>false</bool>
    </property>
    <property name="geometry">
     <rect>
-     <x>40</x>
-     <y>200</y>
-     <width>161</width>
-     <height>81</height>
+     <x>10</x>
+     <y>225</y>
+     <width>195</width>
+     <height>31</height>
     </rect>
    </property>
    <property name="text">
-    <string>Nenhum WMS</string>
+    <string>WMS Não Adicionado</string>
    </property>
   </widget>
-  <widget class="QPushButton" name="pushButton_2">
+  <widget class="QPushButton" name="btn_wfs">
    <property name="enabled">
     <bool>false</bool>
    </property>
    <property name="geometry">
     <rect>
-     <x>200</x>
-     <y>200</y>
-     <width>161</width>
-     <height>81</height>
+     <x>240</x>
+     <y>230</y>
+     <width>195</width>
+     <height>31</height>
     </rect>
    </property>
    <property name="text">
-    <string>Nenhum WFS</string>
+    <string>WFS Não Adicionado</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="btn_addservice">
+   <property name="geometry">
+    <rect>
+     <x>160</x>
+     <y>180</y>
+     <width>111</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Adicionar serviço</string>
    </property>
   </widget>
  </widget>

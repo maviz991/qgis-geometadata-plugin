@@ -137,8 +137,8 @@ FORM_CLASS, _ = uic.loadUiType(os.path.join(
 
 class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
     # -------------------------------------------- FUNÇÃO INIT ------------------------------------------ #
-    distribution_data = {} # Armazena os dados finais #02/10
     def __init__(self, parent=None, iface=None):
+        self.distribution_data = {} # Armazena os dados finais #02/10
         """Constructor."""
         super(GeoMetadataDialog, self).__init__(parent)
         self.setupUi(self)
@@ -710,14 +710,21 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
                 print(f"Erro ao converter data: {e}")
 
         # --- ETAPA 2: RESTAURAR DADOS DE DISTRIBUIÇÃO ---
-        dist_keys = ['geoserver_base_url', 'online_protocol', 'geoserver_layer_name', 'geoserver_layer_title', 'geoserver_user']
-        self.distribution_data = {key: data_dict.get(key) for key in dist_keys}
+        self.distribution_data['wms_data'] = data_dict.get('wms_data', {})
+        self.distribution_data['wfs_data'] = data_dict.get('wfs_data', {})
         self.lineEdit_thumbnail_url.setText(data_dict.get('thumbnail_url', ''))
         
-        layer_name = self.distribution_data.get('geoserver_layer_name')
-        # V-- CORREÇÃO APLICADA AQUI --V
-        if layer_name:
-            self.btn_distribution_info.setText(f"🔗 Associado a: {layer_name}")
+        wms_info = self.distribution_data.get('wms_data', {}).get('geoserver_layer_title')
+        wfs_info = self.distribution_data.get('wfs_data', {}).get('geoserver_layer_title')
+
+        display_text = []
+        if wms_info:
+            display_text.append(f"WMS: {wms_info}")
+        if wfs_info:
+            display_text.append(f"WFS: {wfs_info}")
+
+        if display_text:
+            self.btn_distribution_info.setText(f"🔗 Associado a: {', '.join(display_text)}")
         else:
             self.btn_distribution_info.setText("⚠️ Nenhuma camada associada")
 

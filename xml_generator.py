@@ -153,27 +153,47 @@ def generate_xml_from_template(data_dict, template_path):
         id_info.remove(graphic_overview_node)
 
     # 3.2 - Distribuição (WMS e WFS)
-    layer_name = data_dict.get('geoserver_layer_name')
-    layer_title = data_dict.get('geoserver_layer_title')
-    base_url = data_dict.get('geoserver_base_url')
+    wms_data = data_dict.get('wms_data')
+    wfs_data = data_dict.get('wfs_data')
     dist_info = root.find('./gmd:distributionInfo', namespaces=ns)
     
-    if all([layer_name, layer_title, base_url, dist_info is not None]):
-            online_nodes = dist_info.findall('.//gmd:onLine', namespaces=ns)
-            if len(online_nodes) == 2:
-                wms_url = f"{base_url}/ows?service=WMS&version=1.3.0&request=GetCapabilities"
-                set_element_text(online_nodes[0], './gmd:CI_OnlineResource/gmd:linkage/gmd:URL', wms_url, ns)
-                set_element_text(online_nodes[0], './gmd:CI_OnlineResource/gmd:name/gco:CharacterString', layer_name, ns)
-                set_element_text(online_nodes[0], './gmd:CI_OnlineResource/gmd:description/gco:CharacterString', layer_title, ns)
-                set_element_text(online_nodes[0], './gmd:CI_OnlineResource/gmd:protocol/gco:CharacterString', 'OGC:WMS', ns)
-                
-                wfs_url = f"{base_url}/wfs"
-                set_element_text(online_nodes[1], './gmd:CI_OnlineResource/gmd:linkage/gmd:URL', wfs_url, ns)
-                set_element_text(online_nodes[1], './gmd:CI_OnlineResource/gmd:name/gco:CharacterString', layer_name, ns)
-                set_element_text(online_nodes[1], './gmd:CI_OnlineResource/gmd:description/gco:CharacterString', layer_title, ns)
-                set_element_text(online_nodes[1], './gmd:CI_OnlineResource/gmd:protocol/gco:CharacterString', 'OGC:WFS', ns)
-    elif dist_info is not None:
-        root.remove(dist_info)
+    
+    if dist_info is not None:
+        online_nodes = dist_info.findall('.//gmd:onLine', namespaces=ns)
+        
+        wms_node = online_nodes[0] if len(online_nodes) >= 1 else None
+        wfs_node = online_nodes[1] if len(online_nodes) >= 2 else None
+
+        # Handle WMS
+        if wms_data and wms_node is not None:
+            wms_url = f"{wms_data['geoserver_base_url']}/ows?service=WMS&version=1.3.0&request=GetCapabilities"
+            set_element_text(wms_node, './gmd:CI_OnlineResource/gmd:linkage/gmd:URL', wms_url, ns)
+            set_element_text(wms_node, './gmd:CI_OnlineResource/gmd:name/gco:CharacterString', wms_data['geoserver_layer_name'], ns)
+            set_element_text(wms_node, './gmd:CI_OnlineResource/gmd:description/gco:CharacterString', wms_data['geoserver_layer_title'], ns)
+            set_element_text(wms_node, './gmd:CI_OnlineResource/gmd:protocol/gco:CharacterString', 'OGC:WMS', ns)
+        elif wms_node is not None:
+            set_element_text(wms_node, './gmd:CI_OnlineResource/gmd:linkage/gmd:URL', '', ns)
+            set_element_text(wms_node, './gmd:CI_OnlineResource/gmd:name/gco:CharacterString', '', ns)
+            set_element_text(wms_node, './gmd:CI_OnlineResource/gmd:description/gco:CharacterString', '', ns)
+            set_element_text(wms_node, './gmd:CI_OnlineResource/gmd:protocol/gco:CharacterString', '', ns)
+
+        # Handle WFS
+        if wfs_data and wfs_node is not None:
+            wfs_url = f"{wfs_data['geoserver_base_url']}/wfs"
+            set_element_text(wfs_node, './gmd:CI_OnlineResource/gmd:linkage/gmd:URL', wfs_url, ns)
+            set_element_text(wfs_node, './gmd:CI_OnlineResource/gmd:name/gco:CharacterString', wfs_data['geoserver_layer_name'], ns)
+            set_element_text(wfs_node, './gmd:CI_OnlineResource/gmd:description/gco:CharacterString', wfs_data['geoserver_layer_title'], ns)
+            set_element_text(wfs_node, './gmd:CI_OnlineResource/gmd:protocol/gco:CharacterString', 'OGC:WFS', ns)
+        elif wfs_node is not None:
+            set_element_text(wfs_node, './gmd:CI_OnlineResource/gmd:linkage/gmd:URL', '', ns)
+            set_element_text(wfs_node, './gmd:CI_OnlineResource/gmd:name/gco:CharacterString', '', ns)
+            set_element_text(wfs_node, './gmd:CI_OnlineResource/gmd:description/gco:CharacterString', '', ns)
+            set_element_text(wfs_node, './gmd:CI_OnlineResource/gmd:protocol/gco:CharacterString', '', ns)
+        
+        # If after processing, there are no online resources left, remove dist_info
+        remaining_online_nodes = dist_info.findall('.//gmd:onLine', namespaces=ns)
+        if not remaining_online_nodes:
+            root.remove(dist_info)
 
     # --- ETAPA 4: SERIALIZAR XML ---
     return ET.tostring(root, pretty_print=True, xml_declaration=True, encoding='utf-8').decode('utf-8')
