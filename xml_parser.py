@@ -49,7 +49,7 @@ def parse_xml_to_dict(xml_path):
             data['MD_Keywords'] = ', '.join(keywords)
 
             data['MD_SpatialRepresentationTypeCode'] = get_element_attribute(id_info, './/gmd:spatialRepresentationType/gmd:MD_SpatialRepresentationTypeCode', 'codeListValue', ns)
-            data['spatialResolution_denominator'] = get_element_text(id_info, './/gmd:denominator/gco:Integer', ns)
+            data['spatialResolution_denominator'] = get_element_text(id_info, './/gmd:spatialResolution/gmd:MD_Resolution/gmd:equivalentScale/gmd:MD_RepresentativeFraction/gmd:denominator/gco:Integer', ns)
             data['topicCategory'] = get_element_text(id_info, './/gmd:topicCategory/gmd:MD_TopicCategoryCode', ns)
             
             data['westBoundLongitude'] = get_element_text(id_info, './/gmd:westBoundLongitude/gco:Decimal', ns)

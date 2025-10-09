@@ -259,7 +259,17 @@
             <gmd:MD_SpatialRepresentationTypeCode codeList="http://standards.iso.org/iso/19139/resources/gmxCodelists.xml#MD_SpatialRepresentationTypeCode"
                                                   codeListValue=""/>
          </gmd:spatialRepresentationType>
-         <gmd:spatialResolution/>
+         <gmd:spatialResolution>
+          <gmd:MD_Resolution>
+           <gmd:equivalentScale>
+            <gmd:MD_RepresentativeFraction>
+             <gmd:denominator>
+              <gco:Integer/>
+             </gmd:denominator>
+            </gmd:MD_RepresentativeFraction>
+           </gmd:equivalentScale>
+          </gmd:MD_Resolution>
+         </gmd:spatialResolution>
          <gmd:language>
             <gmd:LanguageCode codeList="http://www.loc.gov/standards/iso639-2/" codeListValue="por"/>
          </gmd:language>
