@@ -43,9 +43,9 @@ def update_contact_block(contact_wrapper_node, data_dict, ns_map):
 
     uuid_value = data_dict.get('uuid') or str(uuid.uuid4())
     responsible_party_node.set('uuid', uuid_value)
-    
+
     structure = {
-        'individualName': 'gco:CharacterString', 'organisationName': 'gco:CharacterString', 
+        'individualName': 'gco:CharacterString', 'organisationName': 'gco:CharacterString',
         'positionName': 'gco:CharacterString', 'contactInfo': {'CI_Contact': {
             'phone': {'CI_Telephone': {'voice': 'gco:CharacterString'}},
             'address': {'CI_Address': {

@@ -390,10 +390,15 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
             return
 
         # --- LÓGICA DE CARREGAMENTO ---
-        # 1. Se caminho válido para o arquivo .xml da camada.
+        # 1. Tenta carregar o preset do layer properties
+        preset_key = layer.customProperty('contact_preset_key')
+        if preset_key:
+            self.set_combobox_by_data(self.comboBox_contact_presets, preset_key)
+        
+        # 2. Se caminho válido para o arquivo .xml da camada.
         metadata_path = self.get_sidecar_metadata_path()
         
-        # 2. Se um caminho válido foi encontrado e verifica se o arquivo XML de fato existe
+        # 3. Se um caminho válido foi encontrado e verifica se o arquivo XML de fato existe
         if metadata_path and os.path.exists(metadata_path):
             print(f"Arquivo de metadados encontrado: {metadata_path}")
             
@@ -491,7 +496,10 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         data['northBoundLatitude'] = self.lineEdit_northBoundLatitude.text()
 
         #Combobox Preset selecionada (persistênte)
-        data['contact_preset_key'] = self.comboBox_contact_presets.currentData()
+        preset_key = self.comboBox_contact_presets.currentData()
+        layer = self.iface.activeLayer()
+        if layer:
+            layer.setCustomProperty('contact_preset_key', preset_key)
 
         #Dados das camadas no dialog dela
         data.update(self.distribution_data)
@@ -650,6 +658,22 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
                 level=Qgis.Critical
             )
 
+    def update_distribution_button(self):
+        """Atualiza o texto do botão de distribuição com as informações de WMS e WFS."""
+        wms_info = self.distribution_data.get('wms_data', {}).get('geoserver_layer_title')
+        wfs_info = self.distribution_data.get('wfs_data', {}).get('geoserver_layer_title')
+
+        display_text = []
+        if wms_info:
+            display_text.append(f"WMS: {wms_info}")
+        if wfs_info:
+            display_text.append(f"WFS: {wfs_info}")
+
+        if display_text:
+            self.btn_distribution_info.setText(f"🔗 Associado a: {', '.join(display_text)}")
+        else:
+            self.btn_distribution_info.setText("⚠️ Nenhuma camada associada")
+        self.btn_distribution_info.update()
     # --------------------------------------- FUNÇÃO CARREGAR XML -------------------------------------- #
     def populate_form_from_dict(self, data_dict):
         """
@@ -727,20 +751,26 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
             self.btn_distribution_info.setText(f"🔗 Associado a: {', '.join(display_text)}")
         else:
             self.btn_distribution_info.setText("⚠️ Nenhuma camada associada")
+    def update_distribution_button(self):
+        """Atualiza o texto do botão de distribuição com as informações de WMS e WFS."""
+        wms_info = self.distribution_data.get('wms_data', {}).get('geoserver_layer_title')
+        wfs_info = self.distribution_data.get('wfs_data', {}).get('geoserver_layer_title')
 
-        # --- ETAPA 3: DEDUÇÃO DO PRESET DE CONTATO ---
-        found_preset_key = None
-        for preset_key, preset_data in CONTATOS_PREDEFINIDOS.items():
-            if preset_key == 'nenhum': 
-                continue
-            if (self.lineEdit_contact_individualName.text() == preset_data.get('contact_individualName') and
-                self.lineEdit_contact_organisationName.text() == preset_data.get('contact_organisationName') and
-                self.lineEdit_contact_email.text() == preset_data.get('contact_email')):
-                found_preset_key = preset_key
-                break
+        display_text = []
+        if wms_info:
+            display_text.append(f"WMS: {wms_info}")
+        if wfs_info:
+            display_text.append(f"WFS: {wfs_info}")
 
-        if found_preset_key:
-            self.set_combobox_by_data(self.comboBox_contact_presets, found_preset_key)
+        if display_text:
+            self.btn_distribution_info.setText(f"🔗 Associado a: {', '.join(display_text)}")
+        else:
+            self.btn_distribution_info.setText("⚠️ Nenhuma camada associada")
+
+        # --- ETAPA 3: RESTAURAR O PRESET DE CONTATO ---
+        preset_key = data_dict.get('contact_preset_key')
+        if preset_key:
+            self.set_combobox_by_data(self.comboBox_contact_presets, preset_key)
         else:
             nenhum_index = self.comboBox_contact_presets.findData('nenhum')
             if nenhum_index >= 0:
@@ -958,20 +988,14 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
 
             if credentials and 'geoserver_user' in credentials:
                 self.distribution_data['geoserver_user'] = credentials['geoserver_user'] #021025
-            
+
             # Passo 2: Diálogo de Seleção de Camada
             selection_dialog = LayerSelectionDialog(credentials, self)
             # Alimenta o diálogo de seleção com os dados existentes
-            selection_dialog.set_data(self.distribution_data) #021025
+            selection_dialog.set_data(self.distribution_data)  # 021025
 
             # Apenas se o usuário preencher e clicar em "OK"...
             if selection_dialog.exec_() == QtWidgets.QDialog.Accepted:
                 self.distribution_data.update(selection_dialog.get_data())
-                
-                # Atualiza o feedback na interface principal
-                layer_name = self.distribution_data.get('geoserver_layer_name')
-                if layer_name:
-                    self.btn_distribution_info.setText(f"🔗 Associado a: {layer_name}")
-                    self.iface.messageBar().pushMessage("Sucesso", "Informações de distribuição salvas.", level=Qgis.Success)
-                else:
-                    self.btn_distribution_info.setText("⚠️ Nenhuma camada associada")
+                self.update_distribution_button()
+                self.iface.messageBar().pushMessage("Sucesso", "Informações de distribuição salvas.", level=Qgis.Success)

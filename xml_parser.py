@@ -111,7 +111,7 @@ def parse_xml_to_dict(xml_path):
             data['contact_country'] = get_element_text(form_contact, './/gmd:contactInfo//gmd:country/gco:CharacterString', ns)
             data['contact_email'] = get_element_text(form_contact, './/gmd:contactInfo//gmd:electronicMailAddress/gco:CharacterString', ns)
             data['contact_role'] = get_element_attribute(form_contact, './/gmd:role/gmd:CI_RoleCode', 'codeListValue', ns)
-            
+
         return data
 
     except Exception as e:
