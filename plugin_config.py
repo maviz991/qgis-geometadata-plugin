@@ -29,7 +29,14 @@ class PluginConfig:
             "records_url": f"{base_url}/srv/api/records",
             "catalog_url": f"{base_url}/srv/eng/catalog.search"
         }
-
+    
+    def get_metadata_view_url(self, uuid):
+        """ Constrói a URL DINÂMICA para ver um metadado específico. """
+        base_url = self.get_geonetwork_base_url()
+        if not uuid or uuid == "N/A":
+            return base_url
+        return f"{base_url}/srv/por/catalog.search#/metadata/{uuid}"
+    
     # --- NOVO MÉTODO ADICIONADO ---
     def get_geonetwork_base_url(self):
         """ Retorna apenas a URL base do GeoNetwork. """

@@ -23,7 +23,7 @@ from qgis.core import Qgis
 # --- 3. Imports de Módulos Locais do Plugin ---
 from . import xml_generator
 from . import xml_parser
-from .geoserver_login_dialog import GeoServerLoginDialog
+#from .geoserver_login_dialog import GeoServerLoginDialog
 from .layer_selection_dialog import LayerSelectionDialog
 from .plugin_config import config_loader
 from .unified_login_dialog import UnifiedLoginDialog # <-- Import correto
@@ -162,7 +162,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         """
         if self.api_session:
             self.api_session = None
-            self.iface.messageBar().pushMessage("Info", "Desconectado do portal.", level=Qgis.Info, duration=3)
+            self.iface.messageBar().pushMessage("Info", "Desconectado do Geohab.", level=Qgis.Info, duration=3)
             self.update_ui_for_login_status()
             return
 
@@ -173,7 +173,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         if login_dialog.exec_():
             self.api_session = login_dialog.get_session()
             self.last_username = login_dialog.get_last_username()
-            self.iface.messageBar().pushMessage("Sucesso", f"Conectado ao portal como {self.last_username}!", level=Qgis.Success, duration=4)
+            self.iface.messageBar().pushMessage("Sucesso", f"✅ Conectado ao Geohab como {self.last_username}!", level=Qgis.Success, duration=4)
         else:
             self.api_session = None
         
@@ -188,11 +188,11 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         self.btn_exp_geo.setEnabled(is_logged_in)
         
         if is_logged_in:
-            self.btn_login.setText(f"✓ Conectado ({self.last_username})")
-            self.btn_login.setToolTip("Clique para desconectar do portal")
+            self.btn_login.setText(f"✅ Conectado ({self.last_username})")
+            self.btn_login.setToolTip("Clique para desconectar do Geohab")
         else:
-            self.btn_login.setText("Conectar ao Portal")
-            self.btn_login.setToolTip("Clique para fazer login no portal e habilitar a exportação")
+            self.btn_login.setText(" Conectar ao Goehab")
+            self.btn_login.setToolTip("Clique para fazer login no Goehab e habilitar a exportação")
 
     # -------------------------- FUNÇÃO EXPORTAR PARA GEOHAB (TOTALMENTE REFATORADA) --------------------- #
     def exportar_to_geo(self):
@@ -202,7 +202,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         """
         if not self.api_session:
             self.show_message("Não Autenticado",
-                              "Você não está conectado. Por favor, clique em 'Conectar ao Portal' primeiro.",
+                              "Você não está conectado. Por favor, clique em 'Conectar ao Geohab' primeiro.",
                               icon=QtWidgets.QMessageBox.Warning)
             return
 
@@ -215,28 +215,38 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
             
             gn_urls = config_loader.get_geonetwork_url() 
             geonetwork_api_url = gn_urls.get('records_url')
+            geonetwork_catalog_url = gn_urls.get('catalog_url')
 
-            if not geonetwork_api_url:
-                raise ValueError("A URL da API do GeoNetwork não está definida no arquivo de configuração.")
+            if not geonetwork_api_url or not geonetwork_catalog_url:
+                raise ValueError("As URLs do GeoNetwork não estão definidas corretamente no arquivo de configuração.")
 
-            # --- CORREÇÃO PRINCIPAL AQUI ---
-            # 1. Prepara os cabeçalhos básicos
+            # --- CORREÇÃO FINAL E PRECISA AQUI ---
+            # PASSO 1: Visitar o catálogo para garantir que todos os cookies, incluindo os duplicados, estejam na sessão.
+            print("Preparando a sessão com o GeoNetwork para obter o token CSRF...")
+            self.api_session.get(geonetwork_catalog_url, verify=False)
+            
+            # PASSO 2: Encontrar o token CSRF CORRETO.
+            # Iteramos manualmente para encontrar o token com o path específico do GeoNetwork,
+            # resolvendo o erro de cookies duplicados.
+            csrf_token = None
+            for cookie in self.api_session.cookies:
+                if cookie.name == 'XSRF-TOKEN' and 'geonetwork' in cookie.path:
+                    csrf_token = cookie.value
+                    print(f"Token CSRF específico do GeoNetwork encontrado (path: {cookie.path})")
+                    break # Encontramos o que queríamos, podemos parar de procurar
+
+            # PASSO 3: Construir os cabeçalhos.
             headers = {
                 'Content-Type': 'application/xml',
-                'Accept': 'application/json' # É uma boa prática dizer o que esperamos de volta
+                'Accept': 'application/json'
             }
-
-            # 2. Extrai o token CSRF dos cookies da sessão
-            csrf_token = self.api_session.cookies.get('XSRF-TOKEN')
-            
-            # 3. Se o token foi encontrado, adiciona ao cabeçalho
             if csrf_token:
                 headers['X-XSRF-TOKEN'] = csrf_token
-                print(f"Token CSRF encontrado e adicionado ao cabeçalho: {csrf_token[:10]}...")
             else:
-                print("AVISO: Nenhum token CSRF (XSRF-TOKEN) encontrado nos cookies da sessão.")
+                print("AVISO CRÍTICO: O token CSRF específico do GeoNetwork não foi encontrado. A requisição provavelmente falhará.")
             
-            # 4. Envia a requisição com os cabeçalhos completos
+            # PASSO 4: Enviar o metadado.
+            print(f"Enviando metadados para: {geonetwork_api_url}")
             response = self.api_session.put(
                 geonetwork_api_url,
                 data=xml_payload.encode('utf-8'),
@@ -246,25 +256,29 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
             
             response.raise_for_status()
 
+            # PASSO 5: Processar a resposta.
             if response.status_code in [200, 201]:
+                # ... (o resto do tratamento de sucesso permanece o mesmo)
                 uuid_criado = "N/A"
                 try:
                     response_data = response.json()
                     uuid_criado = response_data.get('@uuid', response_data.get('uuid', 'N/A'))
                 except json.JSONDecodeError:
                     print("Resposta não foi JSON, mas o status foi de sucesso.")
-                
+
+                #direct_link = config_loader.get_metadata_view_url(uuid_criado)
+
                 success_text = (f"Metadados enviados com sucesso!<br><br>"
                                 f"<b>Título:</b> {metadata_dict['title']}<br>"
                                 f"<b>UUID:</b> {uuid_criado}<br><br>"
-                                f'Acesse o <a href="{config_loader.get_geonetwork_base_url()}">portal</a> para finalizar a publicação.')
+                                f'Acesse o <a href="{config_loader.get_geonetwork_base_url()}">Geohab</a> para finalizar a publicação.')
                 self.show_message("Sucesso!", success_text)
-                self.iface.messageBar().pushMessage("Sucesso", f"Metadados '{metadata_dict['title']}' enviados ao portal.", level=Qgis.Success, duration=7)
+                self.iface.messageBar().pushMessage("Sucesso", f"Metadados '{metadata_dict['title']}' enviados ao Geohab.", level=Qgis.Success, duration=7)
             else:
                 raise Exception(f"Resposta inesperada do servidor: Status {response.status_code}")
 
         except requests.exceptions.HTTPError as e:
-            error_text = f"Falha no envio (Status: {e.response.status_code}).<br><br>Verifique suas permissões no portal.<br>Detalhe: {e.response.text[:200]}"
+            error_text = f"Falha no envio (Status: {e.response.status_code}).<br><br>Verifique suas permissões no Geohab.<br>Detalhe: {e.response.text[:200]}"
             self.show_message("Erro no Envio", error_text, icon=QtWidgets.QMessageBox.Critical)
             print(f"ERRO do GeoNetwork: {e.response.status_code} - {e.response.text}")
         except requests.exceptions.RequestException as e:
@@ -275,8 +289,8 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
             print(f"ERRO INESPERADO: {e}")
             traceback.print_exc()
 
-    # --- O RESTANTE DAS SUAS FUNÇÕES (exportar_to_xml, populate_comboboxes, etc.) CONTINUA AQUI ---
-    # ... (cole o resto das suas funções a partir de 'exportar_to_xml' aqui) ...
+    # -------------------------- FUNÇÃO EXPORTAR PARA XML --------------------- #
+
     def exportar_to_xml(self):
         """Coleta dados, gera o XML e pede ao usuário para salvá-lo."""
         
@@ -822,19 +836,27 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         
     # --------------------------------- FUNÇÃO LOGIN GEOSERVER ---------------------------------- #
     def open_distribution_workflow(self):
-        """ Inicia o fluxo de dois passos: Login -> Seleção. """
-        login_dialog = GeoServerLoginDialog(self)
-        login_dialog.set_data(self.distribution_data)
+        """
+        Inicia o fluxo de seleção de camada, reaproveitando a sessão de login principal.
+        """
+        # PASSO 1: VERIFICAR SE O USUÁRIO JÁ ESTÁ LOGADO NO PORTAL
+        if not self.api_session:
+            self.show_message(
+                "Conexão Necessária",
+                "Para associar uma camada do GeoServer, por favor, primeiro conecte-se ao portal usando o botão 'Conectar ao Geohab'.",
+                icon=QtWidgets.QMessageBox.Information
+            )
+            return
 
-        if login_dialog.exec_() == QtWidgets.QDialog.Accepted:
-            credentials = login_dialog.get_credentials()
-            if credentials and 'geoserver_user' in credentials:
-                self.distribution_data['geoserver_user'] = credentials['geoserver_user']
+        # PASSO 2: SE ESTIVER LOGADO, ABRE A JANELA DE SELEÇÃO PASSANDO A SESSÃO
+        # A LayerSelectionDialog agora receberá a sessão, não mais as credenciais.
+        selection_dialog = LayerSelectionDialog(self.api_session, self)
+        
+        # Alimenta o diálogo de seleção com os dados já existentes
+        selection_dialog.set_data(self.distribution_data)
 
-            selection_dialog = LayerSelectionDialog(credentials, self)
-            selection_dialog.set_data(self.distribution_data)
-
-            if selection_dialog.exec_() == QtWidgets.QDialog.Accepted:
-                self.distribution_data.update(selection_dialog.get_data())
-                self.update_distribution_button()
-                self.iface.messageBar().pushMessage("Sucesso", "Informações de distribuição salvas.", level=Qgis.Success)
+        # Apenas se o usuário preencher e clicar em "OK"...
+        if selection_dialog.exec_() == QtWidgets.QDialog.Accepted:
+            self.distribution_data.update(selection_dialog.get_data())
+            self.update_distribution_button()
+            self.iface.messageBar().pushMessage("Sucesso", "Informações de distribuição salvas.", level=Qgis.Success)

@@ -767,6 +767,29 @@ p, li { white-space: pre-wrap; }
      </item>
     </layout>
    </item>
+   <item row="9" column="3">
+    <layout class="QGridLayout" name="gridLayout_34">
+     <property name="sizeConstraint">
+      <enum>QLayout::SetMinimumSize</enum>
+     </property>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_northBoundLatitude">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Norte</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignBottom|Qt::AlignHCenter</set>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
    <item row="12" column="3">
     <layout class="QGridLayout" name="gridLayout_38">
      <property name="sizeConstraint">
@@ -818,29 +841,6 @@ p, li { white-space: pre-wrap; }
        </property>
        <property name="placeholderText">
         <string>Resumo descritivo da camada</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item row="9" column="3">
-    <layout class="QGridLayout" name="gridLayout_34">
-     <property name="sizeConstraint">
-      <enum>QLayout::SetMinimumSize</enum>
-     </property>
-     <item row="0" column="0">
-      <widget class="QLabel" name="label_northBoundLatitude">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="text">
-        <string>Norte</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignBottom|Qt::AlignHCenter</set>
        </property>
       </widget>
      </item>
@@ -982,41 +982,6 @@ p, li { white-space: pre-wrap; }
       </widget>
      </item>
     </layout>
-   </item>
-   <item row="16" column="0">
-    <widget class="QPushButton" name="btn_login">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="minimumSize">
-      <size>
-       <width>32</width>
-       <height>0</height>
-      </size>
-     </property>
-     <property name="layoutDirection">
-      <enum>Qt::LeftToRight</enum>
-     </property>
-     <property name="text">
-      <string> Login</string>
-     </property>
-     <property name="icon">
-      <iconset>
-       <normaloff>../../../../CDHU/python/plugins/GeoMetadata/img/login_2.svg</normaloff>../../../../CDHU/python/plugins/GeoMetadata/img/login_2.svg</iconset>
-     </property>
-     <property name="iconSize">
-      <size>
-       <width>26</width>
-       <height>16</height>
-      </size>
-     </property>
-     <property name="checkable">
-      <bool>false</bool>
-     </property>
-    </widget>
    </item>
    <item row="1" column="2">
     <layout class="QGridLayout" name="gridLayout_28">
@@ -1460,6 +1425,41 @@ p, li { white-space: pre-wrap; }
      </property>
     </widget>
    </item>
+   <item row="16" column="0">
+    <widget class="QPushButton" name="btn_login">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>32</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="layoutDirection">
+      <enum>Qt::LeftToRight</enum>
+     </property>
+     <property name="text">
+      <string> Login</string>
+     </property>
+     <property name="icon">
+      <iconset>
+       <normaloff>../../../../CDHU/python/plugins/GeoMetadata/img/login_3.svg</normaloff>../../../../CDHU/python/plugins/GeoMetadata/img/login_3.svg</iconset>
+     </property>
+     <property name="iconSize">
+      <size>
+       <width>26</width>
+       <height>16</height>
+      </size>
+     </property>
+     <property name="checkable">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
   </layout>
  </widget>
  <tabstops>
@@ -1492,7 +1492,6 @@ p, li { white-space: pre-wrap; }
   <tabstop>lineEdit_southBoundLatitude</tabstop>
   <tabstop>lineEdit_westBoundLongitude</tabstop>
   <tabstop>textEdit_abstract</tabstop>
-  <tabstop>textBrowser</tabstop>
  </tabstops>
  <resources/>
  <connections/>
