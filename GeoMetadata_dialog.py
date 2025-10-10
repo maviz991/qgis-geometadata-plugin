@@ -170,14 +170,14 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
             
             xml_content = xml_generator.generate_xml_from_template(metadata_dict, template_path)
             
-            safe_title = metadata_dict.get('title', 'metadados').replace(' ', '_')
+            safe_title = metadata_dict.get('title', 'metadados').replace('_', ' ')
             suggested_filename = f"{safe_title}.xml"
 
 
 
             file_path, _ = QtWidgets.QFileDialog.getSaveFileName(
-                self, 
-                "Salvar Metadados XML", 
+                self,
+                "Salvar Metadados XML",
                 suggested_filename,
                 "Arquivos XML (*.xml)"
             )
@@ -193,9 +193,9 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
                             f'<a href="{metadata_uri}">{file_path}</a>')
                 self.show_message("Exportação Concluída", success_text)
                 self.iface.messageBar().pushMessage(
-                    "Sucesso", 
-                    f"Metadados salvos em: {file_path}", 
-                    level=Qgis.Success, 
+                    "Sucesso",
+                    f"Metadados salvos em: {file_path}",
+                    level=Qgis.Success,
                     duration=5
                 )
 
@@ -231,7 +231,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
             # Adiciona o texto visível (text) e o dado oculto (data)
             self.comboBox_status_codeListValue.addItem(text, data)
 
-        setorList_options = [  
+        setorList_options = [
             ('CDHU', 'cdhu'),
             ('DPDU', 'dpdu'),
             ('SPHU', 'sphu'),
@@ -301,7 +301,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         for text, data in categoric_options:
             self.comboBox_topicCategory.addItem(text, data)
 
-        hierarchy_options = [             
+        hierarchy_options = [
             #('Atributo', 'attribute'),
             #('Feição', 'feature'),
             ('Conjunto de dados', 'dataset'),
@@ -322,7 +322,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         for text, data in hierarchy_options:
             self.comboBox_hierarchyLevel.addItem(text, data)
     #Extras
-        role_options = [             
+        role_options = [
             ('Autor', 'author'),
             ('Depositário', 'custodian'),
             ('Distribuidor', 'distributor'),
@@ -390,10 +390,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
             return
 
         # --- LÓGICA DE CARREGAMENTO ---
-        # 1. Tenta carregar o preset do layer properties
-        preset_key = layer.customProperty('contact_preset_key')
-        if preset_key:
-            self.set_combobox_by_data(self.comboBox_contact_presets, preset_key)
+
         
         # 2. Se caminho válido para o arquivo .xml da camada.
         metadata_path = self.get_sidecar_metadata_path()
@@ -446,7 +443,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         # --- LÓGICA DE UUID PARA PRESETS (Setores) ---
         # 1. Pega a chave do preset que o usuário selecionou (ex: 'ssaru')
         preset_key = self.comboBox_contact_presets.currentData()
-        
+
         # 2. Se um preset válido foi selecionado
         if preset_key and preset_key != 'nenhum':
             preset_data = CONTATOS_PREDEFINIDOS.get(preset_key, {}) # busca os dados completos desse preset no dicionário
@@ -496,10 +493,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         data['northBoundLatitude'] = self.lineEdit_northBoundLatitude.text()
 
         #Combobox Preset selecionada (persistênte)
-        preset_key = self.comboBox_contact_presets.currentData()
-        layer = self.iface.activeLayer()
-        if layer:
-            layer.setCustomProperty('contact_preset_key', preset_key)
+        data['contact_preset_key'] = self.comboBox_contact_presets.currentData()
 
         #Dados das camadas no dialog dela
         data.update(self.distribution_data)
@@ -630,7 +624,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
             
             with open(metadata_path, 'w', encoding='utf-8') as f:
                 f.write(xml_content)
-            
+
             # --- MUDANÇA: Feedback Duplo (Pop-up + Barra do QGIS) ---
             success_text = (f"Pronto!<br><br>"
                             f"Metadados associados à camada '<b>{layer.name()}</b>'.<br>"
@@ -638,9 +632,9 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
                             f'<a href="{metadata_uri}">{metadata_path}</a>')
             self.show_message("Metadados associado a camada corretamente!", success_text)
             self.iface.messageBar().pushMessage(
-                "Sucesso", 
-                f"Pronto! Metadados associado a camada ativa<br>Metadados salvos em: {metadata_path}", 
-                level=Qgis.Success, 
+                "Sucesso",
+                f"Pronto! Metadados associado a camada ativa<br>Metadados salvos em: {metadata_path}",
+                level=Qgis.Success,
                 duration=9
             )
 
@@ -674,6 +668,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         else:
             self.btn_distribution_info.setText("⚠️ Nenhuma camada associada")
         self.btn_distribution_info.update()
+
     # --------------------------------------- FUNÇÃO CARREGAR XML -------------------------------------- #
     def populate_form_from_dict(self, data_dict):
         """
@@ -751,6 +746,27 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
             self.btn_distribution_info.setText(f"🔗 Associado a: {', '.join(display_text)}")
         else:
             self.btn_distribution_info.setText("⚠️ Nenhuma camada associada")
+
+        # --- ETAPA 3: DEDUÇÃO DO PRESET DE CONTATO ---
+        found_preset_key = None
+        for preset_key, preset_data in CONTATOS_PREDEFINIDOS.items():
+            if preset_key == 'nenhum': 
+                continue
+            if (self.lineEdit_contact_individualName.text() == preset_data.get('contact_individualName') and
+                self.lineEdit_contact_organisationName.text() == preset_data.get('contact_organisationName') and
+                self.lineEdit_contact_email.text() == preset_data.get('contact_email')):
+                found_preset_key = preset_key
+                break
+
+        if found_preset_key:
+            self.set_combobox_by_data(self.comboBox_contact_presets, found_preset_key)
+        else:
+            nenhum_index = self.comboBox_contact_presets.findData('nenhum')
+            if nenhum_index >= 0:
+                self.comboBox_contact_presets.setCurrentIndex(nenhum_index)
+                
+        print("Formulário preenchido com dados de um Metadado existente.")
+            
     def update_distribution_button(self):
         """Atualiza o texto do botão de distribuição com as informações de WMS e WFS."""
         wms_info = self.distribution_data.get('wms_data', {}).get('geoserver_layer_title')
@@ -766,19 +782,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
             self.btn_distribution_info.setText(f"🔗 Associado a: {', '.join(display_text)}")
         else:
             self.btn_distribution_info.setText("⚠️ Nenhuma camada associada")
-
-        # --- ETAPA 3: RESTAURAR O PRESET DE CONTATO ---
-        preset_key = data_dict.get('contact_preset_key')
-        if preset_key:
-            self.set_combobox_by_data(self.comboBox_contact_presets, preset_key)
-        else:
-            nenhum_index = self.comboBox_contact_presets.findData('nenhum')
-            if nenhum_index >= 0:
-                self.comboBox_contact_presets.setCurrentIndex(nenhum_index)
-                
         print("Formulário preenchido com dados de um Metadado existente.")
-
-
 
     # --------------------------------- FUNÇÃO MSG ALERTAS ---------------------------------- #
     def show_message(self, title, text, icon=QtWidgets.QMessageBox.Information):
