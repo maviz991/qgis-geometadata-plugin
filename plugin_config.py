@@ -19,16 +19,21 @@ class PluginConfig:
                 self.config = json.load(f)
         except Exception as e:
             print(f"CRITICAL: Não foi possível carregar o arquivo de configuração: {e}")
-            # Você pode definir valores padrão aqui como fallback
             self.config['geonetwork_url'] = ""
             self.config['geoserver_url'] = ""
 
     def get_geonetwork_url(self):
+        """ Retorna um dicionário com as URLs detalhadas do GeoNetwork. """
         base_url = self.config.get("geonetwork_url", "")
         return {
             "records_url": f"{base_url}/srv/api/records",
             "catalog_url": f"{base_url}/srv/eng/catalog.search"
         }
+
+    # --- NOVO MÉTODO ADICIONADO ---
+    def get_geonetwork_base_url(self):
+        """ Retorna apenas a URL base do GeoNetwork. """
+        return self.config.get("geonetwork_url", "")
 
     def get_geoserver_url(self):
         return self.config.get("geoserver_url", "")
