@@ -244,7 +244,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
             self.comboBox_contact_presets.addItem(text, data)
 
         typeEspatial_options = [             
-            ('Grid|Raster', 'grid'),
+            ('Grid | Raster', 'grid'),
             ('Modelo estereofónico', 'stereoscopicModel'),
             ('Rede triangular irregular (TIN)', 'tin'),
             ('Tabela de texto', 'textTable'),              
