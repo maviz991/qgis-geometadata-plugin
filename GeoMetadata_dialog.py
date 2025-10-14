@@ -28,6 +28,8 @@ from .layer_selection_dialog import LayerSelectionDialog
 from .plugin_config import config_loader
 from .unified_login_dialog import UnifiedLoginDialog # <-- Import correto
 import pathlib
+from qgis.PyQt.QtGui import QIcon
+from qgis.PyQt.QtCore import QSize
 from qgis.core import (
     Qgis,
     QgsCoordinateReferenceSystem,
@@ -143,6 +145,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         # Configuração inicial da UI
         self.populate_comboboxes()
         self.auto_fill_from_layer()
+        self.current_metadata_uuid = None        
 
         # --- MODIFICADO: Conexões de Botões ---
         self.btn_exp_xml.clicked.connect(self.exportar_to_xml)
@@ -151,6 +154,27 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         self.btn_login.clicked.connect(self.authenticate)
         self.comboBox_contact_presets.currentIndexChanged.connect(self.on_contact_preset_changed)
         self.btn_distribution_info.clicked.connect(self.open_distribution_workflow)
+
+        # --- LÓGICA DE ÍCONES ---
+        # 1. Obtenha o caminho do diretório do plugin
+        plugin_dir = os.path.dirname(__file__)
+
+        # 2. Crie os objetos QIcon e armazene-os como atributos
+        path_icon_ok = os.path.join(plugin_dir, 'img', 'login_ok.png')
+        path_icon_error = os.path.join(plugin_dir, 'img', 'login_error.png')
+
+        # Verificação para garantir que os ícones existem (bom para depuração)
+        if not os.path.exists(path_icon_ok) or not os.path.exists(path_icon_error):
+            print("AVISO: Arquivos de ícone de login não encontrados!")
+            # Você pode definir ícones padrão aqui se quiser
+            self.icon_login_ok = QIcon() 
+            self.icon_login_error = QIcon()
+        else:
+            self.icon_login_ok = QIcon(path_icon_ok)
+            self.icon_login_error = QIcon(path_icon_error)
+        
+        # Opcional: Defina o tamanho do ícone no botão para garantir consistência
+        self.btn_login.setIconSize(QSize(20, 20))    
 
         # Atualiza o estado inicial dos botões
         self.update_ui_for_login_status()
@@ -186,15 +210,18 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         """
         is_logged_in = self.api_session is not None
         self.btn_exp_geo.setEnabled(is_logged_in)
+        self.btn_distribution_info.setEnabled(is_logged_in)
         
         if is_logged_in:
-            self.btn_login.setText(f"✅ Conectado ({self.last_username})")
+            self.btn_login.setIcon(self.icon_login_ok)
+            self.btn_login.setText(f" Conectado ({self.last_username})")
             self.btn_login.setToolTip("Clique para desconectar do Geohab")
         else:
+            self.btn_login.setIcon(self.icon_login_error)
             self.btn_login.setText(" Conectar ao Goehab")
             self.btn_login.setToolTip("Clique para fazer login no Goehab e habilitar a exportação")
 
-    # -------------------------- FUNÇÃO EXPORTAR PARA GEOHAB (TOTALMENTE REFATORADA) --------------------- #
+    # -------------------------- FUNÇÃO EXPORTAR PARA GEOHAB (REFATORADA) --------------------- #
     def exportar_to_geo(self):
         """
         Coleta os dados, gera o XML e o envia para a API do GeoNetwork usando
@@ -258,6 +285,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
 
             # PASSO 5: Processar a resposta.
             if response.status_code in [200, 201]:
+                print(f"Resposta do GeoNetwork (Status {response.status_code}): {response.text}")
                 # ... (o resto do tratamento de sucesso permanece o mesmo)
                 uuid_criado = "N/A"
                 try:
@@ -265,13 +293,21 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
                     uuid_criado = response_data.get('@uuid', response_data.get('uuid', 'N/A'))
                 except json.JSONDecodeError:
                     print("Resposta não foi JSON, mas o status foi de sucesso.")
-
-                #direct_link = config_loader.get_metadata_view_url(uuid_criado)
+                #Lógica de UUID Oficial do Geohab
+                if uuid_criado and uuid_criado != "N/A":
+                    # 1. Atualiza o UUID na memória da dialog para uso futuro
+                    self.current_metadata_uuid = uuid_criado
+                    
+                    # 2. Silenciosamente, ressalva o arquivo sidecar com o UUID oficial
+                    print(f"Vinculando metadado ao UUID oficial: {uuid_criado}. Ressalvando arquivo sidecar...")
+                    self.salvar_metadados_sidecar(is_automatic_resave=True)
+                direct_link = config_loader.get_metadata_view_url(uuid_criado)
+                                #f'Acesse o <a href="{config_loader.get_geonetwork_base_url()}">Geohab</a> para finalizar a publicação.')                
 
                 success_text = (f"Metadados enviados com sucesso!<br><br>"
                                 f"<b>Título:</b> {metadata_dict['title']}<br>"
                                 f"<b>UUID:</b> {uuid_criado}<br><br>"
-                                f'Acesse o <a href="{config_loader.get_geonetwork_base_url()}">Geohab</a> para finalizar a publicação.')
+                                f'Acesse o <a href="{config_loader.get_geonetwork_edit()}">Geohab</a> para finalizar a publicação.')
                 self.show_message("Sucesso!", success_text)
                 self.iface.messageBar().pushMessage("Sucesso", f"Metadados '{metadata_dict['title']}' enviados ao Geohab.", level=Qgis.Success, duration=7)
             else:
@@ -630,9 +666,13 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         #Dados das camadas no dialog dela
         data.update(self.distribution_data)
         data['thumbnail_url'] = self.lineEdit_thumbnail_url.text()
+
+        # <<< MUDANÇA 3: Adiciona o UUID atual ao dicionário de dados >>>
+        # Isso passa o UUID para o xml_generator, que saberá se deve criar ou atualizar.
+        data['metadata_uuid'] = self.current_metadata_uuid
                  
-        return data
-    
+        return data        
+
 
     # --------------------------- FUNÇÃO PREENCHIMENTO DE CONTATO AUTOMÁTICO ---------------------------- #
     def set_combobox_by_data(self, combo_box, data_value):
@@ -697,46 +737,48 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
             return None
     
     # ------------------------------- FUNÇÃO SALVAR | 'Continuar depois' ------------------------------- #
-    def salvar_metadados_sidecar(self):
-        """
-        Coleta os dados, gera o XML e o salva como um arquivo .xml 'sidecar'
-        ao lado do arquivo da camada ativa.
-        """
+    def salvar_metadados_sidecar(self, is_automatic_resave=False):
         layer = self.iface.activeLayer()
         if not layer:
-            return None
+            # Em um resave automático, não há camada ativa, então não fazemos nada.
+            if is_automatic_resave: return
+            self.show_message("Nenhuma Camada Ativa", "Selecione uma camada para salvar os metadados.", icon=QtWidgets.QMessageBox.Warning)
+            return
+            
         try:
             metadata_path = self.get_sidecar_metadata_path()
             if not metadata_path:
-                warning_text = (f"A camada '{layer.name()}' não está salva no seu computador!<br><br>"
-                                f"A função 'Continuar depois' não pode salvar um metadado para você preencher mais tarde.<br><br>"
-                                f"SOLUÇÕES:<br>   • Use 'Exportar para XML' para salvar o metadado, mas desvinculado a camada atual.<br>    • Ou salve a camada '{layer.name()}' no seu computador.")
-                self.show_message("Não é possível salvar para 'Continuar depois'", warning_text, icon=QtWidgets.QMessageBox.Warning)
-                self.iface.messageBar().pushMessage("Aviso", "A camada não está salva no seu computador.", level=Qgis.Warning, duration=10)
+                if not is_automatic_resave:
+                    # Mostra o aviso apenas se for uma ação do usuário
+                    warning_text = (f"A camada '{layer.name()}' não está salva em um arquivo físico (ex: Shapefile, GeoPackage).<br><br>"
+                                    "A função 'Continuar depois' só funciona para camadas salvas.")
+                    self.show_message("Não é possível salvar", warning_text, icon=QtWidgets.QMessageBox.Warning)
                 return
             
             metadata_dict = self.collect_data()
             plugin_dir = os.path.dirname(__file__)
             template_path = os.path.join(plugin_dir, 'tamplate_mgb20.xml')
             xml_content = xml_generator.generate_xml_from_template(metadata_dict, template_path)
-            metadata_uri = pathlib.Path(metadata_path).as_uri()
             
             with open(metadata_path, 'w', encoding='utf-8') as f:
                 f.write(xml_content)
 
-            success_text = (f"Pronto!<br><br>"
-                            f"Metadados associados à camada '<b>{layer.name()}</b>'.<br>"
-                            f"O arquivo foi salvo no mesmo local da camada:<br>"
-                            f'<a href="{metadata_uri}">{metadata_path}</a>')
-            self.show_message("Metadados associado a camada corretamente!", success_text)
-            self.iface.messageBar().pushMessage("Sucesso", f"Metadados associados à camada e salvos em: {metadata_path}", level=Qgis.Success, duration=9)
+            # <<< MUDANÇA 5: Só mostra a mensagem se não for um resave automático >>>
+            if not is_automatic_resave:
+                metadata_uri = pathlib.Path(metadata_path).as_uri()
+                success_text = (f"Pronto!<br><br>"
+                                f"Metadados associados à camada '<b>{layer.name()}</b>'.<br>"
+                                f"O arquivo foi salvo em:<br>"
+                                f'<a href="{metadata_uri}">{metadata_path}</a>')
+                self.show_message("Metadados Salvos", success_text)
+                self.iface.messageBar().pushMessage("Sucesso", f"Metadados associados à camada e salvos.", level=Qgis.Success, duration=5)
 
         except Exception as e:
+            # Erros são sempre mostrados
             print(f"Erro ao salvar arquivo de metadados sidecar: {e}")
             traceback.print_exc()
             error_text = f"Ocorreu um erro ao tentar salvar o arquivo de metadados:<br><br>{e}"
             self.show_message("Erro ao Salvar", error_text, icon=QtWidgets.QMessageBox.Critical)
-            self.iface.messageBar().pushMessage("Erro", f"Falha ao salvar metadados: {e}", level=Qgis.Critical)
 
     # --------------------------------------- FUNÇÃO CARREGAR XML -------------------------------------- #
     def populate_form_from_dict(self, data_dict):
@@ -745,6 +787,11 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         de distribuição e deduz o preset de contato.
         """
         if not data_dict: return
+
+        # <<< MUDANÇA 6: Armazena o UUID lido do XML >>>
+        self.current_metadata_uuid = data_dict.get('metadata_uuid')
+        if self.current_metadata_uuid:
+            print(f"UUID '{self.current_metadata_uuid}' carregado do XML para a sessão da dialog.")        
 
         self.lineEdit_title.setText(data_dict.get('title', ''))
         try:

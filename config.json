@@ -1,4 +1,5 @@
 {
     "geonetwork_url": "https://geohab.cdhu.sp.gov.br/geonetwork",
-    "geoserver_url": "https://geohab.cdhu.sp.gov.br/geoserver"
+    "geoserver_url": "https://geohab.cdhu.sp.gov.br/geoserver",
+    "geonetwork_edit": "https://geohab.cdhu.sp.gov.br/geonetwork/srv/por/catalog.edit#/"
 }

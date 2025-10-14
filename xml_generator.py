@@ -169,8 +169,21 @@ def generate_xml_from_template(data_dict, template_path):
         update_contact_block(contact_wrappers_id[0], data_dict, ns)
         update_contact_block(contact_wrappers_id[1], CDHU_CONTACT_DATA, ns)
 
+    # Verifica se um UUID já existe no dicionário de dados (vindo de um XML carregado)
+    existing_uuid = data_dict.get('metadata_uuid')
+    
+    if existing_uuid:
+        # Se existe, usa esse UUID. Isso garante que estamos ATUALIZANDO o metadado.
+        final_uuid = existing_uuid
+        print(f"Gerador XML: Usando UUID existente para atualização: {final_uuid}")
+    else:
+        # Se não existe, gera um novo. Isso acontece na CRIAÇÃO de um novo metadado.
+        final_uuid = str(uuid.uuid4())
+        print(f"Gerador XML: Gerando novo UUID para criação: {final_uuid}")
+        
+    set_element_text(root, './gmd:fileIdentifier/gco:CharacterString', final_uuid, ns)
+
     # --- ETAPA 2: PREENCHER METADADOS GERAIS ---
-    set_element_text(root, './gmd:fileIdentifier/gco:CharacterString', str(uuid.uuid4()), ns)
     set_element_text(root, './gmd:dateStamp/gco:DateTime', data_dict.get('dateStamp'), ns)
     set_element_attribute(root, './gmd:language/gmd:LanguageCode', 'codeListValue', data_dict.get('LanguageCode'), ns)
     hierarchy_level_value = data_dict.get('hierarchyLevel')

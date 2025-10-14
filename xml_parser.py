@@ -1,4 +1,4 @@
-# xml_parser.py (VERSÃO FINAL, LIMPA E CORRIGIDA)
+# xml_parser.py (VERSÃO FINAL COM LEITURA DE UUID)
 
 from lxml import etree as ET
 
@@ -36,6 +36,11 @@ def parse_xml_to_dict(xml_path):
         data['characterSet'] = get_element_attribute(root, './gmd:characterSet/gmd:MD_CharacterSetCode', 'codeListValue', ns)
         data['hierarchyLevel'] = get_element_attribute(root, './gmd:hierarchyLevel/gmd:MD_ScopeCode', 'codeListValue', ns)
 
+        # <<< NOVA SEÇÃO: Extrai o UUID do próprio metadado para permitir atualizações >>>
+        data['metadata_uuid'] = get_element_text(root, './gmd:fileIdentifier/gco:CharacterString', ns)
+        if data.get('metadata_uuid'):
+            print(f"UUID oficial do metadado encontrado no arquivo XML: {data['metadata_uuid']}")
+        
         # --- PREENCHIMENTO DAS INFORMAÇÕES DE IDENTIFICAÇÃO ---
         id_info = root.find('.//gmd:identificationInfo/gmd:MD_DataIdentification', namespaces=ns)
         if id_info is not None:
@@ -57,10 +62,9 @@ def parse_xml_to_dict(xml_path):
             data['southBoundLatitude'] = get_element_text(id_info, './/gmd:southBoundLatitude/gco:Decimal', ns)
             data['northBoundLatitude'] = get_element_text(id_info, './/gmd:northBoundLatitude/gco:Decimal', ns)
 
-            # <<< LEITURA DA THUMBNAIL (no lugar correto) >>>
             data['thumbnail_url'] = get_element_text(id_info, './gmd:graphicOverview/gmd:MD_BrowseGraphic/gmd:fileName/gco:CharacterString', ns)
 
-        # <<< LEITURA DOS DADOS DA CAMADA (agora unificado e no lugar correto) >>>
+        # --- LEITURA DOS DADOS DA CAMADA ---
         dist_info = root.find('./gmd:distributionInfo/gmd:MD_Distribution', namespaces=ns)
         if dist_info:
             online_resources = dist_info.findall('.//gmd:onLine/gmd:CI_OnlineResource', namespaces=ns)
@@ -90,11 +94,12 @@ def parse_xml_to_dict(xml_path):
             data['wms_data'] = wms_data
             data['wfs_data'] = wfs_data
 
-        # --- LÓGICA DE CONTATO (robusta e no lugar correto) ---
+        # --- LÓGICA DE CONTATO ---
         all_contacts = root.findall('.//gmd:CI_ResponsibleParty', namespaces=ns)
         form_contact = None
         for contact in all_contacts:
             org_name = get_element_text(contact, './gmd:organisationName/gco:CharacterString', ns)
+            # Este critério de exclusão é específico do seu caso, parece correto.
             if org_name and 'Companhia de Desenvolvimento Habitacional e Urbano' not in org_name:
                 form_contact = contact
                 break 
