@@ -508,12 +508,12 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
             ('Agricultura, pesca ou pecuária', 'farming'),
             ('Biotipos', 'biota'),
             ('Limites Administrativos', 'boundaries'),
-            ('Climatologia, Meteorologia ou atmosfera', 'climatologyMeteorologyAtmosphere'),
+            ('Climatologia ou Meteorologia', 'climatologyMeteorologyAtmosphere'),
             ('Econômia', 'economy'),
             ('Altimetria, Batimetria ou Topografia', 'elevation'),
             ('Informação GeoCientífica', 'geoscientificInformation'),
             ('Saúde', 'health'),
-            ('Mapas, Coberturas Aéreas, imagens de Satélite', 'imageryBaseMapsEarthCover'),
+            ('Mapas ou imagens de Satélite', 'imageryBaseMapsEarthCover'),
             ('Informação Militar', 'intelligenceMilitary'),
             ('Águas Interiores', 'inlandWaters'),
             ('Localização', 'location'),
@@ -604,6 +604,29 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
 
     
     # -------------------------------- FUNÇÃO PARA PREENCHER TÍTULO E BBOX ------------------------------ #
+    def sanitize_title(self, value):
+            """
+            Limpa uma string para ser usada como título, substituindo
+            underscores e hifens por espaços e removendo caracteres especiais.
+            """
+            if not value:
+                return ""
+            
+            # Passo 1: Substitui os separadores comuns por um espaço.
+            # Usar .replace() é mais explícito e claro do que regex aqui.
+            title = value.replace('_', ' ').replace('-', ' ')
+            
+            # Passo 2: Remove todos os caracteres que não são letras, números ou espaços.
+            # Aqui, construímos a regex para remover o que NÃO queremos, sem usar o ambíguo \w.
+            # A regex [^a-zA-Z0-9À-ÿ\s] remove tudo que não for:
+            # a-z, A-Z, 0-9, caracteres acentuados comuns (À-ÿ) e espaços (\s).
+            title = re.sub(r'[^a-zA-Z0-9À-ÿ\s]', '', title)
+            
+            # Passo 3: Converte múltiplos espaços em um único espaço e remove espaços nas pontas.
+            title = re.sub(r'\s+', ' ', title).strip()
+            
+            return title
+    
     def auto_fill_from_layer(self):
         """
         Tenta carregar os dados de um arquivo XML 'sidecar'. Se não encontrar,
@@ -637,7 +660,9 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         print("Nenhum arquivo XML associado a essa camada! Preenchendo com dados padrão da camada.")
         
         # Preenche o TÍTULO com o nome da camada
-        self.lineEdit_title.setText(layer.name())
+        layer_name = layer.name()
+        clean_title = self.sanitize_title(layer_name)
+        self.lineEdit_title.setText(clean_title)
         
         # 1. Pega a extensão e o CRS originais da camada
         original_extent = layer.extent()
