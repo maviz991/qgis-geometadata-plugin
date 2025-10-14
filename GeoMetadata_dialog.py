@@ -15,6 +15,8 @@ import os
 import json
 from datetime import datetime
 import traceback
+import re
+import unicodedata
 # --- 2. Imports de Bibliotecas de Terceiros ---
 import requests
 from qgis.PyQt import uic, QtWidgets
@@ -190,7 +192,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         """
         if self.api_session:
             self.api_session = None
-            self.iface.messageBar().pushMessage("Info", "Desconectado do Geohab.", level=Qgis.Info, duration=3)
+            self.iface.messageBar().pushMessage("Info", "❌ Desconectado do Geohab.", level=Qgis.Info, duration=3)
             self.update_ui_for_login_status()
             return
 
@@ -223,7 +225,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         else:
             self.btn_login.setIcon(self.icon_login_error)
             self.btn_login.setText(" Conectar ao Goehab")
-            self.btn_login.setToolTip("Clique para fazer login no Goehab e habilitar a exportação")
+            self.btn_login.setToolTip("Clique para fazer login no Goehab")
 
     # -------------------------- FUNÇÃO EXPORTAR PARA GEOHAB (REFATORADA) --------------------- #
     def exportar_to_geo(self):
@@ -329,6 +331,24 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
             print(f"ERRO INESPERADO: {e}")
             traceback.print_exc()
 
+    # -------------------------- FUNÇÃO LIMPEZA DE NOME --------------------- #
+    def sanitize_filename(self, value):
+            """
+            Normaliza a string, remove acentos, caracteres especiais e espaços,
+            transformando-a em um nome de arquivo seguro (slugify).
+            """
+            # 1. Normaliza para decompor acentos dos caracteres (ex: 'é' -> 'e' + ´)
+            value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
+            
+            # 2. Remove caracteres que não sejam letras, números, hífen ou underscore
+            value = re.sub(r'[^\w\s-]', '', value).strip()
+            
+            # 3. Substitui espaços e hifens repetidos por um único hífen
+            value = re.sub(r'[-\s]+', '-', value)
+            
+            return value
+
+
     # -------------------------- FUNÇÃO EXPORTAR PARA XML --------------------- #
 
     def exportar_to_xml(self):
@@ -342,8 +362,9 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
             
             xml_content = xml_generator.generate_xml_from_template(metadata_dict, template_path)
             
-            safe_title = metadata_dict.get('title', 'metadados').replace('_', ' ')
-            suggested_filename = f"{safe_title}.xml"
+            original_title = metadata_dict.get('title', 'metadados')
+            safe_filename_base = self.sanitize_filename(original_title)
+            suggested_filename = f"{safe_filename_base}.xml"
 
 
 
@@ -379,8 +400,6 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
                 msg_box.exec_()
 
                 if msg_box.clickedButton() == open_folder_button:
-                    # --- MUDANÇA AQUI ---
-                    # Substitua a linha original por esta chamada ao novo método
                     self.open_folder_and_select_file(file_path)
 
         except Exception as e:
