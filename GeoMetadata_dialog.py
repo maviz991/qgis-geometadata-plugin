@@ -26,8 +26,12 @@ from . import xml_parser
 #from .geoserver_login_dialog import GeoServerLoginDialog
 from .layer_selection_dialog import LayerSelectionDialog
 from .plugin_config import config_loader
-from .unified_login_dialog import UnifiedLoginDialog # <-- Import correto
+from .unified_login_dialog import UnifiedLoginDialog
+from PyQt5.QtWidgets import QMessageBox
+from qgis.core import Qgis, QgsFileUtils
 import pathlib
+import sys
+import subprocess
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtCore import QSize
 from qgis.core import (
@@ -307,7 +311,7 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
                 success_text = (f"Metadados enviados com sucesso!<br><br>"
                                 f"<b>Título:</b> {metadata_dict['title']}<br>"
                                 f"<b>UUID:</b> {uuid_criado}<br><br>"
-                                f'Acesse o <a href="{config_loader.get_geonetwork_edit()}">Geohab</a> para finalizar a publicação.')
+                                f'Acesse o <a href="{config_loader.get_geonetwork_base_url()}">Geohab</a> para finalizar a publicação.')
                 self.show_message("Sucesso!", success_text)
                 self.iface.messageBar().pushMessage("Sucesso", f"Metadados '{metadata_dict['title']}' enviados ao Geohab.", level=Qgis.Success, duration=7)
             else:
@@ -353,19 +357,31 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
             if file_path:
                 with open(file_path, 'w', encoding='utf-8') as f:
                     f.write(xml_content)
+
+                # --- Feedback interativo com botão ---
                 
-                # --- MUDANÇA: Feedback Duplo (Pop-up + Barra do QGIS) ---
-                metadata_uri = pathlib.Path(file_path).as_uri()
-                success_text = (f"Pronto!<br><br>"
-                            f"Metadados salvos com sucesso em:.<br>"
-                            f'<a href="{metadata_uri}">{file_path}</a>')
-                self.show_message("Exportação Concluída", success_text)
                 self.iface.messageBar().pushMessage(
                     "Sucesso",
                     f"Metadados salvos em: {file_path}",
                     level=Qgis.Success,
                     duration=5
                 )
+
+                msg_box = QMessageBox()
+                msg_box.setIcon(QMessageBox.Information)
+                msg_box.setWindowTitle("Exportação Concluída")
+                msg_box.setText("Metadados salvos com sucesso!")
+                msg_box.setInformativeText(file_path)
+                
+                msg_box.addButton(QMessageBox.Ok)
+                open_folder_button = msg_box.addButton("Abrir Pasta do Arquivo", QMessageBox.ActionRole)
+
+                msg_box.exec_()
+
+                if msg_box.clickedButton() == open_folder_button:
+                    # --- MUDANÇA AQUI ---
+                    # Substitua a linha original por esta chamada ao novo método
+                    self.open_folder_and_select_file(file_path)
 
         except Exception as e:
             print(f"Erro ao gerar ou salvar XML: {e}")
@@ -380,6 +396,31 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
                 f"Falha ao gerar XML: {e}", 
                 level=Qgis.Critical
             )
+
+    def open_folder_and_select_file(self, file_path):
+            """
+            Abre o gerenciador de arquivos do sistema e seleciona o arquivo especificado.
+            Funciona de forma multiplataforma.
+            """
+            path = os.path.normpath(file_path) # Garante que as barras estão corretas para o SO
+
+            try:
+                if sys.platform == 'win32':
+                    subprocess.run(['explorer', '/select,', path])
+                elif sys.platform == 'darwin': # macOS
+                    subprocess.run(['open', '-R', path])
+                else: # Linux
+                    # Tentar selecionar o arquivo é inconsistente entre os gerenciadores de arquivos do Linux.
+                    # A abordagem mais segura é abrir a pasta que o contém.
+                    directory = os.path.dirname(path)
+                    subprocess.run(['xdg-open', directory])
+            except Exception as e:
+                self.iface.messageBar().pushMessage(
+                    "Erro",
+                    f"Não foi possível abrir o gerenciador de arquivos: {str(e)}",
+                    level=Qgis.Critical,
+                    duration=5
+                )
 
     # ----------------------------------- FUNÇÃO PARA POPULAR COMBOBOXEIS ------------------------------- #
     def populate_comboboxes(self):        
