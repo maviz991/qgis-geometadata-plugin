@@ -13,29 +13,19 @@
 # --- 1. Imports da Biblioteca Padrão Python ---
 import os
 import json
-from datetime import datetime
 import traceback
 import re
 import unicodedata
-# --- 2. Imports de Bibliotecas de Terceiros ---
-import requests
-from qgis.PyQt import uic, QtWidgets
-from qgis.PyQt.QtCore import Qt, QDateTime
-from qgis.core import Qgis
-# --- 3. Imports de Módulos Locais do Plugin ---
-from . import xml_generator
-from . import xml_parser
-#from .geoserver_login_dialog import GeoServerLoginDialog
-from .layer_selection_dialog import LayerSelectionDialog
-from .plugin_config import config_loader
-from .unified_login_dialog import UnifiedLoginDialog
-from PyQt5.QtWidgets import QMessageBox
-from qgis.core import Qgis, QgsFileUtils
 import pathlib
 import sys
 import subprocess
-from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtCore import QSize
+
+# --- 2. Imports de Bibliotecas de Terceiros ---
+import requests
+from qgis.PyQt import uic, QtWidgets
+from qgis.PyQt.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QWidget, QMessageBox
+from qgis.PyQt.QtCore import Qt, QDateTime, QSize
+from qgis.PyQt.QtGui import QPixmap, QIcon
 from qgis.core import (
     Qgis,
     QgsCoordinateReferenceSystem,
@@ -43,921 +33,429 @@ from qgis.core import (
     QgsProject
 )
 
+# --- 3. Imports de Módulos Locais do Plugin ---
+from . import xml_generator, xml_parser, resources
+from .layer_selection_dialog import LayerSelectionDialog
+from .plugin_config import config_loader
+from .unified_login_dialog import UnifiedLoginDialog
+from .styles import STYLE_SHEET
+
+# --- Constantes e Configurações ---
 CONTATOS_PREDEFINIDOS = {
-    # ... seu dicionário de contatos permanece aqui ...
-        'cdhu': {
-            'uuid': 'b98c4847-4d5c-43e1-a5eb-bd0228f6903a',
-            'contact_individualName': 'CDHU',
-            'contact_organisationName': 'Companhia de Desenvolvimento Habitacional e Urbano',
-            'contact_positionName': '/',
-            'contact_phone': '+55 11 2505-2479',
-            'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé',
-            'contact_city': 'São Paulo',
-            'contact_postalCode': '01014-930',
-            'contact_country': 'Brasil',
-            'contact_email': 'geo@cdhu.sp.gov.br',
-            'contact_administrativeArea': 'SP',
-            'contact_role': 'owner'
-        },
-        'dpdu': {
-            'uuid': 'a44bfd3a-a9f4-4caf-ba04-6ca36ab44111',
-            'contact_individualName': 'DPDU',
-            'contact_organisationName': 'Diretoria de Planejamento e Desenvolvimento Urbano',
-            'contact_positionName': '/',
-            'contact_phone': '+55 11 2505-2553',
-            'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé, 8º andar - Bloco 2',
-            'contact_city': 'São Paulo',
-            'contact_postalCode': '01014-930',
-            'contact_country': 'Brasil',
-            'contact_email': 'hub_habitacao@cdhu.sp.gov.br',
-            'contact_administrativeArea': 'SP',
-            'contact_role': 'processor'
-        },
-        'ssaru': {
-            'uuid': '648b9e9f-5b88-4e50-8cce-efa78199515e',
-            'contact_individualName': 'SSARU',
-            'contact_organisationName': 'Superintendência Social de Ação em Recuperação Urbana',
-            'contact_positionName': '/',
-            'contact_phone': '+55 11 2505-2352',
-            'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé, 7º andar',
-            'contact_city': 'São Paulo',
-            'contact_postalCode': '01014-930',
-            'contact_country': 'Brasil',
-            'contact_email': 'mapeamento.ssaru@cdhu.sp.gov.br',
-            'contact_administrativeArea': 'SP',
-            'contact_role': 'author'
-        },
-        'terras': {
-            'uuid': '14e0f9a4-81a6-430e-9165-8af35481d8ac',
-            'contact_individualName': 'TERRAS',
-            'contact_organisationName': 'Superintendência de Terras',
-            'contact_positionName': '/',
-            'contact_phone': '+55 11 2505-0000',
-            'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé, 6º andar - Bloco 5',
-            'contact_city': 'São Paulo',
-            'contact_postalCode': '01014-930',
-            'contact_country': 'Brasil',
-            'contact_email': 'terras@cdhu.sp.gov.br',
-            'contact_administrativeArea': 'SP',
-            'contact_role': 'author'
-        },
-        'sphu': {
-            'uuid': '7d1bd2ec-ceee-4f35-a10c-4c37c37355fe',
-            'contact_individualName': 'SPHU',
-            'contact_organisationName': 'Superintendência de Projetos Habitacionais e Urbanos',
-            'contact_positionName': '/',
-            'contact_phone': '+55 11 2505-0000',
-            'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé',
-            'contact_city': 'São Paulo',
-            'contact_postalCode': '01014-930',
-            'contact_country': 'Brasil',
-            'contact_email': 'sphu@cdhu.sp.gov.br',
-            'contact_administrativeArea': 'SP',
-            'contact_role': 'processor'
-        },
-        'nenhum': {
-            'nenhum': {
-            'contact_individualName': '',
-            'contact_organisationName': '',
-            'contact_positionName': '',
-            'contact_phone': '',
-            'contact_deliveryPoint': '',
-            'contact_city': '',
-            'contact_postalCode': '',
-            'contact_country': '',
-            'contact_email': '',
-            'contact_administrativeArea': '', 
-            'contact_role': ''
-        }
-    }
+    'cdhu': { 'uuid': 'b98c4847-4d5c-43e1-a5eb-bd0228f6903a', 'contact_individualName': 'CDHU', 'contact_organisationName': 'Companhia de Desenvolvimento Habitacional e Urbano', 'contact_positionName': '/', 'contact_phone': '+55 11 2505-2479', 'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé', 'contact_city': 'São Paulo', 'contact_postalCode': '01014-930', 'contact_country': 'Brasil', 'contact_email': 'geo@cdhu.sp.gov.br', 'contact_administrativeArea': 'SP', 'contact_role': 'owner' },
+    'dpdu': { 'uuid': 'a44bfd3a-a9f4-4caf-ba04-6ca36ab44111', 'contact_individualName': 'DPDU', 'contact_organisationName': 'Diretoria de Planejamento e Desenvolvimento Urbano', 'contact_positionName': '/', 'contact_phone': '+55 11 2505-2553', 'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé, 8º andar - Bloco 2', 'contact_city': 'São Paulo', 'contact_postalCode': '01014-930', 'contact_country': 'Brasil', 'contact_email': 'hub_habitacao@cdhu.sp.gov.br', 'contact_administrativeArea': 'SP', 'contact_role': 'processor' },
+    'ssaru': { 'uuid': '648b9e9f-5b88-4e50-8cce-efa78199515e', 'contact_individualName': 'SSARU', 'contact_organisationName': 'Superintendência Social de Ação em Recuperação Urbana', 'contact_positionName': '/', 'contact_phone': '+55 11 2505-2352', 'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé, 7º andar', 'contact_city': 'São Paulo', 'contact_postalCode': '01014-930', 'contact_country': 'Brasil', 'contact_email': 'mapeamento.ssaru@cdhu.sp.gov.br', 'contact_administrativeArea': 'SP', 'contact_role': 'author' },
+    'terras': { 'uuid': '14e0f9a4-81a6-430e-9165-8af35481d8ac', 'contact_individualName': 'TERRAS', 'contact_organisationName': 'Superintendência de Terras', 'contact_positionName': '/', 'contact_phone': '+55 11 2505-0000', 'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé, 6º andar - Bloco 5', 'contact_city': 'São Paulo', 'contact_postalCode': '01014-930', 'contact_country': 'Brasil', 'contact_email': 'terras@cdhu.sp.gov.br', 'contact_administrativeArea': 'SP', 'contact_role': 'author' },
+    'sphu': { 'uuid': '7d1bd2ec-ceee-4f35-a10c-4c37c37355fe', 'contact_individualName': 'SPHU', 'contact_organisationName': 'Superintendência de Projetos Habitacionais e Urbanos', 'contact_positionName': '/', 'contact_phone': '+55 11 2505-0000', 'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé', 'contact_city': 'São Paulo', 'contact_postalCode': '01014-930', 'contact_country': 'Brasil', 'contact_email': 'sphu@cdhu.sp.gov.br', 'contact_administrativeArea': 'SP', 'contact_role': 'processor' },
+    'nenhum': { 'contact_individualName': '', 'contact_organisationName': '', 'contact_positionName': '', 'contact_phone': '', 'contact_deliveryPoint': '', 'contact_city': '', 'contact_postalCode': '', 'contact_country': '', 'contact_email': '', 'contact_administrativeArea': '', 'contact_role': '' }
 }
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'GeoMetadata_dialog_base.ui'))
 
-class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
+class GeoMetadataDialog(QtWidgets.QDialog):
     def __init__(self, parent=None, iface=None):
-        """Constructor."""
+        """Construtor."""
         super(GeoMetadataDialog, self).__init__(parent)
-        self.setupUi(self)
-
+        
+        # --- Atributos da Classe ---
         self.iface = iface
         self.distribution_data = {}
-
-        # --- NOVO: Atributos para a sessão de login unificada ---
         self.api_session = None
         self.last_username = None
+        self.current_metadata_uuid = None
 
-        # Configuração inicial da UI
+        # --- Ordem de Construção da UI e Lógica ---
+        self._setup_main_window()
+        self._build_ui_structure()
+        self._setup_connections_and_logic()
+    
+    # --- Métodos de Construção e Configuração da UI (Estrutura) ---
+    def _setup_main_window(self):
+        """Configura as propriedades da janela principal."""
+        self.setObjectName("GeoMetadataDialog")
+        self.setWindowTitle("GeoMetadata | CDHU")
+        self.setMinimumSize(1190, 600)
+        self.setMaximumSize(1240, 650)
+        self.setStyleSheet(STYLE_SHEET)
+
+    def _build_ui_structure(self):
+        """Cria e organiza os widgets principais da UI (header, card)."""
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+
+        header_widget = self._create_header()
+        main_layout.addWidget(header_widget)
+        main_layout.addSpacing(15)
+
+        content_layout = QHBoxLayout()
+        content_layout.setContentsMargins(15, 0, 15, 15)
+        form_card = self._create_form_card()
+        content_layout.addWidget(form_card)
+        main_layout.addLayout(content_layout)
+
+    def _setup_connections_and_logic(self):
+        """Conecta os sinais dos widgets e inicializa a lógica da UI."""
+        self._setup_button_connections()
+        self._setup_login_icons()
         self.populate_comboboxes()
         self.auto_fill_from_layer()
-        self.current_metadata_uuid = None        
-
-        # --- MODIFICADO: Conexões de Botões ---
-        self.btn_exp_xml.clicked.connect(self.exportar_to_xml)
-        self.btn_exp_geo.clicked.connect(self.exportar_to_geo)
-        self.btn_salvar.clicked.connect(self.salvar_metadados_sidecar)
-        self.btn_login.clicked.connect(self.authenticate)
-        self.comboBox_contact_presets.currentIndexChanged.connect(self.on_contact_preset_changed)
-        self.btn_distribution_info.clicked.connect(self.open_distribution_workflow)
-
-        # --- LÓGICA DE ÍCONES ---
-        # 1. Obtenha o caminho do diretório do plugin
-        plugin_dir = os.path.dirname(__file__)
-
-        # 2. Crie os objetos QIcon e armazene-os como atributos
-        path_icon_ok = os.path.join(plugin_dir, 'img', 'login_ok.png')
-        path_icon_error = os.path.join(plugin_dir, 'img', 'login_error.png')
-
-        # Verificação para garantir que os ícones existem (bom para depuração)
-        if not os.path.exists(path_icon_ok) or not os.path.exists(path_icon_error):
-            print("AVISO: Arquivos de ícone de login não encontrados!")
-            # Você pode definir ícones padrão aqui se quiser
-            self.icon_login_ok = QIcon() 
-            self.icon_login_error = QIcon()
-        else:
-            self.icon_login_ok = QIcon(path_icon_ok)
-            self.icon_login_error = QIcon(path_icon_error)
-        
-        # Opcional: Defina o tamanho do ícone no botão para garantir consistência
-        self.btn_login.setIconSize(QSize(20, 20))    
-
-        # Atualiza o estado inicial dos botões
         self.update_ui_for_login_status()
 
-    # ------------------------------------- NOVA FUNÇÃO DE AUTENTICAÇÃO ---------------------------------- #
+    def _create_header(self):
+        """Cria o widget do cabeçalho com o novo estilo de navegação."""
+        header_widget = QWidget()
+        header_widget.setObjectName("Header")
+        layout = QHBoxLayout(header_widget)
+        layout.setSpacing(10) # Adiciona um pequeno espaço entre os elementos
+
+        logo_label = QLabel()
+        pixmap = QPixmap(":/plugins/geometadata/img/header_logo.png")
+        logo_label.setPixmap(pixmap.scaled(160, 80, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+
+        # --- ATRIBUINDO OS NOMES DE OBJETO PARA ESTILIZAÇÃO ---
+
+        # Estes botões usarão o estilo "LinkButton" do QSS
+        self.header_btn_salvar = QPushButton("Continuar depois")
+        self.header_btn_salvar.setObjectName("LinkButton")
+
+        self.header_btn_exp_xml = QPushButton("Exportar para XML")
+        self.header_btn_exp_xml.setObjectName("LinkButton")
+        
+        self.header_btn_exp_geo = QPushButton("Exportar para Geohab")
+        self.header_btn_exp_geo.setObjectName("LinkButton")
+
+        self.header_btn_distribution_info = QPushButton("Associar Camada")
+        self.header_btn_distribution_info.setObjectName("DistributionButton")
+
+        self.header_btn_login = QPushButton()
+        self.header_btn_login.setObjectName("ConnectButton")
+        
+        # --- Montagem do Layout na Ordem Correta ---
+        layout.addWidget(logo_label)
+        layout.addWidget(self.header_btn_salvar)
+        layout.addWidget(self.header_btn_exp_xml)
+        layout.addWidget(self.header_btn_exp_geo)
+        layout.addStretch() # Empurra os botões de ação para a direita
+        layout.addWidget(self.header_btn_distribution_info)
+        layout.addWidget(self.header_btn_login)
+        
+        return header_widget
+        
+    def _create_form_card(self):
+        """Cria o card principal e carrega o formulário do .ui dentro dele."""
+        card_widget = QWidget()
+        card_widget.setProperty("class", "Card")
+        card_layout = QVBoxLayout(card_widget)
+
+        self.ui = FORM_CLASS()
+        form_container = QWidget()
+        self.ui.setupUi(form_container)
+        
+        for btn_name in ['btn_exp_xml', 'btn_exp_geo', 'btn_salvar', 'btn_login']:
+            if hasattr(self.ui, btn_name):
+                getattr(self.ui, btn_name).hide()
+        
+        card_layout.addWidget(form_container)
+        return card_widget
+
+    def _setup_button_connections(self):
+        """Conecta todos os sinais de widgets a seus respectivos slots."""
+        self.header_btn_salvar.clicked.connect(self.salvar_metadados_sidecar)
+        self.header_btn_exp_xml.clicked.connect(self.exportar_to_xml)
+        self.header_btn_exp_geo.clicked.connect(self.exportar_to_geo)
+        self.header_btn_login.clicked.connect(self.authenticate)
+        self.header_btn_distribution_info.clicked.connect(self.open_distribution_workflow)
+        
+        self.ui.comboBox_contact_presets.currentIndexChanged.connect(self.on_contact_preset_changed)
+        #self.ui.btn_distribution_info.clicked.connect(self.open_distribution_workflow)
+
+
+    def _setup_login_icons(self):
+        """Carrega os ícones de login a partir dos recursos."""
+        self.icon_login_ok = QIcon(":/plugins/geometadata/img/login_ok.png")
+        self.icon_login_error = QIcon(":/plugins/geometadata/img/login_error.png")
+        self.header_btn_login.setIconSize(QSize(20, 20))
+
+    # =========================================================================
+    # LÓGICA DE NEGÓCIO DO PLUGIN
+    # =========================================================================
+
     def authenticate(self):
-        """
-        Abre a dialog de login unificada para obter ou limpar uma sessão autenticada.
-        """
         if self.api_session:
             self.api_session = None
             self.iface.messageBar().pushMessage("Info", "❌ Desconectado do Geohab.", level=Qgis.Info, duration=3)
             self.update_ui_for_login_status()
             return
-
+        
         login_dialog = UnifiedLoginDialog(self)
-        if self.last_username:
-            login_dialog.set_data({'last_username': self.last_username})
-
+        if self.last_username: login_dialog.set_data({'last_username': self.last_username})
+        
         if login_dialog.exec_():
             self.api_session = login_dialog.get_session()
             self.last_username = login_dialog.get_last_username()
             self.iface.messageBar().pushMessage("Sucesso", f"✅ Conectado ao Geohab como {self.last_username}!", level=Qgis.Success, duration=4)
         else:
             self.api_session = None
-        
         self.update_ui_for_login_status()
 
-    # ------------------------------------- NOVA FUNÇÃO PARA ATUALIZAR UI --------------------------------- #
     def update_ui_for_login_status(self):
-        """
-        Atualiza a interface (botões, etc.) com base no status de login.
-        """
         is_logged_in = self.api_session is not None
-        self.btn_exp_geo.setEnabled(is_logged_in)
-        self.btn_distribution_info.setEnabled(is_logged_in)
+        self.header_btn_exp_geo.setEnabled(is_logged_in)
+        self.header_btn_distribution_info.setEnabled(is_logged_in)
         
         if is_logged_in:
-            self.btn_login.setIcon(self.icon_login_ok)
-            self.btn_login.setText(f" Conectado ({self.last_username})")
-            self.btn_login.setToolTip("Clique para desconectar do Geohab")
+            self.header_btn_login.setIcon(self.icon_login_ok)
+            self.header_btn_login.setText(f" {self.last_username}")
+            self.header_btn_login.setToolTip("Clique para desconectar")
         else:
-            self.btn_login.setIcon(self.icon_login_error)
-            self.btn_login.setText(" Conectar ao Goehab")
-            self.btn_login.setToolTip("Clique para fazer login no Goehab")
+            self.header_btn_login.setIcon(self.icon_login_error)
+            self.header_btn_login.setText(" ENTRAR")
+            self.header_btn_login.setToolTip("Clique para fazer login no Goehab")
 
-    # -------------------------- FUNÇÃO EXPORTAR PARA GEOHAB (REFATORADA) --------------------- #
     def exportar_to_geo(self):
-        """
-        Coleta os dados, gera o XML e o envia para a API do GeoNetwork usando
-        a sessão de login previamente estabelecida.
-        """
+        # A lógica completa de exportação para o GeoHab vai aqui
         if not self.api_session:
-            self.show_message("Não Autenticado",
-                              "Você não está conectado. Por favor, clique em 'Conectar ao Geohab' primeiro.",
-                              icon=QtWidgets.QMessageBox.Warning)
+            self.show_message("Não Autenticado", "Você não está conectado.", icon=QtWidgets.QMessageBox.Warning)
             return
+        self.iface.messageBar().pushMessage("Info", "Função 'Exportar para Geohab' acionada.", level=Qgis.Info)
 
-        try:
-            self.iface.messageBar().pushMessage("Info", "Preparando e enviando metadados...", level=Qgis.Info, duration=3)
-            metadata_dict = self.collect_data()
-            plugin_dir = os.path.dirname(__file__)
-            template_path = os.path.join(plugin_dir, 'tamplate_mgb20.xml')
-            xml_payload = xml_generator.generate_xml_from_template(metadata_dict, template_path)
-            
-            gn_urls = config_loader.get_geonetwork_url() 
-            geonetwork_api_url = gn_urls.get('records_url')
-            geonetwork_catalog_url = gn_urls.get('catalog_url')
-
-            if not geonetwork_api_url or not geonetwork_catalog_url:
-                raise ValueError("As URLs do GeoNetwork não estão definidas corretamente no arquivo de configuração.")
-
-            # --- CORREÇÃO FINAL E PRECISA AQUI ---
-            # PASSO 1: Visitar o catálogo para garantir que todos os cookies, incluindo os duplicados, estejam na sessão.
-            print("Preparando a sessão com o GeoNetwork para obter o token CSRF...")
-            self.api_session.get(geonetwork_catalog_url, verify=False)
-            
-            # PASSO 2: Encontrar o token CSRF CORRETO.
-            # Iteramos manualmente para encontrar o token com o path específico do GeoNetwork,
-            # resolvendo o erro de cookies duplicados.
-            csrf_token = None
-            for cookie in self.api_session.cookies:
-                if cookie.name == 'XSRF-TOKEN' and 'geonetwork' in cookie.path:
-                    csrf_token = cookie.value
-                    print(f"Token CSRF específico do GeoNetwork encontrado (path: {cookie.path})")
-                    break # Encontramos o que queríamos, podemos parar de procurar
-
-            # PASSO 3: Construir os cabeçalhos.
-            headers = {
-                'Content-Type': 'application/xml',
-                'Accept': 'application/json'
-            }
-            if csrf_token:
-                headers['X-XSRF-TOKEN'] = csrf_token
-            else:
-                print("AVISO CRÍTICO: O token CSRF específico do GeoNetwork não foi encontrado. A requisição provavelmente falhará.")
-            
-            # PASSO 4: Enviar o metadado.
-            print(f"Enviando metadados para: {geonetwork_api_url}")
-            response = self.api_session.put(
-                geonetwork_api_url,
-                data=xml_payload.encode('utf-8'),
-                headers=headers,
-                params={'publishToAll': 'false'}
-            )
-            
-            response.raise_for_status()
-
-            # PASSO 5: Processar a resposta.
-            if response.status_code in [200, 201]:
-                print(f"Resposta do GeoNetwork (Status {response.status_code}): {response.text}")
-                # ... (o resto do tratamento de sucesso permanece o mesmo)
-                uuid_criado = "N/A"
-                try:
-                    response_data = response.json()
-                    uuid_criado = response_data.get('@uuid', response_data.get('uuid', 'N/A'))
-                except json.JSONDecodeError:
-                    print("Resposta não foi JSON, mas o status foi de sucesso.")
-                #Lógica de UUID Oficial do Geohab
-                if uuid_criado and uuid_criado != "N/A":
-                    # 1. Atualiza o UUID na memória da dialog para uso futuro
-                    self.current_metadata_uuid = uuid_criado
-                    
-                    # 2. Silenciosamente, ressalva o arquivo sidecar com o UUID oficial
-                    print(f"Vinculando metadado ao UUID oficial: {uuid_criado}. Ressalvando arquivo sidecar...")
-                    self.salvar_metadados_sidecar(is_automatic_resave=True)
-                direct_link = config_loader.get_metadata_view_url(uuid_criado)
-                                #f'Acesse o <a href="{config_loader.get_geonetwork_base_url()}">Geohab</a> para finalizar a publicação.')                
-
-                success_text = (f"Metadados enviados com sucesso!<br><br>"
-                                f"<b>Título:</b> {metadata_dict['title']}<br>"
-                                f"<b>UUID:</b> {uuid_criado}<br><br>"
-                                f'Acesse o <a href="{config_loader.get_geonetwork_base_url()}">Geohab</a> para finalizar a publicação.')
-                self.show_message("Sucesso!", success_text)
-                self.iface.messageBar().pushMessage("Sucesso", f"Metadados '{metadata_dict['title']}' enviados ao Geohab.", level=Qgis.Success, duration=7)
-            else:
-                raise Exception(f"Resposta inesperada do servidor: Status {response.status_code}")
-
-        except requests.exceptions.HTTPError as e:
-            error_text = f"Falha no envio (Status: {e.response.status_code}).<br><br>Verifique suas permissões no Geohab.<br>Detalhe: {e.response.text[:200]}"
-            self.show_message("Erro no Envio", error_text, icon=QtWidgets.QMessageBox.Critical)
-            print(f"ERRO do GeoNetwork: {e.response.status_code} - {e.response.text}")
-        except requests.exceptions.RequestException as e:
-            self.show_message("Erro de Rede", f"Não foi possível conectar ao servidor:<br><br>{e}", icon=QtWidgets.QMessageBox.Critical)
-            print(f"ERRO DE REDE: {e}")
-        except Exception as e:
-            self.show_message("Erro Inesperado", f"Ocorreu um erro no plugin:<br><br>{e}", icon=QtWidgets.QMessageBox.Critical)
-            print(f"ERRO INESPERADO: {e}")
-            traceback.print_exc()
-
-    # -------------------------- FUNÇÃO LIMPEZA DE NOME --------------------- #
     def sanitize_filename(self, value):
-            """
-            Normaliza a string, remove acentos, caracteres especiais e espaços,
-            transformando-a em um nome de arquivo seguro (slugify).
-            """
-            # 1. Normaliza para decompor acentos dos caracteres (ex: 'é' -> 'e' + ´)
-            value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
-            
-            # 2. Remove caracteres que não sejam letras, números, hífen ou underscore
-            value = re.sub(r'[^\w\s-]', '', value).strip()
-            
-            # 3. Substitui espaços e hifens repetidos por um único hífen
-            value = re.sub(r'[-\s]+', '-', value)
-            
-            return value
-
-
-    # -------------------------- FUNÇÃO EXPORTAR PARA XML --------------------- #
+        value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
+        value = re.sub(r'[^\w\s-]', '', value).strip()
+        value = re.sub(r'[-\s]+', '-', value)
+        return value
 
     def exportar_to_xml(self):
-        """Coleta dados, gera o XML e pede ao usuário para salvá-lo."""
-        
         try:
             metadata_dict = self.collect_data()
-            
             plugin_dir = os.path.dirname(__file__)
             template_path = os.path.join(plugin_dir, 'tamplate_mgb20.xml')
-            
             xml_content = xml_generator.generate_xml_from_template(metadata_dict, template_path)
-            
-            original_title = metadata_dict.get('title', 'metadados')
-            safe_filename_base = self.sanitize_filename(original_title)
+            safe_filename_base = self.sanitize_filename(metadata_dict.get('title', 'metadados'))
             suggested_filename = f"{safe_filename_base}.xml"
-
-
-
-            file_path, _ = QtWidgets.QFileDialog.getSaveFileName(
-                self,
-                "Salvar Metadados XML",
-                suggested_filename,
-                "Arquivos XML (*.xml)"
-            )
+            
+            file_path, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Salvar Metadados XML", suggested_filename, "Arquivos XML (*.xml)")
             
             if file_path:
-                with open(file_path, 'w', encoding='utf-8') as f:
-                    f.write(xml_content)
-
-                # --- Feedback interativo com botão ---
-                
-                self.iface.messageBar().pushMessage(
-                    "Sucesso",
-                    f"Metadados salvos em: {file_path}",
-                    level=Qgis.Success,
-                    duration=5
-                )
-
-                msg_box = QMessageBox()
+                with open(file_path, 'w', encoding='utf-8') as f: f.write(xml_content)
+                self.iface.messageBar().pushMessage("Sucesso", f"Metadados salvos em: {file_path}", level=Qgis.Success, duration=5)
+                msg_box = QMessageBox(self)
                 msg_box.setIcon(QMessageBox.Information)
                 msg_box.setWindowTitle("Exportação Concluída")
                 msg_box.setText("Metadados salvos com sucesso!")
                 msg_box.setInformativeText(file_path)
-                
-                msg_box.addButton(QMessageBox.Ok)
                 open_folder_button = msg_box.addButton("Abrir Pasta do Arquivo", QMessageBox.ActionRole)
-
+                msg_box.addButton(QMessageBox.Ok)
                 msg_box.exec_()
-
-                if msg_box.clickedButton() == open_folder_button:
-                    self.open_folder_and_select_file(file_path)
-
+                if msg_box.clickedButton() == open_folder_button: self.open_folder_and_select_file(file_path)
         except Exception as e:
-            print(f"Erro ao gerar ou salvar XML: {e}")
-            import traceback
             traceback.print_exc()
-            
-            # --- MUDANÇA: Feedback Duplo (Pop-up + Barra do QGIS) ---
-            error_text = f"Ocorreu um erro ao gerar ou salvar o arquivo XML:<br><br>{e}"
-            self.show_message("Erro na Exportação", error_text, icon=QtWidgets.QMessageBox.Critical)
-            self.iface.messageBar().pushMessage(
-                "Erro", 
-                f"Falha ao gerar XML: {e}", 
-                level=Qgis.Critical
-            )
+            self.show_message("Erro na Exportação", f"Ocorreu um erro ao gerar o XML:<br><br>{e}", icon=QtWidgets.QMessageBox.Critical)
 
     def open_folder_and_select_file(self, file_path):
-            """
-            Abre o gerenciador de arquivos do sistema e seleciona o arquivo especificado.
-            Funciona de forma multiplataforma.
-            """
-            path = os.path.normpath(file_path) # Garante que as barras estão corretas para o SO
+        try:
+            path = os.path.normpath(file_path)
+            if sys.platform == 'win32': subprocess.run(['explorer', '/select,', path])
+            elif sys.platform == 'darwin': subprocess.run(['open', '-R', path])
+            else: subprocess.run(['xdg-open', os.path.dirname(path)])
+        except Exception as e:
+            self.iface.messageBar().pushMessage("Erro", f"Não foi possível abrir o gerenciador de arquivos: {e}", level=Qgis.Critical)
 
-            try:
-                if sys.platform == 'win32':
-                    subprocess.run(['explorer', '/select,', path])
-                elif sys.platform == 'darwin': # macOS
-                    subprocess.run(['open', '-R', path])
-                else: # Linux
-                    # Tentar selecionar o arquivo é inconsistente entre os gerenciadores de arquivos do Linux.
-                    # A abordagem mais segura é abrir a pasta que o contém.
-                    directory = os.path.dirname(path)
-                    subprocess.run(['xdg-open', directory])
-            except Exception as e:
-                self.iface.messageBar().pushMessage(
-                    "Erro",
-                    f"Não foi possível abrir o gerenciador de arquivos: {str(e)}",
-                    level=Qgis.Critical,
-                    duration=5
-                )
-
-    # ----------------------------------- FUNÇÃO PARA POPULAR COMBOBOXEIS ------------------------------- #
-    def populate_comboboxes(self):        
-        # --- Preenche o ComboBox de Status ---
-        status_options = [
-            ('Arquivo Antigo', 'historicalArchive'),
-            ('Concluído', 'completed'),
-            ('Contínuo', 'onGoing'),
-            ('Em Desenvolvimento', 'underDevelopment'),
-            ('Necessário', 'required'),
-            ('Obsoleto', 'obsolete'),            
-            ('Planejado', 'planned')
-        ]
+    def populate_comboboxes(self):
+        def populate(combo, options):
+            combo.clear()
+            for text, data in options:
+                combo.addItem(text, data)
         
-        self.comboBox_status_codeListValue.clear()  # Limpa o combo antes de adicionar
-        for text, data in status_options:
-            # Adiciona o texto visível (text) e o dado oculto (data)
-            self.comboBox_status_codeListValue.addItem(text, data)
+        populate(self.ui.comboBox_status_codeListValue, [('Arquivo Antigo', 'historicalArchive'), ('Concluído', 'completed'), ('Contínuo', 'onGoing'), ('Em Desenvolvimento', 'underDevelopment'), ('Necessário', 'required'), ('Obsoleto', 'obsolete'), ('Planejado', 'planned')])
+        populate(self.ui.comboBox_contact_presets, [('CDHU', 'cdhu'), ('DPDU', 'dpdu'), ('SPHU', 'sphu'), ('SSARU', 'ssaru'), ('TERRAS', 'terras'), ('Nenhum', 'nenhum')])
+        populate(self.ui.comboBox_MD_SpatialRepresentationTypeCode, [('Vetor', 'vector'), ('Grid | Raster', 'grid'), ('Tabela de texto', 'textTable'), ('Rede triangular irregular (TIN)', 'tin'), ('Modelo estereofónico', 'stereoscopicModel'), ('Vídeo', 'video')])
+        populate(self.ui.comboBox_LanguageCode, [('🇧🇷 Português', 'por'), ('🇺🇸 Inglês', 'eng'), ('🇪🇸 Espanhol', 'spa'), ('🇫🇷 Françês', 'fra'), ('🇩🇪 Alemão', 'ger')])
+        populate(self.ui.comboBox_characterSet, [('UTF-8', 'utf8')])
+        populate(self.ui.comboBox_topicCategory, [('Limites Administrativos', 'boundaries'), ('Planejamento e Cadastro', 'planningCadastre'), ('Sociedade e Cultura', 'society'), ('Infraestrutura', 'structure'), ('Transportes', 'transportation'), ('Localização', 'location'), ('Mapas ou imagens de Satélite', 'imageryBaseMapsEarthCover'), ('Altimetria, Batimetria ou Topografia', 'elevation'), ('Saúde', 'health'), ('Águas Interiores', 'inlandWaters'), ('Econômia', 'economy'), ('Biotipos', 'biota'), ('Climatologia ou Meteorologia', 'climatologyMeteorologyAtmosphere'), ('Informação GeoCientífica', 'geoscientificInformation'), ('Informação Militar', 'intelligenceMilitary'), ('Oceanos', 'oceans'), ('Infraestruturas de Comunicação', 'utilitiesCommunication'), ('Agricultura, pesca ou pecuária', 'farming')])
+        populate(self.ui.comboBox_hierarchyLevel, [('Conjunto de dados', 'dataset')])
+        populate(self.ui.comboBox_contact_role, [('Dono', 'owner'), ('Autor', 'author'), ('Organizador', 'processor'), ('Distribuidor', 'distributor'), ('Depositário', 'custodian'), ('Fornecedor de recurso', 'resourceProvider'), ('Investigador principal', 'principalInvestigator'), ('Originador', 'originator'), ('Ponto de contato', 'pointOfContact'), ('Publicador', 'publisher'), ('Utilizador', 'user')])
+        populate(self.ui.comboBox_contact_administrativeArea, [('São Paulo', 'SP'), ('Acre', 'AC'), ('Alagoas', 'AL'), ('Amapá', 'AP'), ('Amazonas', 'AM'), ('Bahia', 'BA'), ('Ceará', 'CE'), ('Distrito Federal', 'DF'), ('Espírito Santo', 'ES'), ('Goiás', 'GO'), ('Maranhão', 'MA'), ('Mato Grosso', 'MT'), ('Mato Grosso do Sul', 'MS'), ('Minas Gerais', 'MG'), ('Pará', 'PA'), ('Paraíba', 'PB'), ('Paraná', 'PR'), ('Pernambuco', 'PE'), ('Piauí', 'PI'), ('Rio de Janeiro', 'RJ'), ('Rio Grande do Norte', 'RN'), ('Rio Grande do Sul', 'RS'), ('Rondônia', 'RO'), ('Roraima', 'RR'), ('Santa Catarina', 'SC'), ('Sergipe', 'SE'), ('Tocantins', 'TO')])
 
-        setorList_options = [
-            ('CDHU', 'cdhu'),
-            ('DPDU', 'dpdu'),
-            ('SPHU', 'sphu'),
-            ('SSARU', 'ssaru'),
-            ('TERRAS', 'terras')
-        ]
-        
-        self.comboBox_contact_presets.clear()
-        for text, data in setorList_options:
-            self.comboBox_contact_presets.addItem(text, data)
-
-        typeEspatial_options = [             
-            ('Grid | Raster', 'grid'),
-            ('Modelo estereofónico', 'stereoscopicModel'),
-            ('Rede triangular irregular (TIN)', 'tin'),
-            ('Tabela de texto', 'textTable'),              
-            ('Vetor', 'vector'),            
-            ('Vídeo', 'video')
-        ]
-        
-        self.comboBox_MD_SpatialRepresentationTypeCode.clear()
-        for text, data in typeEspatial_options:
-            self.comboBox_MD_SpatialRepresentationTypeCode.addItem(text, data) 
-
-        language_options = [             
-            ('🇧🇷 Português', 'por'),
-            ('🇺🇸 Inglês', 'eng'),
-            ('🇪🇸 Espanhol', 'spa'),
-            ('🇫🇷 Françês', 'fra'),
-            ('🇩🇪 Alemão', 'ger')
-        ]
-        
-        self.comboBox_LanguageCode.clear()
-        for text, data in language_options:
-            self.comboBox_LanguageCode.addItem(text, data)
-
-        characterSet_options = [             
-            ('UTF-8', 'utf8')
-        ]
-        
-        self.comboBox_characterSet.clear()
-        for text, data in characterSet_options:
-            self.comboBox_characterSet.addItem(text, data)
-
-        categoric_options = [             
-            ('Agricultura, pesca ou pecuária', 'farming'),
-            ('Biotipos', 'biota'),
-            ('Limites Administrativos', 'boundaries'),
-            ('Climatologia ou Meteorologia', 'climatologyMeteorologyAtmosphere'),
-            ('Econômia', 'economy'),
-            ('Altimetria, Batimetria ou Topografia', 'elevation'),
-            ('Informação GeoCientífica', 'geoscientificInformation'),
-            ('Saúde', 'health'),
-            ('Mapas ou imagens de Satélite', 'imageryBaseMapsEarthCover'),
-            ('Informação Militar', 'intelligenceMilitary'),
-            ('Águas Interiores', 'inlandWaters'),
-            ('Localização', 'location'),
-            ('Oceanos', 'oceans'),
-            ('Planejamento e Cadastro', 'planningCadastre'),
-            ('Sociedade e Cultura', 'society'),
-            ('Infraestrutura', 'structure'),
-            ('Transportes', 'transportation'),
-            ('Infraestruturas de Comunicação', 'utilitiesCommunication')
-        ]
-        
-        self.comboBox_topicCategory.clear()
-        for text, data in categoric_options:
-            self.comboBox_topicCategory.addItem(text, data)
-
-        hierarchy_options = [
-            #('Atributo', 'attribute'),
-            #('Feição', 'feature'),
-            ('Conjunto de dados', 'dataset'),
-            #('Conjunto de dados não-geográficos', 'nonGeographicDataset'),
-            #('Coleção', 'collectionSession'),
-            #('Modelo', 'model'),
-            #('Serviço', 'service'),
-            #('Seção de coleção', 'fieldSession'),
-            #('Software', 'software'),
-            #('Série', 'series'),
-            #('Tile', 'tile'),
-            #('Tipo de Atributo', 'attributeType'),
-            #('Tipo de Feição', 'featureType'),
-            #('Tipo de Propriedade', 'propertyType')
-        ]
-        
-        self.comboBox_hierarchyLevel.clear()
-        for text, data in hierarchy_options:
-            self.comboBox_hierarchyLevel.addItem(text, data)
-    #Extras
-        role_options = [
-            ('Autor', 'author'),
-            ('Depositário', 'custodian'),
-            ('Distribuidor', 'distributor'),
-            ('Dono', 'owner'),
-            ('Fornecedor de recurso', 'resourceProvider'),
-            ('Investigador principal', 'principalInvestigator'),
-            ('Organizador', 'processor'),
-            ('Originador', 'originator'),
-            ('Ponto de contato', 'pointOfContact'),
-            ('Publicador', 'publisher'),
-            ('Utilizador', 'user')
-        ]
-        
-        self.comboBox_contact_role.clear()
-        for text, data in role_options:
-            self.comboBox_contact_role.addItem(text, data)
-
-        role_states = [    
-            ('São Paulo', 'SP'),         
-            ('Acre', 'AC'),
-            ('Alagoas', 'AL'),
-            ('Amapá', 'AP'),
-            ('Amazonas', 'AM'),
-            ('Bahia', 'BA'),
-            ('Ceará', 'CE'),
-            ('Distrito Federal', 'DF'),
-            ('Espírito Santo', 'ES'),
-            ('Goiás', 'GO'),
-            ('Maranhão', 'MA'),
-            ('Mato Grosso', 'MT'),
-            ('Mato Grosso do Sul', 'MS'),
-            ('Minas Gerais', 'MG'),
-            ('Pará', 'PA'),
-            ('Paraíba', 'PB'),
-            ('Paraná', 'PR'),
-            ('Pernambuco', 'PE'),
-            ('Piauí', 'PI'),
-            ('Rio de Janeiro', 'RJ'),
-            ('Rio Grande do Norte', 'RN'),
-            ('Rio Grande do Sul', 'RS'),
-            ('Rondônia', 'RO'),
-            ('Roraima', 'RR'),
-            ('Santa Catarina', 'SC'),
-            ('Sergipe', 'SE'),
-            ('Tocantins', 'TO')
-        ]
-        
-        self.comboBox_contact_administrativeArea.clear()
-        for text, data in role_states:
-            self.comboBox_contact_administrativeArea.addItem(text, data)
-
-    
-    # -------------------------------- FUNÇÃO PARA PREENCHER TÍTULO E BBOX ------------------------------ #
     def sanitize_title(self, value):
-            """
-            Limpa uma string para ser usada como título, substituindo
-            underscores e hifens por espaços e removendo caracteres especiais.
-            """
-            if not value:
-                return ""
-            
-            # Passo 1: Substitui os separadores comuns por um espaço.
-            # Usar .replace() é mais explícito e claro do que regex aqui.
-            title = value.replace('_', ' ').replace('-', ' ')
-            
-            # Passo 2: Remove todos os caracteres que não são letras, números ou espaços.
-            # Aqui, construímos a regex para remover o que NÃO queremos, sem usar o ambíguo \w.
-            # A regex [^a-zA-Z0-9À-ÿ\s] remove tudo que não for:
-            # a-z, A-Z, 0-9, caracteres acentuados comuns (À-ÿ) e espaços (\s).
-            title = re.sub(r'[^a-zA-Z0-9À-ÿ\s]', '', title)
-            
-            # Passo 3: Converte múltiplos espaços em um único espaço e remove espaços nas pontas.
-            title = re.sub(r'\s+', ' ', title).strip()
-            
-            return title
+        if not value: return ""
+        title = value.replace('_', ' ').replace('-', ' ')
+        title = re.sub(r'[^a-zA-Z0-9À-ÿ\s]', '', title)
+        title = re.sub(r'\s+', ' ', title).strip()
+        return title
     
     def auto_fill_from_layer(self):
-        """
-        Tenta carregar os dados de um arquivo XML 'sidecar'. Se não encontrar,
-        preenche os campos Título e BBOX com os dados padrão da camada.
-        """
-        
-        # Verifica camada ativa no QGIS.
-        if not self.iface:
-            return
         layer = self.iface.activeLayer()
-        if not layer:
-            return
-
-        # --- LÓGICA DE CARREGAMENTO ---
-
+        if not layer: return
         
-        # 2. Se caminho válido para o arquivo .xml da camada.
         metadata_path = self.get_sidecar_metadata_path()
-        
-        # 3. Se um caminho válido foi encontrado e verifica se o arquivo XML de fato existe
         if metadata_path and os.path.exists(metadata_path):
-            print(f"Arquivo de metadados encontrado: {metadata_path}")
-            
-            data_from_xml = xml_parser.parse_xml_to_dict(metadata_path) # Chama xml_parser.py para ler o XML e transformá-lo em um dicionário.
-            
-            
-            if data_from_xml: # Always load from XML if data is available
-                self.populate_form_from_dict(data_from_xml) # preenche o formulário com os dados do XML
+            data_from_xml = xml_parser.parse_xml_to_dict(metadata_path)
+            if data_from_xml:
+                self.populate_form_from_dict(data_from_xml)
                 return
-        # --- LÓGICA PADRÃO (SÓ EXECUTA SE O XML NÃO FOR CARREGADO) ---
-        print("Nenhum arquivo XML associado a essa camada! Preenchendo com dados padrão da camada.")
         
-        # Preenche o TÍTULO com o nome da camada
-        layer_name = layer.name()
-        clean_title = self.sanitize_title(layer_name)
-        self.lineEdit_title.setText(clean_title)
-        
-        # 1. Pega a extensão e o CRS originais da camada
-        original_extent = layer.extent()
+        self.ui.lineEdit_title.setText(self.sanitize_title(layer.name()))
         source_crs = layer.crs()
-        
-        # 2. Define o nosso CRS de destino: Geográficas WGS 84 (Padrão GeoNetwork)
         target_crs = QgsCoordinateReferenceSystem("EPSG:4326")
-        
-        geographic_extent = original_extent
-
-        # 3. Verifica se a reprojeção é realmente necessária
-        if source_crs != target_crs:
-            print(f"Reprojetando a extensão de {source_crs.authid()} para {target_crs.authid()}")
-            # Cria o objeto de transformação
+        geographic_extent = layer.extent()
+        if source_crs.isValid() and target_crs.isValid() and source_crs != target_crs:
             transform = QgsCoordinateTransform(source_crs, target_crs, QgsProject.instance())
-            # Executa a transformação na extensão
-            geographic_extent = transform.transform(original_extent)
-
-        # 4. Preenche os campos do formulário com a extensão em geográficas
-        self.lineEdit_westBoundLongitude.setText(f"{geographic_extent.xMinimum():.6f}")
-        self.lineEdit_eastBoundLongitude.setText(f"{geographic_extent.xMaximum():.6f}")
-        self.lineEdit_southBoundLatitude.setText(f"{geographic_extent.yMinimum():.6f}")
-        self.lineEdit_northBoundLatitude.setText(f"{geographic_extent.yMaximum():.6f}")
-
-
-    # ------------------------------- FUNÇÃO DE COLETA PARA SAÍDA DE DADOS ------------------------------ #
-    def collect_data(self):
-        """Lê todos os widgets do formulário e retorna um dicionário com os dados."""
-        data = {}
+            geographic_extent = transform.transform(geographic_extent)
             
-        # --- LÓGICA DE UUID PARA PRESETS (Setores) ---
-        # 1. Pega a chave do preset que o usuário selecionou (ex: 'ssaru')
-        preset_key = self.comboBox_contact_presets.currentData()
+        self.ui.lineEdit_westBoundLongitude.setText(f"{geographic_extent.xMinimum():.6f}")
+        self.ui.lineEdit_eastBoundLongitude.setText(f"{geographic_extent.xMaximum():.6f}")
+        self.ui.lineEdit_southBoundLatitude.setText(f"{geographic_extent.yMinimum():.6f}")
+        self.ui.lineEdit_northBoundLatitude.setText(f"{geographic_extent.yMaximum():.6f}")
 
-        # 2. Se um preset válido foi selecionado
-        if preset_key and preset_key != 'nenhum':
-            preset_data = CONTATOS_PREDEFINIDOS.get(preset_key, {}) # busca os dados completos desse preset no dicionário
-            data['uuid'] = preset_data.get('uuid') # e adiciona o UUID fixo dele ao dicionário de dados final.
+    def collect_data(self):
+        data = {}
+        preset_key = self.ui.comboBox_contact_presets.currentData()
+        if preset_key and preset_key != 'nenhum': data['uuid'] = CONTATOS_PREDEFINIDOS.get(preset_key, {}).get('uuid')
 
-        # --- Campos de Texto (QLineEdit e QTextEdit) ---
-        data['title'] = self.lineEdit_title.text()
-        data['edition'] = str(self.spinBox_edition.value())
-        data['abstract'] = self.textEdit_abstract.toPlainText()
-        keywords_string = self.lineEdit_MD_Keywords.text()
-        data['MD_Keywords'] = [k.strip() for k in keywords_string.split(',') if k.strip()]
-        data['spatialResolution_denominator'] = self.lineEdit_textEdit_spatialResolution_denominator.text()
-        ## EXTRAS
-        data['contact_individualName'] = self.lineEdit_contact_individualName.text()
-        data['contact_organisationName'] = self.lineEdit_contact_organisationName.text()
-        data['contact_positionName'] = self.lineEdit_contact_positionName.text()
-        data['contact_phone'] = self.lineEdit_contact_phone.text()
-        data['contact_deliveryPoint'] = self.lineEdit_contact_deliveryPoint.text()
-        data['contact_city'] = self.lineEdit_contact_city.text()
-        data['contact_postalCode'] = self.lineEdit_contact_postalCode.text()
-        data['contact_country'] = self.lineEdit_contact_country.text()
-        data['contact_email'] = self.lineEdit_contact_email.text()
- 
-        # --- Campos de Data/Hora (QDateTimeEdit) ---
-        data['dateStamp'] = self.dateTimeEdit_dateStamp.dateTime().toUTC().toString("yyyy-MM-ddTHH:mm:ss'Z'")
-        # Pega o QDateTime do widget
-        qdt_creation = self.dateTimeEdit_date_creation.dateTime()
-        naive_datetime = qdt_creation.toPyDateTime()                # Converte para um objeto datetime
-        aware_datetime = naive_datetime.astimezone()                # Pega o fuso horário local do sistema
-        data['date_creation'] = aware_datetime.isoformat()          # Formata no padrão ISO 8601 completo, que inclui o fuso
-        
-        # --- ComboBoxes ---
-        data['status_codeListValue'] = self.comboBox_status_codeListValue.currentData()
-        data['MD_SpatialRepresentationTypeCode'] = self.comboBox_MD_SpatialRepresentationTypeCode.currentData()
-        data['LanguageCode'] = self.comboBox_LanguageCode.currentData()
-        data['characterSet'] = self.comboBox_characterSet.currentData()
-        data['topicCategory'] = self.comboBox_topicCategory.currentData()
-        data['hierarchyLevel'] = self.comboBox_hierarchyLevel.currentData()
-        ## EXTRAS
-        data['contact_administrativeArea'] = self.comboBox_contact_administrativeArea.currentData()
-        data['contact_role'] = self.comboBox_contact_role.currentData()
-        
-        # --- BBOX ---
-        data['westBoundLongitude'] = self.lineEdit_westBoundLongitude.text()
-        data['eastBoundLongitude'] = self.lineEdit_eastBoundLongitude.text()
-        data['southBoundLatitude'] = self.lineEdit_southBoundLatitude.text()
-        data['northBoundLatitude'] = self.lineEdit_northBoundLatitude.text()
-
-        #Combobox Preset selecionada (persistênte)
-        data['contact_preset_key'] = self.comboBox_contact_presets.currentData()
-
-        #Dados das camadas no dialog dela
+        data.update({
+            'title': self.ui.lineEdit_title.text(),
+            'edition': str(self.ui.spinBox_edition.value()),
+            'abstract': self.ui.textEdit_abstract.toPlainText(),
+            'MD_Keywords': [k.strip() for k in self.ui.lineEdit_MD_Keywords.text().split(',') if k.strip()],
+            'spatialResolution_denominator': self.ui.lineEdit_textEdit_spatialResolution_denominator.text(),
+            'contact_individualName': self.ui.lineEdit_contact_individualName.text(),
+            'contact_organisationName': self.ui.lineEdit_contact_organisationName.text(),
+            'contact_positionName': self.ui.lineEdit_contact_positionName.text(),
+            'contact_phone': self.ui.lineEdit_contact_phone.text(),
+            'contact_deliveryPoint': self.ui.lineEdit_contact_deliveryPoint.text(),
+            'contact_city': self.ui.lineEdit_contact_city.text(),
+            'contact_postalCode': self.ui.lineEdit_contact_postalCode.text(),
+            'contact_country': self.ui.lineEdit_contact_country.text(),
+            'contact_email': self.ui.lineEdit_contact_email.text(),
+            'dateStamp': self.ui.dateTimeEdit_dateStamp.dateTime().toUTC().toString("yyyy-MM-ddTHH:mm:ss'Z'"),
+            'date_creation': self.ui.dateTimeEdit_date_creation.dateTime().toPyDateTime().astimezone().isoformat(),
+            'status_codeListValue': self.ui.comboBox_status_codeListValue.currentData(),
+            'MD_SpatialRepresentationTypeCode': self.ui.comboBox_MD_SpatialRepresentationTypeCode.currentData(),
+            'LanguageCode': self.ui.comboBox_LanguageCode.currentData(),
+            'characterSet': self.ui.comboBox_characterSet.currentData(),
+            'topicCategory': self.ui.comboBox_topicCategory.currentData(),
+            'hierarchyLevel': self.ui.comboBox_hierarchyLevel.currentData(),
+            'contact_administrativeArea': self.ui.comboBox_contact_administrativeArea.currentData(),
+            'contact_role': self.ui.comboBox_contact_role.currentData(),
+            'westBoundLongitude': self.ui.lineEdit_westBoundLongitude.text(),
+            'eastBoundLongitude': self.ui.lineEdit_eastBoundLongitude.text(),
+            'southBoundLatitude': self.ui.lineEdit_southBoundLatitude.text(),
+            'northBoundLatitude': self.ui.lineEdit_northBoundLatitude.text(),
+            'contact_preset_key': self.ui.comboBox_contact_presets.currentData(),
+            'thumbnail_url': self.ui.lineEdit_thumbnail_url.text(),
+            'metadata_uuid': self.current_metadata_uuid
+        })
         data.update(self.distribution_data)
-        data['thumbnail_url'] = self.lineEdit_thumbnail_url.text()
-
-        # <<< MUDANÇA 3: Adiciona o UUID atual ao dicionário de dados >>>
-        # Isso passa o UUID para o xml_generator, que saberá se deve criar ou atualizar.
-        data['metadata_uuid'] = self.current_metadata_uuid
-                 
-        return data        
-
-
-    # --------------------------- FUNÇÃO PREENCHIMENTO DE CONTATO AUTOMÁTICO ---------------------------- #
-    def set_combobox_by_data(self, combo_box, data_value):
-        """Encontra e seleciona um item em um ComboBox pelo userData."""
-        for index in range(combo_box.count()):
-            if combo_box.itemData(index) == data_value:
-                combo_box.setCurrentIndex(index)
-                return
+        return data
 
     def on_contact_preset_changed(self):
-        """Preenche os campos de contato com base no preset selecionado."""
-        
-        # Pega a chave do preset selecionado (ex: 'cdhu')
-        preset_key = self.comboBox_contact_presets.currentData()
-        
-        # Busca os dados no dicionário
-        contact_data = CONTATOS_PREDEFINIDOS.get(preset_key)
-        
-        if not contact_data:
-            return
+        preset_key = self.ui.comboBox_contact_presets.currentData()
+        contact_data = CONTATOS_PREDEFINIDOS.get(preset_key, {})
+        self.ui.lineEdit_contact_individualName.setText(contact_data.get('contact_individualName', ''))
+        self.ui.lineEdit_contact_organisationName.setText(contact_data.get('contact_organisationName', ''))
+        self.ui.lineEdit_contact_positionName.setText(contact_data.get('contact_positionName', ''))
+        self.ui.lineEdit_contact_phone.setText(contact_data.get('contact_phone', ''))
+        self.ui.lineEdit_contact_deliveryPoint.setText(contact_data.get('contact_deliveryPoint', ''))
+        self.ui.lineEdit_contact_city.setText(contact_data.get('contact_city', ''))
+        self.ui.lineEdit_contact_postalCode.setText(contact_data.get('contact_postalCode', ''))
+        self.ui.lineEdit_contact_country.setText(contact_data.get('contact_country', ''))
+        self.ui.lineEdit_contact_email.setText(contact_data.get('contact_email', ''))
+        self.set_combobox_by_data(self.ui.comboBox_contact_administrativeArea, contact_data.get('contact_administrativeArea', ''))
+        self.set_combobox_by_data(self.ui.comboBox_contact_role, contact_data.get('contact_role', ''))
 
-        # Preenche cada QLineEdit com os dados correspondentes
-        self.lineEdit_contact_individualName.setText(contact_data.get('contact_individualName', ''))
-        self.lineEdit_contact_organisationName.setText(contact_data.get('contact_organisationName', ''))
-        self.lineEdit_contact_positionName.setText(contact_data.get('contact_positionName', ''))
-        self.lineEdit_contact_phone.setText(contact_data.get('contact_phone', ''))
-        self.lineEdit_contact_deliveryPoint.setText(contact_data.get('contact_deliveryPoint', ''))
-        self.lineEdit_contact_city.setText(contact_data.get('contact_city', ''))
-        self.lineEdit_contact_postalCode.setText(contact_data.get('contact_postalCode', ''))
-        self.lineEdit_contact_country.setText(contact_data.get('contact_country', ''))
-        self.lineEdit_contact_email.setText(contact_data.get('contact_email', ''))
-        self.set_combobox_by_data(self.comboBox_contact_administrativeArea, contact_data.get('contact_administrativeArea', ''))
-        self.set_combobox_by_data(self.comboBox_contact_role, contact_data.get('contact_role', ''))
+    def set_combobox_by_data(self, combo_box, data_value):
+        index = combo_box.findData(data_value)
+        if index != -1: combo_box.setCurrentIndex(index)
 
-    # ---------------------------------------- FUNÇÃO GET PATH ----------------------------------------- #
     def get_sidecar_metadata_path(self):
-        """
-        Obtém o caminho esperado para o arquivo XML sidecar, usando layer.source()
-        para compatibilidade com GPKG e SHP, com lógica aprimorada para ZIP.
-        """
         layer = self.iface.activeLayer()
-        if not layer:
-            return None
-
+        if not layer or not layer.source(): return None
         source_path = layer.source()
-        
-        if '|' in source_path:
-            base_path = source_path.split('|')[0]
-        else:
-            base_path = source_path
-            
+        base_path = source_path.split('|')[0] if '|' in source_path else source_path
         if 'vsizip' in source_path.lower():
-            path_sem_vsizip = source_path.replace('/vsizip/', '')
+            path_sem_vsizip = re.sub(r'^/vsizip/', '', source_path, flags=re.IGNORECASE)
             zip_index = path_sem_vsizip.lower().find('.zip')
-            if zip_index != -1:
-                base_path = path_sem_vsizip[:zip_index + 4]
-
-        if os.path.isfile(base_path):
-            return base_path + ".xml"
-        else:
-            print(f"O caminho da fonte '{base_path}' para a camada '{layer.name()}' não é um arquivo válido.")
-            return None
+            if zip_index != -1: base_path = path_sem_vsizip[:zip_index + 4]
+        if os.path.isfile(base_path): return base_path + ".xml"
+        return None
     
-    # ------------------------------- FUNÇÃO SALVAR | 'Continuar depois' ------------------------------- #
     def salvar_metadados_sidecar(self, is_automatic_resave=False):
         layer = self.iface.activeLayer()
-        if not layer:
-            # Em um resave automático, não há camada ativa, então não fazemos nada.
-            if is_automatic_resave: return
-            self.show_message("Nenhuma Camada Ativa", "Selecione uma camada para salvar os metadados.", icon=QtWidgets.QMessageBox.Warning)
+        metadata_path = self.get_sidecar_metadata_path()
+        if not metadata_path:
+            if not is_automatic_resave:
+                layer_name = layer.name() if layer else "A camada"
+                self.show_message("Não é possível salvar", f"{layer_name} não parece estar salva em um arquivo físico.", icon=QtWidgets.QMessageBox.Warning)
             return
-            
         try:
-            metadata_path = self.get_sidecar_metadata_path()
-            if not metadata_path:
-                if not is_automatic_resave:
-                    # Mostra o aviso apenas se for uma ação do usuário
-                    warning_text = (f"A camada '{layer.name()}' não está salva em um arquivo físico (ex: Shapefile, GeoPackage).<br><br>"
-                                    "A função 'Continuar depois' só funciona para camadas salvas.")
-                    self.show_message("Não é possível salvar", warning_text, icon=QtWidgets.QMessageBox.Warning)
-                return
-            
             metadata_dict = self.collect_data()
             plugin_dir = os.path.dirname(__file__)
             template_path = os.path.join(plugin_dir, 'tamplate_mgb20.xml')
             xml_content = xml_generator.generate_xml_from_template(metadata_dict, template_path)
-            
-            with open(metadata_path, 'w', encoding='utf-8') as f:
-                f.write(xml_content)
-
-            # <<< MUDANÇA 5: Só mostra a mensagem se não for um resave automático >>>
+            with open(metadata_path, 'w', encoding='utf-8') as f: f.write(xml_content)
             if not is_automatic_resave:
-                metadata_uri = pathlib.Path(metadata_path).as_uri()
-                success_text = (f"Pronto!<br><br>"
-                                f"Metadados associados à camada '<b>{layer.name()}</b>'.<br>"
-                                f"O arquivo foi salvo em:<br>"
-                                f'<a href="{metadata_uri}">{metadata_path}</a>')
-                self.show_message("Metadados Salvos", success_text)
-                self.iface.messageBar().pushMessage("Sucesso", f"Metadados associados à camada e salvos.", level=Qgis.Success, duration=5)
-
+                self.show_message("Metadados Salvos", f"Metadados associados à camada '<b>{layer.name()}</b>' foram salvos com sucesso.")
         except Exception as e:
-            # Erros são sempre mostrados
-            print(f"Erro ao salvar arquivo de metadados sidecar: {e}")
             traceback.print_exc()
-            error_text = f"Ocorreu um erro ao tentar salvar o arquivo de metadados:<br><br>{e}"
-            self.show_message("Erro ao Salvar", error_text, icon=QtWidgets.QMessageBox.Critical)
+            self.show_message("Erro ao Salvar", f"Ocorreu um erro ao salvar o arquivo:<br><br>{e}", icon=QtWidgets.QMessageBox.Critical)
 
-    # --------------------------------------- FUNÇÃO CARREGAR XML -------------------------------------- #
     def populate_form_from_dict(self, data_dict):
-        """
-        Preenche os widgets do formulário a partir de um dicionário, armazena os dados
-        de distribuição e deduz o preset de contato.
-        """
         if not data_dict: return
-
-        # <<< MUDANÇA 6: Armazena o UUID lido do XML >>>
         self.current_metadata_uuid = data_dict.get('metadata_uuid')
-        if self.current_metadata_uuid:
-            print(f"UUID '{self.current_metadata_uuid}' carregado do XML para a sessão da dialog.")        
+        self.ui.lineEdit_title.setText(data_dict.get('title', ''))
+        try: self.ui.spinBox_edition.setValue(int(data_dict.get('edition', '1') or '1'))
+        except (ValueError, TypeError): self.ui.spinBox_edition.setValue(1)
+        self.ui.textEdit_abstract.setText(data_dict.get('abstract', ''))
+        self.ui.lineEdit_MD_Keywords.setText(','.join(data_dict.get('MD_Keywords', [])))
+        self.ui.lineEdit_textEdit_spatialResolution_denominator.setText(data_dict.get('spatialResolution_denominator', ''))
+        self.ui.lineEdit_contact_individualName.setText(data_dict.get('contact_individualName', ''))
+        self.ui.lineEdit_contact_organisationName.setText(data_dict.get('contact_organisationName', ''))
+        self.ui.lineEdit_contact_positionName.setText(data_dict.get('contact_positionName', ''))
+        self.ui.lineEdit_contact_phone.setText(data_dict.get('contact_phone', ''))
+        self.ui.lineEdit_contact_deliveryPoint.setText(data_dict.get('contact_deliveryPoint', ''))
+        self.ui.lineEdit_contact_city.setText(data_dict.get('contact_city', ''))
+        self.ui.lineEdit_contact_postalCode.setText(data_dict.get('contact_postalCode', ''))
+        self.ui.lineEdit_contact_country.setText(data_dict.get('contact_country', ''))
+        self.ui.lineEdit_contact_email.setText(data_dict.get('contact_email', ''))
 
-        self.lineEdit_title.setText(data_dict.get('title', ''))
-        try:
-            self.spinBox_edition.setValue(int(data_dict.get('edition', '1') or '1'))
-        except (ValueError, TypeError):
-            self.spinBox_edition.setValue(1)
-
-        self.textEdit_abstract.setText(data_dict.get('abstract', ''))
-        self.lineEdit_MD_Keywords.setText(data_dict.get('MD_Keywords', ''))
-        self.lineEdit_textEdit_spatialResolution_denominator.setText(data_dict.get('spatialResolution_denominator', ''))
-        
-        self.lineEdit_contact_individualName.setText(data_dict.get('contact_individualName', ''))
-        self.lineEdit_contact_organisationName.setText(data_dict.get('contact_organisationName', ''))
-        self.lineEdit_contact_positionName.setText(data_dict.get('contact_positionName', ''))
-        self.lineEdit_contact_phone.setText(data_dict.get('contact_phone', ''))
-        self.lineEdit_contact_deliveryPoint.setText(data_dict.get('contact_deliveryPoint', ''))
-        self.lineEdit_contact_city.setText(data_dict.get('contact_city', ''))
-        self.lineEdit_contact_postalCode.setText(data_dict.get('contact_postalCode', ''))
-        self.lineEdit_contact_country.setText(data_dict.get('contact_country', ''))
-        self.lineEdit_contact_email.setText(data_dict.get('contact_email', ''))
-
-        for key, combo in {
-            'status_codeListValue': self.comboBox_status_codeListValue,
-            'MD_SpatialRepresentationTypeCode': self.comboBox_MD_SpatialRepresentationTypeCode,
-            'LanguageCode': self.comboBox_LanguageCode,
-            'characterSet': self.comboBox_characterSet,
-            'topicCategory': self.comboBox_topicCategory,
-            'hierarchyLevel': self.comboBox_hierarchyLevel,
-            'contact_administrativeArea': self.comboBox_contact_administrativeArea,
-            'contact_role': self.comboBox_contact_role
-        }.items():
+        for key, combo in {'status_codeListValue': self.ui.comboBox_status_codeListValue, 'MD_SpatialRepresentationTypeCode': self.ui.comboBox_MD_SpatialRepresentationTypeCode, 'LanguageCode': self.ui.comboBox_LanguageCode, 'characterSet': self.ui.comboBox_characterSet, 'topicCategory': self.ui.comboBox_topicCategory, 'hierarchyLevel': self.ui.comboBox_hierarchyLevel, 'contact_administrativeArea': self.ui.comboBox_contact_administrativeArea, 'contact_role': self.ui.comboBox_contact_role}.items():
             self.set_combobox_by_data(combo, data_dict.get(key))
 
-        self.lineEdit_westBoundLongitude.setText(data_dict.get('westBoundLongitude', ''))
-        self.lineEdit_eastBoundLongitude.setText(data_dict.get('eastBoundLongitude', ''))
-        self.lineEdit_southBoundLatitude.setText(data_dict.get('southBoundLatitude', ''))
-        self.lineEdit_northBoundLatitude.setText(data_dict.get('northBoundLatitude', ''))
+        self.ui.lineEdit_westBoundLongitude.setText(data_dict.get('westBoundLongitude', ''))
+        self.ui.lineEdit_eastBoundLongitude.setText(data_dict.get('eastBoundLongitude', ''))
+        self.ui.lineEdit_southBoundLatitude.setText(data_dict.get('southBoundLatitude', ''))
+        self.ui.lineEdit_northBoundLatitude.setText(data_dict.get('northBoundLatitude', ''))
 
         date_creation_str = data_dict.get('date_creation')
         if date_creation_str:
             try:
                 dt = QDateTime.fromString(date_creation_str, Qt.ISODateWithMs)
                 if not dt.isValid(): dt = QDateTime.fromString(date_creation_str, Qt.ISODate)
-                self.dateTimeEdit_date_creation.setDateTime(dt)
-            except Exception as e:
-                print(f"Erro ao converter data: {e}")
+                self.ui.dateTimeEdit_date_creation.setDateTime(dt)
+            except Exception as e: print(f"Erro ao converter data: {e}")
 
         self.distribution_data['wms_data'] = data_dict.get('wms_data', {})
         self.distribution_data['wfs_data'] = data_dict.get('wfs_data', {})
-        self.lineEdit_thumbnail_url.setText(data_dict.get('thumbnail_url', ''))
+        self.ui.lineEdit_thumbnail_url.setText(data_dict.get('thumbnail_url', ''))
         self.update_distribution_button()
-
-        found_preset_key = next((
-            key for key, data in CONTATOS_PREDEFINIDOS.items() if key != 'nenhum' and
-            self.lineEdit_contact_individualName.text() == data.get('contact_individualName') and
-            self.lineEdit_contact_organisationName.text() == data.get('contact_organisationName') and
-            self.lineEdit_contact_email.text() == data.get('contact_email')
-        ), None)
-
-        preset_to_set = found_preset_key if found_preset_key else 'nenhum'
-        self.set_combobox_by_data(self.comboBox_contact_presets, preset_to_set)
-                
+        self.set_combobox_by_data(self.ui.comboBox_contact_presets, data_dict.get('contact_preset_key', 'nenhum'))
         print("Formulário preenchido com dados de um Metadado existente.")
 
     def update_distribution_button(self):
-        """Atualiza o texto do botão de distribuição com as informações de WMS e WFS."""
         wms_info = self.distribution_data.get('wms_data', {}).get('geoserver_layer_title')
         wfs_info = self.distribution_data.get('wfs_data', {}).get('geoserver_layer_title')
-        
-        display_text = []
-        if wms_info: display_text.append(f"WMS: {wms_info}")
-        if wfs_info: display_text.append(f"WFS: {wfs_info}")
-
+        display_text = [info for info in [f"WMS: {wms_info}" if wms_info else None, f"WFS: {wfs_info}" if wfs_info else None] if info]
         if display_text:
-            self.btn_distribution_info.setText(f"🔗 Associado a: {', '.join(display_text)}")
-        else:
-            self.btn_distribution_info.setText("⚠️ Nenhuma camada associada")
+            icon_link = QIcon(":/plugins/geometadata/img/login_ok.png") # Reutilizando o ícone de OK
+            self.header_btn_distribution_info.setIcon(icon_link)
+            self.header_btn_distribution_info.setText(f"🔗 Associado: {', '.join(display_text)}")
+        else: 
+            self.header_btn_distribution_info.setText("⚠️ Nenhuma camada associada")
 
-    # --------------------------------- FUNÇÃO MSG ALERTAS ---------------------------------- #
     def show_message(self, title, text, icon=QtWidgets.QMessageBox.Information):
-        """Exibe uma janela de diálogo (MessageBox) padronizada para o usuário."""
         msg_box = QtWidgets.QMessageBox(self)
         msg_box.setIcon(icon)
         msg_box.setTextFormat(Qt.RichText)
@@ -966,28 +464,13 @@ class GeoMetadataDialog(QtWidgets.QDialog, FORM_CLASS):
         msg_box.setStandardButtons(QtWidgets.QMessageBox.Ok)
         msg_box.exec_()
         
-    # --------------------------------- FUNÇÃO LOGIN GEOSERVER ---------------------------------- #
     def open_distribution_workflow(self):
-        """
-        Inicia o fluxo de seleção de camada, reaproveitando a sessão de login principal.
-        """
-        # PASSO 1: VERIFICAR SE O USUÁRIO JÁ ESTÁ LOGADO NO PORTAL
         if not self.api_session:
-            self.show_message(
-                "Conexão Necessária",
-                "Para associar uma camada do GeoServer, por favor, primeiro conecte-se ao portal usando o botão 'Conectar ao Geohab'.",
-                icon=QtWidgets.QMessageBox.Information
-            )
+            self.show_message("Conexão Necessária", "Para associar uma camada do GeoServer, por favor, primeiro conecte-se ao portal.", icon=QtWidgets.QMessageBox.Information)
             return
-
-        # PASSO 2: SE ESTIVER LOGADO, ABRE A JANELA DE SELEÇÃO PASSANDO A SESSÃO
-        # A LayerSelectionDialog agora receberá a sessão, não mais as credenciais.
-        selection_dialog = LayerSelectionDialog(self.api_session, self)
         
-        # Alimenta o diálogo de seleção com os dados já existentes
+        selection_dialog = LayerSelectionDialog(self.api_session, self)
         selection_dialog.set_data(self.distribution_data)
-
-        # Apenas se o usuário preencher e clicar em "OK"...
         if selection_dialog.exec_() == QtWidgets.QDialog.Accepted:
             self.distribution_data.update(selection_dialog.get_data())
             self.update_distribution_button()
