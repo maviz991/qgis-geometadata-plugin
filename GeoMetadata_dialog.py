@@ -539,7 +539,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.update_distribution_button()
         self.set_combobox_by_data(self.ui.comboBox_contact_presets, data_dict.get('contact_preset_key', 'nenhum'))
         print("Formulário preenchido com dados de um Metadado existente.")
-
+    '''
     def update_distribution_button(self):
         wms_info = self.distribution_data.get('wms_data', {}).get('geoserver_layer_title')
         wfs_info = self.distribution_data.get('wfs_data', {}).get('geoserver_layer_title')
@@ -548,6 +548,20 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             self.header_btn_distribution_info.setText(f"🔗 Associado: {', '.join(display_text)}")
         else: 
             self.header_btn_distribution_info.setText("⚠️ Nenhuma camada associada")
+    '''
+    def update_distribution_button(self):
+        """Atualiza o texto do botão de distribuição com as informações de WMS e WFS."""
+        wms_info = self.distribution_data.get('wms_data', {}).get('geoserver_layer_title')
+        wfs_info = self.distribution_data.get('wfs_data', {}).get('geoserver_layer_title')
+        
+        display_text = []
+        if wms_info: display_text.append(f"WMS: {wms_info}")
+        if wfs_info: display_text.append(f"WFS: {wfs_info}")
+
+        if display_text:
+            self.btn_distribution_info.setText(f"🔗 Associado a: {', '.join(display_text)}")
+        else:
+            self.btn_distribution_info.setText("⚠️ Nenhuma camada associada")            
 
     def show_message(self, title, text, icon=QtWidgets.QMessageBox.Information):
         msg_box = QtWidgets.QMessageBox(self)
