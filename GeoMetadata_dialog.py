@@ -215,11 +215,107 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             self.header_btn_login.setToolTip("Clique para fazer login no Goehab")
 
     def exportar_to_geo(self):
-        # A lógica completa de exportação para o GeoHab vai aqui
+        """
+        Coleta os dados, gera o XML e o envia para a API do GeoNetwork usando
+        a sessão de login previamente estabelecida.
+        """
         if not self.api_session:
-            self.show_message("Não Autenticado", "Você não está conectado.", icon=QtWidgets.QMessageBox.Warning)
+            self.show_message("Não Autenticado",
+                              "Você não está conectado. Por favor, clique em 'Conectar ao Geohab' primeiro.",
+                              icon=QtWidgets.QMessageBox.Warning)
             return
-        self.iface.messageBar().pushMessage("Info", "Função 'Exportar para Geohab' acionada.", level=Qgis.Info)
+
+        try:
+            self.iface.messageBar().pushMessage("Info", "Preparando e enviando metadados...", level=Qgis.Info, duration=3)
+            metadata_dict = self.collect_data()
+            plugin_dir = os.path.dirname(__file__)
+            template_path = os.path.join(plugin_dir, 'tamplate_mgb20.xml')
+            xml_payload = xml_generator.generate_xml_from_template(metadata_dict, template_path)
+            
+            gn_urls = config_loader.get_geonetwork_url() 
+            geonetwork_api_url = gn_urls.get('records_url')
+            geonetwork_catalog_url = gn_urls.get('catalog_url')
+
+            if not geonetwork_api_url or not geonetwork_catalog_url:
+                raise ValueError("As URLs do GeoNetwork não estão definidas corretamente no arquivo de configuração.")
+
+            # --- CORREÇÃO FINAL E PRECISA AQUI ---
+            # PASSO 1: Visitar o catálogo para garantir que todos os cookies, incluindo os duplicados, estejam na sessão.
+            print("Preparando a sessão com o GeoNetwork para obter o token CSRF...")
+            self.api_session.get(geonetwork_catalog_url, verify=False)
+            
+            # PASSO 2: Encontrar o token CSRF CORRETO.
+            # Iteramos manualmente para encontrar o token com o path específico do GeoNetwork,
+            # resolvendo o erro de cookies duplicados.
+            csrf_token = None
+            for cookie in self.api_session.cookies:
+                if cookie.name == 'XSRF-TOKEN' and 'geonetwork' in cookie.path:
+                    csrf_token = cookie.value
+                    print(f"Token CSRF específico do GeoNetwork encontrado (path: {cookie.path})")
+                    break # Encontramos o que queríamos, podemos parar de procurar
+
+            # PASSO 3: Construir os cabeçalhos.
+            headers = {
+                'Content-Type': 'application/xml',
+                'Accept': 'application/json'
+            }
+            if csrf_token:
+                headers['X-XSRF-TOKEN'] = csrf_token
+            else:
+                print("AVISO CRÍTICO: O token CSRF específico do GeoNetwork não foi encontrado. A requisição provavelmente falhará.")
+            
+            # PASSO 4: Enviar o metadado.
+            print(f"Enviando metadados para: {geonetwork_api_url}")
+            response = self.api_session.put(
+                geonetwork_api_url,
+                data=xml_payload.encode('utf-8'),
+                headers=headers,
+                params={'publishToAll': 'false'}
+            )
+            
+            response.raise_for_status()
+
+            # PASSO 5: Processar a resposta.
+            if response.status_code in [200, 201]:
+                print(f"Resposta do GeoNetwork (Status {response.status_code}): {response.text}")
+                # ... (o resto do tratamento de sucesso permanece o mesmo)
+                uuid_criado = "N/A"
+                try:
+                    response_data = response.json()
+                    uuid_criado = response_data.get('@uuid', response_data.get('uuid', 'N/A'))
+                except json.JSONDecodeError:
+                    print("Resposta não foi JSON, mas o status foi de sucesso.")
+                #Lógica de UUID Oficial do Geohab
+                if uuid_criado and uuid_criado != "N/A":
+                    # 1. Atualiza o UUID na memória da dialog para uso futuro
+                    self.current_metadata_uuid = uuid_criado
+                    
+                    # 2. Silenciosamente, ressalva o arquivo sidecar com o UUID oficial
+                    print(f"Vinculando metadado ao UUID oficial: {uuid_criado}. Ressalvando arquivo sidecar...")
+                    self.salvar_metadados_sidecar(is_automatic_resave=True)
+                direct_link = config_loader.get_metadata_view_url(uuid_criado)
+                                #f'Acesse o <a href="{config_loader.get_geonetwork_base_url()}">Geohab</a> para finalizar a publicação.')                
+
+                success_text = (f"Metadados enviados com sucesso!<br><br>"
+                                f"<b>Título:</b> {metadata_dict['title']}<br>"
+                                f"<b>UUID:</b> {uuid_criado}<br><br>"
+                                f'Acesse o <a href="{config_loader.get_geonetwork_base_url()}">Geohab</a> para finalizar a publicação.')
+                self.show_message("Sucesso!", success_text)
+                self.iface.messageBar().pushMessage("Sucesso", f"Metadados '{metadata_dict['title']}' enviados ao Geohab.", level=Qgis.Success, duration=7)
+            else:
+                raise Exception(f"Resposta inesperada do servidor: Status {response.status_code}")
+
+        except requests.exceptions.HTTPError as e:
+            error_text = f"Falha no envio (Status: {e.response.status_code}).<br><br>Verifique suas permissões no Geohab.<br>Detalhe: {e.response.text[:200]}"
+            self.show_message("Erro no Envio", error_text, icon=QtWidgets.QMessageBox.Critical)
+            print(f"ERRO do GeoNetwork: {e.response.status_code} - {e.response.text}")
+        except requests.exceptions.RequestException as e:
+            self.show_message("Erro de Rede", f"Não foi possível conectar ao servidor:<br><br>{e}", icon=QtWidgets.QMessageBox.Critical)
+            print(f"ERRO DE REDE: {e}")
+        except Exception as e:
+            self.show_message("Erro Inesperado", f"Ocorreu um erro no plugin:<br><br>{e}", icon=QtWidgets.QMessageBox.Critical)
+            print(f"ERRO INESPERADO: {e}")
+            traceback.print_exc()
 
     def sanitize_filename(self, value):
         value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
@@ -449,8 +545,6 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         wfs_info = self.distribution_data.get('wfs_data', {}).get('geoserver_layer_title')
         display_text = [info for info in [f"WMS: {wms_info}" if wms_info else None, f"WFS: {wfs_info}" if wfs_info else None] if info]
         if display_text:
-            icon_link = QIcon(":/plugins/geometadata/img/login_ok.png") # Reutilizando o ícone de OK
-            self.header_btn_distribution_info.setIcon(icon_link)
             self.header_btn_distribution_info.setText(f"🔗 Associado: {', '.join(display_text)}")
         else: 
             self.header_btn_distribution_info.setText("⚠️ Nenhuma camada associada")
@@ -466,7 +560,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         
     def open_distribution_workflow(self):
         if not self.api_session:
-            self.show_message("Conexão Necessária", "Para associar uma camada do GeoServer, por favor, primeiro conecte-se ao portal.", icon=QtWidgets.QMessageBox.Information)
+            self.show_message("Conexão Necessária", icon=QtWidgets.QMessageBox.Information)
             return
         
         selection_dialog = LayerSelectionDialog(self.api_session, self)
