@@ -539,29 +539,36 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.update_distribution_button()
         self.set_combobox_by_data(self.ui.comboBox_contact_presets, data_dict.get('contact_preset_key', 'nenhum'))
         print("Formulário preenchido com dados de um Metadado existente.")
-    '''
+
     def update_distribution_button(self):
-        wms_info = self.distribution_data.get('wms_data', {}).get('geoserver_layer_title')
-        wfs_info = self.distribution_data.get('wfs_data', {}).get('geoserver_layer_title')
-        display_text = [info for info in [f"WMS: {wms_info}" if wms_info else None, f"WFS: {wfs_info}" if wfs_info else None] if info]
-        if display_text:
-            self.header_btn_distribution_info.setText(f"🔗 Associado: {', '.join(display_text)}")
-        else: 
-            self.header_btn_distribution_info.setText("⚠️ Nenhuma camada associada")
-    '''
-    def update_distribution_button(self):
-        """Atualiza o texto do botão de distribuição com as informações de WMS e WFS."""
-        wms_info = self.distribution_data.get('wms_data', {}).get('geoserver_layer_title')
-        wfs_info = self.distribution_data.get('wfs_data', {}).get('geoserver_layer_title')
+        """
+        Atualiza o texto do botão de distribuição com as informações de WMS e WFS.
+        (Versão corrigida para lidar com valores None)
+        """
+        # Passo 1: Obter os dicionários de dados de forma segura.
+        # O 'or {}' garante que teremos um dicionário, mesmo se a chave
+        # não existir ou se o valor for explicitamente None.
+        wms_data_dict = self.distribution_data.get('wms_data') or {}
+        wfs_data_dict = self.distribution_data.get('wfs_data') or {}
+
+        # Passo 2: Obter os títulos de dentro dos dicionários agora seguros.
+        # Se a chave 'geoserver_layer_title' não existir, o .get() retornará None,
+        # o que é o comportamento esperado e não causa erro.
+        wms_info = wms_data_dict.get('geoserver_layer_title')
+        wfs_info = wfs_data_dict.get('geoserver_layer_title')
         
+        # O resto da sua lógica original já funciona perfeitamente com isso.
         display_text = []
         if wms_info: display_text.append(f"WMS: {wms_info}")
         if wfs_info: display_text.append(f"WFS: {wfs_info}")
 
+        # O botão está no header
         if display_text:
-            self.btn_distribution_info.setText(f"🔗 Associado a: {', '.join(display_text)}")
+            # Reutilizando o ícone de OK para indicar sucesso 
+            self.header_btn_distribution_info.setText(f"🔗 Associado: {', '.join(display_text)}")
         else:
-            self.btn_distribution_info.setText("⚠️ Nenhuma camada associada")            
+            # Se você tiver um ícone de aviso, ele será usado aqui
+            self.header_btn_distribution_info.setText("⚠️ Nenhuma camada associada")                    
 
     def show_message(self, title, text, icon=QtWidgets.QMessageBox.Information):
         msg_box = QtWidgets.QMessageBox(self)
@@ -572,13 +579,24 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         msg_box.setStandardButtons(QtWidgets.QMessageBox.Ok)
         msg_box.exec_()
         
+
     def open_distribution_workflow(self):
+        """
+        Inicia o fluxo de seleção de camada, reaproveitando a sessão de login principal.
+        """
+        # PASSO 1: VERIFICAR SE O USUÁRIO JÁ ESTÁ LOGADO NO PORTAL
         if not self.api_session:
             self.show_message("Conexão Necessária", icon=QtWidgets.QMessageBox.Information)
             return
-        
+
+        # PASSO 2: SE ESTIVER LOGADO, ABRE A JANELA DE SELEÇÃO PASSANDO A SESSÃO
+        # A LayerSelectionDialog agora receberá a sessão, não mais as credenciais.
         selection_dialog = LayerSelectionDialog(self.api_session, self)
+        
+        # Alimenta o diálogo de seleção com os dados já existentes
         selection_dialog.set_data(self.distribution_data)
+
+        # Apenas se o usuário preencher e clicar em "OK"...
         if selection_dialog.exec_() == QtWidgets.QDialog.Accepted:
             self.distribution_data.update(selection_dialog.get_data())
             self.update_distribution_button()
