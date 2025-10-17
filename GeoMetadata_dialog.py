@@ -127,7 +127,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.header_btn_exp_geo.setObjectName("LinkButton")
 
         self.header_btn_distribution_info = QPushButton("Associar Camada")
-        self.header_btn_distribution_info.setObjectName("DistributionButton")
+        self.header_btn_distribution_info.setObjectName("LinkButton")
 
         self.header_btn_login = QPushButton()
         self.header_btn_login.setObjectName("ConnectButton")
@@ -137,8 +137,8 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         layout.addWidget(self.header_btn_salvar)
         layout.addWidget(self.header_btn_exp_xml)
         layout.addWidget(self.header_btn_exp_geo)
-        layout.addStretch() # Empurra os botões de ação para a direita
         layout.addWidget(self.header_btn_distribution_info)
+        layout.addStretch() # Empurra os botões de ação para a direita
         layout.addWidget(self.header_btn_login)
         
         return header_widget
@@ -560,12 +560,12 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         # O resto da sua lógica original já funciona perfeitamente com isso.
         display_text = []
         if wms_info: display_text.append(f"WMS: {wms_info}")
-        if wfs_info: display_text.append(f"WFS: {wfs_info}")
+        if wfs_info: display_text.append(f"WFS: {wfs_info}")       
 
         # O botão está no header
         if display_text:
             # Reutilizando o ícone de OK para indicar sucesso 
-            self.header_btn_distribution_info.setText(f"🔗 Associado: {', '.join(display_text)}")
+            self.header_btn_distribution_info.setText(f"🔗 Associado:\nWMS: {wms_info}\nWFS: {wfs_info}")
         else:
             # Se você tiver um ícone de aviso, ele será usado aqui
             self.header_btn_distribution_info.setText("⚠️ Nenhuma camada associada")                    

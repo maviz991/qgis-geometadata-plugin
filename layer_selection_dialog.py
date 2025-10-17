@@ -4,7 +4,9 @@ import os
 import requests
 from lxml import etree as ET
 from qgis.PyQt import uic, QtWidgets
-from .plugin_config import config_loader  # <-- Importa o config_loader
+from .plugin_config import config_loader
+from qgis.PyQt.QtGui import QIcon
+
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'layer_selection_dialog_base.ui'))
@@ -26,14 +28,19 @@ class LayerSelectionDialog(QtWidgets.QDialog, FORM_CLASS):
         self.wms_data = None
         self.wfs_data = None
 
-        self.comboBox_service_type.addItem("Selecione um serviço...", None)
-        self.comboBox_service_type.addItem("WMS (Imagem)", "wms")
-        self.comboBox_service_type.addItem("WFS (Vetor)", "wfs")
+        self.icon_wms = QIcon(":/plugins/geometadata/img/wms_icon.png")
+        self.icon_wfs = QIcon(":/plugins/geometadata/img/wfs_icon.png")
+
+        self.comboBox_service_type.addItem("Selecione um serviço...", None)           
+        self.comboBox_service_type.addItem(self.icon_wms, "WMS (Imagem)", "wms")
+        self.comboBox_service_type.addItem(self.icon_wfs, "WFS (Vetor)", "wfs")
         self.comboBox_service_type.currentIndexChanged.connect(self._fetch_layers)
 
         self.btn_addservice.clicked.connect(self._add_service_selection)
         self.btn_wms.clicked.connect(lambda: self._clear_service_selection("wms"))
-        self.btn_wfs.clicked.connect(lambda: self._clear_service_selection("wfs"))    
+        self.btn_wfs.clicked.connect(lambda: self._clear_service_selection("wfs"))
+
+
 
     def _fetch_layers(self):
         service = self.comboBox_service_type.currentData()
@@ -96,6 +103,7 @@ class LayerSelectionDialog(QtWidgets.QDialog, FORM_CLASS):
         self.wfs_data = data.get('wfs_data')
 
         if self.wms_data:
+            self.btn_wms.setIcon(self.icon_wms)
             self.btn_wms.setText(f"WMS: {self.wms_data.get('geoserver_layer_title')}")
             self.btn_wms.setEnabled(True)
         else:
@@ -103,6 +111,7 @@ class LayerSelectionDialog(QtWidgets.QDialog, FORM_CLASS):
             self.btn_wms.setEnabled(False)
 
         if self.wfs_data:
+            self.btn_wfs.setIcon(self.icon_wfs)
             self.btn_wfs.setText(f"WFS: {self.wfs_data.get('geoserver_layer_title')}")
             self.btn_wfs.setEnabled(True)
         else:
@@ -128,10 +137,12 @@ class LayerSelectionDialog(QtWidgets.QDialog, FORM_CLASS):
 
         if service_type == "wms":
             self.wms_data = service_data
+            self.btn_wms.setIcon(self.icon_wms)
             self.btn_wms.setText(f"WMS: {selected_layer.get('title')}")
             self.btn_wms.setEnabled(True)
         elif service_type == "wfs":
             self.wfs_data = service_data
+            self.btn_wfs.setIcon(self.icon_wfs)            
             self.btn_wfs.setText(f"WFS: {selected_layer.get('title')}")
             self.btn_wfs.setEnabled(True)
         
