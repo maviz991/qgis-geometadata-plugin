@@ -60,6 +60,15 @@ STYLE_SHEET = """
     #Header #ConnectButton:disabled {
         background-color: #c0c0c0;
     }
+    #wms_badge, #wfs_badge {
+        background-color: #1A5276;
+        color: white;
+        font-weight: bold;
+        padding: 3px 8px;
+        border-radius: 4px;
+        margin-right: 10px;
+        border: 1px solid red; /* <--- ADICIONE PARA DEPURAR */
+    }
 
     /* O "Card" principal do formulário */
     .Card {
@@ -120,7 +129,7 @@ STYLE_SHEET = """
         color: #cccccc;
     }
 
-        /* 3. Botão de Ação Principal ("Conectar") */
+    /* 3. Botão de Ação Principal ("Conectar") */
     #Header #ConnectButton {
         background-color: #111111;
         color: white;

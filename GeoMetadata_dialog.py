@@ -143,22 +143,78 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         
         return header_widget
         
+
+
+    def _create_distribution_display_panel(self):
+        """Cria o QGroupBox para exibir as camadas associadas."""
+        
+        # 1. Contêiner principal
+        container = QtWidgets.QGroupBox("Camadas Associadas")
+        container_layout = QtWidgets.QVBoxLayout(container)
+        
+        # 2. Slot de exibição para WMS
+        self.wms_display_widget = self._create_badge_placeholder("WMS")
+        container_layout.addWidget(self.wms_display_widget)
+        
+        # 3. Slot de exibição para WFS
+        self.wfs_display_widget = self._create_badge_placeholder("WFS")
+        container_layout.addWidget(self.wfs_display_widget)
+        
+        return container
+
+    def _create_badge_placeholder(self, service_type):
+        """Função auxiliar para criar a estrutura de um slot de exibição (ícone + texto)."""
+        
+        widget = QWidget()
+        layout = QHBoxLayout(widget)
+        layout.setContentsMargins(0, 0, 0, 0)
+        
+        # Ícone do globo
+        icon_label = QLabel()
+        icon_pixmap = QPixmap(":/plugins/geometadata/img/globe.svg") # Certifique-se que este ícone existe
+        icon_label.setPixmap(icon_pixmap.scaled(15, 15, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        
+        # Label para o badge (será estilizado via QSS)
+        badge_label = QLabel(service_type)
+        badge_label.setObjectName(f"{service_type.lower()}_badge") # Ex: wms_badge, wfs_badge
+        
+        # Label para o nome da camada
+        layer_name_label = QLabel("<i>Nenhuma camada associada.</i>")
+        layer_name_label.setWordWrap(True)
+        
+        layout.addWidget(icon_label)
+        layout.addWidget(badge_label)
+        layout.addWidget(layer_name_label, 1) # O '1' faz ele expandir
+        
+        # Armazena referências para atualização futura
+        widget.badge_label = badge_label
+        widget.layer_name_label = layer_name_label
+        
+        return widget
+    
     def _create_form_card(self):
         """Cria o card principal e carrega o formulário do .ui dentro dele."""
         card_widget = QWidget()
         card_widget.setProperty("class", "Card")
         card_layout = QVBoxLayout(card_widget)
 
+        # 1. Cria o painel de exibição de distribuição
+        distribution_panel = self._create_distribution_display_panel()
+        card_layout.addWidget(distribution_panel)
+        card_layout.addSpacing(10) # Espaço entre o painel e o formulário
+
+        # 2. Carrega o formulário do .ui
         self.ui = FORM_CLASS()
         form_container = QWidget()
         self.ui.setupUi(form_container)
         
+         # Esconde os botões antigos do .ui
         for btn_name in ['btn_exp_xml', 'btn_exp_geo', 'btn_salvar', 'btn_login']:
             if hasattr(self.ui, btn_name):
                 getattr(self.ui, btn_name).hide()
         
         card_layout.addWidget(form_container)
-        return card_widget
+        return card_widget    
 
     def _setup_button_connections(self):
         """Conecta todos os sinais de widgets a seus respectivos slots."""
@@ -536,39 +592,36 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.distribution_data['wms_data'] = data_dict.get('wms_data', {})
         self.distribution_data['wfs_data'] = data_dict.get('wfs_data', {})
         self.ui.lineEdit_thumbnail_url.setText(data_dict.get('thumbnail_url', ''))
-        self.update_distribution_button()
+        self.update_distribution_display()
         self.set_combobox_by_data(self.ui.comboBox_contact_presets, data_dict.get('contact_preset_key', 'nenhum'))
         print("Formulário preenchido com dados de um Metadado existente.")
 
-    def update_distribution_button(self):
+    def update_distribution_display(self):
         """
-        Atualiza o texto do botão de distribuição com as informações de WMS e WFS.
-        (Versão corrigida para lidar com valores None)
+        Atualiza os painéis de exibição com as informações das camadas associadas.
         """
-        # Passo 1: Obter os dicionários de dados de forma segura.
-        # O 'or {}' garante que teremos um dicionário, mesmo se a chave
-        # não existir ou se o valor for explicitamente None.
-        wms_data_dict = self.distribution_data.get('wms_data') or {}
-        wfs_data_dict = self.distribution_data.get('wfs_data') or {}
-
-        # Passo 2: Obter os títulos de dentro dos dicionários agora seguros.
-        # Se a chave 'geoserver_layer_title' não existir, o .get() retornará None,
-        # o que é o comportamento esperado e não causa erro.
-        wms_info = wms_data_dict.get('geoserver_layer_title')
-        wfs_info = wfs_data_dict.get('geoserver_layer_title')
+        # --- Obter dados de forma segura ---
+        wms_data = self.distribution_data.get('wms_data') or {}
+        wfs_data = self.distribution_data.get('wfs_data') or {}
+        wms_title = wms_data.get('geoserver_layer_title')
+        wfs_title = wfs_data.get('geoserver_layer_title')
         
-        # O resto da sua lógica original já funciona perfeitamente com isso.
-        display_text = []
-        if wms_info: display_text.append(f"WMS: {wms_info}")
-        if wfs_info: display_text.append(f"WFS: {wfs_info}")       
-
-        # O botão está no header
-        if display_text:
-            # Reutilizando o ícone de OK para indicar sucesso 
-            self.header_btn_distribution_info.setText(f"🔗 Associado:\nWMS: {wms_info}\nWFS: {wfs_info}")
+        # --- Atualizar o painel WMS ---
+        if wms_title:
+            self.wms_display_widget.layer_name_label.setText(wms_title)
+            self.wms_display_widget.badge_label.show()
+            print("badge")
         else:
-            # Se você tiver um ícone de aviso, ele será usado aqui
-            self.header_btn_distribution_info.setText("⚠️ Nenhuma camada associada")                    
+            self.wms_display_widget.layer_name_label.setText("<i>Nenhuma camada associada.</i>")
+            self.wms_display_widget.badge_label.hide()
+            
+        # --- Atualizar o painel WFS ---
+        if wfs_title:
+            self.wfs_display_widget.layer_name_label.setText(wfs_title)
+            self.wfs_display_widget.badge_label.show()
+        else:
+            self.wfs_display_widget.layer_name_label.setText("<i>Nenhuma camada associada.</i>")
+            self.wfs_display_widget.badge_label.hide()                  
 
     def show_message(self, title, text, icon=QtWidgets.QMessageBox.Information):
         msg_box = QtWidgets.QMessageBox(self)
@@ -599,5 +652,5 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         # Apenas se o usuário preencher e clicar em "OK"...
         if selection_dialog.exec_() == QtWidgets.QDialog.Accepted:
             self.distribution_data.update(selection_dialog.get_data())
-            self.update_distribution_button()
+            self.update_distribution_display()
             self.iface.messageBar().pushMessage("Sucesso", "Informações de distribuição salvas.", level=Qgis.Success)

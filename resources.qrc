@@ -6,6 +6,7 @@
     <file alias="img/header_logo.png">img/header_logo.png</file>
     <file alias="img/favcon_cdhu.png">img/favcon_cdhu.png</file>
     <file alias="img/wms_icon.png">img/wms_icon.png</file>
+    <file alias="img/wfs_icon.png">img/wfs_icon.png</file>
     <file alias="img/globe.svg">img/globe.svg</file>
 </qresource>
 </RCC>
