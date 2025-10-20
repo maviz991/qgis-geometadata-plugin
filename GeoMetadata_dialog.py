@@ -76,7 +76,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.setObjectName("GeoMetadataDialog")
         self.setWindowTitle("GeoMetadata | CDHU")
         self.setMinimumSize(1190, 600)
-        self.setMaximumSize(1240, 650)
+        self.setMaximumSize(1640, 700)
         self.setStyleSheet(STYLE_SHEET)
 
     def _build_ui_structure(self):
@@ -172,14 +172,14 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         # Ícone do globo
         icon_label = QLabel()
         icon_pixmap = QPixmap(":/plugins/geometadata/img/globe.svg") # Certifique-se que este ícone existe
-        icon_label.setPixmap(icon_pixmap.scaled(15, 15, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        icon_label.setPixmap(icon_pixmap.scaled(16, 16, Qt.KeepAspectRatio, Qt.SmoothTransformation))
         
         # Label para o badge (será estilizado via QSS)
         badge_label = QLabel(service_type)
         badge_label.setObjectName(f"{service_type.lower()}_badge") # Ex: wms_badge, wfs_badge
         
         # Label para o nome da camada
-        layer_name_label = QLabel("<i>Nenhuma camada associada.</i>")
+        layer_name_label = QLabel("Nenhuma camada associada.")
         layer_name_label.setWordWrap(True)
         
         layout.addWidget(icon_label)
@@ -607,21 +607,28 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         wfs_title = wfs_data.get('geoserver_layer_title')
         
         # --- Atualizar o painel WMS ---
+        wms_badge = self.wms_display_widget.badge_label
         if wms_title:
             self.wms_display_widget.layer_name_label.setText(wms_title)
-            self.wms_display_widget.badge_label.show()
-            print("badge")
+            wms_badge.setProperty("active", True)   
         else:
-            self.wms_display_widget.layer_name_label.setText("<i>Nenhuma camada associada.</i>")
-            self.wms_display_widget.badge_label.hide()
-            
+            self.wms_display_widget.layer_name_label.setText("Nenhuma camada associada.")
+            wms_badge.setProperty("active", False)
+        # Força o Qt a reavaliar o estilo do widget
+        wms_badge.style().unpolish(wms_badge)
+        wms_badge.style().polish(wms_badge)
+
         # --- Atualizar o painel WFS ---
+        wfs_badge = self.wfs_display_widget.badge_label
         if wfs_title:
             self.wfs_display_widget.layer_name_label.setText(wfs_title)
-            self.wfs_display_widget.badge_label.show()
+            wfs_badge.setProperty("active", True)
         else:
-            self.wfs_display_widget.layer_name_label.setText("<i>Nenhuma camada associada.</i>")
-            self.wfs_display_widget.badge_label.hide()                  
+            self.wfs_display_widget.layer_name_label.setText("Nenhuma camada associada.")
+            wfs_badge.setProperty("active", False)   
+
+        wfs_badge.style().unpolish(wfs_badge)
+        wfs_badge.style().polish(wfs_badge)                      
 
     def show_message(self, title, text, icon=QtWidgets.QMessageBox.Information):
         msg_box = QtWidgets.QMessageBox(self)
