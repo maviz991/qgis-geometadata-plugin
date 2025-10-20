@@ -150,17 +150,19 @@ STYLE_SHEET = """
     #Header #ConnectButton[loggedIn="true"]:hover {
         background-color: #5a6268;
     }
-    /* ESTILO PADRÃO (INATIVO / CINZA) */
+    /* ESTILO INATIVO (CINZA) */
     #wms_badge, #wfs_badge {
         background-color: #EAECEE; /* Um cinza bem claro */
         color: #7F8C8D; /* Um cinza mais escuro para o texto */
-        font-weight: normal; /* Sem negrito quando inativo */
+        font-weight: bold; /* Sem negrito quando inativo */
         padding: 3px 8px;
         border-radius: 4px;
-        margin-right: 10px;
+        margin-right: 1px;
+        min-width: 35px;      /* Define uma largura mínima para padronizar */
+        text-align: auto;
     }
 
-        /* ESTILO ATIVO (COLORIDO) - SÓ APLICA QUANDO A PROPRIEDADE 'active' É 'true' */
+        /* ESTILO ATIVO (Verde) */
     #wms_badge[active="true"], 
     #wfs_badge[active="true"] {
         background-color: #008959;

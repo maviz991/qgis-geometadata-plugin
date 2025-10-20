@@ -179,7 +179,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         badge_label.setObjectName(f"{service_type.lower()}_badge") # Ex: wms_badge, wfs_badge
         
         # Label para o nome da camada
-        layer_name_label = QLabel("Nenhuma camada associada.")
+        layer_name_label = QLabel("<i>Nenhuma camada associada.</i>")
         layer_name_label.setWordWrap(True)
         
         layout.addWidget(icon_label)
@@ -612,7 +612,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             self.wms_display_widget.layer_name_label.setText(wms_title)
             wms_badge.setProperty("active", True)   
         else:
-            self.wms_display_widget.layer_name_label.setText("Nenhuma camada associada.")
+            self.wms_display_widget.layer_name_label.setText("<i>Nenhuma camada associada.</i>")
             wms_badge.setProperty("active", False)
         # Força o Qt a reavaliar o estilo do widget
         wms_badge.style().unpolish(wms_badge)
@@ -624,7 +624,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             self.wfs_display_widget.layer_name_label.setText(wfs_title)
             wfs_badge.setProperty("active", True)
         else:
-            self.wfs_display_widget.layer_name_label.setText("Nenhuma camada associada.")
+            self.wfs_display_widget.layer_name_label.setText("<i>Nenhuma camada associada.</i>")
             wfs_badge.setProperty("active", False)   
 
         wfs_badge.style().unpolish(wfs_badge)
