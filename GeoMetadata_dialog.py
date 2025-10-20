@@ -227,16 +227,11 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.ui.comboBox_contact_presets.currentIndexChanged.connect(self.on_contact_preset_changed)
         #self.ui.btn_distribution_info.clicked.connect(self.open_distribution_workflow)
 
-
     def _setup_login_icons(self):
         """Carrega os ícones de login a partir dos recursos."""
         self.icon_login_ok = QIcon(":/plugins/geometadata/img/login_ok.png")
         self.icon_login_error = QIcon(":/plugins/geometadata/img/login_error.png")
         self.header_btn_login.setIconSize(QSize(20, 20))
-
-    # =========================================================================
-    # LÓGICA DE NEGÓCIO DO PLUGIN
-    # =========================================================================
 
     def authenticate(self):
         if self.api_session:
@@ -397,7 +392,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
                 msg_box.setIcon(QMessageBox.Information)
                 msg_box.setWindowTitle("Exportação Concluída")
                 msg_box.setText("Metadados salvos com sucesso!")
-                msg_box.setInformativeText(file_path)
+                msg_box.setInformativeText(f"<b>Em:</b> {file_path}")
                 open_folder_button = msg_box.addButton("Abrir Pasta do Arquivo", QMessageBox.ActionRole)
                 msg_box.addButton(QMessageBox.Ok)
                 msg_box.exec_()
@@ -414,6 +409,26 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             else: subprocess.run(['xdg-open', os.path.dirname(path)])
         except Exception as e:
             self.iface.messageBar().pushMessage("Erro", f"Não foi possível abrir o gerenciador de arquivos: {e}", level=Qgis.Critical)
+
+    def salvar_metadados_sidecar(self, is_automatic_resave=False):
+        layer = self.iface.activeLayer()
+        metadata_path = self.get_sidecar_metadata_path()
+        if not metadata_path:
+            if not is_automatic_resave:
+                layer_name = layer.name() if layer else "A camada"
+                self.show_message("Não é possível salvar", f"{layer_name}\n A camada não esta salva em um arquivo local.", icon=QtWidgets.QMessageBox.Warning)
+            return
+        try:
+            metadata_dict = self.collect_data()
+            plugin_dir = os.path.dirname(__file__)
+            template_path = os.path.join(plugin_dir, 'tamplate_mgb20.xml')
+            xml_content = xml_generator.generate_xml_from_template(metadata_dict, template_path)
+            with open(metadata_path, 'w', encoding='utf-8') as f: f.write(xml_content)
+            if not is_automatic_resave:
+                self.show_message("Metadados Salvos", f"Metadados associados à camada '<b>{layer.name()}</b>'<br> Você poderá continuar depois!")
+        except Exception as e:
+            traceback.print_exc()
+            self.show_message("Erro ao Salvar", f"Ocorreu um erro ao salvar o arquivo:<br><br>{e}", icon=QtWidgets.QMessageBox.Critical)
 
     def populate_comboboxes(self):
         def populate(combo, options):
@@ -534,26 +549,6 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         if os.path.isfile(base_path): return base_path + ".xml"
         return None
     
-    def salvar_metadados_sidecar(self, is_automatic_resave=False):
-        layer = self.iface.activeLayer()
-        metadata_path = self.get_sidecar_metadata_path()
-        if not metadata_path:
-            if not is_automatic_resave:
-                layer_name = layer.name() if layer else "A camada"
-                self.show_message("Não é possível salvar", f"{layer_name} não parece estar salva em um arquivo físico.", icon=QtWidgets.QMessageBox.Warning)
-            return
-        try:
-            metadata_dict = self.collect_data()
-            plugin_dir = os.path.dirname(__file__)
-            template_path = os.path.join(plugin_dir, 'tamplate_mgb20.xml')
-            xml_content = xml_generator.generate_xml_from_template(metadata_dict, template_path)
-            with open(metadata_path, 'w', encoding='utf-8') as f: f.write(xml_content)
-            if not is_automatic_resave:
-                self.show_message("Metadados Salvos", f"Metadados associados à camada '<b>{layer.name()}</b>' foram salvos com sucesso.")
-        except Exception as e:
-            traceback.print_exc()
-            self.show_message("Erro ao Salvar", f"Ocorreu um erro ao salvar o arquivo:<br><br>{e}", icon=QtWidgets.QMessageBox.Critical)
-
     def populate_form_from_dict(self, data_dict):
         if not data_dict: return
         self.current_metadata_uuid = data_dict.get('metadata_uuid')
@@ -596,6 +591,15 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.set_combobox_by_data(self.ui.comboBox_contact_presets, data_dict.get('contact_preset_key', 'nenhum'))
         print("Formulário preenchido com dados de um Metadado existente.")
 
+    def show_message(self, title, text, icon=QtWidgets.QMessageBox.Information):
+        msg_box = QtWidgets.QMessageBox(self)
+        msg_box.setIcon(icon)
+        msg_box.setTextFormat(Qt.RichText)
+        msg_box.setText(text)
+        msg_box.setWindowTitle(title)
+        msg_box.setStandardButtons(QtWidgets.QMessageBox.Ok)
+        msg_box.exec_()
+
     def update_distribution_display(self):
         """
         Atualiza os painéis de exibição com as informações das camadas associadas.
@@ -629,16 +633,6 @@ class GeoMetadataDialog(QtWidgets.QDialog):
 
         wfs_badge.style().unpolish(wfs_badge)
         wfs_badge.style().polish(wfs_badge)                      
-
-    def show_message(self, title, text, icon=QtWidgets.QMessageBox.Information):
-        msg_box = QtWidgets.QMessageBox(self)
-        msg_box.setIcon(icon)
-        msg_box.setTextFormat(Qt.RichText)
-        msg_box.setText(text)
-        msg_box.setWindowTitle(title)
-        msg_box.setStandardButtons(QtWidgets.QMessageBox.Ok)
-        msg_box.exec_()
-        
 
     def open_distribution_workflow(self):
         """
