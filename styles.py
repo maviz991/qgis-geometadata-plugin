@@ -5,7 +5,7 @@ STYLE_SHEET = """
 
     /* O Header */
     #Header {
-        background-color: #ffffff;
+        background-color: #ffffffff;
         padding: 5px 15px;
         border-bottom: 1px solid #e0e0e0;
     }
@@ -16,16 +16,15 @@ STYLE_SHEET = """
     #Header #LinkButton {
         background-color: transparent;
         color: #333;
-        font-size: 15px; /* <-- Texto maior */
+        font-size: 15px;
         font-weight: bold;
         border: none;
-        /* Truque para o sublinhado animado: uma borda transparente */
         border-bottom: 2px solid transparent;
         padding: 8px 10px;
         margin: 0 5px;
     }
     #Header #LinkButton:hover {
-        color: #c9302c; /* <-- Cor vermelha no hover */
+        color: #c9302c; 
         border-bottom: 2px solid #c9302c; /* <-- Sublinhado vermelho no hover */
     }
     #Header #LinkButton:disabled {
@@ -33,25 +32,12 @@ STYLE_SHEET = """
         border-bottom: 2px solid transparent;
     }
 
-    /* 2. Botão de Status ("Associado a:") */
-    #Header #DistributionButton {
-        background-color: #f0f0f0;
-        color: #555;
-        border: 1px solid #e0e0e0;
-        border-radius: 4px;
-        padding: 6px 12px;
-        font-weight: normal;
-    }
-    #Header #DistributionButton:disabled {
-        background-color: #f8f8f8;
-        color: #cccccc;
-    }
-
-    /* 3. Botão de Ação Principal ("Conectar") */
+    /* 2. Botão de Ação Principal ("Conectar") */
     #Header #ConnectButton {
         background-color: #111111;
         color: white;
         font-weight: bold;
+        font-size: 12px;
         border: none;
         border-radius: 4px;
         padding: 8px 24px;
@@ -61,7 +47,7 @@ STYLE_SHEET = """
         background-color: #333333;
     }
     
-    /* Estilo especial para quando o usuário está conectado */
+    /* Estilo para quando o usuário está conectado */
     #Header #ConnectButton[loggedIn="true"] {
         background-color: #6c757d; /* Cinza para indicar estado "conectado" */
     }
@@ -70,17 +56,17 @@ STYLE_SHEET = """
     }
     /* ESTILO INATIVO (CINZA) */
     #wms_badge, #wfs_badge {
-        background-color: #EAECEE; /* Um cinza bem claro */
-        color: #7F8C8D; /* Um cinza mais escuro para o texto */
-        font-weight: bold; /* Sem negrito quando inativo */
+        background-color: #EAECEE; 
+        color: #7F8C8D; 
+        font-weight: bold;
         padding: 3px 8px;
         border-radius: 4px;
         margin-right: 1px;
-        min-width: 35px;      /* Define uma largura mínima para padronizar */
+        min-width: 35px;
         text-align: auto;
     }
 
-        /* ESTILO ATIVO (Verde) */
+    /* ESTILO ATIVO (Verde) */
     #wms_badge[active="true"], 
     #wfs_badge[active="true"] {
         background-color: #008959;
@@ -88,7 +74,7 @@ STYLE_SHEET = """
         font-weight: bold;
     }
 
-    /* O "Card" principal do formulário */
+    /* Card principal do formulário */
     .Card {
         background-color: white;
         border: 1px solid #e0e0e0;
