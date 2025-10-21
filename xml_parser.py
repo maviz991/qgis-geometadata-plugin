@@ -66,7 +66,7 @@ def parse_xml_to_dict(xml_path):
 
         # --- LEITURA DOS DADOS DA CAMADA ---
         dist_info = root.find('./gmd:distributionInfo/gmd:MD_Distribution', namespaces=ns)
-        if dist_info:
+        if dist_info is not None:
             online_resources = dist_info.findall('.//gmd:onLine/gmd:CI_OnlineResource', namespaces=ns)
             
             wms_data = {}
@@ -124,3 +124,4 @@ def parse_xml_to_dict(xml_path):
         import traceback
         traceback.print_exc()
         return None
+    

@@ -54,6 +54,9 @@ STYLE_SHEET = """
     #Header #ConnectButton[loggedIn="true"]:hover {
         background-color: #5a6268;
     }
+
+    /* --- PAINEL LATERAL DE CAMADAS ASSOCIADAS --- */
+    
     /* ESTILO INATIVO (CINZA) */
     #wms_badge, #wfs_badge {
         background-color: #EAECEE; 
@@ -63,6 +66,9 @@ STYLE_SHEET = """
         border-radius: 4px;
         margin-right: 1px;
         min-width: 35px;
+        max-width: 35px;
+        min-height: 15px;
+        max-height: 15px;        
         text-align: auto;
     }
 
@@ -80,7 +86,9 @@ STYLE_SHEET = """
         font-weight: bold;
         border: transparent;
     }
-
+    #ClearButton:hover {
+        background-color: #FADBD8; /* Fundo vermelho claro ao passar o mouse */
+    }
     /* Card principal do formulário */
     .Card {
         background-color: white;

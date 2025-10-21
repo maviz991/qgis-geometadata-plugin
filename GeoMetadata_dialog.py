@@ -219,29 +219,51 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         
         return widget
     
+# Em GeoMetadataDialog
+
+# Em GeoMetadataDialog
+
     def _create_form_card(self):
-        """Cria o card principal e carrega o formulário do .ui dentro dele."""
+        """
+        Cria o card principal, carrega o formulário e injeta o painel de distribuição
+        no layout do contêiner do formulário.
+        """
         card_widget = QWidget()
         card_widget.setProperty("class", "Card")
         card_layout = QVBoxLayout(card_widget)
 
-        # 1. Cria o painel de exibição de distribuição
-        distribution_panel = self._create_distribution_display_panel()
-        card_layout.addWidget(distribution_panel)
-        card_layout.addSpacing(10) # Espaço entre o painel e o formulário
-
-        # 2. Carrega o formulário do .ui
+        # --- 1. CARREGA O FORMULÁRIO DO .UI EM UM CONTÊINER TEMPORÁRIO ---
         self.ui = FORM_CLASS()
-        form_container = QWidget()
+        form_container = QWidget() # Este é o widget que será populado.
         self.ui.setupUi(form_container)
         
-        '''# Esconde os botões antigos do .ui
+        # Esconde os botões antigos
         for btn_name in ['btn_exp_xml', 'btn_exp_geo', 'btn_salvar', 'btn_login']:
             if hasattr(self.ui, btn_name):
                 getattr(self.ui, btn_name).hide()
-        '''
+
+        # --- 2. CRIA O PAINEL DE DISTRIBUIÇÃO ---
+        distribution_panel = self._create_distribution_display_panel()
+
+        # --- 3. INJETA O PAINEL NO LAYOUT DO CONTÊINER DO FORMULÁRIO ---
+        
+        # --- CORREÇÃO DEFINITIVA AQUI ---
+        # O QGridLayout que queremos é o layout do próprio `form_container`
+        target_layout = form_container.layout()
+        
+        # Verificação de segurança para garantir que o layout existe e é uma grade
+        if target_layout and isinstance(target_layout, QtWidgets.QGridLayout):
+            # addWidget(widget, linha, coluna, rowSpan, colSpan, alinhamento)
+            # Estes números devem funcionar bem para o seu layout. Ajuste se necessário.
+            target_layout.addWidget(distribution_panel, 8, 4, 10, 2, Qt.AlignBottom)
+        else:
+            print("AVISO CRÍTICO: O widget principal do seu .ui não tem um QGridLayout aplicado!")
+            print("Abra o .ui no Qt Designer, clique no fundo e aplique um layout de grade.")
+
+        # Finalmente, adiciona o contêiner (agora com o formulário E o painel) ao card
         card_layout.addWidget(form_container)
-        return card_widget    
+        
+        return card_widget
 
     def _setup_button_connections(self):
         """Conecta todos os sinais de widgets a seus respectivos slots."""
