@@ -189,13 +189,13 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         # Ícone do globo
         icon_label = QLabel()
         icon_pixmap = QPixmap(":/plugins/geometadata/img/globe.svg")
-        icon_label.setPixmap(icon_pixmap.scaled(16, 16, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        icon_label.setPixmap(icon_pixmap.scaled(18, 18, Qt.KeepAspectRatio, Qt.SmoothTransformation))
         
         # --- NOVO BOTÃO DE LIMPAR ---
         self.icon_clear = QIcon(":/plugins/geometadata/img/clear_icon.svg")
         clear_button = QPushButton(self.icon_clear, "")
         clear_button.setObjectName("ClearButton") # Para estilização QSS
-        clear_button.setFixedSize(15, 15)
+        clear_button.setFixedSize(10, 10)
         clear_button.setToolTip(f"Remover associação {service_type}")
 
         # Label para o badge (será estilizado via QSS)
@@ -645,7 +645,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         if wms_title:
             self.wms_display_widget.layer_name_label.setText(wms_title)
             wms_badge.setProperty("active", True)
-            self.wms_clear_button.show()   
+            self.wms_clear_button.show()
         else:
             self.wms_display_widget.layer_name_label.setText("<i>Nenhuma camada associada.</i>")
             wms_badge.setProperty("active", False)

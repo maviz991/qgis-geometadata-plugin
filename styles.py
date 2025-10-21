@@ -74,6 +74,13 @@ STYLE_SHEET = """
         font-weight: bold;
     }
 
+    /* ESTILO botão limpar */
+    #ClearButton{
+        color: white;
+        font-weight: bold;
+        border: transparent;
+    }
+
     /* Card principal do formulário */
     .Card {
         background-color: white;
