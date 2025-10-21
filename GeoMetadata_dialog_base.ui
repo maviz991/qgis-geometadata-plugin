@@ -1111,6 +1111,38 @@ p, li { white-space: pre-wrap; }
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>lineEdit_title</tabstop>
+  <tabstop>dateTimeEdit_date_creation</tabstop>
+  <tabstop>spinBox_edition</tabstop>
+  <tabstop>comboBox_status_codeListValue</tabstop>
+  <tabstop>comboBox_contact_presets</tabstop>
+  <tabstop>lineEdit_contact_individualName</tabstop>
+  <tabstop>lineEdit_contact_organisationName</tabstop>
+  <tabstop>lineEdit_contact_phone</tabstop>
+  <tabstop>lineEdit_contact_positionName</tabstop>
+  <tabstop>lineEdit_contact_deliveryPoint</tabstop>
+  <tabstop>lineEdit_contact_city</tabstop>
+  <tabstop>comboBox_contact_administrativeArea</tabstop>
+  <tabstop>lineEdit_contact_postalCode</tabstop>
+  <tabstop>lineEdit_contact_email</tabstop>
+  <tabstop>lineEdit_contact_country</tabstop>
+  <tabstop>comboBox_contact_role</tabstop>
+  <tabstop>lineEdit_MD_Keywords</tabstop>
+  <tabstop>comboBox_MD_SpatialRepresentationTypeCode</tabstop>
+  <tabstop>lineEdit_textEdit_spatialResolution_denominator</tabstop>
+  <tabstop>comboBox_LanguageCode</tabstop>
+  <tabstop>comboBox_characterSet</tabstop>
+  <tabstop>comboBox_topicCategory</tabstop>
+  <tabstop>comboBox_hierarchyLevel</tabstop>
+  <tabstop>dateTimeEdit_dateStamp</tabstop>
+  <tabstop>lineEdit_thumbnail_url</tabstop>
+  <tabstop>textEdit_abstract</tabstop>
+  <tabstop>lineEdit_eastBoundLongitude</tabstop>
+  <tabstop>lineEdit_northBoundLatitude</tabstop>
+  <tabstop>lineEdit_southBoundLatitude</tabstop>
+  <tabstop>lineEdit_westBoundLongitude</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

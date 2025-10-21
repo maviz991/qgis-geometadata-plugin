@@ -135,10 +135,10 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         # --- Montagem do Layout na Ordem Correta ---
         layout.addWidget(logo_label)
         layout.addWidget(self.header_btn_exp_geo)
+        layout.addWidget(self.header_btn_exp_xml)
+        layout.addWidget(self.header_btn_salvar)  
         layout.addWidget(self.header_btn_distribution_info)  
-        layout.addWidget(self.header_btn_exp_xml)      
-        layout.addWidget(self.header_btn_salvar)
-
+        
         layout.addStretch() # Empurra os botões de ação para a direita
         layout.addWidget(self.header_btn_login)
         
@@ -218,10 +218,6 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         widget.clear_button = clear_button
         
         return widget
-    
-# Em GeoMetadataDialog
-
-# Em GeoMetadataDialog
 
     def _create_form_card(self):
         """

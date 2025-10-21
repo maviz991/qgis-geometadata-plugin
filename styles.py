@@ -37,7 +37,7 @@ STYLE_SHEET = """
         background-color: #111111;
         color: white;
         font-weight: bold;
-        font-size: 12px;
+        font-size: 10px;
         border: none;
         border-radius: 4px;
         padding: 8px 24px;
@@ -55,9 +55,7 @@ STYLE_SHEET = """
         background-color: #5a6268;
     }
 
-    /* --- PAINEL LATERAL DE CAMADAS ASSOCIADAS --- */
-    
-    /* ESTILO INATIVO (CINZA) */
+    /* Badge INATIVO (CINZA) */
     #wms_badge, #wfs_badge {
         background-color: #EAECEE; 
         color: #7F8C8D; 
@@ -72,7 +70,7 @@ STYLE_SHEET = """
         text-align: auto;
     }
 
-    /* ESTILO ATIVO (Verde) */
+    /* Badge ATIVO (Verde) */
     #wms_badge[active="true"], 
     #wfs_badge[active="true"] {
         background-color: #008959;
@@ -80,15 +78,16 @@ STYLE_SHEET = """
         font-weight: bold;
     }
 
-    /* ESTILO botão limpar */
+    /* Botão limpar */
     #ClearButton{
         color: white;
         font-weight: bold;
         border: transparent;
     }
     #ClearButton:hover {
-        background-color: #FADBD8; /* Fundo vermelho claro ao passar o mouse */
+        background-color: #FADBD8;
     }
+
     /* Card principal do formulário */
     .Card {
         background-color: white;
@@ -96,3 +95,4 @@ STYLE_SHEET = """
         border-radius: 8px;
     }
 """
+
