@@ -42,7 +42,7 @@ from .styles import STYLE_SHEET
 
 # --- Constantes e Configurações ---
 CONTATOS_PREDEFINIDOS = {
-    #'cdhu': { 'uuid': 'b98c4847-4d5c-43e1-a5eb-bd0228f6903a', 'contact_individualName': 'CDHU', 'contact_organisationName': 'Companhia de Desenvolvimento Habitacional e Urbano', 'contact_positionName': '/', 'contact_phone': '+55 11 2505-2479', 'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé', 'contact_city': 'São Paulo', 'contact_postalCode': '01014-930', 'contact_country': 'Brasil', 'contact_email': 'geo@cdhu.sp.gov.br', 'contact_administrativeArea': 'SP', 'contact_role': 'owner' },
+    'cdhu': { 'uuid': 'b98c4847-4d5c-43e1-a5eb-bd0228f6903a', 'contact_individualName': 'CDHU', 'contact_organisationName': 'Companhia de Desenvolvimento Habitacional e Urbano', 'contact_positionName': '/', 'contact_phone': '+55 11 2505-2479', 'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé', 'contact_city': 'São Paulo', 'contact_postalCode': '01014-930', 'contact_country': 'Brasil', 'contact_email': 'geo@cdhu.sp.gov.br', 'contact_administrativeArea': 'SP', 'contact_role': 'owner' },
     'dpdu': { 'uuid': 'a44bfd3a-a9f4-4caf-ba04-6ca36ab44111', 'contact_individualName': 'DPDU', 'contact_organisationName': 'Diretoria de Planejamento e Desenvolvimento Urbano', 'contact_positionName': '/', 'contact_phone': '+55 11 2505-2553', 'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé, 8º andar - Bloco 2', 'contact_city': 'São Paulo', 'contact_postalCode': '01014-930', 'contact_country': 'Brasil', 'contact_email': 'hub_habitacao@cdhu.sp.gov.br', 'contact_administrativeArea': 'SP', 'contact_role': 'processor' },
     'ssaru': { 'uuid': '648b9e9f-5b88-4e50-8cce-efa78199515e', 'contact_individualName': 'SSARU', 'contact_organisationName': 'Superintendência Social de Ação em Recuperação Urbana', 'contact_positionName': '/', 'contact_phone': '+55 11 2505-2352', 'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé, 7º andar', 'contact_city': 'São Paulo', 'contact_postalCode': '01014-930', 'contact_country': 'Brasil', 'contact_email': 'mapeamento.ssaru@cdhu.sp.gov.br', 'contact_administrativeArea': 'SP', 'contact_role': 'author' },
     'terras': { 'uuid': '14e0f9a4-81a6-430e-9165-8af35481d8ac', 'contact_individualName': 'TERRAS', 'contact_organisationName': 'Superintendência de Terras', 'contact_positionName': '/', 'contact_phone': '+55 11 2505-0000', 'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé, 6º andar - Bloco 5', 'contact_city': 'São Paulo', 'contact_postalCode': '01014-930', 'contact_country': 'Brasil', 'contact_email': 'terras@cdhu.sp.gov.br', 'contact_administrativeArea': 'SP', 'contact_role': 'author' },
@@ -153,13 +153,31 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         
         # 2. Slot de exibição para WMS
         self.wms_display_widget = self._create_badge_placeholder("WMS")
+        self.wms_clear_button = self.wms_display_widget.clear_button
         container_layout.addWidget(self.wms_display_widget)
         
         # 3. Slot de exibição para WFS
         self.wfs_display_widget = self._create_badge_placeholder("WFS")
+        self.wfs_clear_button = self.wfs_display_widget.clear_button
         container_layout.addWidget(self.wfs_display_widget)
         
         return container
+
+    def clear_wms_data(self):
+        """Limpa os dados de associação WMS e atualiza a UI."""
+        if 'wms_data' in self.distribution_data:
+            self.distribution_data['wms_data'] = {}
+        
+        self.update_distribution_display()
+        self.iface.messageBar().pushMessage("Info", "Associação WMS removida.", level=Qgis.Info, duration=3)
+
+    def clear_wfs_data(self):
+        """Limpa os dados de associação WFS e atualiza a UI."""
+        if 'wfs_data' in self.distribution_data:
+            self.distribution_data['wfs_data'] = {}
+            
+        self.update_distribution_display()
+        self.iface.messageBar().pushMessage("Info", "Associação WFS removida.", level=Qgis.Info, duration=3)
 
     def _create_badge_placeholder(self, service_type):
         """Função auxiliar para criar a estrutura de um slot de exibição (ícone + texto)."""
@@ -173,9 +191,17 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         icon_pixmap = QPixmap(":/plugins/geometadata/img/globe.svg")
         icon_label.setPixmap(icon_pixmap.scaled(16, 16, Qt.KeepAspectRatio, Qt.SmoothTransformation))
         
+        # --- NOVO BOTÃO DE LIMPAR ---
+        self.icon_clear = QIcon(":/plugins/geometadata/img/clear_icon.svg")
+        clear_button = QPushButton(self.icon_clear, "")
+        clear_button.setObjectName("ClearButton") # Para estilização QSS
+        clear_button.setFixedSize(15, 15)
+        clear_button.setToolTip(f"Remover associação {service_type}")
+
         # Label para o badge (será estilizado via QSS)
         badge_label = QLabel(service_type)
         badge_label.setObjectName(f"{service_type.lower()}_badge") # Ex: wms_badge, wfs_badge
+        badge_label.setAlignment(Qt.AlignCenter)
         
         # Label para o nome da camada
         layer_name_label = QLabel("<i>Nenhuma camada associada.</i>")
@@ -184,10 +210,12 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         layout.addWidget(icon_label)
         layout.addWidget(badge_label)
         layout.addWidget(layer_name_label, 1) # O '1' faz ele expandir
+        layout.addWidget(clear_button)
         
         # Armazena referências para atualização futura
         widget.badge_label = badge_label
         widget.layer_name_label = layer_name_label
+        widget.clear_button = clear_button
         
         return widget
     
@@ -223,6 +251,9 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.header_btn_login.clicked.connect(self.authenticate)
         self.header_btn_distribution_info.clicked.connect(self.open_distribution_workflow)
         
+        self.wms_clear_button.clicked.connect(self.clear_wms_data)
+        self.wfs_clear_button.clicked.connect(self.clear_wfs_data)
+
         self.ui.comboBox_contact_presets.currentIndexChanged.connect(self.on_contact_preset_changed)
         #self.ui.btn_distribution_info.clicked.connect(self.open_distribution_workflow)
 
@@ -613,10 +644,12 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         wms_badge = self.wms_display_widget.badge_label
         if wms_title:
             self.wms_display_widget.layer_name_label.setText(wms_title)
-            wms_badge.setProperty("active", True)   
+            wms_badge.setProperty("active", True)
+            self.wms_clear_button.show()   
         else:
             self.wms_display_widget.layer_name_label.setText("<i>Nenhuma camada associada.</i>")
             wms_badge.setProperty("active", False)
+            self.wms_clear_button.hide()
         # Força o Qt a reavaliar o estilo do widget
         wms_badge.style().unpolish(wms_badge)
         wms_badge.style().polish(wms_badge)
@@ -626,10 +659,11 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         if wfs_title:
             self.wfs_display_widget.layer_name_label.setText(wfs_title)
             wfs_badge.setProperty("active", True)
+            self.wfs_clear_button.show()
         else:
             self.wfs_display_widget.layer_name_label.setText("<i>Nenhuma camada associada.</i>")
             wfs_badge.setProperty("active", False)   
-
+            self.wfs_clear_button.hide()
         wfs_badge.style().unpolish(wfs_badge)
         wfs_badge.style().polish(wfs_badge)                      
 
