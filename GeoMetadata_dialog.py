@@ -42,7 +42,7 @@ from .styles import STYLE_SHEET
 
 # --- Constantes e Configurações ---
 CONTATOS_PREDEFINIDOS = {
-    'cdhu': { 'uuid': 'b98c4847-4d5c-43e1-a5eb-bd0228f6903a', 'contact_individualName': 'CDHU', 'contact_organisationName': 'Companhia de Desenvolvimento Habitacional e Urbano', 'contact_positionName': '/', 'contact_phone': '+55 11 2505-2479', 'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé', 'contact_city': 'São Paulo', 'contact_postalCode': '01014-930', 'contact_country': 'Brasil', 'contact_email': 'geo@cdhu.sp.gov.br', 'contact_administrativeArea': 'SP', 'contact_role': 'owner' },
+    #'cdhu': { 'uuid': 'b98c4847-4d5c-43e1-a5eb-bd0228f6903a', 'contact_individualName': 'CDHU', 'contact_organisationName': 'Companhia de Desenvolvimento Habitacional e Urbano', 'contact_positionName': '/', 'contact_phone': '+55 11 2505-2479', 'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé', 'contact_city': 'São Paulo', 'contact_postalCode': '01014-930', 'contact_country': 'Brasil', 'contact_email': 'geo@cdhu.sp.gov.br', 'contact_administrativeArea': 'SP', 'contact_role': 'owner' },
     'dpdu': { 'uuid': 'a44bfd3a-a9f4-4caf-ba04-6ca36ab44111', 'contact_individualName': 'DPDU', 'contact_organisationName': 'Diretoria de Planejamento e Desenvolvimento Urbano', 'contact_positionName': '/', 'contact_phone': '+55 11 2505-2553', 'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé, 8º andar - Bloco 2', 'contact_city': 'São Paulo', 'contact_postalCode': '01014-930', 'contact_country': 'Brasil', 'contact_email': 'hub_habitacao@cdhu.sp.gov.br', 'contact_administrativeArea': 'SP', 'contact_role': 'processor' },
     'ssaru': { 'uuid': '648b9e9f-5b88-4e50-8cce-efa78199515e', 'contact_individualName': 'SSARU', 'contact_organisationName': 'Superintendência Social de Ação em Recuperação Urbana', 'contact_positionName': '/', 'contact_phone': '+55 11 2505-2352', 'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé, 7º andar', 'contact_city': 'São Paulo', 'contact_postalCode': '01014-930', 'contact_country': 'Brasil', 'contact_email': 'mapeamento.ssaru@cdhu.sp.gov.br', 'contact_administrativeArea': 'SP', 'contact_role': 'author' },
     'terras': { 'uuid': '14e0f9a4-81a6-430e-9165-8af35481d8ac', 'contact_individualName': 'TERRAS', 'contact_organisationName': 'Superintendência de Terras', 'contact_positionName': '/', 'contact_phone': '+55 11 2505-0000', 'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé, 6º andar - Bloco 5', 'contact_city': 'São Paulo', 'contact_postalCode': '01014-930', 'contact_country': 'Brasil', 'contact_email': 'terras@cdhu.sp.gov.br', 'contact_administrativeArea': 'SP', 'contact_role': 'author' },
@@ -134,17 +134,16 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         
         # --- Montagem do Layout na Ordem Correta ---
         layout.addWidget(logo_label)
-        layout.addWidget(self.header_btn_salvar)
-        layout.addWidget(self.header_btn_exp_xml)
         layout.addWidget(self.header_btn_exp_geo)
-        layout.addWidget(self.header_btn_distribution_info)
+        layout.addWidget(self.header_btn_distribution_info)  
+        layout.addWidget(self.header_btn_exp_xml)      
+        layout.addWidget(self.header_btn_salvar)
+
         layout.addStretch() # Empurra os botões de ação para a direita
         layout.addWidget(self.header_btn_login)
         
         return header_widget
         
-
-
     def _create_distribution_display_panel(self):
         """Cria o QGroupBox para exibir as camadas associadas."""
         
@@ -171,7 +170,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         
         # Ícone do globo
         icon_label = QLabel()
-        icon_pixmap = QPixmap(":/plugins/geometadata/img/globe.svg") # Certifique-se que este ícone existe
+        icon_pixmap = QPixmap(":/plugins/geometadata/img/globe.svg")
         icon_label.setPixmap(icon_pixmap.scaled(16, 16, Qt.KeepAspectRatio, Qt.SmoothTransformation))
         
         # Label para o badge (será estilizado via QSS)
@@ -208,11 +207,11 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         form_container = QWidget()
         self.ui.setupUi(form_container)
         
-         # Esconde os botões antigos do .ui
+        '''# Esconde os botões antigos do .ui
         for btn_name in ['btn_exp_xml', 'btn_exp_geo', 'btn_salvar', 'btn_login']:
             if hasattr(self.ui, btn_name):
                 getattr(self.ui, btn_name).hide()
-        
+        '''
         card_layout.addWidget(form_container)
         return card_widget    
 
@@ -437,7 +436,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
                 combo.addItem(text, data)
         
         populate(self.ui.comboBox_status_codeListValue, [('Arquivo Antigo', 'historicalArchive'), ('Concluído', 'completed'), ('Contínuo', 'onGoing'), ('Em Desenvolvimento', 'underDevelopment'), ('Necessário', 'required'), ('Obsoleto', 'obsolete'), ('Planejado', 'planned')])
-        populate(self.ui.comboBox_contact_presets, [('CDHU', 'cdhu'), ('DPDU', 'dpdu'), ('SPHU', 'sphu'), ('SSARU', 'ssaru'), ('TERRAS', 'terras'), ('Nenhum', 'nenhum')])
+        populate(self.ui.comboBox_contact_presets, [('DPDU', 'dpdu'), ('SPHU', 'sphu'), ('SSARU', 'ssaru'), ('TERRAS', 'terras')])
         populate(self.ui.comboBox_MD_SpatialRepresentationTypeCode, [('Vetor', 'vector'), ('Grid | Raster', 'grid'), ('Tabela de texto', 'textTable'), ('Rede triangular irregular (TIN)', 'tin'), ('Modelo estereofónico', 'stereoscopicModel'), ('Vídeo', 'video')])
         populate(self.ui.comboBox_LanguageCode, [('🇧🇷 Português', 'por'), ('🇺🇸 Inglês', 'eng'), ('🇪🇸 Espanhol', 'spa'), ('🇫🇷 Françês', 'fra'), ('🇩🇪 Alemão', 'ger')])
         populate(self.ui.comboBox_characterSet, [('UTF-8', 'utf8')])
@@ -607,8 +606,8 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         # --- Obter dados de forma segura ---
         wms_data = self.distribution_data.get('wms_data') or {}
         wfs_data = self.distribution_data.get('wfs_data') or {}
-        wms_title = wms_data.get('geoserver_layer_title')
-        wfs_title = wfs_data.get('geoserver_layer_title')
+        wms_title = wms_data.get('geoserver_layer_name')
+        wfs_title = wfs_data.get('geoserver_layer_name')
         
         # --- Atualizar o painel WMS ---
         wms_badge = self.wms_display_widget.badge_label

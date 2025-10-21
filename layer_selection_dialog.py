@@ -12,7 +12,7 @@ FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'layer_selection_dialog_base.ui'))
 
 class LayerSelectionDialog(QtWidgets.QDialog, FORM_CLASS):
-    # --- MUDANÇA 1: O construtor agora recebe a SESSÃO DE API ---
+    # --- Recebe a SESSÃO DE API ---
     def __init__(self, api_session, parent=None):
         super(LayerSelectionDialog, self).__init__(parent)
         self.setupUi(self)
@@ -40,8 +40,6 @@ class LayerSelectionDialog(QtWidgets.QDialog, FORM_CLASS):
         self.btn_wms.clicked.connect(lambda: self._clear_service_selection("wms"))
         self.btn_wfs.clicked.connect(lambda: self._clear_service_selection("wfs"))
 
-
-
     def _fetch_layers(self):
         service = self.comboBox_service_type.currentData()
         if not service:
@@ -60,8 +58,8 @@ class LayerSelectionDialog(QtWidgets.QDialog, FORM_CLASS):
             url = f"{self.geoserver_url}/ows?service=WFS&version=1.1.0&request=GetCapabilities"
 
         try:
-            # --- MUDANÇA 2: USA A SESSÃO AUTENTICADA PARA A REQUISIÇÃO ---
-            # O parâmetro 'auth' não é mais necessário, pois a sessão já tem o cookie.
+            # --- USA A SESSÃO AUTENTICADA PARA A REQUISIÇÃO ---
+            # Sessão com cookie.
             response = self.api_session.get(url, timeout=20, verify=False)
             response.raise_for_status()
 
@@ -71,7 +69,7 @@ class LayerSelectionDialog(QtWidgets.QDialog, FORM_CLASS):
             root = ET.fromstring(response.content)
             layers_found = []
 
-            # A lógica de parse do XML permanece a mesma
+            # A lógica de parse do XML
             if service == 'wms':
                 ns = {'wms': 'http://www.opengis.net/wms'}
                 for layer_node in root.findall('.//wms:Layer/wms:Name/..', namespaces=ns):
@@ -104,7 +102,7 @@ class LayerSelectionDialog(QtWidgets.QDialog, FORM_CLASS):
 
         if self.wms_data:
             self.btn_wms.setIcon(self.icon_wms)
-            self.btn_wms.setText(f"WMS: {self.wms_data.get('geoserver_layer_title')}")
+            self.btn_wms.setText(f"WMS: {self.wms_data.get('geoserver_layer_name')}")
             self.btn_wms.setEnabled(True)
         else:
             self.btn_wms.setText("WMS Não Adicionado")
@@ -112,7 +110,7 @@ class LayerSelectionDialog(QtWidgets.QDialog, FORM_CLASS):
 
         if self.wfs_data:
             self.btn_wfs.setIcon(self.icon_wfs)
-            self.btn_wfs.setText(f"WFS: {self.wfs_data.get('geoserver_layer_title')}")
+            self.btn_wfs.setText(f"WFS: {self.wfs_data.get('geoserver_layer_name')}")
             self.btn_wfs.setEnabled(True)
         else:
             self.btn_wfs.setText("WFS Não Adicionado")
@@ -138,12 +136,12 @@ class LayerSelectionDialog(QtWidgets.QDialog, FORM_CLASS):
         if service_type == "wms":
             self.wms_data = service_data
             self.btn_wms.setIcon(self.icon_wms)
-            self.btn_wms.setText(f"WMS: {selected_layer.get('title')}")
+            self.btn_wms.setText(f"WMS: {selected_layer.get('name')}")
             self.btn_wms.setEnabled(True)
         elif service_type == "wfs":
             self.wfs_data = service_data
             self.btn_wfs.setIcon(self.icon_wfs)            
-            self.btn_wfs.setText(f"WFS: {selected_layer.get('title')}")
+            self.btn_wfs.setText(f"WFS: {selected_layer.get('name')}")
             self.btn_wfs.setEnabled(True)
         
         # Resetar a UI para a próxima seleção
