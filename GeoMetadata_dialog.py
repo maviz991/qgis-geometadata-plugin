@@ -656,7 +656,29 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.distribution_data['wfs_data'] = data_dict.get('wfs_data', {})
         self.ui.lineEdit_thumbnail_url.setText(data_dict.get('thumbnail_url', ''))
         self.update_distribution_display()
-        self.set_combobox_by_data(self.ui.comboBox_contact_presets, data_dict.get('contact_preset_key', 'nenhum'))
+ # --- ETAPA 2: DEDUÇÃO DO PRESET (A LÓGICA RESTAURADA E CORRIGIDA) ---
+        # Compara os dados do DICIONÁRIO (data_dict) com os presets.
+        # É mais robusto comparar com o dicionário do que com o texto dos widgets.
+        
+        found_preset_key = None
+        # Itera sobre cada preset que conhecemos
+        for preset_key, preset_data in CONTATOS_PREDEFINIDOS.items():
+            if preset_key == 'nenhum': 
+                continue
+
+            # Compara alguns campos-chave para ver se há correspondência
+            if (data_dict.get('contact_individualName') == preset_data.get('contact_individualName') and
+                data_dict.get('contact_organisationName') == preset_data.get('contact_organisationName') and
+                data_dict.get('contact_email') == preset_data.get('contact_email')):
+                
+                found_preset_key = preset_key
+                print(f"Dados de contato carregados correspondem ao preset: '{found_preset_key}'")
+                break # Encontramos a correspondência, podemos parar o loop
+
+        # Define a seleção do ComboBox de presets com base no que foi encontrado
+        preset_to_set = found_preset_key if found_preset_key else 'nenhum'
+        self.set_combobox_by_data(self.ui.comboBox_contact_presets, preset_to_set)
+                
         print("Formulário preenchido com dados de um Metadado existente.")
 
     def show_message(self, title, text, icon=QtWidgets.QMessageBox.Information):
