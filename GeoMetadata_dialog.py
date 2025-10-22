@@ -118,30 +118,24 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         logo_label.setPixmap(pixmap.scaled(160, 80, Qt.KeepAspectRatio, Qt.SmoothTransformation))
 
         # --- CRIAÇÃO E CONFIGURAÇÃO DOS BOTÕES ---
-        # Note que não definimos mais o ícone aqui no Python. O QSS fará isso.
-
         # Botão "Continuar depois"
         self.header_btn_salvar = QPushButton(" Continuar depois")
         self.header_btn_salvar.setObjectName("HeaderButtonSave") # Nome para o QSS
-        self.header_btn_salvar.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
         
 
         # Botão "Exportar Metadado"
         self.header_btn_exp_xml = QPushButton(" Exportar Metadado")
         self.header_btn_exp_xml.setObjectName("HeaderButtonXml") # Nome para o QSS
-        self.header_btn_exp_xml.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
 
 
         # Botão "Exportar para Geohab"
         self.header_btn_exp_geo = QPushButton(" Exportar para Geohab")
         self.header_btn_exp_geo.setObjectName("HeaderButtonGeo") # Nome para o QSS
-        self.header_btn_exp_geo.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
 
 
         # Botão "Associar Camada"
         self.header_btn_distribution_info = QPushButton(" Associar Camada")
         self.header_btn_distribution_info.setObjectName("HeaderButtonAddLayer") # Nome para o QSS
-        self.header_btn_distribution_info.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
 
 
         # Botão "Entrar" (Login)

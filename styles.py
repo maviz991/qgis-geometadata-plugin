@@ -16,21 +16,21 @@ STYLE_SHEET = """
     /* Aplica-se a todos os botões pelos seus novos objectNames */
     #HeaderButtonSave, #HeaderButtonXml, #HeaderButtonGeo, #HeaderButtonAddLayer {
         background-color: transparent;
-        color: #111111;
+        color: rgba(0, 0, 0, 0.7);
         font-size: 15px;
         font-weight: bold;
         border: none;
         border-bottom: 1.5px solid transparent; 
-        padding: 5px 5px; /* Padding ajustado para o ícone */
-        margin: 0 3px;
+        padding: 12px 0px; /* Padding ajustado para o ícone */
+        margin: 0 5px;
         min-width: 195px;
         text-align: center;
     }
 
     /* 2. ESTILO HOVER para os botões de navegação */
     #HeaderButtonSave:hover, #HeaderButtonXml:hover, #HeaderButtonGeo:hover, #HeaderButtonAddLayer:hover {
-        color: #696868;
-        border-bottom: 1.5px solid #696868;
+        color: #000000;
+        border-bottom: 1.5px solid #000000;
     }
 
     /* 3. ESTILO DESABILITADO para os botões de navegação */
@@ -85,7 +85,7 @@ STYLE_SHEET = """
         margin-left: 10px;
     }
     #Header #ConnectButton:hover {
-        background-color: #696868;
+        background-color: rgba(0, 0, 0, 0.75);
     }
     
 
