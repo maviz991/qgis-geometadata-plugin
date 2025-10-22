@@ -74,6 +74,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
     # --- Métodos de Construção e Configuração da UI (Estrutura) ---
     def _setup_main_window(self):
         """Configura as propriedades da janela principal."""
+        self.setWindowIcon(QIcon(":/plugins/geometadata/icon.png"))
         self.setObjectName("GeoMetadataDialog")
         self.setWindowTitle("GeoMetadata | CDHU")
         self.setMinimumSize(1200, 690)

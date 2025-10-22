@@ -1,6 +1,6 @@
 <!DOCTYPE RCC><RCC version="1.0">
 <qresource prefix="/plugins/geometadata">
-    <file alias="img/icon.png">img/icon.png</file>
+    <file>icon.png</file>
     <file alias="img/login_ok.png">img/login_ok.png</file>
     <file alias="img/login_error.png">img/login_error.png</file>
     <file alias="img/header_logo.png">img/header_logo.png</file>
