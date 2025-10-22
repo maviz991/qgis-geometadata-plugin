@@ -76,8 +76,8 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         """Configura as propriedades da janela principal."""
         self.setObjectName("GeoMetadataDialog")
         self.setWindowTitle("GeoMetadata | CDHU")
-        self.setMinimumSize(1190, 600)
-        self.setMaximumSize(1640, 700)
+        self.setMinimumSize(1200, 690)
+        self.setMaximumSize(1640, 690)
         self.setStyleSheet(STYLE_SHEET)
 
     def _build_ui_structure(self):
@@ -115,7 +115,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
 
         logo_label = QLabel()
         pixmap = QPixmap(":/plugins/geometadata/img/header_logo.png")
-        logo_label.setPixmap(pixmap.scaled(160, 80, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        logo_label.setPixmap(pixmap.scaled(170, 80, Qt.KeepAspectRatio, Qt.SmoothTransformation))
 
         # --- CRIAÇÃO E CONFIGURAÇÃO DOS BOTÕES ---
         # Botão "Continuar depois"
