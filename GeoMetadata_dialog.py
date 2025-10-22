@@ -114,24 +114,44 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         pixmap = QPixmap(":/plugins/geometadata/img/header_logo.png")
         logo_label.setPixmap(pixmap.scaled(160, 80, Qt.KeepAspectRatio, Qt.SmoothTransformation))
 
+        self.icon_save = QIcon(":/plugins/geometadata/img/exp_save_icon.png")
+        self.icon_exp_geo = QIcon(":/plugins/geometadata/img/exp_geo_icon.png")
+        self.icon_exp_xml = QIcon(":/plugins/geometadata/img/exp_xml_icon.png")
+        self.icon_addlayer = QIcon(":/plugins/geometadata/img/addlayer_icon.png")
+        self.icon_save = QIcon(":/plugins/geometadata/img/exp_save_icon_hover.png")
+        self.icon_exp_geo = QIcon(":/plugins/geometadata/img/exp_geo_icon_hover.png")
+        self.icon_exp_xml = QIcon(":/plugins/geometadata/img/exp_xml_icon_hover.png")
+        self.icon_addlayer = QIcon(":/plugins/geometadata/img/addlayer_icon_hover.png")
+
         # --- ATRIBUINDO OS NOMES DE OBJETO PARA ESTILIZAÇÃO ---
-        self.icon_save = QIcon(":/plugins/geometadata/img/exp_save_icon.svg")
-        self.icon_exp_geo = QIcon(":/plugins/geometadata/img/exp_geo_icon.svg")
-        self.icon_exp_xml = QIcon(":/plugins/geometadata/img/exp_xml_icon.svg")
-        self.icon_addlayer = QIcon(":/plugins/geometadata/img/addlayer_icon.svg")
-
         # Estes botões usarão o estilo "LinkButton" do QSS
-        self.header_btn_salvar = QPushButton(self.icon_save, "Continuar depois")
-        self.header_btn_salvar.setObjectName("LinkButton")       
+        # --- BOTÃO "CONTINUAR DEPOIS" ---
+        self.header_btn_salvar = QPushButton() # 1. Criar
+        self.header_btn_salvar.setIcon(self.icon_save) # 2. Configurar Ícone
+        self.header_btn_salvar.setText(" Continuar depois") # 3. Configurar Texto
+        self.header_btn_salvar.setObjectName("LinkButton") # 4. Configurar Nome (para QSS)
+        self.header_btn_salvar.setIconSize(QSize(22, 22)) # 5. Configurar Tamanho do Ícone!
 
-        self.header_btn_exp_xml = QPushButton(self.icon_exp_xml, "Exportar para XML")
+        # --- BOTÃO "EXPORTAR PARA XML" ---
+        self.header_btn_exp_xml = QPushButton()
+        self.header_btn_exp_xml.setIcon(self.icon_exp_xml)
+        self.header_btn_exp_xml.setText(" Exportar Metadado")
         self.header_btn_exp_xml.setObjectName("LinkButton")
-        
-        self.header_btn_exp_geo = QPushButton(self.icon_exp_geo, "Exportar para Geohab")
-        self.header_btn_exp_geo.setObjectName("LinkButton")
+        self.header_btn_exp_xml.setIconSize(QSize(22, 22))
 
-        self.header_btn_distribution_info = QPushButton(self.icon_addlayer, "Associar Camada")
+        # --- BOTÃO "EXPORTAR PARA GEOHAB" ---
+        self.header_btn_exp_geo = QPushButton()
+        self.header_btn_exp_geo.setIcon(self.icon_exp_geo)
+        self.header_btn_exp_geo.setText(" Exportar para Geohab")
+        self.header_btn_exp_geo.setObjectName("LinkButton")
+        self.header_btn_exp_geo.setIconSize(QSize(22, 22))
+
+        # --- BOTÃO "ASSOCIAR CAMADA" ---
+        self.header_btn_distribution_info = QPushButton()
+        self.header_btn_distribution_info.setIcon(self.icon_addlayer)
+        self.header_btn_distribution_info.setText(" Associar Camada")
         self.header_btn_distribution_info.setObjectName("LinkButton")
+        self.header_btn_distribution_info.setIconSize(QSize(22, 22))
 
         self.header_btn_login = QPushButton()
         self.header_btn_login.setObjectName("ConnectButton")

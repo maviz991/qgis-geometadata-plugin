@@ -15,7 +15,7 @@ STYLE_SHEET = """
     /* 1. Botões estilo "Link de Navegação" */
     #Header #LinkButton {
         background-color: transparent;
-        color: #333;
+        color: #111111;
         font-size: 15px;
         font-weight: bold;
         border: none;
@@ -24,8 +24,8 @@ STYLE_SHEET = """
         margin: 0 5px;
     }
     #Header #LinkButton:hover {
-        color: #c9302c; 
-        border-bottom: 2px solid #c9302c; /* <-- Sublinhado vermelho no hover */
+        color: #696868; 
+        border-bottom: 1.5px solid #696868; /* <-- Sublinhado vermelho no hover */
     }
     #Header #LinkButton:disabled {
         color: #cccccc;
