@@ -26,6 +26,7 @@ from qgis.PyQt import uic, QtWidgets
 from qgis.PyQt.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QWidget, QMessageBox
 from qgis.PyQt.QtCore import Qt, QDateTime, QSize
 from qgis.PyQt.QtGui import QPixmap, QIcon
+from qgis.PyQt.QtWidgets import QSizePolicy
 from qgis.core import (
     Qgis,
     QgsCoordinateReferenceSystem,
@@ -103,68 +104,68 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.auto_fill_from_layer()
         self.update_ui_for_login_status()
 
+ # Em GeoMetadataDialog
+
     def _create_header(self):
         """Cria o widget do cabeçalho com o novo estilo de navegação."""
         header_widget = QWidget()
         header_widget.setObjectName("Header")
         layout = QHBoxLayout(header_widget)
-        layout.setSpacing(10) # Adiciona um pequeno espaço entre os elementos
+        layout.setSpacing(10)
 
         logo_label = QLabel()
         pixmap = QPixmap(":/plugins/geometadata/img/header_logo.png")
         logo_label.setPixmap(pixmap.scaled(160, 80, Qt.KeepAspectRatio, Qt.SmoothTransformation))
 
-        self.icon_save = QIcon(":/plugins/geometadata/img/exp_save_icon.png")
-        self.icon_exp_geo = QIcon(":/plugins/geometadata/img/exp_geo_icon.png")
-        self.icon_exp_xml = QIcon(":/plugins/geometadata/img/exp_xml_icon.png")
-        self.icon_addlayer = QIcon(":/plugins/geometadata/img/addlayer_icon.png")
-        self.icon_save = QIcon(":/plugins/geometadata/img/exp_save_icon_hover.png")
-        self.icon_exp_geo = QIcon(":/plugins/geometadata/img/exp_geo_icon_hover.png")
-        self.icon_exp_xml = QIcon(":/plugins/geometadata/img/exp_xml_icon_hover.png")
-        self.icon_addlayer = QIcon(":/plugins/geometadata/img/addlayer_icon_hover.png")
+        # --- CRIAÇÃO E CONFIGURAÇÃO DOS BOTÕES ---
+        # Note que não definimos mais o ícone aqui no Python. O QSS fará isso.
 
-        # --- ATRIBUINDO OS NOMES DE OBJETO PARA ESTILIZAÇÃO ---
-        # Estes botões usarão o estilo "LinkButton" do QSS
-        # --- BOTÃO "CONTINUAR DEPOIS" ---
-        self.header_btn_salvar = QPushButton() # 1. Criar
-        self.header_btn_salvar.setIcon(self.icon_save) # 2. Configurar Ícone
-        self.header_btn_salvar.setText(" Continuar depois") # 3. Configurar Texto
-        self.header_btn_salvar.setObjectName("LinkButton") # 4. Configurar Nome (para QSS)
-        self.header_btn_salvar.setIconSize(QSize(22, 22)) # 5. Configurar Tamanho do Ícone!
+        # Botão "Continuar depois"
+        self.header_btn_salvar = QPushButton(" Continuar depois")
+        self.header_btn_salvar.setObjectName("HeaderButtonSave") # Nome para o QSS
+        self.header_btn_salvar.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
+        
 
-        # --- BOTÃO "EXPORTAR PARA XML" ---
-        self.header_btn_exp_xml = QPushButton()
-        self.header_btn_exp_xml.setIcon(self.icon_exp_xml)
-        self.header_btn_exp_xml.setText(" Exportar Metadado")
-        self.header_btn_exp_xml.setObjectName("LinkButton")
-        self.header_btn_exp_xml.setIconSize(QSize(22, 22))
+        # Botão "Exportar Metadado"
+        self.header_btn_exp_xml = QPushButton(" Exportar Metadado")
+        self.header_btn_exp_xml.setObjectName("HeaderButtonXml") # Nome para o QSS
+        self.header_btn_exp_xml.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
 
-        # --- BOTÃO "EXPORTAR PARA GEOHAB" ---
-        self.header_btn_exp_geo = QPushButton()
-        self.header_btn_exp_geo.setIcon(self.icon_exp_geo)
-        self.header_btn_exp_geo.setText(" Exportar para Geohab")
-        self.header_btn_exp_geo.setObjectName("LinkButton")
-        self.header_btn_exp_geo.setIconSize(QSize(22, 22))
 
-        # --- BOTÃO "ASSOCIAR CAMADA" ---
-        self.header_btn_distribution_info = QPushButton()
-        self.header_btn_distribution_info.setIcon(self.icon_addlayer)
-        self.header_btn_distribution_info.setText(" Associar Camada")
-        self.header_btn_distribution_info.setObjectName("LinkButton")
-        self.header_btn_distribution_info.setIconSize(QSize(22, 22))
+        # Botão "Exportar para Geohab"
+        self.header_btn_exp_geo = QPushButton(" Exportar para Geohab")
+        self.header_btn_exp_geo.setObjectName("HeaderButtonGeo") # Nome para o QSS
+        self.header_btn_exp_geo.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
 
+
+        # Botão "Associar Camada"
+        self.header_btn_distribution_info = QPushButton(" Associar Camada")
+        self.header_btn_distribution_info.setObjectName("HeaderButtonAddLayer") # Nome para o QSS
+        self.header_btn_distribution_info.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
+
+
+        # Botão "Entrar" (Login)
         self.header_btn_login = QPushButton()
         self.header_btn_login.setObjectName("ConnectButton")
+
         
-        # --- Montagem do Layout na Ordem Correta ---
+        # --- CONFIGURAÇÃO DO TAMANHO DO ÍCONE (IMPORTANTE!) ---
+        # Mesmo que o QSS defina o ícone, o Python ainda controla o tamanho da área do ícone.
+        icon_size = QSize(20, 20)
+        self.header_btn_salvar.setIconSize(icon_size)
+        self.header_btn_exp_xml.setIconSize(icon_size)
+        self.header_btn_exp_geo.setIconSize(icon_size)
+        self.header_btn_distribution_info.setIconSize(icon_size)
+
+        # --- Montagem do Layout ---
         layout.addWidget(logo_label)
-        layout.addWidget(self.header_btn_exp_geo)
         layout.addWidget(self.header_btn_exp_xml)
-        layout.addWidget(self.header_btn_salvar)  
+        layout.addWidget(self.header_btn_salvar)        
+        layout.addWidget(self.header_btn_exp_geo)
         layout.addWidget(self.header_btn_distribution_info)  
-        
-        layout.addStretch() # Empurra os botões de ação para a direita
+        layout.addStretch()
         layout.addWidget(self.header_btn_login)
+
         
         return header_widget
         

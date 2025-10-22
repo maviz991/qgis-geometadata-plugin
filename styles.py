@@ -12,24 +12,65 @@ STYLE_SHEET = """
 
     /* --- ESTILOS DOS BOTÕES NO HEADER --- */
 
-    /* 1. Botões estilo "Link de Navegação" */
-    #Header #LinkButton {
+    /* 1. ESTILO BASE para os botões de navegação do header */
+    /* Aplica-se a todos os botões pelos seus novos objectNames */
+    #HeaderButtonSave, #HeaderButtonXml, #HeaderButtonGeo, #HeaderButtonAddLayer {
         background-color: transparent;
         color: #111111;
         font-size: 15px;
         font-weight: bold;
         border: none;
-        border-bottom: 2px solid transparent;
-        padding: 8px 10px;
-        margin: 0 5px;
+        border-bottom: 1.5px solid transparent; 
+        padding: 5px 5px; /* Padding ajustado para o ícone */
+        margin: 0 3px;
+        min-width: 195px;
+        text-align: center;
     }
-    #Header #LinkButton:hover {
-        color: #696868; 
-        border-bottom: 1.5px solid #696868; /* <-- Sublinhado vermelho no hover */
+
+    /* 2. ESTILO HOVER para os botões de navegação */
+    #HeaderButtonSave:hover, #HeaderButtonXml:hover, #HeaderButtonGeo:hover, #HeaderButtonAddLayer:hover {
+        color: #696868;
+        border-bottom: 1.5px solid #696868;
     }
-    #Header #LinkButton:disabled {
+
+    /* 3. ESTILO DESABILITADO para os botões de navegação */
+    #HeaderButtonSave:disabled, #HeaderButtonXml:disabled, #HeaderButtonGeo:disabled, #HeaderButtonAddLayer:disabled {
         color: #cccccc;
-        border-bottom: 2px solid transparent;
+        border-bottom: 1.5px solid transparent;
+    }
+
+    /* 4. DEFINIÇÃO DOS ÍCONES (Normal e Hover) PARA CADA BOTÃO ESPECÍFICO */
+    
+    /* -- Botão Salvar -- */
+    #HeaderButtonSave {
+        icon: url(:/plugins/geometadata/img/exp_save_icon.png);
+    }
+    #HeaderButtonSave:hover {
+        icon: url(:/plugins/geometadata/img/exp_save_icon_hover.png);
+    }
+
+    /* -- Botão Exportar XML -- */
+    #HeaderButtonXml {
+        icon: url(:/plugins/geometadata/img/exp_xml_icon.png);
+    }
+    #HeaderButtonXml:hover {
+        icon: url(:/plugins/geometadata/img/exp_xml_icon_hover.png);
+    }
+
+    /* -- Botão Exportar Geohab -- */
+    #HeaderButtonGeo {
+        icon: url(:/plugins/geometadata/img/exp_geo_icon.png);
+    }
+    #HeaderButtonGeo:hover {
+        icon: url(:/plugins/geometadata/img/exp_geo_icon_hover.png);
+    }
+
+    /* -- Botão Associar Camada -- */
+    #HeaderButtonAddLayer {
+        icon: url(:/plugins/geometadata/img/addlayer_icon.png);
+    }
+    #HeaderButtonAddLayer:hover {
+        icon: url(:/plugins/geometadata/img/addlayer_icon_hover.png);
     }
 
     /* 2. Botão de Ação Principal ("Conectar") */
@@ -37,23 +78,16 @@ STYLE_SHEET = """
         background-color: #111111;
         color: white;
         font-weight: bold;
-        font-size: 10px;
+        font-size: 11px;
         border: none;
-        border-radius: 4px;
-        padding: 8px 24px;
+        border-radius: 5px;
+        padding: 5px 6px;
         margin-left: 10px;
     }
     #Header #ConnectButton:hover {
-        background-color: #333333;
+        background-color: #696868;
     }
     
-    /* Estilo para quando o usuário está conectado */
-    #Header #ConnectButton[loggedIn="true"] {
-        background-color: #6c757d; /* Cinza para indicar estado "conectado" */
-    }
-    #Header #ConnectButton[loggedIn="true"]:hover {
-        background-color: #5a6268;
-    }
 
     /* Badge INATIVO (CINZA) */
     #wms_badge, #wfs_badge {
