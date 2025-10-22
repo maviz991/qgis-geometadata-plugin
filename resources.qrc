@@ -9,5 +9,9 @@
     <file alias="img/wfs_icon.png">img/wfs_icon.png</file>
     <file alias="img/globe.svg">img/globe.svg</file>
     <file alias="img/clear_icon.svg">img/clear_icon.svg</file>
+    <file alias="img/addlayer_icon.svg">img/addlayer_icon.svg</file>
+    <file alias="img/exp_geo_icon.svg">img/exp_geo_icon.svg</file>
+    <file alias="img/exp_save_icon.svg">img/exp_save_icon.svg</file>
+    <file alias="img/exp_xml_icon.svg">img/exp_xml_icon.svg</file>
 </qresource>
 </RCC>

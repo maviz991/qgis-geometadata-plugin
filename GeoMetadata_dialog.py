@@ -115,18 +115,22 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         logo_label.setPixmap(pixmap.scaled(160, 80, Qt.KeepAspectRatio, Qt.SmoothTransformation))
 
         # --- ATRIBUINDO OS NOMES DE OBJETO PARA ESTILIZAÇÃO ---
+        self.icon_save = QIcon(":/plugins/geometadata/img/exp_save_icon.svg")
+        self.icon_exp_geo = QIcon(":/plugins/geometadata/img/exp_geo_icon.svg")
+        self.icon_exp_xml = QIcon(":/plugins/geometadata/img/exp_xml_icon.svg")
+        self.icon_addlayer = QIcon(":/plugins/geometadata/img/addlayer_icon.svg")
 
         # Estes botões usarão o estilo "LinkButton" do QSS
-        self.header_btn_salvar = QPushButton("Continuar depois")
-        self.header_btn_salvar.setObjectName("LinkButton")
+        self.header_btn_salvar = QPushButton(self.icon_save, "Continuar depois")
+        self.header_btn_salvar.setObjectName("LinkButton")       
 
-        self.header_btn_exp_xml = QPushButton("Exportar para XML")
+        self.header_btn_exp_xml = QPushButton(self.icon_exp_xml, "Exportar para XML")
         self.header_btn_exp_xml.setObjectName("LinkButton")
         
-        self.header_btn_exp_geo = QPushButton("Exportar para Geohab")
+        self.header_btn_exp_geo = QPushButton(self.icon_exp_geo, "Exportar para Geohab")
         self.header_btn_exp_geo.setObjectName("LinkButton")
 
-        self.header_btn_distribution_info = QPushButton("Associar Camada")
+        self.header_btn_distribution_info = QPushButton(self.icon_addlayer, "Associar Camada")
         self.header_btn_distribution_info.setObjectName("LinkButton")
 
         self.header_btn_login = QPushButton()
