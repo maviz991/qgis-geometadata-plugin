@@ -30,7 +30,7 @@ STYLE_SHEET = """
     /* 2. ESTILO HOVER para os botões de navegação */
     #HeaderButtonSave:hover, #HeaderButtonXml:hover, #HeaderButtonGeo:hover, #HeaderButtonAddLayer:hover {
         color: #000000;
-        border-bottom: 1.5px solid #000000;
+        border-bottom: 1.5px solid rgba(0, 0, 0, 0.7);
     }
 
     /* 3. ESTILO DESABILITADO para os botões de navegação */
