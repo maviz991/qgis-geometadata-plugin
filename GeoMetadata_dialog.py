@@ -105,8 +105,6 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.auto_fill_from_layer()
         self.update_ui_for_login_status()
 
- # Em GeoMetadataDialog
-
     def _create_header(self):
         """Cria o widget do cabeçalho com o novo estilo de navegação."""
         header_widget = QWidget()
@@ -120,32 +118,27 @@ class GeoMetadataDialog(QtWidgets.QDialog):
 
         # --- CRIAÇÃO E CONFIGURAÇÃO DOS BOTÕES ---
         # Botão "Continuar depois"
-        self.header_btn_salvar = QPushButton(" Continuar depois")
+        self.header_btn_salvar = QPushButton("Continuar depois")
         self.header_btn_salvar.setObjectName("HeaderButtonSave") # Nome para o QSS
         
 
         # Botão "Exportar Metadado"
-        self.header_btn_exp_xml = QPushButton(" Exportar Metadado")
-        self.header_btn_exp_xml.setObjectName("HeaderButtonXml") # Nome para o QSS
-
+        self.header_btn_exp_xml = QPushButton("Exportar Metadado")
+        self.header_btn_exp_xml.setObjectName("HeaderButtonXml") 
 
         # Botão "Exportar para Geohab"
-        self.header_btn_exp_geo = QPushButton(" Exportar para Geohab")
-        self.header_btn_exp_geo.setObjectName("HeaderButtonGeo") # Nome para o QSS
-
+        self.header_btn_exp_geo = QPushButton("Exportar para Geohab")
+        self.header_btn_exp_geo.setObjectName("HeaderButtonGeo") 
 
         # Botão "Associar Camada"
-        self.header_btn_distribution_info = QPushButton(" Associar Camada")
-        self.header_btn_distribution_info.setObjectName("HeaderButtonAddLayer") # Nome para o QSS
-
+        self.header_btn_distribution_info = QPushButton("Associar Camada")
+        self.header_btn_distribution_info.setObjectName("HeaderButtonAddLayer")
 
         # Botão "Entrar" (Login)
         self.header_btn_login = QPushButton()
         self.header_btn_login.setObjectName("ConnectButton")
-
         
-        # --- CONFIGURAÇÃO DO TAMANHO DO ÍCONE (IMPORTANTE!) ---
-        # Mesmo que o QSS defina o ícone, o Python ainda controla o tamanho da área do ícone.
+        # --- CONFIGURAÇÃO DO TAMANHO DO ÍCONE ---
         icon_size = QSize(20, 20)
         self.header_btn_salvar.setIconSize(icon_size)
         self.header_btn_exp_xml.setIconSize(icon_size)
@@ -262,21 +255,18 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         distribution_panel = self._create_distribution_display_panel()
 
         # --- 3. INJETA O PAINEL NO LAYOUT DO CONTÊINER DO FORMULÁRIO ---
-        
-        # --- CORREÇÃO DEFINITIVA AQUI ---
-        # O QGridLayout que queremos é o layout do próprio `form_container`
+        # O QGridLayout é o layout do próprio `form_container`
         target_layout = form_container.layout()
         
         # Verificação de segurança para garantir que o layout existe e é uma grade
         if target_layout and isinstance(target_layout, QtWidgets.QGridLayout):
             # addWidget(widget, linha, coluna, rowSpan, colSpan, alinhamento)
-            # Estes números devem funcionar bem para o seu layout. Ajuste se necessário.
             target_layout.addWidget(distribution_panel, 8, 4, 10, 2, Qt.AlignBottom)
         else:
             print("AVISO CRÍTICO: O widget principal do seu .ui não tem um QGridLayout aplicado!")
             print("Abra o .ui no Qt Designer, clique no fundo e aplique um layout de grade.")
 
-        # Finalmente, adiciona o contêiner (agora com o formulário E o painel) ao card
+        # Adiciona o contêiner ao card
         card_layout.addWidget(form_container)
         
         return card_widget
@@ -364,8 +354,8 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             self.api_session.get(geonetwork_catalog_url, verify=False)
             
             # PASSO 2: Encontrar o token CSRF CORRETO.
-            # Iteramos manualmente para encontrar o token com o path específico do GeoNetwork,
-            # resolvendo o erro de cookies duplicados.
+            # Itera manualmente para encontrar o token com o path específico do GeoNetwork,
+            # resolção do erro de cookies duplicados.
             csrf_token = None
             for cookie in self.api_session.cookies:
                 if cookie.name == 'XSRF-TOKEN' and 'geonetwork' in cookie.path:
@@ -397,14 +387,13 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             # PASSO 5: Processar a resposta.
             if response.status_code in [200, 201]:
                 print(f"Resposta do GeoNetwork (Status {response.status_code}): {response.text}")
-                # ... (o resto do tratamento de sucesso permanece o mesmo)
                 uuid_criado = "N/A"
                 try:
                     response_data = response.json()
                     uuid_criado = response_data.get('@uuid', response_data.get('uuid', 'N/A'))
                 except json.JSONDecodeError:
                     print("Resposta não foi JSON, mas o status foi de sucesso.")
-                #Lógica de UUID Oficial do Geohab
+                #Lógica de UUID do Geohab
                 if uuid_criado and uuid_criado != "N/A":
                     # 1. Atualiza o UUID na memória da dialog para uso futuro
                     self.current_metadata_uuid = uuid_criado
@@ -656,12 +645,11 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.distribution_data['wfs_data'] = data_dict.get('wfs_data', {})
         self.ui.lineEdit_thumbnail_url.setText(data_dict.get('thumbnail_url', ''))
         self.update_distribution_display()
- # --- ETAPA 2: DEDUÇÃO DO PRESET (A LÓGICA RESTAURADA E CORRIGIDA) ---
-        # Compara os dados do DICIONÁRIO (data_dict) com os presets.
-        # É mais robusto comparar com o dicionário do que com o texto dos widgets.
-        
+
+ # --- ETAPA 2: DEDUÇÃO DO PRESET ---
+        # Compara os dados do DICIONÁRIO (data_dict) com os presets.        
         found_preset_key = None
-        # Itera sobre cada preset que conhecemos
+        # Itera sobre cada preset
         for preset_key, preset_data in CONTATOS_PREDEFINIDOS.items():
             if preset_key == 'nenhum': 
                 continue
@@ -673,7 +661,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
                 
                 found_preset_key = preset_key
                 print(f"Dados de contato carregados correspondem ao preset: '{found_preset_key}'")
-                break # Encontramos a correspondência, podemos parar o loop
+                break
 
         # Define a seleção do ComboBox de presets com base no que foi encontrado
         preset_to_set = found_preset_key if found_preset_key else 'nenhum'
