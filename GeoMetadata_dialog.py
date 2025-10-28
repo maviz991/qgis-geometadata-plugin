@@ -139,7 +139,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.header_btn_login.setObjectName("ConnectButton")
         
         # --- CONFIGURAÇÃO DO TAMANHO DO ÍCONE ---
-        icon_size = QSize(20, 20)
+        icon_size = QSize(21, 21)
         self.header_btn_salvar.setIconSize(icon_size)
         self.header_btn_exp_xml.setIconSize(icon_size)
         self.header_btn_exp_geo.setIconSize(icon_size)
@@ -295,6 +295,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         if self.api_session:
             self.api_session = None
             self.iface.messageBar().pushMessage("Info", "❌ Desconectado do Geohab.", level=Qgis.Info, duration=3)
+            self.show_message(f"Info", "Você foi <b>Desconectado</b> do Geohab.", icon=QtWidgets.QMessageBox.Warning)
             self.update_ui_for_login_status()
             return
         
@@ -304,7 +305,15 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         if login_dialog.exec_():
             self.api_session = login_dialog.get_session()
             self.last_username = login_dialog.get_last_username()
+            #icon_resource_path = ":/plugins/geometadata/img/login_ok.png"
             self.iface.messageBar().pushMessage("Sucesso", f"✅ Conectado ao Geohab como {self.last_username}!", level=Qgis.Success, duration=4)
+            success_text = (
+                f"<p style='font-size: 15px; font-weight: bold;'>Você está conectado ao Geohab!</p>"
+                #f"<p style='font-size: 11px;'><b><img src='{icon_resource_path}' width='17' height='15' style='vertical-align: middle;'> Como:</b> {self.last_username}</p>"
+                f"<p style='font-size: 11px;'><b>Usuário:</b> {self.last_username}</p>"                
+                f"<i style='font-size: 9px; color: rgba(0, 0, 0, 0.5);'>Agora você pode Associar camadas e Exportar para Geohab</i>")
+            self.show_message("Sucesso!", success_text)
+
         else:
             self.api_session = None
         self.update_ui_for_login_status()
@@ -333,7 +342,26 @@ class GeoMetadataDialog(QtWidgets.QDialog):
                               "Você não está conectado. Por favor, clique em 'Conectar ao Geohab' primeiro.",
                               icon=QtWidgets.QMessageBox.Warning)
             return
+        
+        # 1. Obtenha o título do metadado para personalizar a mensagem.
+        metadata_title = self.ui.lineEdit_title.text()
+        
+        # 2. Crie a pergunta para o usuário.
+        question_text = (f"<p style='font-size:14px; font-weight: bold;'>Você deseja realmente exportar o metadado?</p>"
+                         f"<p>Nome do metadado: <b>{metadata_title}</b></p>")
 
+        # 3. Mostre a caixa de diálogo e capture a resposta.
+        reply = QtWidgets.QMessageBox.question(self, 
+                                               'Confirmar Exportação', 
+                                               question_text, 
+                                               QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel, 
+                                               QtWidgets.QMessageBox.Cancel)
+
+        # 4. Verifique a resposta. Se não for "Ok", cancele a operação.
+        if reply != QtWidgets.QMessageBox.Ok:
+            self.iface.messageBar().pushMessage("Info", "Exportação cancelada pelo usuário.", level=Qgis.Info, duration=3)
+            return
+        
         try:
             self.iface.messageBar().pushMessage("Info", "Preparando e enviando metadados...", level=Qgis.Info, duration=3)
             metadata_dict = self.collect_data()
@@ -404,7 +432,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
                 direct_link = config_loader.get_metadata_view_url(uuid_criado)
                                 #f'Acesse o <a href="{config_loader.get_geonetwork_base_url()}">Geohab</a> para finalizar a publicação.')                
 
-                success_text = (f"Metadados enviados com sucesso!<br><br>"
+                success_text = (f"<p style='font-size: 15px; font-weight: bold;'>Metadados enviados com sucesso!<p/>"
                                 f"<b>Título:</b> {metadata_dict['title']}<br>"
                                 f"<b>UUID:</b> {uuid_criado}<br><br>"
                                 f'Acesse o <a href="{config_loader.get_geonetwork_base_url()}">Geohab</a> para finalizar a publicação.')
@@ -445,11 +473,12 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             if file_path:
                 with open(file_path, 'w', encoding='utf-8') as f: f.write(xml_content)
                 self.iface.messageBar().pushMessage("Sucesso", f"Metadados salvos em: {file_path}", level=Qgis.Success, duration=5)
+                metadata_uri = pathlib.Path(file_path).as_uri()                
                 msg_box = QMessageBox(self)
                 msg_box.setIcon(QMessageBox.Information)
                 msg_box.setWindowTitle("Exportação Concluída")
-                msg_box.setText("Metadados salvos com sucesso!")
-                msg_box.setInformativeText(f"<b>Em:</b> {file_path}")
+                msg_box.setText("<p style='font-size: 15px; font-weight: bold;'>Metadados salvos com sucesso!</p>")
+                msg_box.setInformativeText(f"<b>Caminho do Arquivo:</b><br> <a href='{metadata_uri}'>{file_path}</a>")
                 open_folder_button = msg_box.addButton("Abrir Pasta do Arquivo", QMessageBox.ActionRole)
                 msg_box.addButton(QMessageBox.Ok)
                 msg_box.exec_()
@@ -465,11 +494,29 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             elif sys.platform == 'darwin': subprocess.run(['open', '-R', path])
             else: subprocess.run(['xdg-open', os.path.dirname(path)])
         except Exception as e:
-            self.iface.messageBar().pushMessage("Erro", f"Não foi possível abrir o gerenciador de arquivos: {e}", level=Qgis.Critical)
+            self.iface.messageBar().pushMessage("Erro", f"Não foi possível abrir o Explorador de arquivos: {e}", level=Qgis.Critical)
 
     def salvar_metadados_sidecar(self, is_automatic_resave=False):
         layer = self.iface.activeLayer()
+
         metadata_path = self.get_sidecar_metadata_path()
+        # 2. Crie a pergunta para o usuário.
+        question_text = (f"<p style='font-size:14px; font-weight: bold;'>Você deseja realmente salvar?</p>"
+                         f"<p>Ao salvar, sobrecreverá os dados salvos anteriormente, se houverem.<br><br>"
+                         f"<b>Irá subsituir o arquivo auxíliar:</b><br>{metadata_path}</p>")
+
+        # 3. Mostre a caixa de diálogo e capture a resposta.
+        reply = QtWidgets.QMessageBox.question(self, 
+                                               'Confirmar Exportação', 
+                                               question_text, 
+                                               QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel, 
+                                               QtWidgets.QMessageBox.Cancel)
+
+        # 4. Verifique a resposta. Se não for "Ok", cancele a operação.
+        if reply != QtWidgets.QMessageBox.Ok:
+            self.iface.messageBar().pushMessage("Info", "Exportação cancelada pelo usuário.", level=Qgis.Info, duration=3)
+            return
+        
         if not metadata_path:
             if not is_automatic_resave:
                 layer_name = layer.name() if layer else "A camada"
@@ -477,12 +524,17 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             return
         try:
             metadata_dict = self.collect_data()
+            metadata_uri = pathlib.Path(metadata_path).as_uri()
             plugin_dir = os.path.dirname(__file__)
             template_path = os.path.join(plugin_dir, 'tamplate_mgb20.xml')
             xml_content = xml_generator.generate_xml_from_template(metadata_dict, template_path)
             with open(metadata_path, 'w', encoding='utf-8') as f: f.write(xml_content)
             if not is_automatic_resave:
-                self.show_message("Metadados Salvos", f"Metadados associados à camada '<b>{layer.name()}</b>'<br> Você poderá continuar depois!")
+                self.iface.messageBar().pushMessage("Sucesso!", f"Metadado Salvo!: <b>'{layer.name()}'</b>")
+                success_text_meta = (f"<p style='font-size: 15px;'><b>Metadado Salvo!</b></p>"
+                                     f"<p>Você poderá continuar depois!</p>"
+                                     f'<p><b>Anexado a Camada:</b><br><a href="{metadata_uri}">{layer.name()}</a></p>')
+                self.show_message("Sucesso!", success_text_meta)
         except Exception as e:
             traceback.print_exc()
             self.show_message("Erro ao Salvar", f"Ocorreu um erro ao salvar o arquivo:<br><br>{e}", icon=QtWidgets.QMessageBox.Critical)
