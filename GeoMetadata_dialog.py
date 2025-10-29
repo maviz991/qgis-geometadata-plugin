@@ -263,8 +263,8 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             # addWidget(widget, linha, coluna, rowSpan, colSpan, alinhamento)
             target_layout.addWidget(distribution_panel, 8, 4, 10, 2, Qt.AlignBottom)
         else:
-            print("AVISO CRÍTICO: O widget principal do seu .ui não tem um QGridLayout aplicado!")
-            print("Abra o .ui no Qt Designer, clique no fundo e aplique um layout de grade.")
+            print("AVISO CRÍTICO: O widget principal do .ui não tem um QGridLayout aplicado!")
+            print("Abra o .ui, clique no fundo e aplique um layout de grade.")
 
         # Adiciona o contêiner ao card
         card_layout.addWidget(form_container)
@@ -306,12 +306,12 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             self.api_session = login_dialog.get_session()
             self.last_username = login_dialog.get_last_username()
             #icon_resource_path = ":/plugins/geometadata/img/login_ok.png"
-            self.iface.messageBar().pushMessage("Sucesso", f"✅ Conectado ao Geohab como {self.last_username}!", level=Qgis.Success, duration=4)
+            self.iface.messageBar().pushMessage("Sucesso", f"✅ Conectado ao Geohab como {self.last_username}.", level=Qgis.Success, duration=4)
             success_text = (
                 f"<p style='font-size: 15px; font-weight: bold;'>Você está conectado ao Geohab!</p>"
                 #f"<p style='font-size: 11px;'><b><img src='{icon_resource_path}' width='17' height='15' style='vertical-align: middle;'> Como:</b> {self.last_username}</p>"
-                f"<p style='font-size: 11px;'><b>Usuário:</b> {self.last_username}</p>"                
-                f"<p style='font-size: 10px; color: rgba(0, 0, 0, 0.5);'>Agora você pode Associar camadas e Exportar para Geohab</p>")
+                f"<p><b>Usuário:</b> {self.last_username}</p>"                
+                f"<p style='color: rgba(0, 0, 0, 0.5);'>Você pode Associar camadas e Exportar para Geohab</p>")
             self.show_message("Sucesso!", success_text)
 
         else:
@@ -432,9 +432,9 @@ class GeoMetadataDialog(QtWidgets.QDialog):
                                 #f'Acesse o <a href="{config_loader.get_geonetwork_base_url()}">Geohab</a> para finalizar a publicação.')                
 
                 success_text = (f"<p style='font-size: 15px; font-weight: bold;'>Metadados enviados com sucesso!<p/>"
-                                f"<p><b>Título:</b> {metadata_dict['title']}<br>"
-                                f"<b>UUID:</b> {uuid_criado}</p><br>"
-                                f'Acesse o <a href="{config_loader.get_geonetwork_base_url()}">Geohab</a> para finalizar a publicação.')
+                                f"<p><b>Nome do metadado:</b> {metadata_dict['title']}<br>"
+                                f"<b>UUID:</b> {uuid_criado}</p>"
+                                f'<p>Acesse o <a href="{config_loader.get_geonetwork_base_url()}">Geohab</a> para finalizar a publicação.</p>')
                 self.show_message("Sucesso!", success_text)
                 self.iface.messageBar().pushMessage("Sucesso", f"Metadados '{metadata_dict['title']}' enviados ao Geohab.", level=Qgis.Success, duration=7)
             else:
@@ -494,8 +494,6 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             else: subprocess.run(['xdg-open', os.path.dirname(path)])
         except Exception as e:
             self.iface.messageBar().pushMessage("Erro", f"Não foi possível abrir o Explorador de arquivos: {e}", level=Qgis.Critical)
-
-    # Em GeoMetadataDialog
 
     def salvar_metadados_sidecar(self, is_automatic_resave=False):
         """
