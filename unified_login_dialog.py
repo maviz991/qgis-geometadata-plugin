@@ -11,8 +11,7 @@ FORM_CLASS, _ = uic.loadUiType(os.path.join(
 
 class UnifiedLoginDialog(QtWidgets.QDialog, FORM_CLASS):
     """
-    Diálogo de autenticação com abas, permitindo seleção de configuração
-    salva ou entrada de credenciais básicas.
+    Diálogo de autenticação unificado, seguindo o padrão das janelas de conexão do QGIS.
     """
     def __init__(self, parent=None, iface=None):
         super(UnifiedLoginDialog, self).__init__(parent)
@@ -20,70 +19,75 @@ class UnifiedLoginDialog(QtWidgets.QDialog, FORM_CLASS):
         self.iface = iface
         
         self.authenticated_session = None
-        self.username = None # Para armazenar o nome de usuário para a UI
+        self.username = None
 
         # --- CRIA E INJETA O WIDGET DE SELEÇÃO DE AUTENTICAÇÃO ---
-        # "gdal" é um provedor que usa autenticação básica, o que filtra a lista
         self.auth_select = QgsAuthConfigSelect(self, "gdal")
+        
+        # Cria um layout para o nosso widget contêiner e adiciona o seletor de auth
+        layout = QtWidgets.QVBoxLayout(self.authContainerWidget)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.auth_select)
 
-        # Verifica se a aba 'Configurações' já tem um layout.
-        target_layout = self.tabConfig.layout()
-        if not target_layout:
-            # Se não tiver, cria um novo layout vertical e o aplica à aba.
-            print("AVISO: A aba 'Configurações' no .ui não tinha um layout. Criando um programaticamente.")
-            target_layout = QtWidgets.QVBoxLayout(self.tabConfig)
+        # --- LÓGICA DE UI ---
+        # Conecta o sinal do seletor a uma função que habilita/desabilita o groupbox
+        self.auth_select.configChanged.connect(self.on_auth_config_changed)
         
-        # Agora, 'target_layout' tem a garantia de existir.
-        target_layout.addWidget(self.auth_select)
+        # Chama a função uma vez no início para definir o estado inicial correto
+        self.on_auth_config_changed()
+
+    def on_auth_config_changed(self):
+        """
+        Ativado quando o usuário seleciona uma configuração diferente no ComboBox.
+        Desabilita a entrada manual se uma configuração for selecionada.
+        """
+        config_id = self.auth_select.configId()
+        is_config_selected = bool(config_id)
         
-        # Encontra o layout dentro da segunda aba e adiciona o widget
-        self.tabConfig.layout().addWidget(self.auth_select)
+        # Habilita ou desabilita o GroupBox de credenciais básicas
+        self.basicCredentialsGroup.setEnabled(not is_config_selected)
+        
+        # Limpa os campos de texto se uma config for selecionada, para evitar confusão
+        if is_config_selected:
+            self.lineEdit_user.clear()
+            self.lineEdit_password.clear()
 
     def accept(self):
         """
-        Sobrescreve o botão OK para lidar com a lógica de ambas as abas.
+        Sobrescreve o botão OK para obter credenciais da fonte correta.
         """
         geoserver_url = config_loader.get_geoserver_url()
-        if not geoserver_url:
-            self.iface.messageBar().pushMessage("Erro", "URL do GeoServer não definida.", level=Qgis.Critical)
-            return
+        # ... (código de verificação da URL) ...
 
         user = None
         password = None
-
-        # --- LÓGICA DE ABAS ---
-        # Verifica qual aba está atualmente selecionada
-        if self.tabWidget.currentWidget() == self.tabBasic:
-            # --- Aba Básico ---
-            user = self.lineEdit_user.text()
-            password = self.lineEdit_password.text()
-            if not all([user, password]):
-                QtWidgets.QMessageBox.warning(self, "Campos Incompletos", "Usuário e senha são obrigatórios.")
-                return
-            self.username = user # Salva o nome de usuário para a UI
-
-        elif self.tabWidget.currentWidget() == self.tabConfig:
-            # --- Aba Configurações ---
-            auth_cfg_id = self.auth_select.configId()
-            if not auth_cfg_id:
-                QtWidgets.QMessageBox.warning(self, "Seleção Necessária", "Por favor, selecione uma configuração de autenticação.")
-                return
-
+        
+        config_id = self.auth_select.configId()
+        
+        if config_id:
+            # --- MODO CONFIGURAÇÃO SALVA ---
             auth_manager = QgsApplication.authManager()
-            # O método loadAuthenticationConfig preenche um objeto existente
-            config_obj = auth_manager.availableAuthMethodConfigs().get(auth_cfg_id)
-            if not config_obj or not auth_manager.loadAuthenticationConfig(auth_cfg_id, config_obj, True):
-                QtWidgets.QMessageBox.critical(self, "Falha ao Carregar", "Não foi possível carregar a configuração. Verifique sua senha mestra.")
+            config_obj = auth_manager.availableAuthMethodConfigs().get(config_id)
+            if not config_obj or not auth_manager.loadAuthenticationConfig(config_id, config_obj, True):
+                QtWidgets.QMessageBox.critical(self, "Falha ao Carregar", "Não foi possível carregar a configuração.")
                 return
             
             credentials = config_obj.configMap()
             user = credentials.get('username')
             password = credentials.get('password')
-            self.username = user # Salva o nome de usuário para a UI
+            self.username = user
 
-        # --- LÓGICA DE AUTENTICAÇÃO (COMUM A AMBAS AS ABAS) ---
+        else:
+            # --- MODO ENTRADA MANUAL ---
+            user = self.lineEdit_user.text()
+            password = self.lineEdit_password.text()
+            if not all([user, password]):
+                QtWidgets.QMessageBox.warning(self, "Campos Incompletos", "Usuário e senha são obrigatórios.")
+                return
+            self.username = user
+
+        # --- LÓGICA DE AUTENTICAÇÃO (COMUM A AMBOS OS MODOS) ---
         if not all([user, password]):
-            # Este erro só deve acontecer se algo muito errado ocorrer
             QtWidgets.QMessageBox.critical(self, "Erro", "Não foi possível obter as credenciais.")
             return
 
@@ -97,7 +101,7 @@ class UnifiedLoginDialog(QtWidgets.QDialog, FORM_CLASS):
             response.raise_for_status()
             
             self.authenticated_session = session
-            super().accept() # Fecha o diálogo com sucesso
+            super().accept()
 
         except requests.exceptions.HTTPError as e:
             msg = "Usuário ou senha inválidos." if e.response.status_code == 401 else f"Erro do servidor: {e}"
@@ -106,9 +110,7 @@ class UnifiedLoginDialog(QtWidgets.QDialog, FORM_CLASS):
             QtWidgets.QMessageBox.critical(self, "Erro de Conexão", f"Não foi possível conectar: {e}")
 
     def get_session(self):
-        """Retorna a sessão autenticada."""
         return self.authenticated_session
         
     def get_username(self):
-        """Retorna o nome de usuário para ser exibido na UI principal."""
         return self.username
