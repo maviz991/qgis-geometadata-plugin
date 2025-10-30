@@ -294,33 +294,22 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.icon_login_error = QIcon(":/plugins/geometadata/img/login_error.png")
         self.header_btn_login.setIconSize(QSize(20, 20))
 
+# Em GeoMetadata_dialog.py
+
     def authenticate(self):
-        # --- Lógica de Logout ---
         if self.api_session:
             self.api_session = None
-            self.auth_cfg_id = None # Limpa o ID da configuração
             self.iface.messageBar().pushMessage("Info", "❌ Desconectado do Geohab.", level=Qgis.Info, duration=3)
             self.show_message("Info", "<p style='font-size: 15px; font-weight: bold;'>Você foi Desconectado do Geohab!</p>", icon=QtWidgets.QMessageBox.Warning)
             self.update_ui_for_login_status()
             return
         
-        # --- Lógica de Login ---
-        # A criação do diálogo agora é simples, sem passar dados antigos.
+        # Passa o iface para o construtor
         login_dialog = UnifiedLoginDialog(self, iface=self.iface)
         
         if login_dialog.exec_():
             self.api_session = login_dialog.get_session()
-            self.auth_cfg_id = login_dialog.get_selected_auth_cfg_id()
-            
-            # Obtém o nome do usuário da configuração para exibir nas mensagens
-            username = "Usuário" # Um valor padrão
-            if self.auth_cfg_id:
-                auth_manager = QgsApplication.authManager()
-                # Reutiliza o objeto de config do mapa, que não tem senha mas tem o nome de usuário
-                config = auth_manager.availableAuthMethodConfigs().get(self.auth_cfg_id)
-                if config:
-                    auth_manager.loadAuthenticationConfig(self.auth_cfg_id, config, False)
-                    username = config.configMap().get('username', 'Usuário')
+            username = login_dialog.get_username() # <-- Usa o novo método!
 
             self.iface.messageBar().pushMessage("Sucesso", f"✅ Conectado ao Geohab como {username}.", level=Qgis.Success, duration=4)
             success_text = (
@@ -328,29 +317,23 @@ class GeoMetadataDialog(QtWidgets.QDialog):
                 f"<p><b>Usuário:</b> {username}</p>"                
                 f"<p style='color: rgba(0, 0, 0, 0.5);'>Você pode Associar camadas e Exportar para Geohab</p>")
             self.show_message("Sucesso!", success_text)
-        else:
-            self.api_session = None
-            self.auth_cfg_id = None
-
+        
         self.update_ui_for_login_status()
 
     def update_ui_for_login_status(self):
-        is_logged_in = self.api_session is not None and self.auth_cfg_id is not None
+        is_logged_in = self.api_session is not None
         self.header_btn_exp_geo.setEnabled(is_logged_in)
         self.header_btn_distribution_info.setEnabled(is_logged_in)
         
         if is_logged_in:
-            username = "Usuário" # Valor padrão
+            # Tenta obter o nome de usuário da sessão. Precisamos de um pequeno ajuste
+            # no método 'authenticate' para armazenar o nome de usuário.
+            # Vamos adicionar 'self.username'
             try:
-                auth_manager = QgsApplication.authManager()
-                # Pega o objeto de config base do mapa
-                config_to_load = auth_manager.availableAuthMethodConfigs().get(self.auth_cfg_id)
-                if config_to_load:
-                    # Preenche o objeto com os dados completos (incluindo o username)
-                    auth_manager.loadAuthenticationConfig(self.auth_cfg_id, config_to_load, False) # 'False' para não pedir senha
-                    username = config_to_load.configMap().get('username', username)
-            except Exception as e:
-                print(f"AVISO: Não foi possível obter o nome de usuário da configuração: {e}")
+                # Pega o nome do usuário que foi salvo durante o processo de login
+                username = self.api_session.auth[0] 
+            except (AttributeError, IndexError):
+                username = "Usuário Conectado"
 
             self.header_btn_login.setIcon(self.icon_login_ok)
             self.header_btn_login.setText(f" {username}")
