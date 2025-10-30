@@ -298,7 +298,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         if self.api_session:
             self.api_session = None
             self.iface.messageBar().pushMessage("Info", "❌ Desconectado do Geohab.", level=Qgis.Info, duration=3)
-            self.show_message("Info", "<p style='font-size: 15px; font-weight: bold;'>Você foi Desconectado do Geohab!</p>", icon=QtWidgets.QMessageBox.Warning)
+            self.show_message("Info", "<p style='font-size: 14px; font-weight: bold;'>Desconectado do Geohab!</p>", icon=QtWidgets.QMessageBox.Warning)
             self.update_ui_for_login_status()
             return
         
@@ -311,7 +311,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
 
             self.iface.messageBar().pushMessage("Sucesso", f"✅ Conectado ao Geohab como {username}.", level=Qgis.Success, duration=4)
             success_text = (
-                f"<p style='font-size: 15px; font-weight: bold;'>Você está conectado ao Geohab!</p>"
+                f"<p style='font-size: 15px; font-weight: bold;'>Conectado ao Geohab!</p>"
                 f"<p><b>Usuário:</b> {username}</p>"                
                 f"<p style='color: rgba(0, 0, 0, 0.5);'>Você pode Associar camadas e Exportar para Geohab</p>")
             self.show_message("Sucesso!", success_text)
@@ -517,7 +517,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
 
             question_text = (f"<p style='font-size:14px; font-weight: bold;'>Você deseja realmente salvar?</p>"
                              f"<p>Ao salvar, você irá sobreescrever os dados salvos anteriormente, se houver.<br><br>"
-                             f"<b>Irá modificar o arquivo:</b><br>{metadata_path}</p>")
+                             f"<b>⚠️ Irá modificar o arquivo:</b><br>{metadata_path}</p>")
 
             reply = QtWidgets.QMessageBox.question(self, 
                                                    'Confirmar Salvamento', 
