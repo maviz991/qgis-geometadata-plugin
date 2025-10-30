@@ -21,33 +21,43 @@ class UnifiedLoginDialog(QtWidgets.QDialog, FORM_CLASS):
         self.authenticated_session = None
         self.username = None
 
-        # --- CRIA E INJETA O WIDGET DE SELEÇÃO DE AUTENTICAÇÃO ---
+        # --- CRIA O WIDGET DE SELEÇÃO DE AUTENTICAÇÃO ---
         self.auth_select = QgsAuthConfigSelect(self, "gdal")
         
-        # Cria um layout para o nosso widget contêiner e adiciona o seletor de auth
-        layout = QtWidgets.QVBoxLayout(self.authContainerWidget)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(self.auth_select)
-
-        # --- LÓGICA DE UI ---
-        # Conecta o sinal do seletor a uma função que habilita/desabilita o groupbox
-        self.auth_select.configChanged.connect(self.on_auth_config_changed)
+        # --- INJETA O WIDGET NO LAYOUT DO CONTÊINER ---
+        # Busca o layout que acabamos de criar para o nosso widget contêiner no Qt Designer.
+        container_layout = self.saveCredentialsGroup.layout()
         
-        # Chama a função uma vez no início para definir o estado inicial correto
+        # Adiciona o seletor de autenticação a esse layout.
+        if container_layout is not None:
+            container_layout.addWidget(self.auth_select)
+            # Remove as margens para que ele preencha o espaço perfeitamente
+            container_layout.setContentsMargins(0, 0, 0, 0)
+        else:
+            print("AVISO CRÍTICO: O 'authContainerWidget' no .ui não tem um layout aplicado!")
+            # Como plano B, podemos criar um aqui, mas o ideal é fazer no Designer
+            layout = QtWidgets.QVBoxLayout(self.saveCredentialsGroup)
+            layout.setContentsMargins(2, 10, 2, 0)
+            layout.addWidget(self.auth_select)
+
+        # --- LÓGICA DE UI (Robusta) ---
+        if hasattr(self.auth_select, 'configChanged'):
+            self.auth_select.configChanged.connect(self.on_auth_config_changed)
+        elif hasattr(self.auth_select, 'changed'):
+            self.auth_select.changed.connect(self.on_auth_config_changed)
+
         self.on_auth_config_changed()
 
     def on_auth_config_changed(self):
         """
-        Ativado quando o usuário seleciona uma configuração diferente no ComboBox.
+        Ativado quando o usuário seleciona uma configuração diferente.
         Desabilita a entrada manual se uma configuração for selecionada.
         """
         config_id = self.auth_select.configId()
         is_config_selected = bool(config_id)
         
-        # Habilita ou desabilita o GroupBox de credenciais básicas
         self.basicCredentialsGroup.setEnabled(not is_config_selected)
         
-        # Limpa os campos de texto se uma config for selecionada, para evitar confusão
         if is_config_selected:
             self.lineEdit_user.clear()
             self.lineEdit_password.clear()
