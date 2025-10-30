@@ -294,8 +294,6 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.icon_login_error = QIcon(":/plugins/geometadata/img/login_error.png")
         self.header_btn_login.setIconSize(QSize(20, 20))
 
-# Em GeoMetadata_dialog.py
-
     def authenticate(self):
         if self.api_session:
             self.api_session = None
@@ -309,7 +307,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         
         if login_dialog.exec_():
             self.api_session = login_dialog.get_session()
-            username = login_dialog.get_username() # <-- Usa o novo método!
+            username = login_dialog.get_username()
 
             self.iface.messageBar().pushMessage("Sucesso", f"✅ Conectado ao Geohab como {username}.", level=Qgis.Success, duration=4)
             success_text = (
@@ -326,9 +324,6 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.header_btn_distribution_info.setEnabled(is_logged_in)
         
         if is_logged_in:
-            # Tenta obter o nome de usuário da sessão. Precisamos de um pequeno ajuste
-            # no método 'authenticate' para armazenar o nome de usuário.
-            # Vamos adicionar 'self.username'
             try:
                 # Pega o nome do usuário que foi salvo durante o processo de login
                 username = self.api_session.auth[0] 
