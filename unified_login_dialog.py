@@ -3,7 +3,6 @@ import os
 import requests
 from qgis.PyQt import uic, QtWidgets
 from qgis.core import Qgis, QgsApplication
-# Importa o widget de seleção de autenticação que você encontrou!
 from qgis.gui import QgsAuthConfigSelect
 from .plugin_config import config_loader
 
@@ -25,11 +24,19 @@ class UnifiedLoginDialog(QtWidgets.QDialog, FORM_CLASS):
 
         # --- CRIA E INJETA O WIDGET DE SELEÇÃO DE AUTENTICAÇÃO ---
         # "gdal" é um provedor que usa autenticação básica, o que filtra a lista
-        # para mostrar apenas as configurações relevantes.
         self.auth_select = QgsAuthConfigSelect(self, "gdal")
+
+        # Verifica se a aba 'Configurações' já tem um layout.
+        target_layout = self.tabConfig.layout()
+        if not target_layout:
+            # Se não tiver, cria um novo layout vertical e o aplica à aba.
+            print("AVISO: A aba 'Configurações' no .ui não tinha um layout. Criando um programaticamente.")
+            target_layout = QtWidgets.QVBoxLayout(self.tabConfig)
         
-        # Encontra o layout dentro da primeira aba e adiciona o widget
-        # Supondo que o layout se chame 'verticalLayout' dentro da aba 'tabConfig'
+        # Agora, 'target_layout' tem a garantia de existir.
+        target_layout.addWidget(self.auth_select)
+        
+        # Encontra o layout dentro da segunda aba e adiciona o widget
         self.tabConfig.layout().addWidget(self.auth_select)
 
     def accept(self):
