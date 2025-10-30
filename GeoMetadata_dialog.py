@@ -351,18 +351,18 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         
         metadata_title = self.ui.lineEdit_title.text()
         
-        # 2. Question para o user.
+        # 1. Question para o user.
         question_text = (f"<p style='font-size:14px; font-weight: bold;'>Você deseja realmente exportar o metadado?</p>"
                          f"<p>Nome do metadado: <b>{metadata_title}</b></p>")
 
-        # 3. Captura de resposta.
+        # 2. Captura de resposta.
         reply = QtWidgets.QMessageBox.question(self, 
                                                'Confirmar Exportação', 
                                                question_text, 
                                                QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel, 
                                                QtWidgets.QMessageBox.Cancel)
 
-        # 4. Verifique a resposta. Se não, cancele a operação.
+        # 3. Verifique a resposta. Se não, cancele a operação.
         if reply != QtWidgets.QMessageBox.Ok:
             self.iface.messageBar().pushMessage("Info", "Exportação cancelada pelo usuário.", level=Qgis.Info, duration=3)
             return
@@ -381,7 +381,6 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             if not geonetwork_api_url or not geonetwork_catalog_url:
                 raise ValueError("As URLs do GeoNetwork não estão definidas corretamente no arquivo de configuração.")
 
-            # --- CORREÇÃO FINAL E PRECISA AQUI ---
             # PASSO 1: Visitar o catálogo para garantir que todos os cookies, incluindo os duplicados, estejam na sessão.
             print("Preparando a sessão com o GeoNetwork para obter o token CSRF...")
             self.api_session.get(geonetwork_catalog_url, verify=False)
