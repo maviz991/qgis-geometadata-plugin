@@ -617,9 +617,11 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             
         if not is_automatic_resave:
             question_text = (f"<p style='font-size:14px; font-weight: bold;'>Você deseja realmente salvar?</p>"
-                             f"<p>As informações de metadado serão salvas ou atualizadas para a tabela:<br>"
-                             f"<b>{conn_details['f_table_schema']}.{conn_details['f_table_name']}</b><br>"
-                             f"no banco de dados <b>{conn_details['f_table_catalog']}</b>.</p>")
+                             f"<p><b>⚠ As informações serão salvas ou atualizadas em:</b><br>"
+                             f"{conn_details['f_table_schema']}.qgis_plugin_metadata</p>"
+                             f"<p><b>Associado a camada:</b><br>"
+                             f"{conn_details['f_table_name']}</p>"
+                             f"<p>No banco de dados: <b>{conn_details['f_table_catalog']}</b>.</p>")
             reply = QtWidgets.QMessageBox.question(self, 'Confirmar Salvamento no Banco de Dados', 
                                                    question_text, QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel)
             if reply != QtWidgets.QMessageBox.Ok:
@@ -676,11 +678,13 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             
             if not is_automatic_resave:
                 self.iface.messageBar().pushMessage("Sucesso", f"Metadado salvo para a camada '{layer.name()}'.", level=Qgis.Success, duration=5)
-                confirm_text = (f"<p style='font-size:14px; font-weight: bold;'>Metadado Salvo com Sucesso!</p>"
-                    f"<p>As informações de metadado forão salvas ou atualizadas para a tabela:<br>"
-                    f"<b>{conn_details['f_table_schema']}.{conn_details['f_table_name']}</b><br>"
-                    f"no banco de dados <b>{conn_details['f_table_catalog']}</b>.</p>")
-                self.show_message(confirm_text, confirm_text)
+                confirm_text = (f"<p style='font-size:14px; font-weight: bold;'>Metadado Salvo com Sucesso no Banco de dados!</p>"
+                    f"<p><b>As informações forão salvas ou atualizadas em:</b><br>"
+                    f"{conn_details['f_table_schema']}.qgis_plugin_metadata</p>"
+                    f"<p><b>Associado a camada:</b><br>"
+                    f"{conn_details['f_table_name']}</p>"
+                    f"<p>No banco de dados: <b>{conn_details['f_table_catalog']}</b>.</p>")
+                self.show_message(f"Sucesso!", confirm_text)
 
         except Exception as e:
             self.show_message("Erro de Banco de Dados", f"Não foi possível salvar o metadado:\n\n{e}", icon=QtWidgets.QMessageBox.Critical)
