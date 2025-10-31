@@ -1,6 +1,8 @@
 # xml_parser.py (VERSÃO FINAL COM LEITURA DE UUID)
 
 from lxml import etree as ET
+import traceback
+
 
 # --- As funções de ajuda (get_element_text, get_element_attribute) estão perfeitas ---
 def get_element_text(parent_element, xpath, ns_map):
@@ -17,17 +19,28 @@ def get_element_attribute(parent_element, xpath, attr_name, ns_map):
         return element.get(attr_name)
     return None
 
-# --- A função principal, agora limpa e corrigida ---
-def parse_xml_to_dict(xml_path):
+# --- A função principal ---
+def parse_xml_to_dict(source, is_string=False):
     """
-    Lê um arquivo de metadados XML e o converte para um dicionário de dados,
-    incluindo informações de distribuição e thumbnail.
+    Lê metadados XML (de um arquivo ou de uma string) e os converte para um dicionário.
     """
     try:
-        parser = ET.XMLParser(remove_blank_text=True)
-        tree = ET.parse(xml_path, parser)
-        root = tree.getroot()
-        ns = {k if k is not None else 'gmd': v for k, v in root.nsmap.items()}
+        # --- ETAPA 1: Parsing Único ---
+        if is_string:
+            root = ET.fromstring(source)
+        else: # caminho de arquivo
+            tree = ET.parse(source)
+            root = tree.getroot()
+
+        # --- ETAPA 2: Definição Manual de Namespaces ---
+        ns = {
+            'gmd': 'http://www.isotc211.org/2005/gmd',
+            'gco': 'http://www.isotc211.org/2005/gco',
+            'gts': 'http://www.isotc211.org/2005/gts',
+            'srv': 'http://www.isotc211.org/2005/srv',
+            'gml': 'http://www.opengis.net/gml',
+            'xlink': 'http://www.w3.org/1999/xlink'
+        }
         
         data = {}
 
@@ -121,7 +134,6 @@ def parse_xml_to_dict(xml_path):
 
     except Exception as e:
         print(f"Não foi possível parsear o arquivo XML: {e}")
-        import traceback
         traceback.print_exc()
         return None
     

@@ -19,6 +19,10 @@ import unicodedata
 import pathlib
 import sys
 import subprocess
+try:
+    import psycopg2
+except ImportError:
+    psycopg2 = None
 
 # --- 2. Imports de Bibliotecas de Terceiros ---
 import requests
@@ -276,7 +280,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
 
     def _setup_button_connections(self):
         """Conecta todos os sinais de widgets a seus respectivos slots."""
-        self.header_btn_salvar.clicked.connect(self.salvar_metadados_sidecar)
+        self.header_btn_salvar.clicked.connect(self.save_metadata)
         self.header_btn_exp_xml.clicked.connect(self.exportar_to_xml)
         self.header_btn_exp_geo.clicked.connect(self.exportar_to_geo)
         self.header_btn_login.clicked.connect(self.authenticate)
@@ -432,7 +436,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
                     
                     # 2. Silenciosamente, ressalva o arquivo sidecar com o UUID oficial
                     print(f"Vinculando metadado ao UUID oficial: {uuid_criado}. Ressalvando arquivo sidecar...")
-                    self.salvar_metadados_sidecar(is_automatic_resave=True)
+                    self.save_metadata(is_automatic_resave=True)
                 direct_link = config_loader.get_metadata_view_url(uuid_criado)
                                 #f'Acesse o <a href="{config_loader.get_geonetwork_base_url()}">Geohab</a> para finalizar a publicação.')                
 
@@ -500,69 +504,20 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         except Exception as e:
             self.iface.messageBar().pushMessage("Erro", f"Não foi possível abrir o Explorador de arquivos: {e}", level=Qgis.Critical)
 
-    def salvar_metadados_sidecar(self, is_automatic_resave=False):
+    def save_metadata(self, is_automatic_resave=False):
         """
-        Salva os metadados como um arquivo sidecar.
-        Pede confirmação ao usuário, a menos que seja um resave automático.
+        Salva os metadados no local apropriado: um arquivo sidecar para camadas
+        baseadas em arquivo, ou uma tabela no banco de dados para camadas PostgreSQL.
         """
-        # --- ETAPA 1: Confirmação do Usuário (apenas se não for automático) ---
-        if not is_automatic_resave:
-            metadata_path = self.get_sidecar_metadata_path()
-            if not metadata_path:
-                # Se não há caminho, não há o que confirmar ou salvar.
-                layer = self.iface.activeLayer()
-                layer_name = layer.name() if layer else "A camada"
-                self.show_message("Não é possível salvar", f"{layer_name}\n A camada não esta salva em um arquivo local.", icon=QtWidgets.QMessageBox.Warning)
-                return
+        layer = self.iface.activeLayer()
+        if not layer:
+            self.show_message("Nenhuma Camada Ativa", "Por favor, selecione uma camada no painel de camadas.", icon=QtWidgets.QMessageBox.Warning)
+            return
 
-            question_text = (f"<p style='font-size:14px; font-weight: bold;'>Você deseja realmente salvar?</p>"
-                             f"<p>Ao salvar, você irá sobreescrever os dados salvos anteriormente, se houver.<br><br>"
-                             f"<b>⚠️ Irá modificar o arquivo:</b><br>{metadata_path}</p>")
-
-            reply = QtWidgets.QMessageBox.question(self, 
-                                                   'Confirmar Salvamento', 
-                                                   question_text, 
-                                                   QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel, 
-                                                   QtWidgets.QMessageBox.Cancel)
-
-            if reply != QtWidgets.QMessageBox.Ok:
-                self.iface.messageBar().pushMessage("Info", "Operação de salvar cancelada.", level=Qgis.Info, duration=3)
-                return
-        
-        # --- ETAPA 2: Lógica Principal de Salvamento ---
-        # A partir daqui, o código é executado para salvamentos automáticos E para salvamentos confirmados pelo usuário.
-        
-        try:
-            # Re-obter o caminho, pois pode não ter sido definido se for um resave automático
-            metadata_path = self.get_sidecar_metadata_path()
-            if not metadata_path:
-                # Se chegou aqui em um resave automático e não há caminho, apenas saia silenciosamente.
-                print("Salvamento automático cancelado: a camada não tem um caminho de arquivo válido.")
-                return
-
-            metadata_dict = self.collect_data()
-            plugin_dir = os.path.dirname(__file__)
-            template_path = os.path.join(plugin_dir, 'tamplate_mgb20.xml')
-            xml_content = xml_generator.generate_xml_from_template(metadata_dict, template_path)
-            
-            with open(metadata_path, 'w', encoding='utf-8') as f:
-                f.write(xml_content)
-            
-            # Mostra a mensagem de sucesso apenas se foi uma ação direta do usuário
-            if not is_automatic_resave:
-                layer = self.iface.activeLayer() # Necessário para a mensagem
-                metadata_uri = pathlib.Path(metadata_path).as_uri()
-                
-                self.iface.messageBar().pushMessage("Sucesso!", f"Metadado Salvo!: <b>'{layer.name()}'</b>")
-                success_text_meta = (f"<p style='font-size: 15px;'><b>Metadado Salvo!</b></p>"
-                                     f"<p>Você poderá continuar depois!</p>"
-                                     f'<p><b>Anexado a Camada:</b><br><a href="{metadata_uri}">{layer.name()}</a></p>')
-                self.show_message("Sucesso!", success_text_meta)
-                
-        except Exception as e:
-            traceback.print_exc()
-            # Erros são sempre mostrados, independentemente do tipo de salvamento
-            self.show_message("Erro ao Salvar", f"Ocorreu um erro ao salvar o arquivo:<br><br>{e}", icon=QtWidgets.QMessageBox.Critical)
+        if self._is_postgres_layer(layer):
+            self._save_metadata_to_db(layer, is_automatic_resave)
+        else:
+            self._save_metadata_to_sidecar_file(layer, is_automatic_resave)
 
     def populate_comboboxes(self):
         def populate(combo, options):
@@ -590,13 +545,23 @@ class GeoMetadataDialog(QtWidgets.QDialog):
     def auto_fill_from_layer(self):
         layer = self.iface.activeLayer()
         if not layer: return
+
+        data_from_xml = None
         
-        metadata_path = self.get_sidecar_metadata_path()
-        if metadata_path and os.path.exists(metadata_path):
-            data_from_xml = xml_parser.parse_xml_to_dict(metadata_path)
-            if data_from_xml:
-                self.populate_form_from_dict(data_from_xml)
-                return
+        if self._is_postgres_layer(layer):
+            xml_content = self._load_metadata_from_db(layer)
+            if xml_content:
+                # Assume que seu parser pode receber uma string de XML diretamente
+                data_from_xml = xml_parser.parse_xml_to_dict(xml_content, is_string=True)
+        else:
+            # Lógica de arquivo existente
+            metadata_path = self.get_sidecar_metadata_path()
+            if metadata_path and os.path.exists(metadata_path):
+                data_from_xml = xml_parser.parse_xml_to_dict(metadata_path, is_string=False)
+        
+        if data_from_xml:
+            self.populate_form_from_dict(data_from_xml)
+            return
         
         self.ui.lineEdit_title.setText(self.sanitize_title(layer.name()))
         source_crs = layer.crs()
@@ -610,6 +575,192 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.ui.lineEdit_eastBoundLongitude.setText(f"{geographic_extent.xMaximum():.6f}")
         self.ui.lineEdit_southBoundLatitude.setText(f"{geographic_extent.yMinimum():.6f}")
         self.ui.lineEdit_northBoundLatitude.setText(f"{geographic_extent.yMaximum():.6f}")
+
+    def _is_postgres_layer(self, layer):
+        """Verifica se a camada é uma tabela do PostgreSQL."""
+        if not layer:
+            return False
+        return layer.providerType() == 'postgres'
+
+    def _get_postgres_connection_details(self, layer):
+        """Extrai os detalhes da conexão, incluindo o ID de autenticação, do data source da camada."""
+        uri = layer.source()
+        details = {}
+        pattern = re.compile(r"(\w+)='([^']*)'|(\w+)=([^\s]+)")
+        matches = pattern.findall(uri)
+        
+        for key_quoted, val_quoted, key_unquoted, val_unquoted in matches:
+            key = key_quoted or key_unquoted
+            value = val_quoted or val_unquoted
+            details[key] = value
+
+        details['f_table_catalog'] = details.get('dbname')
+        details['f_table_schema'] = details.get('sschema', details.get('schema', 'public'))
+        details['f_table_name'] = details.get('table', '').replace('"', '')
+        # A linha mais importante:
+        details['authcfg'] = details.get('authcfg') 
+        return details
+
+    def _save_metadata_to_db(self, layer, is_automatic_resave=False):
+        """Gera o XML e o salva na tabela de metadados do PostgreSQL."""
+        if not psycopg2:
+            self.show_message("Erro de Dependência", "A biblioteca psycopg2 não foi encontrada.", icon=QtWidgets.QMessageBox.Critical)
+            return
+
+        conn_details = self._get_postgres_connection_details(layer)
+        if not conn_details.get('f_table_name'):
+            self.show_message("Erro", "Não foi possível identificar a tabela da camada.", icon=QtWidgets.QMessageBox.Warning)
+            return
+            
+        if not is_automatic_resave:
+            question_text = (f"<p style='font-size:14px; font-weight: bold;'>Você deseja realmente salvar?</p>"
+                             f"<p>As informações de metadado serão salvas ou atualizadas para a tabela:<br>"
+                             f"<b>{conn_details['f_table_schema']}.{conn_details['f_table_name']}</b><br>"
+                             f"no banco de dados <b>{conn_details['f_table_catalog']}</b>.</p>")
+            reply = QtWidgets.QMessageBox.question(self, 'Confirmar Salvamento no Banco de Dados', 
+                                                   question_text, QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel)
+            if reply != QtWidgets.QMessageBox.Ok:
+                self.iface.messageBar().pushMessage("Info", "Operação cancelada.", level=Qgis.Info)
+                return
+
+        try:
+            # --- LÓGICA DE CONEXÃO CORRIGIDA ---
+            db_password = conn_details.get('password')
+            
+            if not db_password and conn_details.get('authcfg'):
+                auth_manager = QgsApplication.authManager()
+                auth_cfg_id = conn_details['authcfg']
+                
+                # Pega o objeto de configuração base do mapa que o QGIS fornece
+                config = auth_manager.availableAuthMethodConfigs().get(auth_cfg_id)
+
+                if config and auth_manager.loadAuthenticationConfig(auth_cfg_id, config, True):
+                    db_password = config.configMap().get('password')
+                else:
+                    self.show_message("Erro de Autenticação", f"Não foi possível carregar a configuração de autenticação '{auth_cfg_id}' do QGIS.", icon=QtWidgets.QMessageBox.Critical)
+                    return
+                            
+            metadata_dict = self.collect_data()
+            template_path = os.path.join(os.path.dirname(__file__), 'tamplate_mgb20.xml')
+            xml_content = xml_generator.generate_xml_from_template(metadata_dict, template_path)
+    
+            conn = psycopg2.connect(
+                dbname=conn_details.get('dbname'),
+                user=conn_details.get('user'),
+                password=db_password,
+                host=conn_details.get('host'),
+                port=conn_details.get('port', 5432)
+            )
+            cursor = conn.cursor()
+            
+            sql = """
+                INSERT INTO public.qgis_plugin_metadata (f_table_catalog, f_table_schema, f_table_name, metadata_xml)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT ON CONSTRAINT qgis_plugin_metadata_unique_layer
+                DO UPDATE SET 
+                    metadata_xml = EXCLUDED.metadata_xml,
+                    owner = DEFAULT,
+                    update_time = DEFAULT;
+            """
+            cursor.execute(sql, (conn_details.get('f_table_catalog'), conn_details['f_table_schema'], conn_details['f_table_name'], xml_content))
+            
+            conn.commit()
+            cursor.close()
+            conn.close()
+            
+            if not is_automatic_resave:
+                self.iface.messageBar().pushMessage("Sucesso", f"Metadado salvo para a camada '{layer.name()}'.", level=Qgis.Success, duration=5)
+
+        except Exception as e:
+            self.show_message("Erro de Banco de Dados", f"Não foi possível salvar o metadado:\n\n{e}", icon=QtWidgets.QMessageBox.Critical)
+            traceback.print_exc()
+
+    def _load_metadata_from_db(self, layer):
+        """Carrega o metadado XML da tabela do PostgreSQL."""
+        if not psycopg2:
+            self.iface.messageBar().pushMessage("Erro", "A biblioteca psycopg2 não foi encontrada.", level=Qgis.Critical)
+            return None
+
+        conn_details = self._get_postgres_connection_details(layer)
+        if not conn_details.get('f_table_name'):
+            return None
+
+        xml_content = None
+        try:
+            # --- LÓGICA DE CONEXÃO ---
+            db_password = conn_details.get('password')
+            
+            if not db_password and conn_details.get('authcfg'):
+                auth_manager = QgsApplication.authManager()
+                auth_cfg_id = conn_details['authcfg']
+                config = auth_manager.availableAuthMethodConfigs().get(auth_cfg_id)
+
+                if config and auth_manager.loadAuthenticationConfig(auth_cfg_id, config, True):
+                    db_password = config.configMap().get('password')
+                else:
+                    self.iface.messageBar().pushMessage("Aviso", f"Não foi possível carregar a config de autenticação '{auth_cfg_id}'.", level=Qgis.Warning)
+                    # Não retorna, tenta conectar sem senha (pode funcionar para alguns setups)        
+
+            conn = psycopg2.connect(
+                dbname=conn_details.get('dbname'),
+                user=conn_details.get('user'),
+                password=db_password,
+                host=conn_details.get('host'),
+                port=conn_details.get('port', 5432)
+            )
+            cursor = conn.cursor()
+            
+            sql = """
+                SELECT metadata_xml 
+                FROM public.qgis_plugin_metadata 
+                WHERE f_table_catalog = %s AND f_table_schema = %s AND f_table_name = %s;
+            """
+            cursor.execute(sql, (conn_details.get('f_table_catalog'), conn_details['f_table_schema'], conn_details['f_table_name']))
+            
+            result = cursor.fetchone()
+            if result:
+                xml_content = result[0]
+                print(f"Metadado carregado do banco de dados para a camada '{layer.name()}'.")
+                
+            cursor.close()
+            conn.close()
+
+        except Exception as e:
+            self.iface.messageBar().pushMessage("Aviso", f"Não foi possível carregar o metadado do banco de dados: {e}", level=Qgis.Warning, duration=7)
+            traceback.print_exc()
+            
+        return xml_content
+
+    # --- MÉTODO REFATORADO (lógica de arquivo movida para cá) ---
+    def _save_metadata_to_sidecar_file(self, layer, is_automatic_resave=False):
+        """Salva os metadados como um arquivo XML sidecar para camadas baseadas em arquivo."""
+        metadata_path = self.get_sidecar_metadata_path()
+        if not metadata_path:
+            layer_name = layer.name() if layer else "A camada"
+            self.show_message("Não é possível salvar", f"{layer_name}\n A camada não esta salva em um arquivo local.", icon=QtWidgets.QMessageBox.Warning)
+            return
+
+        if not is_automatic_resave:
+            # ... (lógica de confirmação do usuário para arquivos, como já existia) ...
+            reply = QtWidgets.QMessageBox.question(self, 'Confirmar Salvamento', "Deseja salvar/sobrescrever o arquivo de metadado?", 
+                                                   QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel)
+            if reply != QtWidgets.QMessageBox.Ok:
+                return
+
+        try:
+            metadata_dict = self.collect_data()
+            template_path = os.path.join(os.path.dirname(__file__), 'tamplate_mgb20.xml')
+            xml_content = xml_generator.generate_xml_from_template(metadata_dict, template_path)
+            
+            with open(metadata_path, 'w', encoding='utf-8') as f:
+                f.write(xml_content)
+            
+            if not is_automatic_resave:
+                self.iface.messageBar().pushMessage("Sucesso!", f"Metadado Salvo para a camada: '{layer.name()}'")
+
+        except Exception as e:
+            self.show_message("Erro ao Salvar Arquivo", f"Ocorreu um erro ao salvar o arquivo:\n\n{e}", icon=QtWidgets.QMessageBox.Critical)
+            traceback.print_exc()
 
     def collect_data(self):
         data = {}
