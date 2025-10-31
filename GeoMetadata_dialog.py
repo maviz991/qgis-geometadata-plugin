@@ -603,6 +603,9 @@ class GeoMetadataDialog(QtWidgets.QDialog):
 
     def _save_metadata_to_db(self, layer, is_automatic_resave=False):
         """Gera o XML e o salva na tabela de metadados do PostgreSQL."""
+        if not self._check_auth_system():
+            return
+    
         if not psycopg2:
             self.show_message("Erro de Dependência", "A biblioteca psycopg2 não foi encontrada.", icon=QtWidgets.QMessageBox.Critical)
             return
@@ -685,6 +688,9 @@ class GeoMetadataDialog(QtWidgets.QDialog):
 
     def _load_metadata_from_db(self, layer):
         """Carrega o metadado XML da tabela do PostgreSQL."""
+        if not self._check_auth_system():
+            return None     
+           
         if not psycopg2:
             self.iface.messageBar().pushMessage("Erro", "A biblioteca psycopg2 não foi encontrada.", level=Qgis.Critical)
             return None
@@ -975,3 +981,27 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             self.distribution_data.update(selection_dialog.get_data())
             self.update_distribution_display()
             self.iface.messageBar().pushMessage("Sucesso", "Informações de distribuição salvas.", level=Qgis.Success)
+
+    def _check_auth_system(self):
+        """
+        Verifica se o sistema de autenticação do QGIS está funcional.
+        Se não estiver, informa o usuário e retorna False.
+        """
+    
+        auth_manager = QgsApplication.authManager()
+        if auth_manager.isDisabled():
+            title = "Sistema de Autenticação do QGIS Desabilitado"
+            message = (
+                "<p>Seu plugin GeoMetadata detectou que o sistema de autenticação do QGIS "
+                "nesta instalação está desabilitado ou corrompido. Isso impede o acesso "
+                "seguro a bancos de dados.</p>"
+                "<p><b>Este não é um erro do plugin</b>, mas sim da instalação do QGIS. "
+                "A causa mais provável é uma instalação incompleta.</p>"
+                "<p><b>Solução Recomendada:</b><br>"
+                "1. Feche o QGIS.<br>"
+                "2. Desinstale esta versão específica do QGIS.<br>"
+                "3. Abra um CDA ou reinstale-a usando o instalador oficial e executando como administrador.</p>"
+            )
+            self.show_message(title, message, icon=QtWidgets.QMessageBox.Critical)
+            return False
+        return True
