@@ -450,9 +450,29 @@ class GeoMetadataDialog(QtWidgets.QDialog):
                 raise Exception(f"Resposta inesperada do servidor: Status {response.status_code}")
 
         except requests.exceptions.HTTPError as e:
-            error_text = f"Falha no envio (Status: {e.response.status_code}).<br><br>Verifique suas permissões no Geohab.<br>Detalhe: {e.response.text[:200]}"
-            self.show_message("Erro no Envio", error_text, icon=QtWidgets.QMessageBox.Critical)
+            # A mensagem para o desenvolvedor no console continua completa e em inglês (essencial para depuração)
             print(f"ERRO do GeoNetwork: {e.response.status_code} - {e.response.text}")
+
+            # --- LÓGICA DE MENSAGEM PARA O USUÁRIO ---
+            status_code = e.response.status_code
+            server_response_text = e.response.text
+
+            # Tenta traduzir a resposta do servidor
+            translated_detail = self._translate_server_error(server_response_text)
+
+            # Cria uma mensagem baseada no código de status
+            if status_code in [401, 403, 200]:
+                base_message = f"<b>Falha de Permissão (Status: {status_code})</b><br><br>Verifique se você tem permissão para publicar/editar metadados no Geohab."
+            elif status_code == 400:
+                base_message = f"<b>Requisição Inválida (Status: {status_code})</b><br><br>O servidor considerou o metadado enviado inválido. Verifique os campos obrigatórios."
+            else:
+                base_message = f"<b>O servidor respondeu com um erro (Status: {status_code}).</b>"
+
+            # Junta a mensagem base com o detalhe traduzido
+            final_error_text = f"{base_message}<br><br><b>Detalhe:</b>{translated_detail}"
+            
+            self.show_message("Erro no Envio", final_error_text, icon=QtWidgets.QMessageBox.Critical)
+
         except requests.exceptions.RequestException as e:
             self.show_message("Erro de Rede", f"Não foi possível conectar ao servidor:<br><br>{e}", icon=QtWidgets.QMessageBox.Critical)
             print(f"ERRO DE REDE: {e}")
@@ -460,6 +480,47 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             self.show_message("Erro Inesperado", f"Ocorreu um erro no plugin:<br><br>{e}", icon=QtWidgets.QMessageBox.Critical)
             print(f"ERRO INESPERADO: {e}")
             traceback.print_exc()
+
+
+        except requests.exceptions.RequestException as e:
+            self.show_message("Erro de Rede", f"Não foi possível conectar ao servidor:<br><br>{e}", icon=QtWidgets.QMessageBox.Critical)
+            print(f"ERRO DE REDE: {e}")
+        except Exception as e:
+            self.show_message("Erro Inesperado", f"Ocorreu um erro no plugin:<br><br>{e}", icon=QtWidgets.QMessageBox.Critical)
+            print(f"ERRO INESPERADO: {e}")
+            traceback.print_exc()
+
+
+    def _translate_server_error(self, error_text):
+        """
+        Tenta traduzir mensagens de erro comuns do servidor para Português-BR.
+        Retorna a mensagem original se nenhuma tradução for encontrada.
+        """
+        # Deixa o texto em minúsculas para uma correspondência sem diferenciar maiúsculas/minúsculas
+        lower_error = error_text.lower()
+        
+        # --- DICIONÁRIO DE TRADUÇÕES ---
+        # Adicione mais erros comuns aqui conforme os encontrar
+        translations = {
+            "authentication failed": "Falha na autenticação. Verifique se o usuário e senha estão corretos.",
+            "unauthorized": "Acesso não autorizado. Suas credenciais não são válidas para esta operação.",
+            "forbidden": "<p><span style='font-size: 15px; font-family: Arial Black;'>ACESSO NEGADO.<br>Você não é revisor!</span><br><br>Contate o Administrador local.</p>",
+            "invalid credentials": "Credenciais inválidas.",
+            "validation failed": "Falha na validação. O servidor recusou o metadado por não seguir as regras exigidas.",
+            "already exists": "já existe no catálogo.",
+            "nullpointerexception": "Ocorreu um erro inesperado no servidor (NullPointerException). Contate o administrador.",
+            "internal server error": "Ocorreu um Erro Interno no Servidor. Tente novamente mais tarde ou contate o administrador."
+        }
+
+        for key, translation in translations.items():
+            if key in lower_error:
+                # Encontramos uma correspondência! Retorna a tradução amigável.
+                # Podemos adicionar o detalhe original para referência.
+                detail = error_text # Pega a primeira linha do erro original
+                return f"{translation}"
+                
+        # Se nenhuma correspondência for encontrada, retorna o texto original.
+        return error_text[:403] # Limita o tamanho para não poluir a caixa de diálogo
 
     def sanitize_filename(self, value):
         value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
