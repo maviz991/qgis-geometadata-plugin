@@ -208,8 +208,8 @@ def generate_xml_from_template(data_dict, template_path):
     if date_node is None:
         date_node = ET.SubElement(date_parent_node, f"{{{ns['gmd']}}}date")
         ET.SubElement(date_node, f"{{{ns['gco']}}}CharacterString") # Changed to CharacterString as per template
-        
-    set_element_text(id_info, './/gmd:date//gco:CharacterString', data_dict.get('date_creation'), ns) # Changed to CharacterString
+
+    set_element_text(id_info, './/gmd:date//gco:DateTime', data_dict.get('date_creation'), ns) # Changed to CharacterString
     set_element_text(id_info, './gmd:abstract/gco:CharacterString', data_dict.get('abstract'), ns)
     set_element_attribute(id_info, './gmd:status/gmd:MD_ProgressCode', 'codeListValue', data_dict.get('status_codeListValue'), ns)
     set_element_text(id_info, './/gmd:topicCategory/gmd:MD_TopicCategoryCode', data_dict.get('topicCategory'), ns)
