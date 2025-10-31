@@ -504,7 +504,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         translations = {
             "authentication failed": "Falha na autenticação. Verifique se o usuário e senha estão corretos.",
             "unauthorized": "Acesso não autorizado. Suas credenciais não são válidas para esta operação.",
-            "forbidden": "<p><span style='font-size: 15px; font-family: Arial Black;'>ACESSO NEGADO.<br>Você não é revisor!</span><br><br>Contate o Administrador local.</p>",
+            "forbidden": "<p><span style='font-size: 15px; font-family: Arial Black, sans-serif; font-weight: bold;'>ACESSO NEGADO!<br>Você não é revisor.</span><br><br>Contate o Administrador local.</p>",
             "invalid credentials": "Credenciais inválidas.",
             "validation failed": "Falha na validação. O servidor recusou o metadado por não seguir as regras exigidas.",
             "already exists": "já existe no catálogo.",
@@ -739,8 +739,8 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             
             if not is_automatic_resave:
                 self.iface.messageBar().pushMessage("Sucesso", f"Metadado salvo para a camada '{layer.name()}'.", level=Qgis.Success, duration=5)
-                confirm_text = (f"<p style='font-size:14px; font-weight: bold;'>Metadado Salvo com Sucesso no Banco de dados!</p>"
-                    f"<p><b>As informações forão salvas ou atualizadas em:</b><br>"
+                confirm_text = (f"<p style='font-size:14px; font-weight: bold;'>Metadado Salvo no Banco de dados!</p>"
+                    f"<p><b>Salvo ou atualizado em:</b><br>"
                     f"{conn_details['f_table_schema']}.qgis_plugin_metadata</p>"
                     f"<p><b>Associado a camada:</b><br>"
                     f"{conn_details['f_table_name']}</p>"
