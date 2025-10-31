@@ -813,22 +813,41 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             
         return xml_content
 
-    # --- MÉTODO REFATORADO (lógica de arquivo movida para cá) ---
+    # --- MÉTODO REFATORADO (lógica de arquivo) ---
     def _save_metadata_to_sidecar_file(self, layer, is_automatic_resave=False):
-        """Salva os metadados como um arquivo XML sidecar para camadas baseadas em arquivo."""
+        """
+        Salva os metadados como um arquivo XML sidecar, com UX aprimorada.
+        """
+        # A lógica de salvamento principal precisa do caminho do arquivo.
+        # Obtê-lo no início simplifica o código.
         metadata_path = self.get_sidecar_metadata_path()
         if not metadata_path:
+            # Se for um resave automático, apenas sai silenciosamente.
+            if is_automatic_resave:
+                print("Salvamento automático de sidecar cancelado: a camada não tem um caminho de arquivo válido.")
+                return
+            
+            # Se for uma ação do usuário, informa o problema.
             layer_name = layer.name() if layer else "A camada"
             self.show_message("Não é possível salvar", f"{layer_name}\n A camada não esta salva em um arquivo local.", icon=QtWidgets.QMessageBox.Warning)
             return
 
+        # --- ETAPA 1: Confirmação do Usuário (apenas se não for automático) ---
         if not is_automatic_resave:
-            # ... (lógica de confirmação do usuário para arquivos, como já existia) ...
-            reply = QtWidgets.QMessageBox.question(self, 'Confirmar Salvamento', "Deseja salvar/sobrescrever o arquivo de metadado?", 
-                                                   QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel)
-            if reply != QtWidgets.QMessageBox.Ok:
-                return
+            question_text = (f"<p style='font-size:14px; font-weight: bold;'>Você deseja realmente salvar?</p>"
+                            f"<p>Ao salvar, você irá sobrescrever os dados salvos anteriormente, se houver.<br><br>"
+                            f"<b>⚠️ Irá modificar o arquivo:</b><br>{metadata_path}</p>")
 
+            reply = QtWidgets.QMessageBox.question(self, 
+                                                'Confirmar Salvamento', 
+                                                question_text, 
+                                                QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel)
+
+            if reply != QtWidgets.QMessageBox.Ok:
+                self.iface.messageBar().pushMessage("Info", "Operação de salvar cancelada.", level=Qgis.Info, duration=3)
+                return
+        
+        # --- ETAPA 2: Lógica Principal de Salvamento ---
         try:
             metadata_dict = self.collect_data()
             template_path = os.path.join(os.path.dirname(__file__), 'tamplate_mgb20.xml')
@@ -837,9 +856,18 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             with open(metadata_path, 'w', encoding='utf-8') as f:
                 f.write(xml_content)
             
+            # Mostra a mensagem de sucesso rica apenas se foi uma ação direta do usuário
             if not is_automatic_resave:
-                self.iface.messageBar().pushMessage("Sucesso!", f"Metadado Salvo para a camada: '{layer.name()}'")
-
+                metadata_uri = pathlib.Path(metadata_path).as_uri()
+                
+                self.iface.messageBar().pushMessage("Sucesso!", f"Metadado salvo para a camada: <b>'{layer.name()}'</b>", level=Qgis.Success, duration=5)
+                
+                success_title = "Metadado Salvo!"
+                success_text = (f"<p style='font-size: 15px;'><b>Metadado salvo com sucesso!</b></p>"
+                                    f"<p>Você poderá continuar a edição depois.<br><br>"
+                                    f'<b>Anexado à Camada:</b><br><a href="{metadata_uri}">{layer.name()}</a></p>')
+                self.show_message(success_title, success_text)
+                
         except Exception as e:
             self.show_message("Erro ao Salvar Arquivo", f"Ocorreu um erro ao salvar o arquivo:\n\n{e}", icon=QtWidgets.QMessageBox.Critical)
             traceback.print_exc()
