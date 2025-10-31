@@ -644,7 +644,10 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         return layer.providerType() == 'postgres'
 
     def _get_postgres_connection_details(self, layer):
-        """Extrai os detalhes da conexão, incluindo o ID de autenticação, do data source da camada."""
+        """
+        Extrai os detalhes da conexão do data source da camada, tratando 
+        corretamente o schema e o nome da tabela.
+        """
         uri = layer.source()
         details = {}
         pattern = re.compile(r"(\w+)='([^']*)'|(\w+)=([^\s]+)")
@@ -656,10 +659,30 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             details[key] = value
 
         details['f_table_catalog'] = details.get('dbname')
-        details['f_table_schema'] = details.get('sschema', details.get('schema', 'public'))
-        details['f_table_name'] = details.get('table', '').replace('"', '')
-        # A linha mais importante:
-        details['authcfg'] = details.get('authcfg') 
+
+        # --- LÓGICA DE PARSING CORRIGIDA PARA SCHEMA E TABELA ---
+
+        # 1. Pega o identificador completo da tabela da URI.
+        #    Exemplo: "programa_viver_melhor"."modelo_edificacoes"
+        full_table_identifier = details.get('table', '')
+
+        # 2. Limpa as aspas para facilitar o processamento.
+        #    Exemplo: programa_viver_melhor.modelo_edificacoes
+        clean_identifier = full_table_identifier.replace('"', '')
+
+        # 3. Divide o identificador em schema e nome da tabela.
+        if '.' in clean_identifier:
+            # Usa split('.', 1) para dividir apenas no primeiro ponto, caso haja
+            # pontos no nome da tabela (embora seja má prática).
+            parts = clean_identifier.split('.', 1)
+            details['f_table_schema'] = parts[0]
+            details['f_table_name'] = parts[1]
+        else:
+            # Se não houver ponto, a tabela está no schema padrão.
+            # Usamos o 'sschema' ou 'schema' da URI como fallback, ou 'public' como último recurso.
+            details['f_table_schema'] = details.get('sschema', details.get('schema', 'public'))
+            details['f_table_name'] = clean_identifier
+            
         return details
 
     def _save_metadata_to_db(self, layer, is_automatic_resave=False):
@@ -818,8 +841,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         """
         Salva os metadados como um arquivo XML sidecar, com UX aprimorada.
         """
-        # A lógica de salvamento principal precisa do caminho do arquivo.
-        # Obtê-lo no início simplifica o código.
+
         metadata_path = self.get_sidecar_metadata_path()
         if not metadata_path:
             # Se for um resave automático, apenas sai silenciosamente.
