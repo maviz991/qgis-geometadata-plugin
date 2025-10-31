@@ -625,6 +625,8 @@ class GeoMetadataDialog(QtWidgets.QDialog):
 
         try:
             # --- LÓGICA DE CONEXÃO CORRIGIDA ---
+            conn_details = self._get_postgres_connection_details(layer)
+            db_user = conn_details.get('user')
             db_password = conn_details.get('password')
             
             if not db_password and conn_details.get('authcfg'):
@@ -635,18 +637,19 @@ class GeoMetadataDialog(QtWidgets.QDialog):
                 config = auth_manager.availableAuthMethodConfigs().get(auth_cfg_id)
 
                 if config and auth_manager.loadAuthenticationConfig(auth_cfg_id, config, True):
+                    db_user = config.configMap().get('username')
                     db_password = config.configMap().get('password')
                 else:
                     self.show_message("Erro de Autenticação", f"Não foi possível carregar a configuração de autenticação '{auth_cfg_id}' do QGIS.", icon=QtWidgets.QMessageBox.Critical)
                     return
-                            
+                                
             metadata_dict = self.collect_data()
             template_path = os.path.join(os.path.dirname(__file__), 'tamplate_mgb20.xml')
             xml_content = xml_generator.generate_xml_from_template(metadata_dict, template_path)
     
             conn = psycopg2.connect(
                 dbname=conn_details.get('dbname'),
-                user=conn_details.get('user'),
+                user=db_user,
                 password=db_password,
                 host=conn_details.get('host'),
                 port=conn_details.get('port', 5432)
@@ -670,6 +673,11 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             
             if not is_automatic_resave:
                 self.iface.messageBar().pushMessage("Sucesso", f"Metadado salvo para a camada '{layer.name()}'.", level=Qgis.Success, duration=5)
+                confirm_text = (f"<p style='font-size:14px; font-weight: bold;'>Metadado Salvo com Sucesso!</p>"
+                    f"<p>As informações de metadado forão salvas ou atualizadas para a tabela:<br>"
+                    f"<b>{conn_details['f_table_schema']}.{conn_details['f_table_name']}</b><br>"
+                    f"no banco de dados <b>{conn_details['f_table_catalog']}</b>.</p>")
+                self.show_message(confirm_text, confirm_text)
 
         except Exception as e:
             self.show_message("Erro de Banco de Dados", f"Não foi possível salvar o metadado:\n\n{e}", icon=QtWidgets.QMessageBox.Critical)
@@ -688,6 +696,8 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         xml_content = None
         try:
             # --- LÓGICA DE CONEXÃO ---
+            conn_details = self._get_postgres_connection_details(layer)
+            db_user = conn_details.get('user')
             db_password = conn_details.get('password')
             
             if not db_password and conn_details.get('authcfg'):
@@ -696,14 +706,15 @@ class GeoMetadataDialog(QtWidgets.QDialog):
                 config = auth_manager.availableAuthMethodConfigs().get(auth_cfg_id)
 
                 if config and auth_manager.loadAuthenticationConfig(auth_cfg_id, config, True):
+                    db_user = config.configMap().get('username')
                     db_password = config.configMap().get('password')
                 else:
                     self.iface.messageBar().pushMessage("Aviso", f"Não foi possível carregar a config de autenticação '{auth_cfg_id}'.", level=Qgis.Warning)
-                    # Não retorna, tenta conectar sem senha (pode funcionar para alguns setups)        
-
+                    # Não retorna, tenta conectar sem senha (pode funcionar para alguns setups)     
+                
             conn = psycopg2.connect(
                 dbname=conn_details.get('dbname'),
-                user=conn_details.get('user'),
+                user=db_user,
                 password=db_password,
                 host=conn_details.get('host'),
                 port=conn_details.get('port', 5432)
