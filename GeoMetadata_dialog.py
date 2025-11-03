@@ -348,6 +348,9 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         Coleta os dados, gera o XML e o envia para a API do GeoNetwork usando
         a sessão de login previamente estabelecida.
         """
+        if not self._validate_form():
+            return
+        
         if not self.plugin.api_session:
             self.show_message("Não Autenticado",
                               "Você não está conectado. Por favor, clique em 'Conectar ao Geohab' primeiro.",
@@ -523,6 +526,71 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         # Se nenhuma correspondência for encontrada, retorna o texto original.
         return error_text[:403] # Limita o tamanho para não poluir a caixa de diálogo
 
+    def _validate_form(self):
+        """
+        Verifica se os campos essenciais do formulário foram preenchidos.
+        Usa a lógica de validação final para placeholderText (currentIndex == -1).
+        """
+        errors = []
+
+        required_fields = {
+            self.ui.lineEdit_title: "Título",
+            self.ui.comboBox_status_codeListValue: "Status",
+            self.ui.textEdit_abstract: "Resumo",
+            self.ui.lineEdit_contact_individualName: "Sigla (Contato)",
+            self.ui.lineEdit_contact_organisationName: "Nome da Organização (Contato)",
+            # ... (seu dicionário completo de campos)
+            self.ui.lineEdit_contact_deliveryPoint: "Endereço (Contato)",
+            self.ui.lineEdit_contact_city: "Cidade (Contato)",
+            self.ui.comboBox_contact_administrativeArea: "Estado (Contato)",
+            self.ui.lineEdit_contact_postalCode: "CEP (Contato)",
+            self.ui.lineEdit_contact_email: "E-mail (Contato)",
+            self.ui.lineEdit_contact_country: "País (Contato)",
+            self.ui.comboBox_contact_role: "Responsabilidade (Contato)",
+            self.ui.lineEdit_MD_Keywords: "Palavras-chave",
+            self.ui.comboBox_MD_SpatialRepresentationTypeCode: "Tipo de Representação Espacial",
+            self.ui.comboBox_LanguageCode: "Idioma",
+            self.ui.comboBox_topicCategory: "Categoria Temática",
+            self.ui.comboBox_hierarchyLevel: "Nível Hierárquico"
+        }
+
+        for widget, friendly_name in required_fields.items():
+            is_invalid = False
+            
+            if isinstance(widget, QtWidgets.QLineEdit):
+                if not widget.text().strip():
+                    is_invalid = True
+            elif isinstance(widget, QtWidgets.QTextEdit):
+                if not widget.toPlainText().strip():
+                    is_invalid = True
+            # --- LÓGICA DE VALIDAÇÃO FINAL E CORRETA PARA placeholderText ---
+            elif isinstance(widget, QtWidgets.QComboBox):
+                # É inválido se, e somente se, NADA foi selecionado.
+                # Com placeholderText, isso corresponde ao índice -1.
+                if widget.currentIndex() == -1:
+                    is_invalid = True
+            
+            if is_invalid:
+                errors.append(friendly_name)
+
+        # Validação para Bounding Box
+        if not self.ui.lineEdit_westBoundLongitude.text().strip() or \
+        not self.ui.lineEdit_eastBoundLongitude.text().strip() or \
+        not self.ui.lineEdit_southBoundLatitude.text().strip() or \
+        not self.ui.lineEdit_northBoundLatitude.text().strip():
+            errors.append("Coordenadas Geográficas (Extensão)")
+
+        # Lógica de exibição de erro
+        if errors:
+            error_message = "<b>Os seguintes campos obrigatórios não foram preenchidos:</b><br><ul>"
+            for error in errors:
+                error_message += f"<li>{error}</li>"
+            error_message += "</ul>"
+            QMessageBox.warning(self, "Campos Faltando", error_message)
+            return False
+        
+        return True
+
     def sanitize_filename(self, value):
         value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
         value = re.sub(r'[^\w\s-]', '', value).strip()
@@ -530,6 +598,9 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         return value
 
     def exportar_to_xml(self):
+        if not self._validate_form():
+            return
+        
         try:
             metadata_dict = self.collect_data()
             plugin_dir = os.path.dirname(__file__)
