@@ -73,6 +73,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.auth_cfg_id = None
         self.current_metadata_uuid = None
 
+        self.form_is_dirty = False
         # --- Ordem de Construção da UI e Lógica ---
         self._setup_main_window()
         self._build_ui_structure()
@@ -112,6 +113,10 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.populate_comboboxes()
         self.auto_fill_from_layer()
         self.update_ui_for_login_status()
+        self.form_is_dirty = False
+        #print("Formulário carregado. Dirty flag resetada para False.") # Para debug
+        self._connect_dirty_flag_signals()
+
 
     def _create_header(self):
         """Cria o widget do cabeçalho com o novo estilo de navegação."""
@@ -637,6 +642,83 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         except Exception as e:
             self.iface.messageBar().pushMessage("Erro", f"Não foi possível abrir o Explorador de arquivos: {e}", level=Qgis.Critical)
 
+    def _mark_as_dirty(self):
+        """
+        Marca o formulário como 'sujo' (True) se as alterações não estiverem salvas
+        """
+        self.form_is_dirty = True
+
+    def _connect_dirty_flag_signals(self):
+        """
+        Conecta os sinais de alteração de todos os widgets de entrada ao slot _mark_as_dirty.
+        """
+         # Widgets de texto (QLineEdit, QTextEdit)
+        text_widgets = [
+            self.ui.lineEdit_title,
+            self.ui.textEdit_abstract,
+            self.ui.lineEdit_MD_Keywords,
+            self.ui.lineEdit_textEdit_spatialResolution_denominator,
+            self.ui.lineEdit_contact_individualName,
+            self.ui.lineEdit_contact_organisationName,
+            self.ui.lineEdit_contact_positionName,
+            self.ui.lineEdit_contact_phone,
+            self.ui.lineEdit_contact_deliveryPoint,
+            self.ui.lineEdit_contact_city,
+            self.ui.lineEdit_contact_postalCode,
+            self.ui.lineEdit_contact_country,
+            self.ui.lineEdit_contact_email,
+            self.ui.lineEdit_thumbnail_url
+        ]
+        for widget in text_widgets:
+            if isinstance(widget, QtWidgets.QLineEdit):
+                widget.textChanged.connect(self._mark_as_dirty)
+            elif isinstance(widget, QtWidgets.QTextEdit):
+                widget.textChanged.connect(self._mark_as_dirty)
+
+        # ComboBoxes
+        combo_widgets = [
+            self.ui.comboBox_status_codeListValue,
+            self.ui.comboBox_MD_SpatialRepresentationTypeCode,
+            self.ui.comboBox_LanguageCode,
+            self.ui.comboBox_characterSet,
+            self.ui.comboBox_topicCategory,
+            self.ui.comboBox_hierarchyLevel,
+            self.ui.comboBox_contact_role,
+            self.ui.comboBox_contact_administrativeArea
+        ]
+        for widget in combo_widgets:
+            widget.currentIndexChanged.connect(self._mark_as_dirty)
+
+        # Outros tipos de widget
+        self.ui.spinBox_edition.valueChanged.connect(self._mark_as_dirty)
+        self.ui.dateTimeEdit_date_creation.dateTimeChanged.connect(self._mark_as_dirty)
+        self.ui.dateTimeEdit_dateStamp.dateTimeChanged.connect(self._mark_as_dirty)
+
+        # Conectar também as ações de limpar WMS/WFS
+        self.wms_clear_button.clicked.connect(self._mark_as_dirty)
+        self.wfs_clear_button.clicked.connect(self._mark_as_dirty)
+
+    # GeoMetadata_dialog.py -> adicione este método à classe
+
+    def closeEvent(self, event):
+        """
+        Executado quando o usuário tenta fechar a janela.
+        Verifica se há alterações não salvas.
+        """
+        if self.form_is_dirty:
+            reply = QMessageBox.question(self, 
+                                        'Alterações não Salvas',
+                                        "Você tem alterações que não foram salvas.\nDeseja realmente sair?",
+                                        QMessageBox.Yes | QMessageBox.No,
+                                        QMessageBox.No)
+
+            if reply == QMessageBox.Yes:
+                event.accept()  # Permite que a janela feche
+            else:
+                event.ignore()  # Cancela o evento de fechamento
+        else:
+            event.accept() # Se não há alterações, apenas fecha normalmente
+
     def save_metadata(self, is_automatic_resave=False):
         """
         Salva os metadados no local apropriado: um arquivo sidecar para camadas
@@ -647,10 +729,14 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             self.show_message("Nenhuma Camada Ativa", "Por favor, selecione uma camada no painel de camadas.", icon=QtWidgets.QMessageBox.Warning)
             return
 
+        success = False
         if self._is_postgres_layer(layer):
-            self._save_metadata_to_db(layer, is_automatic_resave)
+            success = self._save_metadata_to_db(layer, is_automatic_resave)
         else:
-            self._save_metadata_to_sidecar_file(layer, is_automatic_resave)
+            success = self._save_metadata_to_sidecar_file(layer, is_automatic_resave)
+        if success and not is_automatic_resave:
+            self.form_is_dirty = False
+            print("Formulário salvo. Dirty flag resetada para False.")
 
     def populate_comboboxes(self):
         def populate(combo, options):
@@ -841,10 +927,12 @@ class GeoMetadataDialog(QtWidgets.QDialog):
                     f"{conn_details['f_table_schema']}.{conn_details['f_table_name']}</p>"
                     f"<p>No banco de dados: <b>{conn_details['f_table_catalog']}</b>.</p>")
                 self.show_message(f"Sucesso!", confirm_text)
+                return True
 
         except Exception as e:
             self.show_message("Erro de Banco de Dados", f"Não foi possível salvar o metadado:\n\n{e}", icon=QtWidgets.QMessageBox.Critical)
             traceback.print_exc()
+            return False
 
     def _load_metadata_from_db(self, layer):
         """Carrega o metadado XML da tabela do PostgreSQL."""
@@ -961,10 +1049,12 @@ class GeoMetadataDialog(QtWidgets.QDialog):
                                     f"<p>Você poderá continuar a edição depois.<br><br>"
                                     f'<b>Anexado à Camada:</b><br><a href="{metadata_uri}">{layer.name()}</a></p>')
                 self.show_message(success_title, success_text)
+                return True
                 
         except Exception as e:
             self.show_message("Erro ao Salvar Arquivo", f"Ocorreu um erro ao salvar o arquivo:\n\n{e}", icon=QtWidgets.QMessageBox.Critical)
             traceback.print_exc()
+            return False
 
     def collect_data(self):
         data = {}

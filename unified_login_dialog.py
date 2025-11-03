@@ -114,7 +114,7 @@ class UnifiedLoginDialog(QtWidgets.QDialog, FORM_CLASS):
             super().accept()
 
         except requests.exceptions.HTTPError as e:
-            msg = "Usuário ou senha inválidos." if e.response.status_code == 401 else f"Erro do servidor: {e}"
+            msg = "Usuário ou senha inválidos." if e.response.status_code == 401 else f"<p>Erro do servidor: {e}</p><p>Contate a equipe de TI via chamado no CDA!</p>"
             QtWidgets.QMessageBox.critical(self, "Falha na Autenticação", msg)
         except requests.exceptions.RequestException as e:
             QtWidgets.QMessageBox.critical(self, "Erro de Conexão", f"Não foi possível conectar: {e}")
