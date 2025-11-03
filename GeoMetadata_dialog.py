@@ -60,14 +60,15 @@ FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'GeoMetadata_dialog_base.ui'))
 
 class GeoMetadataDialog(QtWidgets.QDialog):
-    def __init__(self, parent=None, iface=None):
+    def __init__(self, iface, plugin_instance, parent=None):
         """Construtor."""
         super(GeoMetadataDialog, self).__init__(parent)
         
         # --- Atributos da Classe ---
         self.iface = iface
+        self.plugin = plugin_instance
         self.distribution_data = {}
-        self.api_session = None
+        #self.api_session = None
         #self.last_username = None
         self.auth_cfg_id = None
         self.current_metadata_uuid = None
@@ -299,8 +300,8 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.header_btn_login.setIconSize(QSize(20, 20))
 
     def authenticate(self):
-        if self.api_session:
-            self.api_session = None
+        if self.plugin.api_session:
+            self.plugin.api_session = None
             self.iface.messageBar().pushMessage("Info", "❌ Desconectado do Geohab.", level=Qgis.Info, duration=3)
             self.show_message("Info", "<p style='font-size: 14px; font-weight: bold;'>Desconectado do Geohab!</p>", icon=QtWidgets.QMessageBox.Warning)
             self.update_ui_for_login_status()
@@ -310,7 +311,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         login_dialog = UnifiedLoginDialog(self, iface=self.iface)
         
         if login_dialog.exec_():
-            self.api_session = login_dialog.get_session()
+            self.plugin.api_session = login_dialog.get_session()
             username = login_dialog.get_username()
 
             self.iface.messageBar().pushMessage("Sucesso", f"✅ Conectado ao Geohab como {username}.", level=Qgis.Success, duration=4)
@@ -323,14 +324,14 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.update_ui_for_login_status()
 
     def update_ui_for_login_status(self):
-        is_logged_in = self.api_session is not None
+        is_logged_in = self.plugin.api_session is not None
         self.header_btn_exp_geo.setEnabled(is_logged_in)
         self.header_btn_distribution_info.setEnabled(is_logged_in)
         
         if is_logged_in:
             try:
                 # Pega o nome do usuário que foi salvo durante o processo de login
-                username = self.api_session.auth[0] 
+                username = self.plugin.api_session.auth[0] 
             except (AttributeError, IndexError):
                 username = "Usuário Conectado"
 
@@ -347,7 +348,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         Coleta os dados, gera o XML e o envia para a API do GeoNetwork usando
         a sessão de login previamente estabelecida.
         """
-        if not self.api_session:
+        if not self.plugin.api_session:
             self.show_message("Não Autenticado",
                               "Você não está conectado. Por favor, clique em 'Conectar ao Geohab' primeiro.",
                               icon=QtWidgets.QMessageBox.Warning)
@@ -387,13 +388,13 @@ class GeoMetadataDialog(QtWidgets.QDialog):
 
             # PASSO 1: Visitar o catálogo para garantir que todos os cookies, incluindo os duplicados, estejam na sessão.
             print("Preparando a sessão com o GeoNetwork para obter o token CSRF...")
-            self.api_session.get(geonetwork_catalog_url, verify=False)
+            self.plugin.api_session.get(geonetwork_catalog_url, verify=False)
             
             # PASSO 2: Encontrar o token CSRF CORRETO.
             # Itera manualmente para encontrar o token com o path específico do GeoNetwork,
             # resolção do erro de cookies duplicados.
             csrf_token = None
-            for cookie in self.api_session.cookies:
+            for cookie in self.plugin.api_session.cookies:
                 if cookie.name == 'XSRF-TOKEN' and 'geonetwork' in cookie.path:
                     csrf_token = cookie.value
                     print(f"Token CSRF específico do GeoNetwork encontrado (path: {cookie.path})")
@@ -411,7 +412,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             
             # PASSO 4: Enviar o metadado.
             print(f"Enviando metadados para: {geonetwork_api_url}")
-            response = self.api_session.put(
+            response = self.plugin.api_session.put(
                 geonetwork_api_url,
                 data=xml_payload.encode('utf-8'),
                 headers=headers,
@@ -1080,13 +1081,13 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         Inicia o fluxo de seleção de camada, reaproveitando a sessão de login principal.
         """
         # PASSO 1: VERIFICAR SE O USUÁRIO JÁ ESTÁ LOGADO NO PORTAL
-        if not self.api_session:
+        if not self.plugin.api_session:
             self.show_message("Conexão Necessária", icon=QtWidgets.QMessageBox.Information)
             return
 
         # PASSO 2: SE ESTIVER LOGADO, ABRE A JANELA DE SELEÇÃO PASSANDO A SESSÃO
         # A LayerSelectionDialog agora receberá a sessão, não mais as credenciais.
-        selection_dialog = LayerSelectionDialog(self.api_session, self)
+        selection_dialog = LayerSelectionDialog(self.plugin.api_session, self)
         
         # Alimenta o diálogo de seleção com os dados já existentes
         selection_dialog.set_data(self.distribution_data)

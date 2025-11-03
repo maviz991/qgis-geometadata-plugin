@@ -50,6 +50,8 @@ class GeoMetadata:
             'i18n',
             'GeoMetadata_{}.qm'.format(locale))
 
+        self.api_session = None
+
         if os.path.exists(locale_path):
             self.translator = QTranslator()
             self.translator.load(locale_path)
@@ -180,7 +182,9 @@ class GeoMetadata:
     def run(self):
         """Run method that performs all the real work"""
         # Create the dialog (after translation) and keep reference
-        self.dlg = GeoMetadataDialog(parent=self.iface.mainWindow(), iface=self.iface)        
+        self.dlg = GeoMetadataDialog(iface=self.iface, 
+                                     plugin_instance=self, 
+                                     parent=self.iface.mainWindow())       
         # show the dialog
         self.dlg.show()
         # Run the dialog event loop
