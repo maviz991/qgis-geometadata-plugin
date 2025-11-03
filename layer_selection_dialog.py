@@ -23,6 +23,7 @@ class LayerSelectionDialog(QtWidgets.QDialog, FORM_CLASS):
         # Armazena a sessão e obtém a URL do GeoServer a partir da configuração
         self.api_session = api_session
         self.geoserver_url = config_loader.get_geoserver_url()
+        self.all_layers = []
         
         self.data = {}
         self.wms_data = None
@@ -39,6 +40,8 @@ class LayerSelectionDialog(QtWidgets.QDialog, FORM_CLASS):
         self.btn_addservice.clicked.connect(self._add_service_selection)
         self.btn_wms.clicked.connect(lambda: self._clear_service_selection("wms"))
         self.btn_wfs.clicked.connect(lambda: self._clear_service_selection("wfs"))
+
+        self.lineEdit_search.textChanged.connect(self._filter_layer_list)        
 
     def _fetch_layers(self):
         service = self.comboBox_service_type.currentData()
@@ -68,6 +71,7 @@ class LayerSelectionDialog(QtWidgets.QDialog, FORM_CLASS):
             
             root = ET.fromstring(response.content)
             layers_found = []
+            self.all_layers.clear()
 
             # A lógica de parse do XML
             if service == 'wms':
@@ -83,8 +87,11 @@ class LayerSelectionDialog(QtWidgets.QDialog, FORM_CLASS):
                     title = feature_type.find('wfs:Title', ns).text
                     if name and title: layers_found.append({'name': name, 'title': title})
             
-            for layer in sorted(layers_found, key=lambda x: x['title']):
-                self.comboBox_layers.addItem(f"{layer['title']} ({layer['name']})", layer)
+            #for layer in sorted(layers_found, key=lambda x: x['title']):
+                #self.comboBox_layers.addItem(f"{layer['title']} ({layer['name']})", layer)
+
+            self.all_layers = sorted(layers_found, key=lambda x: x['title'])
+            self._filter_layer_list("")
             
             self.comboBox_layers.setEnabled(True)
 
@@ -92,6 +99,28 @@ class LayerSelectionDialog(QtWidgets.QDialog, FORM_CLASS):
             QtWidgets.QMessageBox.critical(self, "Erro de Conexão", f"Falha ao carregar camadas do GeoServer: {e}")
             self.comboBox_layers.clear()
             self.comboBox_layers.addItem("Falha ao carregar", None)
+
+    def _filter_layer_list(self, filter_text):
+        """
+        Filtra e repopula o QComboBox de camadas com base no texto do filtro.
+        """
+        filter_text = filter_text.lower()
+        
+        # 1. Limpa os itens atuais do ComboBox
+        self.comboBox_layers.clear()
+        
+        # 2. Adiciona o item de placeholder
+        self.comboBox_layers.addItem("Selecione uma camada...", None)
+        
+        # 3. Itera na lista COMPLETA de camadas (self.all_layers)
+        for layer in self.all_layers:
+            title = layer.get('title', '').lower()
+            name = layer.get('name', '').lower()
+            
+            # 4. Adiciona ao ComboBox apenas se corresponder ao filtro
+            if filter_text in title or filter_text in name:
+                display_text = f"{layer.get('title')} ({layer.get('name')})"
+                self.comboBox_layers.addItem(display_text, layer) # Adiciona texto e dados
 
     def set_data(self, data):
         """Pré-preenche os botões com os dados de WMS/WFS já salvos."""

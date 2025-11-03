@@ -1259,6 +1259,19 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             self.update_distribution_display()
             self.iface.messageBar().pushMessage("Sucesso", "Informações de distribuição salvas.", level=Qgis.Success)
 
+    # GeoMetadata_dialog.py -> adicione este método à classe
+
+    def reject(self):
+        """
+        Sobrescreve o comportamento padrão da tecla ESC.
+        
+        Em vez de fechar a janela diretamente, este método chama self.close(),
+        que por sua vez acionará o nosso closeEvent(). Isso garante que a
+        verificação de alterações não salvas seja executada tanto para a tecla ESC
+        quanto para o botão 'X' da janela.
+        """
+        self.close()
+        
     def _check_auth_system(self):
         """
         Verifica se o sistema de autenticação do QGIS está funcional.
