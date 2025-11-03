@@ -702,9 +702,9 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         if not is_automatic_resave:
             question_text = (f"<p style='font-size:14px; font-weight: bold;'>Você deseja realmente salvar?</p>"
                              f"<p><b>⚠ As informações serão salvas ou atualizadas em:</b><br>"
-                             f"{conn_details['f_table_schema']}.qgis_plugin_metadata</p>"
+                             f"public.qgis_geometadata_plugin</p>"
                              f"<p><b>Associado a camada:</b><br>"
-                             f"{conn_details['f_table_name']}</p>"
+                             f"{conn_details['f_table_schema']}.{conn_details['f_table_name']}</p>"
                              f"<p>No banco de dados: <b>{conn_details['f_table_catalog']}</b>.</p>")
             reply = QtWidgets.QMessageBox.question(self, 'Confirmar Salvamento no Banco de Dados', 
                                                    question_text, QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel)
@@ -746,9 +746,9 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             cursor = conn.cursor()
             
             sql = """
-                INSERT INTO public.qgis_plugin_metadata (f_table_catalog, f_table_schema, f_table_name, metadata_xml)
+                INSERT INTO public.qgis_geometadata_plugin (f_table_catalog, f_table_schema, f_table_name, metadata_xml)
                 VALUES (%s, %s, %s, %s)
-                ON CONFLICT ON CONSTRAINT qgis_plugin_metadata_unique_layer
+                ON CONFLICT ON CONSTRAINT qgis_geometadata_plugin_unique_layer
                 DO UPDATE SET 
                     metadata_xml = EXCLUDED.metadata_xml,
                     owner = DEFAULT,
@@ -764,9 +764,9 @@ class GeoMetadataDialog(QtWidgets.QDialog):
                 self.iface.messageBar().pushMessage("Sucesso", f"Metadado salvo para a camada '{layer.name()}'.", level=Qgis.Success, duration=5)
                 confirm_text = (f"<p style='font-size:14px; font-weight: bold;'>Metadado Salvo no Banco de dados!</p>"
                     f"<p><b>Salvo ou atualizado em:</b><br>"
-                    f"{conn_details['f_table_schema']}.qgis_plugin_metadata</p>"
+                    f"public.qgis_geometadata_plugin</p>"
                     f"<p><b>Associado a camada:</b><br>"
-                    f"{conn_details['f_table_name']}</p>"
+                    f"{conn_details['f_table_schema']}.{conn_details['f_table_name']}</p>"
                     f"<p>No banco de dados: <b>{conn_details['f_table_catalog']}</b>.</p>")
                 self.show_message(f"Sucesso!", confirm_text)
 
@@ -817,7 +817,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             
             sql = """
                 SELECT metadata_xml 
-                FROM public.qgis_plugin_metadata 
+                FROM public.qgis_geometadata_plugin 
                 WHERE f_table_catalog = %s AND f_table_schema = %s AND f_table_name = %s;
             """
             cursor.execute(sql, (conn_details.get('f_table_catalog'), conn_details['f_table_schema'], conn_details['f_table_name']))
