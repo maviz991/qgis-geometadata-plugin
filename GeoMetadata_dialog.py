@@ -286,7 +286,12 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.wfs_clear_button.clicked.connect(self.clear_wfs_data)
 
         self.ui.comboBox_contact_presets.currentIndexChanged.connect(self.on_contact_preset_changed)
-        #self.ui.btn_distribution_info.clicked.connect(self.open_distribution_workflow)
+        self.ui.toolButton_set_today.clicked.connect(self._set_dateStamp_to_today)
+
+    def _set_dateStamp_to_today(self):
+        """Define o valor do dateTimeEdit_dateStamp para a data e hora atuais."""
+        current_datetime = QDateTime.currentDateTime()
+        self.ui.dateTimeEdit_dateStamp.setDateTime(current_datetime)
 
     def _setup_login_icons(self):
         """Carrega os ícones de login a partir dos recursos."""
