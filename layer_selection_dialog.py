@@ -38,14 +38,16 @@ class LayerSelectionDialog(QtWidgets.QDialog, FORM_CLASS):
         self.completer.setModel(self.completer_model)
         self.completer.setFilterMode(Qt.MatchContains)
         self.completer.setCaseSensitivity(Qt.CaseInsensitive)
+        #self.completer.setCompletionMode(QtWidgets.QCompleter.UnfilteredPopupCompletion)
         self.lineEdit_layer_search.setCompleter(self.completer)
+
 
         # --- Ícones e ComboBox de Serviço ---
         self.icon_wms = QIcon(":/plugins/geometadata/img/wms_icon.png")
         self.icon_wfs = QIcon(":/plugins/geometadata/img/wfs_icon.png")
         self.comboBox_service_type.addItem("Selecione um serviço...", None)           
-        self.comboBox_service_type.addItem(self.icon_wms, "WMS (Imagem)", "wms")
-        self.comboBox_service_type.addItem(self.icon_wfs, "WFS (Vetor)", "wfs")
+        self.comboBox_service_type.addItem(self.icon_wms, "WMS [ Mapa ]", "wms")
+        self.comboBox_service_type.addItem(self.icon_wfs, "WFS [ Vetor ]", "wfs")
         
         # --- Conexões de Sinais ---
         self.comboBox_service_type.currentIndexChanged.connect(self._fetch_layers)
