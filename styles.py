@@ -60,7 +60,7 @@ STYLE_SHEET = """
     #Header #ConnectButton:hover {
         background-color: rgba(0, 0, 0, 0.75);
     }
-        /* Badge INATIVO (CINZA) */
+    /* Badge INATIVO (CINZA) */
     #wms_badge, #wfs_badge {
         background-color: #EAECEE; 
         color: #7F8C8D; 
@@ -177,11 +177,35 @@ STYLE_SHEET = """
         border-radius: 4px;
         padding: 3px;
     }
-    /* Painel de distribuição no tema escuro */
+/* Painel de distribuição no tema escuro */
+    QWidget#GeoMetadataDialog[theme="dark"] QGroupBox#DistributionPanel {
+        background-color: #2a2a2a;
+        border: 1px solid #444;
+        border-radius: 4px;
+        margin-top: 15px;
+        
+        /* Ajusta o padding: mais espaço em cima para o título, menos nos outros lados */
+        padding: 0; 
+    }
+
+    /* Estiliza e POSICIONA o TÍTULO do QGroupBox */
+    QWidget#GeoMetadataDialog[theme="dark"] QGroupBox#DistributionPanel::title {
+        /* Essas duas linhas colocam o título sobre a borda superior esquerda */
+        subcontrol-origin: margin;
+        subcontrol-position: top left;
+        
+        /* Ajusta o padding para ser apenas horizontal e dá um pequeno recuo da esquerda */
+        padding: 0 5px;
+        margin-bottom: 100px;
+        left: 0px;
+        
+        background-color: transparent; /* Garante que o fundo atrás do texto seja da mesma cor da caixa */
+        color: #ccc;
+    }
     /* Badges no tema escuro */
     QWidget#GeoMetadataDialog[theme="dark"] #wms_badge, 
     QWidget#GeoMetadataDialog[theme="dark"] #wfs_badge {
-        background-color: #4f4f4f; 
+        background-color: #4f4f4f;
         color: #ccc; 
     }
     QWidget#GeoMetadataDialog[theme="dark"] #wms_badge[active="true"], 

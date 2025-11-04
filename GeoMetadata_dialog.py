@@ -78,6 +78,8 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self._setup_main_window()
         self._build_ui_structure()
         self._setup_connections_and_logic()
+        self.setStyleSheet(STYLE_SHEET)
+
         
     
     # --- Métodos de Construção e Configuração da UI (Estrutura) ---
@@ -86,9 +88,10 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.setWindowIcon(QIcon(":/plugins/geometadata/icon.png"))
         self.setObjectName("GeoMetadataDialog")
         self.setWindowTitle("GeoMetadata | CDHU")
-        self.setMinimumSize(1200, 690)
-        self.setMaximumSize(1640, 690)
-        self.setStyleSheet(STYLE_SHEET)
+        self.setMinimumSize(1250, 620)
+        #self.setMaximumSize(1640, 800)
+        #self.setStyleSheet(STYLE_SHEET)
+        #self.resize(1250, 620)
 
     def _build_ui_structure(self):
         """Cria e organiza os widgets principais da UI (header, card)."""
@@ -111,8 +114,9 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self._setup_button_connections()
         self._setup_login_icons()
         self.populate_comboboxes()
-        self.auto_fill_from_layer()
         self.update_ui_for_login_status()
+        self.auto_fill_from_layer()
+        self.update_distribution_display()
         self.form_is_dirty = False
         #print("Formulário carregado. Dirty flag resetada para False.") # Para debug
         self._connect_dirty_flag_signals()
@@ -176,6 +180,8 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         # 1. Contêiner principal
         container = QtWidgets.QGroupBox("Camadas Associadas")
         container_layout = QtWidgets.QVBoxLayout(container)
+        container.setObjectName("DistributionPanel")
+        print(f"DEBUG: Criado QGroupBox com objectName='{container.objectName()}'")
         
         # 2. Slot de exibição para WMS
         self.wms_display_widget = self._create_badge_placeholder("WMS")
@@ -231,6 +237,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         
         # Label para o nome da camada
         layer_name_label = QLabel("<i>Nenhuma camada associada.</i>")
+        layer_name_label.setObjectName("LayerNameLabel")
         layer_name_label.setWordWrap(True)
         
         layout.addWidget(icon_label)

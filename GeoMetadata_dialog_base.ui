@@ -739,7 +739,7 @@
      <property name="maximumSize">
       <size>
        <width>16777214</width>
-       <height>80</height>
+       <height>50</height>
       </size>
      </property>
      <property name="toolTip">
