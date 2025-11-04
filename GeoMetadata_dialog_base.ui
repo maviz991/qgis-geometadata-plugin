@@ -603,8 +603,14 @@
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
+     <property name="contextMenuPolicy">
+      <enum>Qt::DefaultContextMenu</enum>
+     </property>
      <property name="toolTip">
       <string>Escala da camada ex: 1:5000 → 5000</string>
+     </property>
+     <property name="echoMode">
+      <enum>QLineEdit::Normal</enum>
      </property>
      <property name="alignment">
       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -689,7 +695,7 @@
    <item row="7" column="1" colspan="5">
     <widget class="QLineEdit" name="lineEdit_MD_Keywords">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
@@ -702,7 +708,7 @@
       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
      </property>
      <property name="placeholderText">
-      <string>Palavra-chave 1, Palavra-chave 2, Palavra-chave 3, [...]</string>
+      <string>Separadas por vírgula: Ex.: Palavra-chave 1, Palavra-chave 2, [...]</string>
      </property>
     </widget>
    </item>

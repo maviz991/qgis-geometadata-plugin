@@ -1056,21 +1056,31 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             return False
 
     def collect_data(self):
+        """
+        Coleta todos os dados do formulário, aplicando lógicas de limpeza e normalização
+        para os campos de entrada de texto livre antes de retorná-los em um dicionário.
+        """
         data = {}
         preset_key = self.ui.comboBox_contact_presets.currentData()
         if preset_key and preset_key != 'nenhum': data['uuid'] = self.contatos_predefinidos.get(preset_key, {}).get('uuid')
 
+        # --- 1. Normalização das Palavras-chave ---
         raw_keywords_text = self.ui.lineEdit_MD_Keywords.text()
         normalized_text = re.sub(r'[\s;./]+', ',', raw_keywords_text)
         keywords_list = [k.strip() for k in normalized_text.split(',') if k.strip()]
 
-
+        # --- 2. Normalização da Escala ---
+        raw_scale_text = self.ui.lineEdit_textEdit_spatialResolution_denominator.text()
+        cleaned_scale_text = raw_scale_text.replace('.', '').replace(',', '')
+        all_numbers_in_scale = re.findall(r'\d+', cleaned_scale_text)
+        scale_value = all_numbers_in_scale[-1] if all_numbers_in_scale else ""
+        
         data.update({
             'title': self.ui.lineEdit_title.text(),
             'edition': str(self.ui.spinBox_edition.value()),
             'abstract': self.ui.textEdit_abstract.toPlainText(),
             'MD_Keywords': keywords_list,
-            'spatialResolution_denominator': self.ui.lineEdit_textEdit_spatialResolution_denominator.text(),
+            'spatialResolution_denominator': scale_value,
             'contact_individualName': self.ui.lineEdit_contact_individualName.text(),
             'contact_organisationName': self.ui.lineEdit_contact_organisationName.text(),
             'contact_positionName': self.ui.lineEdit_contact_positionName.text(),
