@@ -742,7 +742,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
                 combo.addItem(text, data)
         
         populate(self.ui.comboBox_status_codeListValue, [('Arquivo Antigo', 'historicalArchive'), ('Concluído', 'completed'), ('Contínuo', 'onGoing'), ('Em Desenvolvimento', 'underDevelopment'), ('Necessário', 'required'), ('Obsoleto', 'obsolete'), ('Planejado', 'planned')])
-        populate(self.ui.comboBox_contact_presets, [('DPDU', 'dpdu'), ('SPHU', 'sphu'), ('SSARU', 'ssaru'), ('TERRAS', 'terras')])
+        populate(self.ui.comboBox_contact_presets, [('CDHU', 'cdhu'), ('DPDU', 'dpdu'), ('SPHU', 'sphu'), ('SSARU', 'ssaru'), ('TERRAS', 'terras')])
         populate(self.ui.comboBox_MD_SpatialRepresentationTypeCode, [('Vetor', 'vector'), ('Grid | Raster', 'grid'), ('Tabela de texto', 'textTable'), ('Rede triangular irregular (TIN)', 'tin'), ('Modelo estereofónico', 'stereoscopicModel'), ('Vídeo', 'video')])
         populate(self.ui.comboBox_LanguageCode, [('🇧🇷 Português', 'por'), ('🇺🇸 Inglês', 'eng'), ('🇪🇸 Espanhol', 'spa'), ('🇫🇷 Françês', 'fra'), ('🇩🇪 Alemão', 'ger')])
         populate(self.ui.comboBox_characterSet, [('UTF-8', 'utf8')])
@@ -1074,7 +1074,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         cleaned_scale_text = raw_scale_text.replace('.', '').replace(',', '')
         all_numbers_in_scale = re.findall(r'\d+', cleaned_scale_text)
         scale_value = all_numbers_in_scale[-1] if all_numbers_in_scale else ""
-        
+
         data.update({
             'title': self.ui.lineEdit_title.text(),
             'edition': str(self.ui.spinBox_edition.value()),

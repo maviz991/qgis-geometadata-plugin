@@ -133,11 +133,27 @@ def generate_xml_from_template(data_dict, template_path, cdhu_contact_data):
     root = tree.getroot()
     ns = {k if k is not None else 'gmd': v for k, v in root.nsmap.items()}
 
+     # --- LÓGICA DE VERIFICAÇÃO DE DUPLICATA ---
+    # Compara o UUID do contato selecionado com o UUID do contato padrão CDHU.
+    is_duplicate_contact = (data_dict.get('uuid') and 
+                            cdhu_contact_data.get('uuid') and
+                            data_dict['uuid'] == cdhu_contact_data['uuid'])
+    
+    if is_duplicate_contact:
+        print("Gerador XML: Contato selecionado é o CDHU. Evitando duplicata.")
+
     # --- ETAPA 1: ATUALIZAR CONTATOS ---
     contact_wrappers_raiz = root.findall('./gmd:contact', namespaces=ns)
     if len(contact_wrappers_raiz) >= 2:
+        # Bloco 1: Sempre preenchido com os dados CDHU
         update_contact_block(contact_wrappers_raiz[0], cdhu_contact_data, ns)
-        update_contact_block(contact_wrappers_raiz[1], data_dict, ns)
+        
+        # Bloco 2: Preenchido com dados do usuário OU removido se for duplicata
+        if is_duplicate_contact:
+            contact_to_remove = contact_wrappers_raiz[1]
+            contact_to_remove.getparent().remove(contact_to_remove)
+        else:
+            update_contact_block(contact_wrappers_raiz[1], data_dict, ns)
 
     # Ensure identificationInfo and MD_DataIdentification exist
     identification_info_node = root.find('./gmd:identificationInfo', namespaces=ns)
@@ -150,7 +166,16 @@ def generate_xml_from_template(data_dict, template_path, cdhu_contact_data):
 
     contact_wrappers_id = id_info.findall('./gmd:pointOfContact', namespaces=ns)
     if len(contact_wrappers_id) >= 2:
-        update_contact_block(contact_wrappers_id[0], data_dict, ns)
+        # Bloco 1: Preenchido com dados do usuário (ou removido se for CDHU)
+        if is_duplicate_contact:
+            # Neste caso, o "contato do usuário" é o CDHU, que já está no outro bloco.
+            # Então, o primeiro pointOfContact pode ser removido ou limpo. Remover é mais limpo.
+            contact_to_remove = contact_wrappers_id[0]
+            contact_to_remove.getparent().remove(contact_to_remove)
+        else:
+            update_contact_block(contact_wrappers_id[0], data_dict, ns)
+
+        # Bloco 2: Sempre preenchido com os dados CDHU
         update_contact_block(contact_wrappers_id[1], cdhu_contact_data, ns)
 
     # Verifica se um UUID já existe no dicionário de dados (vindo de um XML carregado)

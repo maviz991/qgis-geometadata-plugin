@@ -1075,6 +1075,11 @@ p, li { white-space: pre-wrap; }
    </item>
    <item row="14" column="2">
     <widget class="QToolButton" name="toolButton_set_today">
+     <property name="font">
+      <font>
+       <pointsize>7</pointsize>
+      </font>
+     </property>
      <property name="toolTip">
       <string> Definir a data e hora para o momento atual</string>
      </property>
