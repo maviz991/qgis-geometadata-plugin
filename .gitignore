@@ -10,3 +10,4 @@ __pycache__/
 *.qgz
 *.qgs~
 __pycache__
+.vscode
