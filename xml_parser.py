@@ -63,8 +63,8 @@ def parse_xml_to_dict(source, is_string=False):
             data['abstract'] = get_element_text(id_info, './gmd:abstract/gco:CharacterString', ns)
             data['status_codeListValue'] = get_element_attribute(id_info, './gmd:status/gmd:MD_ProgressCode', 'codeListValue', ns)
             
-            keywords = [node.text.strip() for node in id_info.findall('.//gmd:descriptiveKeywords//gmd:keyword/gco:CharacterString', ns) if node.text]
-            data['MD_Keywords'] = ', '.join(keywords)
+            keywords_list = [node.text.strip() for node in id_info.findall('.//gmd:descriptiveKeywords//gmd:keyword/gco:CharacterString', ns) if node.text]
+            data['MD_Keywords'] = keywords_list
 
             data['MD_SpatialRepresentationTypeCode'] = get_element_attribute(id_info, './/gmd:spatialRepresentationType/gmd:MD_SpatialRepresentationTypeCode', 'codeListValue', ns)
             data['spatialResolution_denominator'] = get_element_text(id_info, './/gmd:spatialResolution/gmd:MD_Resolution/gmd:equivalentScale/gmd:MD_RepresentativeFraction/gmd:denominator/gco:Integer', ns)
