@@ -5,22 +5,6 @@ import uuid
 import os
 from qgis.core import Qgis
 
-# --- DADOS FIXOS PARA O CONTATO CDHU ---
-CDHU_CONTACT_DATA = {
-    'uuid': 'b98c4847-4d5c-43e1-a5eb-bd0228f6903a',
-    'contact_individualName': 'CDHU',
-    'contact_organisationName': 'Companhia de Desenvolvimento Habitacional e Urbano',
-    'contact_positionName': '/',
-    'contact_phone': '+55 11 2505-2479',
-    'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé',
-    'contact_city': 'São Paulo',
-    'contact_postalCode': '01014-930',
-    'contact_country': 'Brasil',
-    'contact_email': 'geo@cdhu.sp.gov.br',
-    'contact_administrativeArea': 'SP', 
-    'contact_role': 'owner'            
-}
-
 # --- FUNÇÕES DE AJUDA ---
 def set_element_text(parent_element, xpath, text_value, ns_map):
     if parent_element is None: return
@@ -140,7 +124,7 @@ def remove_element_if_exists(parent_element, xpath, ns_map):
         element.getparent().remove(element)
 
 # ---------------------------- FUNÇÃO PRINCIPAL ----------------------------
-def generate_xml_from_template(data_dict, template_path):
+def generate_xml_from_template(data_dict, template_path, cdhu_contact_data):
     if not os.path.exists(template_path):
         raise FileNotFoundError(f"Template XML não encontrado em '{template_path}'")
 
@@ -152,7 +136,7 @@ def generate_xml_from_template(data_dict, template_path):
     # --- ETAPA 1: ATUALIZAR CONTATOS ---
     contact_wrappers_raiz = root.findall('./gmd:contact', namespaces=ns)
     if len(contact_wrappers_raiz) >= 2:
-        update_contact_block(contact_wrappers_raiz[0], CDHU_CONTACT_DATA, ns)
+        update_contact_block(contact_wrappers_raiz[0], cdhu_contact_data, ns)
         update_contact_block(contact_wrappers_raiz[1], data_dict, ns)
 
     # Ensure identificationInfo and MD_DataIdentification exist
@@ -167,7 +151,7 @@ def generate_xml_from_template(data_dict, template_path):
     contact_wrappers_id = id_info.findall('./gmd:pointOfContact', namespaces=ns)
     if len(contact_wrappers_id) >= 2:
         update_contact_block(contact_wrappers_id[0], data_dict, ns)
-        update_contact_block(contact_wrappers_id[1], CDHU_CONTACT_DATA, ns)
+        update_contact_block(contact_wrappers_id[1], cdhu_contact_data, ns)
 
     # Verifica se um UUID já existe no dicionário de dados (vindo de um XML carregado)
     existing_uuid = data_dict.get('metadata_uuid')

@@ -375,7 +375,8 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             metadata_dict = self.collect_data()
             plugin_dir = os.path.dirname(__file__)
             template_path = os.path.join(plugin_dir, 'tamplate_mgb20.xml')
-            xml_payload = xml_generator.generate_xml_from_template(metadata_dict, template_path)
+            cdhu_data = self.contatos_predefinidos.get('cdhu', {})
+            xml_payload = xml_generator.generate_xml_from_template(metadata_dict, template_path, cdhu_data)
             
             gn_urls = config_loader.get_geonetwork_url() 
             geonetwork_api_url = gn_urls.get('records_url')
@@ -600,7 +601,8 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             metadata_dict = self.collect_data()
             plugin_dir = os.path.dirname(__file__)
             template_path = os.path.join(plugin_dir, 'tamplate_mgb20.xml')
-            xml_content = xml_generator.generate_xml_from_template(metadata_dict, template_path)
+            cdhu_data = self.contatos_predefinidos.get('cdhu', {})
+            xml_content = xml_generator.generate_xml_from_template(metadata_dict, template_path, cdhu_data)
             safe_filename_base = self.sanitize_filename(metadata_dict.get('title', 'metadados'))
             suggested_filename = f"{safe_filename_base}.xml"
             
@@ -882,7 +884,8 @@ class GeoMetadataDialog(QtWidgets.QDialog):
                                 
             metadata_dict = self.collect_data()
             template_path = os.path.join(os.path.dirname(__file__), 'tamplate_mgb20.xml')
-            xml_content = xml_generator.generate_xml_from_template(metadata_dict, template_path)
+            cdhu_data = self.contatos_predefinidos.get('cdhu', {})
+            xml_content = xml_generator.generate_xml_from_template(metadata_dict, template_path, cdhu_data)
     
             conn = psycopg2.connect(
                 dbname=conn_details.get('dbname'),
@@ -1023,7 +1026,8 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         try:
             metadata_dict = self.collect_data()
             template_path = os.path.join(os.path.dirname(__file__), 'tamplate_mgb20.xml')
-            xml_content = xml_generator.generate_xml_from_template(metadata_dict, template_path)
+            cdhu_data = self.contatos_predefinidos.get('cdhu', {})
+            xml_content = xml_generator.generate_xml_from_template(metadata_dict, template_path, cdhu_data)
             
             with open(metadata_path, 'w', encoding='utf-8') as f:
                 f.write(xml_content)
