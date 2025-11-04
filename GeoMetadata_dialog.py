@@ -1060,11 +1060,16 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         preset_key = self.ui.comboBox_contact_presets.currentData()
         if preset_key and preset_key != 'nenhum': data['uuid'] = self.contatos_predefinidos.get(preset_key, {}).get('uuid')
 
+        raw_keywords_text = self.ui.lineEdit_MD_Keywords.text()
+        normalized_text = re.sub(r'[\s;./]+', ',', raw_keywords_text)
+        keywords_list = [k.strip() for k in normalized_text.split(',') if k.strip()]
+
+
         data.update({
             'title': self.ui.lineEdit_title.text(),
             'edition': str(self.ui.spinBox_edition.value()),
             'abstract': self.ui.textEdit_abstract.toPlainText(),
-            'MD_Keywords': [k.strip() for k in self.ui.lineEdit_MD_Keywords.text().split(',') if k.strip()],
+            'MD_Keywords': keywords_list,
             'spatialResolution_denominator': self.ui.lineEdit_textEdit_spatialResolution_denominator.text(),
             'contact_individualName': self.ui.lineEdit_contact_individualName.text(),
             'contact_organisationName': self.ui.lineEdit_contact_organisationName.text(),
