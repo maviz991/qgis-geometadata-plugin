@@ -62,8 +62,18 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.distribution_data = {}
         self.auth_cfg_id = None
         self.current_metadata_uuid = None
-
         self.form_is_dirty = False
+
+        palette = iface.mainWindow().palette()
+        base_color = palette.color(palette.Base)
+        luminance = (0.299 * base_color.red() + 0.587 * base_color.green() + 0.114 * base_color.blue())
+        if luminance < 128:
+            self.setProperty("theme", "dark")
+            print("GeoMetadata: Tema escuro detectado. Aplicando estilos escuros.")
+        else:
+            self.setProperty("theme", "light") # Opcional, para clareza
+            print("GeoMetadata: Tema claro detectado.")
+
         # --- Ordem de Construção da UI e Lógica ---
         self._setup_main_window()
         self._build_ui_structure()
@@ -583,7 +593,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
 
         # Lógica de exibição de erro
         if errors:
-            error_message = "<b>Os seguintes campos obrigatórios não foram preenchidos:</b><br><ul>"
+            error_message = "<p style='font-size:15px; font-weight: bold;'>Preencha os campos obrigatórios!</p><b>São os seguintes campos:</b><ul>"
             for error in errors:
                 error_message += f"<li>{error}</li>"
             error_message += "</ul>"
@@ -1009,7 +1019,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             
             # Se for uma ação do usuário, informa o problema.
             layer_name = layer.name() if layer else "A camada"
-            self.show_message("Não é possível salvar", f"{layer_name}\n A camada não esta salva em um arquivo local.", icon=QtWidgets.QMessageBox.Warning)
+            self.show_message("Não é possível salvar", f"<p style='font-size:15px; font-weight: bold;'>É necessário exportar a camada!</p>A camada {layer_name} não esta salva em um arquivo local ou no PostgreSQL.", icon=QtWidgets.QMessageBox.Warning)
             return
 
         # --- ETAPA 1: Confirmação do Usuário (apenas se não for automático) ---

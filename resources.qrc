@@ -17,5 +17,13 @@
     <file alias="img/exp_geo_icon_hover.png">img/exp_geo_icon_hover.png</file>
     <file alias="img/exp_save_icon_hover.png">img/exp_save_icon_hover.png</file>
     <file alias="img/exp_xml_icon_hover.png">img/exp_xml_icon_hover.png</file>    
+    <file alias="img/addlayer_icon_white.png">img/addlayer_icon_white.png</file>
+    <file alias="img/exp_geo_icon_white.png">img/exp_geo_icon_white.png</file>
+    <file alias="img/exp_save_icon_white.png">img/exp_save_icon_white.png</file>
+    <file alias="img/exp_xml_icon_white.png">img/exp_xml_icon_white.png</file>
+    <file alias="img/addlayer_icon_hover_white.png">img/addlayer_icon_hover_white.png</file>
+    <file alias="img/exp_geo_icon_hover_white.png">img/exp_geo_icon_hover_white.png</file>
+    <file alias="img/exp_save_icon_hover_white.png">img/exp_save_icon_hover_white.png</file>
+    <file alias="img/exp_xml_icon_hover_white.png">img/exp_xml_icon_hover_white.png</file>      
 </qresource>
 </RCC>
