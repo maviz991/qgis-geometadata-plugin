@@ -46,15 +46,6 @@ from .plugin_config import config_loader
 from .unified_login_dialog import UnifiedLoginDialog
 from .styles import STYLE_SHEET
 
-# --- Constantes e Configurações ---
-CONTATOS_PREDEFINIDOS = {
-    'cdhu': { 'uuid': 'b98c4847-4d5c-43e1-a5eb-bd0228f6903a', 'contact_individualName': 'CDHU', 'contact_organisationName': 'Companhia de Desenvolvimento Habitacional e Urbano', 'contact_positionName': '/', 'contact_phone': '+55 11 2505-2479', 'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé', 'contact_city': 'São Paulo', 'contact_postalCode': '01014-930', 'contact_country': 'Brasil', 'contact_email': 'geo@cdhu.sp.gov.br', 'contact_administrativeArea': 'SP', 'contact_role': 'owner' },
-    'dpdu': { 'uuid': 'a44bfd3a-a9f4-4caf-ba04-6ca36ab44111', 'contact_individualName': 'DPDU', 'contact_organisationName': 'Diretoria de Planejamento e Desenvolvimento Urbano', 'contact_positionName': '/', 'contact_phone': '+55 11 2505-2553', 'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé, 8º andar - Bloco 2', 'contact_city': 'São Paulo', 'contact_postalCode': '01014-930', 'contact_country': 'Brasil', 'contact_email': 'hub_habitacao@cdhu.sp.gov.br', 'contact_administrativeArea': 'SP', 'contact_role': 'processor' },
-    'ssaru': { 'uuid': '648b9e9f-5b88-4e50-8cce-efa78199515e', 'contact_individualName': 'SSARU', 'contact_organisationName': 'Superintendência Social de Ação em Recuperação Urbana', 'contact_positionName': '/', 'contact_phone': '+55 11 2505-2352', 'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé, 7º andar', 'contact_city': 'São Paulo', 'contact_postalCode': '01014-930', 'contact_country': 'Brasil', 'contact_email': 'mapeamento.ssaru@cdhu.sp.gov.br', 'contact_administrativeArea': 'SP', 'contact_role': 'author' },
-    'terras': { 'uuid': '14e0f9a4-81a6-430e-9165-8af35481d8ac', 'contact_individualName': 'TERRAS', 'contact_organisationName': 'Superintendência de Terras', 'contact_positionName': '/', 'contact_phone': '+55 11 2505-0000', 'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé, 6º andar - Bloco 5', 'contact_city': 'São Paulo', 'contact_postalCode': '01014-930', 'contact_country': 'Brasil', 'contact_email': 'terras@cdhu.sp.gov.br', 'contact_administrativeArea': 'SP', 'contact_role': 'author' },
-    'sphu': { 'uuid': '7d1bd2ec-ceee-4f35-a10c-4c37c37355fe', 'contact_individualName': 'SPHU', 'contact_organisationName': 'Superintendência de Projetos Habitacionais e Urbanos', 'contact_positionName': '/', 'contact_phone': '+55 11 2505-0000', 'contact_deliveryPoint': 'Rua Boa Vista, 170 - Sé', 'contact_city': 'São Paulo', 'contact_postalCode': '01014-930', 'contact_country': 'Brasil', 'contact_email': 'sphu@cdhu.sp.gov.br', 'contact_administrativeArea': 'SP', 'contact_role': 'processor' },
-    'nenhum': { 'contact_individualName': '', 'contact_organisationName': '', 'contact_positionName': '', 'contact_phone': '', 'contact_deliveryPoint': '', 'contact_city': '', 'contact_postalCode': '', 'contact_country': '', 'contact_email': '', 'contact_administrativeArea': '', 'contact_role': '' }
-}
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'GeoMetadata_dialog_base.ui'))
@@ -64,12 +55,11 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         """Construtor."""
         super(GeoMetadataDialog, self).__init__(parent)
         
+        self._load_contacts()
         # --- Atributos da Classe ---
         self.iface = iface
         self.plugin = plugin_instance
         self.distribution_data = {}
-        #self.api_session = None
-        #self.last_username = None
         self.auth_cfg_id = None
         self.current_metadata_uuid = None
 
@@ -1059,7 +1049,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
     def collect_data(self):
         data = {}
         preset_key = self.ui.comboBox_contact_presets.currentData()
-        if preset_key and preset_key != 'nenhum': data['uuid'] = CONTATOS_PREDEFINIDOS.get(preset_key, {}).get('uuid')
+        if preset_key and preset_key != 'nenhum': data['uuid'] = self.contatos_predefinidos.get(preset_key, {}).get('uuid')
 
         data.update({
             'title': self.ui.lineEdit_title.text(),
@@ -1099,7 +1089,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
 
     def on_contact_preset_changed(self):
         preset_key = self.ui.comboBox_contact_presets.currentData()
-        contact_data = CONTATOS_PREDEFINIDOS.get(preset_key, {})
+        contact_data = self.contatos_predefinidos.get(preset_key, {})
         self.ui.lineEdit_contact_individualName.setText(contact_data.get('contact_individualName', ''))
         self.ui.lineEdit_contact_organisationName.setText(contact_data.get('contact_organisationName', ''))
         self.ui.lineEdit_contact_positionName.setText(contact_data.get('contact_positionName', ''))
@@ -1127,7 +1117,31 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             if zip_index != -1: base_path = path_sem_vsizip[:zip_index + 4]
         if os.path.isfile(base_path): return base_path + ".xml"
         return None
-    
+
+    def _load_contacts(self):
+        """Lê o arquivo contacts.json e carrega os dados em self.contatos_predefinidos."""
+        self.contatos_predefinidos = {} # Inicia com um dicionário vazio
+        try:
+            # Constrói o caminho para o arquivo de forma segura
+            plugin_dir = os.path.dirname(__file__)
+            contacts_path = os.path.join(plugin_dir, 'contacts.json')
+
+            with open(contacts_path, 'r', encoding='utf-8') as f:
+                self.contatos_predefinidos = json.load(f)
+            print("Arquivo de contatos carregado com sucesso.")
+
+        except FileNotFoundError:
+            QMessageBox.warning(self, "Arquivo de Configuração Faltando",
+                                f"O arquivo 'contacts.json' não foi encontrado na pasta do plugin.\n"
+                                f"Os presets de contato não estarão disponíveis.")
+        except json.JSONDecodeError:
+            QMessageBox.critical(self, "Erro no Arquivo de Configuração",
+                                f"O arquivo 'contacts.json' contém um erro de sintaxe e não pôde ser lido.\n"
+                                f"Verifique a formatação do JSON.")
+        except Exception as e:
+            QMessageBox.critical(self, "Erro Inesperado",
+                                f"Ocorreu um erro ao carregar os contatos: {e}")
+
     def populate_form_from_dict(self, data_dict):
         if not data_dict: return
         self.current_metadata_uuid = data_dict.get('metadata_uuid')
@@ -1172,7 +1186,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         # Compara os dados do DICIONÁRIO (data_dict) com os presets.        
         found_preset_key = None
         # Itera sobre cada preset
-        for preset_key, preset_data in CONTATOS_PREDEFINIDOS.items():
+        for preset_key, preset_data in self.contatos_predefinidos.items():
             if preset_key == 'nenhum': 
                 continue
 
@@ -1271,7 +1285,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         quanto para o botão 'X' da janela.
         """
         self.close()
-        
+
     def _check_auth_system(self):
         """
         Verifica se o sistema de autenticação do QGIS está funcional.
