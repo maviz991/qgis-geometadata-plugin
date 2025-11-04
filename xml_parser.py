@@ -107,28 +107,36 @@ def parse_xml_to_dict(source, is_string=False):
             data['wms_data'] = wms_data
             data['wfs_data'] = wfs_data
 
-        # --- LÓGICA DE CONTATO ---
         all_contacts = root.findall('.//gmd:CI_ResponsibleParty', namespaces=ns)
-        form_contact = None
+        user_contact_node = None # Usando um nome mais claro que 'form_contact'
+
+        # ETAPA 1: Tenta encontrar um contato que NÃO seja o padrão (CDHU).
         for contact in all_contacts:
             org_name = get_element_text(contact, './gmd:organisationName/gco:CharacterString', ns)
-            # Este critério de exclusão é específico do seu caso, parece correto.
             if org_name and 'Companhia de Desenvolvimento Habitacional e Urbano' not in org_name:
-                form_contact = contact
-                break 
-        
-        if form_contact is not None:
-            data['contact_individualName'] = get_element_text(form_contact, './/gmd:individualName/gco:CharacterString', ns)
-            data['contact_organisationName'] = get_element_text(form_contact, './/gmd:organisationName/gco:CharacterString', ns)
-            data['contact_positionName'] = get_element_text(form_contact, './/gmd:positionName/gco:CharacterString', ns)
-            data['contact_phone'] = get_element_text(form_contact, './/gmd:contactInfo//gmd:voice/gco:CharacterString', ns)
-            data['contact_deliveryPoint'] = get_element_text(form_contact, './/gmd:contactInfo//gmd:deliveryPoint/gco:CharacterString', ns)
-            data['contact_city'] = get_element_text(form_contact, './/gmd:contactInfo//gmd:city/gco:CharacterString', ns)
-            data['contact_administrativeArea'] = get_element_text(form_contact, './/gmd:contactInfo//gmd:administrativeArea/gco:CharacterString', ns)
-            data['contact_postalCode'] = get_element_text(form_contact, './/gmd:contactInfo//gmd:postalCode/gco:CharacterString', ns)
-            data['contact_country'] = get_element_text(form_contact, './/gmd:contactInfo//gmd:country/gco:CharacterString', ns)
-            data['contact_email'] = get_element_text(form_contact, './/gmd:contactInfo//gmd:electronicMailAddress/gco:CharacterString', ns)
-            data['contact_role'] = get_element_attribute(form_contact, './/gmd:role/gmd:CI_RoleCode', 'codeListValue', ns)
+                user_contact_node = contact
+                break # Encontramos o contato do usuário (ex: DPDU), podemos parar.
+
+        # ETAPA 2: Se não encontrou um contato distinto (PLANO B).
+        if user_contact_node is None:
+            # ...significa que ou não há contatos, ou o único contato é o da CDHU.
+            # Neste caso, simplesmente pegamos o primeiro contato que encontrarmos.
+            if all_contacts: # Verifica se a lista não está vazia.
+                user_contact_node = all_contacts[0]
+
+        # ETAPA 3: Preenche os dados se um contato foi encontrado (seja o do usuário ou o fallback).
+        if user_contact_node is not None:
+            data['contact_individualName'] = get_element_text(user_contact_node, './/gmd:individualName/gco:CharacterString', ns)
+            data['contact_organisationName'] = get_element_text(user_contact_node, './/gmd:organisationName/gco:CharacterString', ns)
+            data['contact_positionName'] = get_element_text(user_contact_node, './/gmd:positionName/gco:CharacterString', ns)
+            data['contact_phone'] = get_element_text(user_contact_node, './/gmd:contactInfo//gmd:voice/gco:CharacterString', ns)
+            data['contact_deliveryPoint'] = get_element_text(user_contact_node, './/gmd:contactInfo//gmd:deliveryPoint/gco:CharacterString', ns)
+            data['contact_city'] = get_element_text(user_contact_node, './/gmd:contactInfo//gmd:city/gco:CharacterString', ns)
+            data['contact_administrativeArea'] = get_element_text(user_contact_node, './/gmd:contactInfo//gmd:administrativeArea/gco:CharacterString', ns)
+            data['contact_postalCode'] = get_element_text(user_contact_node, './/gmd:contactInfo//gmd:postalCode/gco:CharacterString', ns)
+            data['contact_country'] = get_element_text(user_contact_node, './/gmd:contactInfo//gmd:country/gco:CharacterString', ns)
+            data['contact_email'] = get_element_text(user_contact_node, './/gmd:contactInfo//gmd:electronicMailAddress/gco:CharacterString', ns)
+            data['contact_role'] = get_element_attribute(user_contact_node, './/gmd:role/gmd:CI_RoleCode', 'codeListValue', ns)
 
         return data
 
