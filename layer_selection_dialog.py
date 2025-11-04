@@ -6,55 +6,72 @@ from lxml import etree as ET
 from qgis.PyQt import uic, QtWidgets
 from .plugin_config import config_loader
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtCore import Qt
+from qgis.PyQt.QtCore import Qt, QStringListModel
 
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'layer_selection_dialog_base.ui'))
 
+# layer_selection_dialog.py
 class LayerSelectionDialog(QtWidgets.QDialog, FORM_CLASS):
-    # --- Recebe a SESSÃO DE API ---
     def __init__(self, api_session, parent=None):
         super(LayerSelectionDialog, self).__init__(parent)
         self.setupUi(self)
 
         if not api_session:
-            raise ValueError("Uma sessão de API autenticada é necessária para inicializar este diálogo.")
+            raise ValueError("Uma sessão de API autenticada é necessária.")
         
-        # Armazena a sessão e obtém a URL do GeoServer a partir da configuração
         self.api_session = api_session
         self.geoserver_url = config_loader.get_geoserver_url()
+        
         self.all_layers = []
+        self.layer_data_map = {} # Mapeia o texto de exibição para os dados da camada
+        self.selected_layer_data = None
         
         self.data = {}
         self.wms_data = None
         self.wfs_data = None
 
+        # --- CONFIGURAÇÃO DO QCOMPLETER ---
+        self.completer = QtWidgets.QCompleter(self)
+        self.completer_model = QStringListModel(self)
+        self.completer.setModel(self.completer_model)
+        self.completer.setFilterMode(Qt.MatchContains)
+        self.completer.setCaseSensitivity(Qt.CaseInsensitive)
+        self.lineEdit_layer_search.setCompleter(self.completer)
+
+        # --- Ícones e ComboBox de Serviço ---
         self.icon_wms = QIcon(":/plugins/geometadata/img/wms_icon.png")
         self.icon_wfs = QIcon(":/plugins/geometadata/img/wfs_icon.png")
-
         self.comboBox_service_type.addItem("Selecione um serviço...", None)           
-        self.comboBox_service_type.addItem(self.icon_wms, "WMS [Imagem]", "wms")
-        self.comboBox_service_type.addItem(self.icon_wfs, "WFS [Vetor]", "wfs")
-        self.comboBox_service_type.currentIndexChanged.connect(self._fetch_layers)
-
-        self.comboBox_layers.setEnabled(False)
-        self.comboBox_layers.lineEdit().textChanged.connect(self._filter_layer_list)
+        self.comboBox_service_type.addItem(self.icon_wms, "WMS (Imagem)", "wms")
+        self.comboBox_service_type.addItem(self.icon_wfs, "WFS (Vetor)", "wfs")
         
-
+        # --- Conexões de Sinais ---
+        self.comboBox_service_type.currentIndexChanged.connect(self._fetch_layers)
+        self.completer.activated.connect(self._on_layer_selected)
         self.btn_addservice.clicked.connect(self._add_service_selection)
         self.btn_wms.clicked.connect(lambda: self._clear_service_selection("wms"))
         self.btn_wfs.clicked.connect(lambda: self._clear_service_selection("wfs"))
+        
+        self.lineEdit_layer_search.setEnabled(False)
 
     def _fetch_layers(self):
         service = self.comboBox_service_type.currentData()
+        # Limpa tudo ao mudar de serviço
+        self.all_layers.clear()
+        self.layer_data_map.clear()
+        self.completer_model.setStringList([])
+        self.lineEdit_layer_search.clear()
+        self.selected_layer_data = None
+
         if not service:
-            self.comboBox_layers.clear()
-            self.comboBox_layers.setEnabled(False)
+            self.lineEdit_layer_search.setEnabled(False)
             return
 
-        self.comboBox_layers.setEnabled(False)
-        self.comboBox_layers.lineEdit().setText("Carregando...")
+        self.lineEdit_layer_search.setText("Carregando...")
+        self.lineEdit_layer_search.setEnabled(False)
+        
 
         if service == 'wms':
             url = f"{self.geoserver_url}/ows?service=WMS&version=1.3.0&request=GetCapabilities"
@@ -84,30 +101,35 @@ class LayerSelectionDialog(QtWidgets.QDialog, FORM_CLASS):
 
             self.all_layers = sorted(layers_found, key=lambda x: x['title'])
             
-            # Popula a lista pela primeira vez, SEM mostrar o popup
-            self._filter_layer_list("", show_popup=False) 
+            display_list = []
+            for layer in self.all_layers:
+                display_text = f"{layer.get('title')} ({layer.get('name')})"
+                display_list.append(display_text)
+                self.layer_data_map[display_text] = layer
+
+            self.completer_model.setStringList(display_list)
             
-            self.comboBox_layers.setEnabled(True)
-            self.comboBox_layers.lineEdit().clear()
-            self.comboBox_layers.setFocus()
+            self.lineEdit_layer_search.setEnabled(True)
+            self.lineEdit_layer_search.clear()
+            self.lineEdit_layer_search.setFocus()
 
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, "Erro de Conexão", f"Falha ao carregar camadas do GeoServer: {e}")
-            self.comboBox_layers.lineEdit().setText("Falha ao carregar")
+            self.lineEdit_layer_search.lineEdit().setText("Falha ao carregar")
 
     # Substitua seu método _filter_layer_list por este:
     def _filter_layer_list(self, filter_text, show_popup=True):
         """
         Filtra, repopula o QComboBox e exibe o popup, preservando o texto e foco do usuário.
         """
-        line_edit = self.comboBox_layers.lineEdit()
+        line_edit = self.lineEdit_layer_search.lineEdit()
         text_before_filter = line_edit.text()
         cursor_pos = line_edit.cursorPosition()
 
         # Bloqueia sinais para evitar loops de eventos
-        self.comboBox_layers.blockSignals(True)
+        self.lineEdit_layer_search.blockSignals(True)
 
-        self.comboBox_layers.clear()
+        self.lineEdit_layer_search.clear()
         
         # Adiciona apenas os itens que correspondem ao filtro
         for layer in self.all_layers:
@@ -116,18 +138,29 @@ class LayerSelectionDialog(QtWidgets.QDialog, FORM_CLASS):
             
             if filter_text.lower() in title or filter_text.lower() in name:
                 display_text = f"{layer.get('title')} ({layer.get('name')})"
-                self.comboBox_layers.addItem(display_text, layer)
+                self.lineEdit_layer_search.addItem(display_text, layer)
 
         # Restaura o texto e a posição do cursor, mantendo a experiência de digitação
         line_edit.setText(text_before_filter)
         line_edit.setCursorPosition(cursor_pos)
 
         # Desbloqueia os sinais
-        self.comboBox_layers.blockSignals(False)
+        self.lineEdit_layer_search.blockSignals(False)
 
         # Mostra o popup apenas se for uma ação do usuário e houver itens para mostrar
-        if show_popup and self.comboBox_layers.count() > 0:
-            self.comboBox_layers.showPopup()
+        if show_popup and self.lineEdit_layer_search.count() > 0:
+            self.lineEdit_layer_search.showPopup()
+
+    def _on_layer_selected(self, selected_text):
+        """
+        Chamado quando uma camada é selecionada na lista do QCompleter.
+        """
+        # Usa o mapa para encontrar os dados completos da camada
+        if selected_text in self.layer_data_map:
+            self.selected_layer_data = self.layer_data_map[selected_text]
+            print(f"Camada selecionada: {self.selected_layer_data}")
+        else:
+            self.selected_layer_data = None            
 
     def set_data(self, data):
         """Pré-preenche os botões com os dados de WMS/WFS já salvos."""
@@ -155,7 +188,7 @@ class LayerSelectionDialog(QtWidgets.QDialog, FORM_CLASS):
     def _add_service_selection(self):
         """Adiciona o serviço e camada selecionados aos dados de WMS ou WFS."""
         service_type = self.comboBox_service_type.currentData()
-        selected_layer = self.comboBox_layers.currentData()
+        selected_layer = self.selected_layer_data 
 
         if not service_type or not selected_layer:
             QtWidgets.QMessageBox.warning(self, "Aviso", "Selecione um tipo de serviço e uma camada.")
@@ -182,8 +215,8 @@ class LayerSelectionDialog(QtWidgets.QDialog, FORM_CLASS):
         
         # Resetar a UI para a próxima seleção
         self.comboBox_service_type.setCurrentIndex(0)
-        self.comboBox_layers.clear()
-        self.comboBox_layers.setEnabled(False)
+        self.lineEdit_layer_search.clear()
+        self.lineEdit_layer_search.setEnabled(False)
 
     def _clear_service_selection(self, service_type):
         """Limpa a seleção de um serviço específico (WMS ou WFS)."""

@@ -91,18 +91,9 @@
          </widget>
         </item>
         <item row="4" column="0">
-         <widget class="QComboBox" name="comboBox_layers">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="editable">
-           <bool>true</bool>
-          </property>
-          <property name="insertPolicy">
-           <enum>QComboBox::NoInsert</enum>
-          </property>
+         <widget class="QLineEdit" name="lineEdit_layer_search">
           <property name="placeholderText">
-           <string>Comece a digitar para filtrar as camadas...</string>
+           <string>Digite para buscar uma camada...</string>
           </property>
          </widget>
         </item>
