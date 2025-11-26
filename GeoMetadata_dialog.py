@@ -465,7 +465,8 @@ class GeoMetadataDialog(QtWidgets.QDialog):
                 success_text = (f"<p style='font-size: 15px; font-weight: bold;'>Metadados enviados com sucesso!<p/>"
                                 f"<p><b>Nome do metadado:</b> {metadata_dict['title']}<br>"
                                 f"<b>UUID:</b> {uuid_criado}</p>"
-                                f'<p>Acesse o <a href="{config_loader.get_geonetwork_base_url()}">Geohab</a> para finalizar a publicação.</p>')
+                                #f'<p>Acesse o <a href="{config_loader.get_geonetwork_base_url()}">Geohab</a> para finalizar a publicação.</p>')
+                                f'<p>Acesse o <a href="https://geo.cdhu.sp.gov.br/geonetwork/srv/por/catalog.edit#/board?">Geohab</a> para finalizar a publicação.</p>')
                 self.show_message("Sucesso!", success_text)
                 self.iface.messageBar().pushMessage("Sucesso", f"Metadados '{metadata_dict['title']}' enviados ao Geohab.", level=Qgis.Success, duration=7)
             else:

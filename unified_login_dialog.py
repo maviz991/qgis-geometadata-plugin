@@ -102,12 +102,12 @@ class UnifiedLoginDialog(QtWidgets.QDialog, FORM_CLASS):
             return
 
         session = requests.Session()
+        session.verify = False        
         session.auth = (user, password)
-        session.verify = False
-        test_url = f"{geoserver_url}/ows?service=WMS&version=1.3.0&request=GetCapabilities"
+        test_url = f"{geoserver_url}/ows?version=1.3.0"
         
         try:
-            response = session.get(test_url, timeout=15)
+            response = session.get(test_url, timeout=15, verify=False)
             response.raise_for_status()
             
             self.authenticated_session = session
