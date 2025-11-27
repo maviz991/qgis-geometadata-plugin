@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual do Usuário – GeoMetadata | Geohab Plugin para QGIS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+    <style>
+        @charset "UTF-8";
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            padding-top: 80px;
+            line-height: 1.6;
+        }
+
+        :root {
+            --font-primary: 'Axiforma', 'Montserrat', sans-serif;
+            --font-secondary: 'Montserrat', sans-serif;
+            --color-primary: #ff1100;
+            --color-secondary: #000000;
+            --color-text: #333;
+            --color-border: #e0e0e0;
+        }
+        /* =================================================================== */
+/*               ESTILOS PARA A NAVBAR CUSTOMIZADA                     */
+/* =================================================================== */
+
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #000; /* Cor escura de fundo */
+    padding: 10px 0;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    z-index: 100;
+}
+
+.navbar .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 0 15px;
+}
+
+.navbar-brand img {
+    height: 40px;
+}
+
+/* --- Estilos dos Links --- */
+.nav-links {
+    display: flex;
+}
+
+.nav-links ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    gap: 20px;
+}
+
+.nav-links a {
+    color: #f8f9fa;
+    text-decoration: none;
+    font-weight: bold;
+    padding: 5px 0;
+    border-bottom: 2px solid transparent;
+    transition: color 0.3s, border-bottom-color 0.3s;
+}
+
+.nav-links a:hover {
+    color: #ffffff;
+    border-bottom-color: #ffffff;
+}
+
+/* --- Estilos do Botão Hambúrguer --- */
+.burger-menu {
+    display: none; /* Escondido em telas grandes */
+    flex-direction: column;
+    gap: 5px;
+    cursor: pointer;
+    background: none;
+    border: none;
+    z-index: 101;
+}
+
+.burger-menu .bar {
+    width: 25px;
+    height: 3px;
+    background-color: white;
+    border-radius: 3px;
+    transition: all 0.3s ease-in-out;
+}
+
+/* Animação do "X" quando o menu está ativo */
+.burger-menu.active .bar:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+.burger-menu.active .bar:nth-child(2) { opacity: 0; }
+.burger-menu.active .bar:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
+
+
+/* --- LÓGICA RESPONSIVA (Media Query) --- */
+@media (max-width: 992px) {
+    .burger-menu {
+        display: flex; /* Mostra o hambúrguer em telas pequenas */
+    }
+
+    .nav-links {
+        display: none; /* Esconde o menu de links por padrão */
+        position: absolute;
+        top: 60px; /* Altura da sua navbar */
+        left: 0;
+        width: 100%;
+        background-color: #000000;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px 0;
+        box-shadow: 0 4px 5px rgba(0,0,0,0.2);
+    }
+    
+    .nav-links.active {
+        display: flex; /* Mostra o menu de links quando o hambúrguer é clicado */
+    }
+
+    .nav-links ul {
+        flex-direction: column;
+        text-align: center;
+        width: 100%;
+    }
+
+    .nav-links ul li {
+        padding: 10px 0;
+    }
+}
+
+
+        .module-intro-block {
+            max-width: 100%;
+            margin: 20px auto;
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        }        
+        .notice-block {
+        display: flex;
+        align-items: flex-start;
+        gap: 15px;
+        padding: 20px;
+        border-radius: 8px;
+        margin: 20px 0;
+        border: 1px solid transparent;
+        }        
+        .notice-icon {
+        flex-shrink: 0;
+        display: flex;
+        justify-content: center;
+        margin-top: 2px;
+        }
+        .notice-icon svg {
+        width: 22px;
+        height: 22px;
+        }    
+        .notice-content p {
+        margin: 0;
+        line-height: 1.6;
+        }
+        .notice-content a {
+        font-weight: 600;
+        text-decoration: none;
+        }            
+        .notice-block.notice-warning {
+        background-color: #fffaf0;
+        border-color: #ffeed9;
+        border-left: 5px solid #fabd5a;
+        color: #856404;
+        text-decoration: none;
+        }
+        .notice-block.notice-warning .notice-icon {
+        color: #fabd5a;
+        }       
+        
+        .notice-block.notice-info {
+        background-color: #f0f7ff;
+        border-color: #d9eaff;
+        border-left: 5px solid #007bff;
+        color: #004085;
+        display: flex;
+        text-decoration: none;
+        }
+        .notice-block.notice-info .notice-icon {
+        color: #007bff;
+        }
+        .notice-block.notice-info a {
+        color: #0056b3;
+        }        
+        .icon-custon {
+            display: inline-block;
+            width: 1em;
+            height: 1em;
+            background-color: currentColor;
+            -webkit-mask-size: contain;
+            mask-size: contain;
+            -webkit-mask-repeat: no-repeat;
+            mask-repeat: no-repeat;
+            -webkit-mask-position: center;
+            mask-position: center;
+        }
+        .icon-chevron-right {
+            -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 18 15 12 9 6'%3E%3C/polyline%3E%3C/svg%3E");
+            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 18 15 12 9 6'%3E%3C/polyline%3E%3C/svg%3E");
+        }
+        .icon-question {
+            -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'%3E%3C/circle%3E%3Cpath d='M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3'%3E%3C/path%3E%3Cline x1='12' y1='17' x2='12.01' y2='17'%3E%3C/line%3E%3C/svg%3E");
+            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'%3E%3C/circle%3E%3Cpath d='M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3'%3E%3C/path%3E%3Cline x1='12' y1='17' x2='12.01' y2='17'%3E%3C/line%3E%3C/svg%3E");
+        }
+        .module-intro-block {
+            max-width: 1100px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        }
+        .main-screenshot {
+            display: flex;
+            width: 100%;
+            gap: 5px;
+            height: 300px;
+            border-radius: 8px;
+            align-items: center;
+            margin: 1em 0 2em 0;
+        }
+        .step-content-layout-cols {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;      
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+            margin-top: 2.5rem;
+            }
+
+        .img-content {
+            width: 100%;
+            height: 300px;
+            margin: 0 auto; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            cursor: zoom-in;
+            transition: transform 0.3s ease;
+
+        }
+        .step-content-col-media {
+        display: flex;
+        min-width: 250px;
+        gap: 5px;
+        justify-content: center;
+
+        padding-bottom: 2em;
+        }
+        @media only screen and (max-width: 700px) {
+        .step-content-col-media {
+            display: block;
+            width: 100%;
+            padding-top: inherit;
+            height: auto;
+        }}
+        .step-content-layout-cols {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+            margin-top: 2.5rem;
+        }
+
+        .step-number {
+            flex-shrink: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 25px;
+            height: 25px;
+            background-color: var(--color-primary);
+            padding-top: 4px;
+            color: white;
+            border-radius: 50%;
+            font-weight: 700;
+            font-size: 1em;
+            font-family: 'Axiforma', 'Montserrat', sans-serif;
+        }
+        .step-content-col-text {
+            flex: 1;
+        }
+
+        .lista-icons {
+            display: flex;
+            padding-bottom: 10px;
+            flex-direction: column;
+            gap: 13px;
+        }
+
+        .badge-color-black {
+            display: inline-block;
+            background-color: #000000;
+            color: white;
+            border: solid 0px #000;
+            border-radius: 3px;
+            padding: 0.25em 0.6em;
+            font-size: 0.705rem;
+            font-weight: 500;
+        }
+        .step-title {
+            font-family: 'Axiforma', 'Montserrat', sans-serif;
+            font-size: 1.4em;
+            font-weight: 700;
+            color: #000;
+            margin-top: 0;
+            margin-bottom: 0.5rem;
+        }
+/*                            Gatilho modal                            */
+        .modal-trigger-img {
+        border-radius: 5px;
+        cursor: zoom-in;
+        transition: 0.3s;
+        width: auto;
+        display: block;
+        margin: 1rem auto 2rem auto;
+        }
+
+        .modal-trigger-img:hover {
+        opacity: 0.7;
+        }
+
+        @media (max-width: 768px) {
+        .modal-trigger-img {
+            width: 100%;
+            float: none;
+            height: auto;
+        }
+        }
+
+        /*                     Background do modal imagem                      */
+        .image-modal-popup {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        padding-top: 100px;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.616);
+        }
+
+        /*                          Conteúdo do Modal                          */
+        .modal-display-img {
+        max-width: -moz-fit-content;
+        max-width: fit-content;
+        max-height: -webkit-fill-available;
+        height: 70%;
+        display: block;
+        margin: 1rem auto 2rem auto;
+        box-sizing: border-box;
+        }
+
+        /*                           Legenda do Modal                          */
+        .modal-caption-text {
+        margin: auto;
+        display: block;
+        width: 60%;
+        max-width: 700px;
+        text-align: center;
+        color: #fff;
+        padding: 10px 0;
+        height: 150px;
+        }
+
+        /*                          Animação de Zoom                           */
+        .modal-display-img, .modal-caption-text {
+        animation-name: zoom;
+        animation-duration: 1s;
+        }
+
+        @keyframes zoom {
+        from {
+            transform: scale(0);
+        }
+        to {
+            transform: scale(1);
+        }
+        }
+
+        /*                         Botão close do modal                        */
+        .custom-close {
+        position: absolute;
+        top: 70px;
+        right: 75px;
+        color: #ffffff;
+        font-size: 50px;
+        font-weight: bold;
+        transition: 0.3s;
+        z-index: 1001;
+        }
+
+        .custom-close:hover,
+        .custom-close:focus {
+        color: var(--color-primary-dark);
+        text-decoration: none;
+        cursor: pointer;
+        }
+
+        /*                       Responsividade do Modal                       */
+        @media only screen and (max-width: 700px) {
+        .modal-display-img {
+            width: 100%;
+            padding-top: inherit;
+            height: auto;
+        }
+        .custom-close {
+            top: 45px;
+            right: 35px;
+        }
+        }
+        /*                       Icone                       */
+
+        .inline-icon {
+            height: auto;
+            width: 19px;
+            vertical-align: middle;
+            margin: 0 4px;
+        }
+
+        .guide-container {
+            font-family: 'Montserrat', sans-serif;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .guide-container-title {
+            font-family: 'Axiforma', 'Montserrat', sans-serif;
+            color: #000000;
+            font-weight: 700;
+            font-size: 1.8em;
+            border-left: 4px solid var(--color-primary);
+            padding-left: 15px;
+            margin-top: 0;
+            margin-bottom: 25px;
+        }
+        
+        .guide-container p, .guide-container li {
+            text-align: justify;
+            color: #444;
+        }
+        .guide-container ul, .guide-container ol {
+            padding-left: 20px;
+        }
+        
+        .info-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            cursor: help;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 12px;
+            padding: 0.2em 0.6em;
+            font-size: 0.8em;
+            font-weight: 550;
+            color: #495057;
+            white-space: nowrap;
+        }
+        
+        kbd {
+            background-color: #333; color: #fff; padding: 2px 6px; border-radius: 4px; font-family: monospace;
+        }
+
+        .main-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .main-header h1 {
+             font-family: 'Axiforma', 'Montserrat', sans-serif;
+             font-size: 2.5em;
+             color: #1a1a1a;
+        }
+        .meta-info {
+            color: #6c757d;
+        }
+/* =================================================================== */
+/*               ESTILOS PARA O ACCORDION DO FAQ                     */
+/* =================================================================== */
+
+#faqAccordion .card {
+    border: 1px solid #e0e0e0;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    box-shadow: none;
+    overflow: hidden; /* Garante que os cantos arredondados funcionem */
+}
+
+#faqAccordion .card-header {
+    background-color: #f8f9fa;
+    padding: 0;
+    border-bottom: none;
+}
+
+#faqAccordion .btn-link {
+    width: 100%;
+    text-align: left;
+    padding: 15px 20px;
+    color: #333;
+    font-weight: bold;
+    text-decoration: none;
+    position: relative; /* Necessário para o ícone indicador */
+}
+
+#faqAccordion .btn-link:hover {
+    background-color: #e9ecef;
+    text-decoration: none;
+}
+
+#faqAccordion .btn-link:focus {
+    box-shadow: none; /* Remove o brilho azul do foco */
+}
+
+/* Ícone indicador de estado (+/-) */
+#faqAccordion .btn-link::before {
+    content: '\002B'; /* Símbolo de '+' */
+    font-size: 1.5em;
+    color: var(--color-primary);
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    transition: transform 0.2s ease-in-out;
+}
+
+#faqAccordion .btn-link[aria-expanded="true"]::before {
+    content: '\2212'; /* Símbolo de '−' */
+    transform: translateY(-50%) rotate(180deg);
+}
+
+#faqAccordion .card-body {
+    background-color: #ffffff;
+    padding: 20px;
+}
+#faqAccordion .card-body ol,
+#faqAccordion .card-body ul {
+    padding-left: 20px;
+    margin-top: 10px;
+}        
+    </style>
+</head>
+
+<body>
+    <!-- =================================================================== -->
+    <!--                       INÍCIO: BARRA DE NAVEGAÇÃO                      -->
+    <!-- =================================================================== -->
+    <nav class="navbar fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <img src="https://cda.cdhu.sp.gov.br/pics/logos/source/GLPI_Logo-white.svg" alt="Logo CDHU">
+            </a>
+    
+            <!-- INÍCIO: Botão Hambúrguer Customizado -->
+            <button class="burger-menu" id="burger-menu" aria-label="Toggle navigation">
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+            </button>
+            <!-- FIM: Botão Hambúrguer Customizado -->
+    
+            <!-- Lista de links (agora com a classe 'nav-links') -->
+            <div class="nav-links" id="navbarNav">
+                <ul>
+                    <li><a class="js-scroll-link" href="#secao1">Introdução</a></li>
+                    <li><a class="js-scroll-link" href="#secao2">Instalação</a></li>
+                    <li><a class="js-scroll-link" href="#secao3">Interface</a></li>
+                    <li><a class="js-scroll-link" href="#secao4">Tarefas</a></li>
+                    <li><a class="js-scroll-link" href="#secao5">FAQ</a></li>
+                    <li><a class="js-scroll-link" href="#secao6">Suporte</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <!-- =================================================================== -->
+    <!--                         FIM: BARRA DE NAVEGAÇÃO                       -->
+    <!-- =================================================================== -->    
+    <!-- =================================================================== -->
+    <!--                       INÍCIO: MANUAL DO PLUGIN                      -->
+    <!-- =================================================================== -->
+    <div class="module-intro-block">
+        <div class="guide-container">
+
+            <div class="main-header">
+                <h1>Manual do Usuário – Plugin GeoMetadata</h1>
+                <p class="meta-info">
+                    <strong>Versão:</strong> 1.0.1 | <strong>Data:</strong> 27 de Novembro de 2025
+                </p>
+            </div>
+            <!-- Seção 1-->
+            <h2 class="guide-container-title" id="secao1">1. Introdução</h2>
+            <p>Bem-vindo ao <strong>GeoMetadata | Geohab Plugin</strong>, o plugin oficial da CDHU para a criação e gerenciamento de metadados geoespaciais.</p>
+            <p>Esta ferramenta foi desenvolvida para simplificar, padronizar e centralizar a documentação de nossas camadas, seguindo o padrão ISO 19115 (MGB 2.0) e garantindo a integração perfeita com o nosso catálogo de dados do <strong>Geohab</strong>.</p>
+            <p>Está é uma versão <b>alfa</b>, poderá haver problemas durante a execução ou bugs.</p>
+            <p>Com este plugin, você pode:</p>
+            <ul>
+                <li>Criar metadados ricos e padronizados diretamente no QGIS.</li>
+                <li>Carregar e editar metadados já existentes.</li>
+                <li>Associar suas camadas a serviços web <span class="info-badge" data-toggle="tooltip" title="Serviços de Mapas Prontos">WMS<span class="icon-custon icon-question"></span></span>/<span class="info-badge" data-toggle="tooltip" title="Serviços de Feições (Vetores)">WFS<span class="icon-custon icon-question"></span></span> do nosso GeoServer.</li>
+                <li>Exportar metadados para o Geohab com segurança e consistência.</li>
+            </ul>
+            <hr>
+
+            <!-- Seção 2-->
+            <h2 class="guide-container-title" id="secao2">2. Instalação</h2>
+            <ol>
+                <li>Receba o arquivo <kbd>.zip</kbd> do plugin.</li>
+                <li>No QGIS, vá até o menu <strong>Complementos > Gerenciar e Instalar Complementos...</strong>.</li>
+                <li>Na janela que se abre, selecione a aba <strong>Instalar a partir de ZIP</strong>.</li>
+                <li>Clique no botão <code>...</code> e selecione o arquivo <kbd>.zip</kbd> que você recebeu.</li>
+                <li>Clique em <strong>Instalar Complemento</strong>.</li>
+                <li>Após a instalação, um novo ícone da CDHU aparecerá na sua barra de ferramentas.</li>
+            </ol>
+            <hr>
+
+            <!-- Seção 3-->
+            <h2 class="guide-container-title" id="secao3">3. Visão Geral da Interface</h2>
+            <p>Ao clicar no ícone do plugin, a janela principal será aberta. Ela é dividida em três áreas principais, como mostrado na imagem abaixo:</p>
+            
+            <!-- IMAGEM ANOTADA DA INTERFACE -->
+            <div class="step-content-col-media">
+                <div class="image-modal-wrapper">
+                    <img class="modal-trigger-img img-content" title="Modo Light (Claro)" src="https://stor.cdhu.sp.gov.br/geo/publico/html/geometadata_light.png" 
+                    alt="Interface modo Light (Claro)">
+                    <div class="image-modal-popup"><span class="custom-close">×</span><img class="modal-display-img">
+                        <div class="modal-caption-text">Interface modo Light (Claro).</div>
+                    </div>
+                </div>
+                <div class="image-modal-wrapper">
+                    <img class="modal-trigger-img img-content" title="Modo Dark (Escuro)" src="https://stor.cdhu.sp.gov.br/geo/publico/html/geometadata_dark.png" 
+                    alt="Interface modo Dark (Escuro)">
+                    <div class="image-modal-popup"><span class="custom-close">×</span><img class="modal-display-img">
+                        <div class="modal-caption-text">Interface modo Dark (Escuro).</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+            <div class="step-content-layout-cols" style="margin-top: 1.5rem;">
+                <div class="step-number" style="background-color:#333;">A</div>
+                <div class="step-content-col-text">
+                    <h3 class="step-title" style="font-size: 1.2em;">Cabeçalho (Barra de Ações)</h3>
+                    <p>É aqui que ficam as ações principais:</p>
+                    <div class="lista-icons">
+                        <span><img src="https://stor.cdhu.sp.gov.br/geo/publico/html/exp_xml_icon_hover.png" class="inline-icon"
+                                alt="Ícone Exportar"> <strong>Exportar Metadado:</strong> Salva o metadado como um arquivo
+                            <kbd>.xml</kbd>.</span>
+                        <span><img src="https://stor.cdhu.sp.gov.br/geo/publico/html/exp_save_icon_hover.png" class="inline-icon"
+                                alt="Ícone Salvar"> <strong>Continuar depois:</strong> Salva seu progresso junto à camada.</span>
+                        <span><img src="https://stor.cdhu.sp.gov.br/geo/publico/html/exp_geo_icon_hover.png" class="inline-icon"
+                                alt="Ícone Geohab"> <strong>Exportar para Geohab:</strong> Envia o metadado para o catálogo.</span>
+                        <span><img src="https://stor.cdhu.sp.gov.br/geo/publico/html/addlayer_icon_hover.png" class="inline-icon"
+                                alt="Ícone Associar"> <strong>Associar Camada:</strong> Vincula a camada a um serviço WMS ou
+                            WFS.</span>
+                        <span><span class="badge-color-black" title="Item 1 da imagem abaixo" data-toggle="tooltip"
+                                data-placement="bottom"><img src="https://stor.cdhu.sp.gov.br/geo/publico/html/login_error.png"
+                                    class="inline-icon" alt="Ícone Associar"> Entrar</span> <strong>Login:</strong> Botão para fazer
+                            login no Geohab.</span>
+                        <span><span class="badge-color-black" title="Item 1 da imagem abaixo" data-toggle="tooltip"
+                                data-placement="bottom"><img src="https://stor.cdhu.sp.gov.br/geo/publico/html/login_ok.png"
+                                    class="inline-icon" alt="Ícone Associar"> Seu Nome</span> <strong>Logout:</strong> Botão para
+                            sair do Geohab.</span>
+            
+                    </div>
+                </div>
+            </div>
+        
+            <div class="step-content-layout-cols" style="margin-top: 1.5rem;">
+                <div class="step-number" style="background-color:#333;">B</div>
+                <div class="step-content-col-text">
+                    <h3 class="step-title" style="font-size: 1.2em;">Formulário Principal</h3>
+                    <p>Área de preenchimento das informações, agrupadas logicamente (Identificação, Contato, Detalhes Técnicos). O campo <span class="info-badge">Bounding Box<span class="icon-custon icon-question"></span></span> é preenchido automaticamente a partir da camada e não pode ser editado.</p>
+                </div>
+            </div>
+        
+            <div class="step-content-layout-cols" style="margin-top: 1.5rem;">
+                <div class="step-number" style="background-color:#333;">C</div>
+                <div class="step-content-col-text">
+                    <h3 class="step-title" style="font-size: 1.2em;">Painel de Camadas Associadas</h3>
+                    <p>Mostra quais serviços (WMS/WFS) do GeoServer foram vinculados a este metadado. Você pode remover uma associação clicando no ícone <code>X</code>.</p>
+                </div>
+            </div>
+            <hr>
+            <!-- Seção 4-->
+            <h2 class="guide-container-title" id="secao4">4. Passo a Passo: Principais Tarefas</h2>
+            
+            <h3 class="step-title" style="margin-top: 2rem; font-size: 1.5em;">Tarefa 1: Criar um Novo Metadado</h3>
+            
+            <div class="step-content-layout-cols">
+                <div class="step-number">1</div>
+                <div class="step-content-col-text">
+                    <h3 class="step-title">Carregue a Camada</h3>
+                    <p>Abra o QGIS e adicione a camada (Local ou PostgreSQL). Certifique-se de que ela esteja <strong>selecionada</strong> no Painel de Camadas.</p>
+                </div>
+            </div>
+            <div class="step-content-layout-cols">
+                <div class="step-number">2</div>
+                <div class="step-content-col-text">
+                    <h3 class="step-title">Abra o Plugin e Verifique</h3>
+                    <p>Clique no ícone do GeoMetadata. Note que o <strong>Título</strong> e a <strong>Extensão Geográfica</strong> já foram preenchidos para você.</p>
+                </div>
+            </div>
+            <div class="step-content-layout-cols">
+                <div class="step-number">3</div>
+                <div class="step-content-col-text">
+                    <h3 class="step-title">Faça Login</h3>
+                    <p>Clique em <strong>ENTRAR</strong>. Use uma configuração salva do QGIS ou digite seu usuário e senha da rede. O login é necessário para as próximas etapas.</p>
+                </div>
+            </div>
+            <div class="step-content-layout-cols">
+                <div class="step-number">4</div>
+                <div class="step-content-col-text">
+                    <h3 class="step-title">Preencha os Campos</h3>
+                    <p>Complete os campos obrigatórios, como <strong>Resumo</strong> e <strong>Palavras-chave</strong>.</p>
+                    <ul>
+                        <li><strong>Dica (Palavras-chave):</strong> Separe-as por <strong>vírgula <kbd>,</kbd></strong>. O sistema também entende ponto-e-vírgula <kbd>;</kbd> e corrige automaticamente.</li>
+                        <li><strong>Dica (Escala):</strong> Digite apenas o número ex: <kbd>5000</kbd>. O sistema é inteligente e consegue extrair o número de formatos como <kbd>1:5.000</kbd>.</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="step-content-layout-cols">
+                <div class="step-number">5</div>
+                <div class="step-content-col-text">
+                    <h3 class="step-title">Salve ou Exporte</h3>
+                    <p>Se quiser salvar e continuar depois, clique em <strong>Continuar depois</strong>. Se o metadado estiver completo e pronto, clique em <strong>Exportar para Geohab</strong>.</p>
+                </div>
+            </div>
+
+            <h3 class="step-title" style="margin-top: 2rem; font-size: 1.5em;">Tarefa 2: Editar um Metadado Existente</h3>
+            <p>Selecione no QGIS a camada cujo metadado você já salvou. Ao abrir o plugin, ele detectará e preencherá todos os campos automaticamente para edição.</p>
+            <div></div>
+            <!-- Bloco de Aviso -->
+            <div class="notice-block notice-warning">
+                <div class="notice-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z">
+                    </path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                </div>
+                <div class="notice-content">
+                    <p><strong>Atenção:</strong> A Extensão Geográfica será sempre atualizada para refletir o estado <em>atual</em> da camada.</p>
+                </div>
+            </div>            
+            <hr>
+<!-- =================================================================== -->
+<!--               INÍCIO: SEÇÃO 5 - FAQ COM ACCORDION                   -->
+<!-- =================================================================== -->
+<h2 class="guide-container-title" id="secao5">5. Solução de Problemas (FAQ)</h2>
+
+<div class="accordion" id="faqAccordion">
+
+    <!-- Item 1: Campos Faltando -->
+    <div class="card">
+        <div class="card-header" id="headingOne">
+            <h2 class="mb-0">
+                <button class="btn btn-link btn-block text-left" type="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                    Aparece a mensagem "Campos Faltando" ao tentar exportar. O que fazer?
+                </button>
+            </h2>
+        </div>
+        <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#faqAccordion">
+            <div class="card-body">
+                <strong>Solução:</strong> O plugin valida se os campos essenciais (definidos pelo padrão ISO) estão preenchidos. Preencha todos os campos listados na mensagem de erro para poder continuar. Campos como Título, Resumo e Contato são obrigatórios para garantir a qualidade do metadado.
+            </div>
+        </div>
+    </div>
+
+    <!-- Item 2: Problemas de Login -->
+    <div class="card">
+        <div class="card-header" id="headingTwo">
+            <h2 class="mb-0">
+                <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                    Não consigo fazer login no Geohab.
+                </button>
+            </h2>
+        </div>
+        <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#faqAccordion">
+            <div class="card-body">
+                <strong>Solução:</strong> Este problema geralmente tem duas causas:<br>
+                <ol>
+                    <li><strong>Credenciais Incorretas:</strong> Verifique se seu usuário e senha estão corretos. Você pode usar uma configuração de autenticação salva no QGIS ou digitar manualmente.</li>
+                    <li><strong>Problema de Rede:</strong> Para se conectar ao Geohab, você precisa estar conectado a internet.</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <!-- Item 3: Permissão para Enviar -->
+    <div class="card">
+        <div class="card-header" id="headingThree">
+            <h2 class="mb-0">
+                <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                    Consigo fazer login, mas recebo um erro de "Acesso Negado" ou "Forbidden" ao exportar.
+                </button>
+            </h2>
+        </div>
+        <div id="collapseThree" class="collapse" aria-labelledby="headingThree" data-parent="#faqAccordion">
+            <div class="card-body">
+                <strong>Solução:</strong> Para publicar ou editar metadados no Geohab, seu usuário precisa ter, no mínimo, o papel de <strong>'Revisor'</strong>. Se você não tem essa permissão, entre em contato com o <b>Administrador local</b> do seu setor para solicitar o acesso.
+            </div>
+        </div>
+    </div>
+
+    <!-- Item 4: Problemas ao Salvar Localmente -->
+    <div class="card">
+        <div class="card-header" id="headingFour">
+            <h2 class="mb-0">
+                <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
+                    O botão "Continuar depois" não funciona ou dá erro.
+                </button>
+            </h2>
+        </div>
+        <div id="collapseFour" class="collapse" aria-labelledby="headingFour" data-parent="#faqAccordion">
+            <div class="card-body">
+                <strong>Solução:</strong> A função "Continuar depois" salva um arquivo de metadado (<kbd>.xml</kbd>) ao lado da sua camada. Isso requer que a camada esteja salva em um local onde você tenha permissão de escrita.<br>
+                <ul>
+                    <li><strong>Para camadas em arquivo (Shapefile, GeoPackage):</strong> Certifique-se de que a camada está salva em uma pasta no seu computador (e não é uma camada temporária).</li>
+                    <li><strong>Para camadas em Banco de Dados (PostgreSQL):</strong> A função salva o metadado em uma tabela específica <kbd>public.qgis_geometadata_plugin</kbd>. Verifique se seu usuário do banco tem permissão de escrita nessa tabela.</li>
+                    <li><strong>Para camadas GeoServiço (WFS) ou Outra fonte de banco de dados:</strong> Baixe e salve no seu computador.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Item 5: Adaptação ao Tema -->
+    <div class="card">
+        <div class="card-header" id="headingFive">
+            <h2 class="mb-0">
+                <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseFive" aria-expanded="false" aria-controls="collapseFive">
+                    O plugin não se adapta ao tema (claro/escuro) do meu QGIS.
+                </button>
+            </h2>
+        </div>
+        <div id="collapseFive" class="collapse" aria-labelledby="headingFive" data-parent="#faqAccordion">
+            <div class="card-body">
+                <strong>Solução:</strong> O plugin detecta o tema do QGIS na sua inicialização. Para que a mudança de cores tenha efeito, é necessário <strong>reiniciar o QGIS</strong> após alterar o tema em <i>Configurações > Opções > Geral</i>.
+            </div>
+        </div>
+    </div>
+
+    <!-- Item 6: Formato de Dados -->
+    <div class="card">
+        <div class="card-header" id="headingSix">
+            <h2 class="mb-0">
+                <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseSix" aria-expanded="false" aria-controls="collapseSix">
+                    Posso usar ";" para separar palavras-chave ou escrever "1:5.000" na escala?
+                </button>
+            </h2>
+        </div>
+        <div id="collapseSix" class="collapse" aria-labelledby="headingSix" data-parent="#faqAccordion">
+            <div class="card-body">
+                <strong>Solução: Sim!</strong> O plugin foi projetado para ser inteligente. Ele irá converter automaticamente separadores como <kbd>;</kbd>, <kbd>/</kbd> ou múltiplos espaços em vírgulas. Da mesma forma, ele extrairá o número correto de formatos de escala como <kbd>1:5.000</kbd> ou <kbd>25.000</kbd>, salvando apenas o denominador (<code>5000</code> ou <code>25000</code>).
+            </div>
+        </div>
+    </div>
+    <!-- Item 7: BBox Dinâmico -->
+    <div class="card">
+        <div class="card-header" id="headingSeven">
+            <h2 class="mb-0">
+                <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseSeven" aria-expanded="false" aria-controls="collapseSeven">
+                    Salvei um metadado, editei minha camada e, ao reabrir o plugin, os valores de Norte/Sul/Leste/Oeste mudaram. Isso é um erro?
+                </button>
+            </h2>
+        </div>
+        <div id="collapseSeven" class="collapse" aria-labelledby="headingSeven" data-parent="#faqAccordion">
+            <div class="card-body">
+                <strong>Solução: Não, isso é o comportamento correto e desejado!</strong> A Extensão Geográfica (Bounding Box) é uma propriedade da <strong>camada</strong>, não do metadado. O plugin foi projetado para sempre ler a extensão real da sua camada ativa no QGIS a cada vez que ele abre. Isso garante que o metadado que você exporta esteja sempre <strong>sincronizado com o estado mais atual</strong> dos seus dados geoespaciais, mesmo que a camada tenha sido editada.
+            </div>
+        </div>
+    </div>
+    <!-- Item 8: Lógica de Contatos -->
+    <div class="card">
+        <div class="card-header" id="headingEight">
+            <h2 class="mb-0">
+                <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseEight" aria-expanded="false" aria-controls="collapseEight">
+                    Por que o metadado final (XML) às vezes tem dois contatos e às vezes só um?
+                </button>
+            </h2>
+        </div>
+        <div id="collapseEight" class="collapse" aria-labelledby="headingEight" data-parent="#faqAccordion">
+            <div class="card-body">
+                <strong>Explicação:</strong> O padrão de metadados exige um contato "dono" do recurso, que para nossos dados é sempre a <strong>CDHU</strong>. O plugin adiciona este contato automaticamente. O segundo contato é o que você preenche no formulário (o "autor" ou "processador" dos dados, como DPDU, SSARU, etc.). <br><br>
+                Quando você seleciona o preset <strong>"CDHU"</strong> no formulário, o plugin é inteligente e percebe que os dois contatos seriam idênticos. Para evitar redundância, ele remove o segundo bloco, gerando um XML mais limpo com apenas um contato.
+            </div>
+        </div>
+    </div>    
+    <!-- Item 9: Perda de Dados -->
+    <div class="card">
+        <div class="card-header" id="headingNine">
+            <h2 class="mb-0">
+                <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseNine" aria-expanded="false" aria-controls="collapseNine">
+                    Cliquei no "X" para fechar e perdi tudo que preenchi. O plugin não avisa?
+                </button>
+            </h2>
+        </div>
+        <div id="collapseNine" class="collapse" aria-labelledby="headingNine" data-parent="#faqAccordion">
+            <div class="card-body">
+                <strong>Resposta: O plugin avisa!</strong> Se você fizer qualquer alteração no formulário, o plugin detecta e, ao tentar fechar, ele exibirá uma mensagem perguntando: <i>"Você tem alterações que não foram salvas. Deseja realmente sair?"</i>. Se você clicou "Sim" por engano, os dados serão perdidos.<br><br>
+                <strong>Dica:</strong> Se você precisa fazer uma pausa, use sempre o botão <img src="URL_DO_ICONE_SALVAR.png" class="inline-icon" alt="Ícone Continuar depois"> <strong>Continuar depois</strong>. Ele salva seu progresso e você pode fechar a janela com segurança.
+            </div>
+        </div>
+    </div>   
+    <!-- Item 10: Associar Camada -->
+    <div class="card">
+        <div class="card-header" id="headingTen">
+            <h2 class="mb-0">
+                <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseTen" aria-expanded="false" aria-controls="collapseTen">
+                    O que exatamente o botão "Associar Camada" faz?
+                </button>
+            </h2>
+        </div>
+        <div id="collapseTen" class="collapse" aria-labelledby="headingTen" data-parent="#faqAccordion">
+            <div class="card-body">
+                <strong>Explicação:</strong> Esta função cria um vínculo no metadado entre a sua camada de dados e os serviços web (WMS/WFS) correspondentes no GeoServer. Ao associar, você está dizendo: "os dados descritos neste metadado podem ser visualizados/baixados através destes links".<br><br>
+                Isso é crucial para o <strong>Geohab</strong>, pois permite que outros usuários e sistemas descubram não apenas que o dado existe, mas também <strong>como acessá-lo</strong> diretamente a partir do catálogo de metadados.<br><br>
+                Você pode associar apenas um ou ambos serviços dispobíveis (WMS e/ou WFS).
+            </div>
+        </div>
+    </div>    
+</div>
+
+<hr>
+<!-- =================================================================== -->
+<!--                 FIM: SEÇÃO 5 - FAQ COM ACCORDION                    -->
+<!-- =================================================================== -->
+<hr>
+            <!-- Seção 6-->
+            <h2 class="guide-container-title" id="secao6">6. Suporte</h2>
+            <p>Em caso de dúvidas, erros ou sugestões, por favor, abra um <span class="info-badge" data-toggle="tooltip" title="Clique aqui para abrir um chamado"><a href="https://cda.cdhu.sp.gov.br/front/ticket.php" target="_blank" style="text-decoration: none; color: red;">CDA</a></span></p>
+
+        </div>
+    </div>
+    <!-- =================================================================== -->
+    <!--                       FIM: MANUAL DO PLUGIN                         -->
+    <!-- =================================================================== -->
+
+    <!-- ======================================================= -->
+    <!--     SCRIPTS ESSENCIAIS (jQuery, Popper, Bootstrap)      -->
+    <!-- ======================================================= -->
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.min.js"></script>
+    
+<script>
+$(function() {
+
+console.log("Página e jQuery prontos. Inicializando componentes...");
+
+// INICIALIZAÇÃO DE COMPONENTES BOOTSTRAP (MODAL, TOOLTIP, POPOVER)
+$('[data-toggle="popover"]').popover();
+$('[data-toggle="tooltip"]').tooltip();
+
+// Lógica para fechar o popover ao clicar fora
+$('body').on('click', function(e) {
+    $('[data-toggle="popover"]').each(function() {
+        if (!$(this).is(e.target) && $(this).has(e.target).length === 0 && $('.popover').has(e.target).length === 0) {
+            $(this).popover('hide');
+        }
+    });
+});
+
+// INICIALIZAÇÃO DE COMPONENTES INTERATIVOS (Modal)
+document.querySelectorAll('.image-modal-wrapper').forEach(wrapper => {
+    const triggerImg = wrapper.querySelector('.modal-trigger-img');
+    const modal = wrapper.querySelector('.image-modal-popup');
+    if (triggerImg && modal) {
+        const modalDisplayImg = modal.querySelector('.modal-display-img');
+        const modalCaptionText = modal.querySelector('.modal-caption-text');
+        const closeButton = modal.querySelector('.custom-close');
+
+        triggerImg.addEventListener('click', function() {
+            modal.style.display = "block";
+            if (modalDisplayImg) modalDisplayImg.src = this.src;
+            if (modalCaptionText) modalCaptionText.innerHTML = this.alt;
+        });
+        if (closeButton) {
+            closeButton.addEventListener('click', () => modal.style.display = "none");
+        }
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) modal.style.display = "none";
+        });
+    }
+});
+
+document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') {
+        document.querySelectorAll('.image-modal-popup[style*="display: block"]').forEach(m => m.style.display = "none");
+    }
+});
+
+    // Seleciona os elementos da Navbar
+    const burgerMenu = document.getElementById('burger-menu');
+    const navLinks = document.querySelector('.nav-links');
+    const navItems = document.querySelectorAll('.nav-links a');
+
+    // Função para fechar o menu
+    function closeMenu() {
+        navLinks.classList.remove('active');
+        burgerMenu.classList.remove('active');
+    }
+
+    // Abre/Fecha o menu ao clicar no ícone do hambúrguer
+    burgerMenu.addEventListener('click', (e) => {
+        e.stopPropagation(); // Evita que o clique no hambúrguer feche o menu imediatamente
+        navLinks.classList.toggle('active');
+        burgerMenu.classList.toggle('active');
+    });
+
+    // Fecha o menu ao clicar em um dos links
+    navItems.forEach(item => {
+        item.addEventListener('click', closeMenu);
+    });
+
+    // Fecha o menu ao clicar em qualquer lugar fora dele
+    document.addEventListener('click', (e) => {
+        // Verifica se o menu está aberto e se o clique foi fora do menu e fora do botão
+        const isClickInsideMenu = navLinks.contains(e.target);
+        const isClickOnBurger = burgerMenu.contains(e.target);
+        
+        if (navLinks.classList.contains('active') && !isClickInsideMenu && !isClickOnBurger) {
+            closeMenu();
+        }
+    });
+
+    // Lógica de rolagem suave (seu código existente, sem alterações)
+    document.body.addEventListener('click', function(e) {
+        const link = e.target.closest('a.js-scroll-link');
+        // ... (resto do seu código de rolagem suave) ...
+    });
+
+// OUVINTE DE CLIQUE ÚNICO E GLOBAL (ROLAGEM SUAVE)
+document.body.addEventListener('click', function(e) {
+    // 1. Encontra o link clicado, se ele for um link de rolagem suave
+    const link = e.target.closest('a.js-scroll-link');
+    if (!link) {
+        return;
+    }
+    
+    e.preventDefault();
+    
+    const anchorTargetId = link.getAttribute('href');
+    const anchorTarget = document.querySelector(anchorTargetId);
+
+    if (anchorTarget) {
+        // 3. Pega a altura da sua barra de navegação fixa
+        const navbar = document.querySelector('.navbar.fixed-top');
+        const navbarHeight = navbar ? navbar.offsetHeight : 0;
+        
+        // 4. Calcula a posição do topo do elemento alvo e subtrai a altura da navbar
+        const targetPosition = anchorTarget.getBoundingClientRect().top + window.pageYOffset - navbarHeight;
+
+        // 5. Adiciona um pequeno respiro extra
+        const offsetPosition = targetPosition - 20; // 20px de respiro
+
+        // 6. Executa a rolagem suave para a posição calculada
+        window.scrollTo({
+            top: offsetPosition,
+            behavior: 'smooth'
+        });
+    }
+});
+
+
+console.warn("A lógica de progresso do curso e dos módulos está desativada");
+
+});
+</script>     
+</body>
+
+</html>
