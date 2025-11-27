@@ -1,24 +1,45 @@
 [general]
-name=GeoMetadata|Geohab Plugin
-qgisMinimumVersion=3.10
+name=GeoMetadata | Geohab Plugin
+qgisMinimumVersion=3.16
 qgisMaximumVersion=3.99
-description=Plugin para criação e publicação de metadados no padrão MGB 2.0, com integração direta ao Geoportal Geohab|CDHU.
-about=Este plugin simplifica o fluxo de trabalho de metadados, permitindo o preenchimento de um formulário, salvamento local e publicação direta no catálogo (GeoNetwork) do Geohab.
-version=0.0.9
+description=Plugin profissional para criação, gerenciamento e publicação de metadados no padrão MGB 2.0, com integração direta ao Geoportal Geohab da CDHU.
+about=Este plugin oferece um fluxo de trabalho completo e robusto para metadados, desde a criação em um formulário inteligente até a publicação direta no catálogo (GeoNetwork) do Geohab, garantindo qualidade, consistência e facilidade de uso.
+version=1.0.0
 author=Matheus Aviz | CDHU
 email=mdaviz@apoiocdhu.sp.gov.br
 tracker=https://github.com/maviz991/qgis-geometadata-plugin/issues
 repository=https://github.com/maviz991/qgis-geometadata-plugin
+[ui]
 icon=icon.png
 category=Web
-tags=metadata, mgb, geonetwork, geohab, cdhu, catalog, xml, qgis, plugin, publishing
-changelog=0.0.9 Pré-release (2025-09-10)
-    • Lançamento inicial do plugin GeoMetadata|Geohab Plugin
-    • Criação e edição de metadados no padrão MGB 2.0
-    • Preenchimento automático de título e BBOX
-    • Persistência de dados com a função "Salvar" (arquivos sidecar)
-    • Exportação para arquivo XML
-    • Publicação direta no Geoportal Geohab|CDHU com autenticação
+tags=metadata, mgb, geonetwork, geohab, cdhu, catalog, xml, qgis, plugin, publishing, iso19115
+[releases]
+changelog=
+    # Versão 1.0.0 (Data de Lançamento) - Release de Produção
+    ## Melhorias de Usabilidade e Qualidade de Vida (UX)
+    - **Login Persistente:** O estado de login agora persiste durante toda a sessão do QGIS, eliminando a necessidade de autenticações repetidas.
+    - **Proteção Contra Perda de Dados:** Um aviso de confirmação é exibido ao tentar fechar a janela com alterações não salvas.
+    - **Busca de Camadas Aprimorada:** A janela "Associar Camada" agora possui um campo de busca com autocompletar, facilitando a localização de camadas no GeoServer.
+    - **Botão "Hoje":** Adicionado um botão de atalho para preencher a data do metadado com a data e hora atuais.
+    - **Link para o Manual:** Adicionado um link de acesso rápido ao manual do usuário na interface principal.
+    ## Robustez e Qualidade dos Dados
+    - **Validação de Campos Obrigatórios:** O plugin agora impede a exportação de metadados incompletos, informando ao usuário quais campos essenciais precisam ser preenchidos.
+    - **Limpeza Inteligente de Dados:** Os campos de "Palavras-chave" e "Escala" agora normalizam a entrada do usuário, aceitando diferentes formatos (ex: ";" como separador ou "1:5.000" para escala).
+    - **BBox Dinâmico:** A Extensão Geográfica (Bounding Box) é sempre atualizada com base na camada ativa no QGIS, garantindo que o metadado reflita o estado real dos dados.
+    - **Ciclo de Vida do UUID:** Melhorada a lógica de criação e atualização de metadados no Geohab para garantir a consistência do UUID do registro.
+    - **Prevenção de Contatos Duplicados:** O gerador de XML agora evita a duplicação de informações de contato quando o preset "CDHU" é selecionado.
+    ## Manutenção e Configuração
+    - **Contatos Externalizados:** Os presets de contato foram movidos para um arquivo `contacts.json`, permitindo fácil atualização sem a necessidade de editar o código do plugin.
+    ## Interface (UI)
+    - **Tema Adaptativo:** A interface agora detecta automaticamente o tema do QGIS (claro ou escuro) e ajusta suas cores para uma integração visual perfeita.
+    - **Melhorias de Layout:** Ajustes gerais na interface para melhor responsividade e consistência visual.
+    # Versão 0.0.9 (Data) - Pré-release
+    - Lançamento inicial do plugin
+    - Criação e edição de metadados no padrão MGB 2.0
+    - Preenchimento automático de título e BBOX
+    - Persistência com a função "Salvar" (arquivos sidecar e banco de dados)
+    - Exportação para arquivo XML
+    - Publicação direta no Geoportal Geohab com autenticação
 experimental=False
 deprecated=False
 server=False
