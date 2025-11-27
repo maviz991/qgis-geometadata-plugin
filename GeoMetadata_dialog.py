@@ -28,7 +28,8 @@ except ImportError:
 import requests
 from qgis.PyQt import uic, QtWidgets
 from qgis.PyQt.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QWidget, QMessageBox
-from qgis.PyQt.QtCore import Qt, QDateTime, QSize
+from qgis.PyQt.QtCore import Qt, QDateTime, QSize, QUrl 
+from qgis.PyQt.QtGui import QDesktopServices, QCursor
 from qgis.PyQt.QtGui import QPixmap, QIcon
 from qgis.PyQt.QtWidgets import QSizePolicy
 from qgis.core import (
@@ -80,6 +81,17 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self._setup_connections_and_logic()
         self.setStyleSheet(STYLE_SHEET)
 
+        # --- CONFIGURAÇÃO DO LINK DE SUPORTE ---
+        # 1. Define o texto como Rich Text para permitir links HTML
+        self.ui.label_support_link.setTextFormat(Qt.RichText)
+        self.ui.label_support_link.setText(
+            '<a href="https://stor.cdhu.sp.gov.br/geo/publico/html/guide_user.html" style="color: #888; text-decoration: none;">'
+            'Precisa de ajuda? Acesse o Manual do Usuário'
+            '</a>'
+        )
+        # 2. Permite que o QLabel interaja com os links
+        self.ui.label_support_link.setOpenExternalLinks(True)
+        self.ui.label_support_link.setCursor(QCursor(Qt.PointingHandCursor))
         
     
     # --- Métodos de Construção e Configuração da UI (Estrutura) ---
