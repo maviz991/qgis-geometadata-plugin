@@ -1,6 +1,6 @@
 # qgis-geometadata-plugin
 
- # GeoMetadata - Plugin de Metadados para QGIS
+ # GeoMetadata | Geohab Plugin - Plugin de Metadados para QGIS
 
 ![Logo do Plugin](icon.png)
 
