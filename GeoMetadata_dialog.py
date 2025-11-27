@@ -87,7 +87,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         """Configura as propriedades da janela principal."""
         self.setWindowIcon(QIcon(":/plugins/geometadata/icon.png"))
         self.setObjectName("GeoMetadataDialog")
-        self.setWindowTitle("GeoMetadata | CDHU")
+        self.setWindowTitle("GeoMetadata | Geohab Plugin")
         self.setMinimumSize(1250, 620)
         #self.setMaximumSize(1640, 800)
         #self.setStyleSheet(STYLE_SHEET)
@@ -874,9 +874,9 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             
         if not is_automatic_resave:
             question_text = (f"<p style='font-size:14px; font-weight: bold;'>Você deseja realmente salvar?</p>"
-                             f"<p><b>⚠ As informações serão salvas ou atualizadas em:</b><br>"
+                             f"<p><b>⚠ As informações serão atualizadas na Tabela:</b><br>"
                              f"public.qgis_geometadata_plugin</p>"
-                             f"<p><b>Associado a camada:</b><br>"
+                             f"<p><b>Associado à camada:</b><br>"
                              f"{conn_details['f_table_schema']}.{conn_details['f_table_name']}</p>"
                              f"<p>No banco de dados: <b>{conn_details['f_table_catalog']}</b>.</p>")
             reply = QtWidgets.QMessageBox.question(self, 'Confirmar Salvamento no Banco de Dados', 
@@ -937,9 +937,9 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             if not is_automatic_resave:
                 self.iface.messageBar().pushMessage("Sucesso", f"Metadado salvo para a camada '{layer.name()}'.", level=Qgis.Success, duration=5)
                 confirm_text = (f"<p style='font-size:14px; font-weight: bold;'>Metadado Salvo no Banco de dados!</p>"
-                    f"<p><b>Salvo ou atualizado em:</b><br>"
+                    f"<p><b>Atualizado na Tabela:</b><br>"
                     f"public.qgis_geometadata_plugin</p>"
-                    f"<p><b>Associado a camada:</b><br>"
+                    f"<p><b>Associado à camada:</b><br>"
                     f"{conn_details['f_table_schema']}.{conn_details['f_table_name']}</p>"
                     f"<p>No banco de dados: <b>{conn_details['f_table_catalog']}</b>.</p>")
                 self.show_message(f"Sucesso!", confirm_text)
@@ -1034,7 +1034,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         if not is_automatic_resave:
             question_text = (f"<p style='font-size:14px; font-weight: bold;'>Você deseja realmente salvar?</p>"
                             f"<p>Ao salvar, você irá sobrescrever os dados salvos anteriormente, se houver.<br><br>"
-                            f"<b>⚠️ Irá modificar o arquivo:</b><br>{metadata_path}</p>")
+                            f"<b>⚠️ Irá modificar o arquivo local:</b><br>{metadata_path}</p>")
 
             reply = QtWidgets.QMessageBox.question(self, 
                                                 'Confirmar Salvamento', 
