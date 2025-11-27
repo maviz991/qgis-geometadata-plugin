@@ -52,7 +52,8 @@ def parse_xml_to_dict(source, is_string=False):
         # <<< NOVA SEÇÃO: Extrai o UUID do próprio metadado para permitir atualizações >>>
         data['metadata_uuid'] = get_element_text(root, './gmd:fileIdentifier/gco:CharacterString', ns)
         if data.get('metadata_uuid'):
-            print(f"UUID oficial do metadado encontrado no arquivo XML: {data['metadata_uuid']}")
+            pass
+            #print(f"UUID oficial do metadado encontrado no arquivo XML: {data['metadata_uuid']}")
         
         # --- PREENCHIMENTO DAS INFORMAÇÕES DE IDENTIFICAÇÃO ---
         id_info = root.find('.//gmd:identificationInfo/gmd:MD_DataIdentification', namespaces=ns)

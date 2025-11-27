@@ -69,10 +69,10 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         luminance = (0.299 * base_color.red() + 0.587 * base_color.green() + 0.114 * base_color.blue())
         if luminance < 128:
             self.setProperty("theme", "dark")
-            print("GeoMetadata: Tema escuro detectado. Aplicando estilos escuros.")
+            #print("GeoMetadata: Tema escuro detectado. Aplicando estilos escuros.")
         else:
             self.setProperty("theme", "light") # Opcional, para clareza
-            print("GeoMetadata: Tema claro detectado.")
+            #print("GeoMetadata: Tema claro detectado.")
 
         # --- Ordem de Construção da UI e Lógica ---
         self._setup_main_window()
@@ -181,7 +181,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         container = QtWidgets.QGroupBox("Camadas Associadas")
         container_layout = QtWidgets.QVBoxLayout(container)
         container.setObjectName("DistributionPanel")
-        print(f"DEBUG: Criado QGroupBox com objectName='{container.objectName()}'")
+        #print(f"DEBUG: Criado QGroupBox com objectName='{container.objectName()}'")
         
         # 2. Slot de exibição para WMS
         self.wms_display_widget = self._create_badge_placeholder("WMS")
@@ -1017,7 +1017,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         """
         Salva os metadados como um arquivo XML sidecar, com UX aprimorada.
         """
-
+        # layer_name = self.ui.lineEdit_title.text()
         metadata_path = self.get_sidecar_metadata_path()
         if not metadata_path:
             # Se for um resave automático, apenas sai silenciosamente.
@@ -1030,12 +1030,13 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             self.show_message("Não é possível salvar", f"<p style='font-size:15px; font-weight: bold;'>É necessário exportar a camada!</p>A camada {layer_name} não esta salva em um arquivo local ou no PostgreSQL.", icon=QtWidgets.QMessageBox.Warning)
             return
 
+        layer_name = layer.name() 
         # --- ETAPA 1: Confirmação do Usuário (apenas se não for automático) ---
         if not is_automatic_resave:
             question_text = (f"<p style='font-size:14px; font-weight: bold;'>Você deseja realmente salvar?</p>"
-                            f"<p>Ao salvar, você irá sobrescrever os dados salvos anteriormente, se houver.<br><br>"
-                            f"<b>⚠️ Irá modificar o arquivo local:</b><br>{metadata_path}</p>")
-
+                             f"<p><b>⚠ As informações serão atualizadas no Arquivo Local:</b><br>"
+                             f"{metadata_path}</p>"
+                             f"<p><b>Associado à camada:</b><br>{layer_name}</p>")
             reply = QtWidgets.QMessageBox.question(self, 
                                                 'Confirmar Salvamento', 
                                                 question_text, 
@@ -1055,7 +1056,6 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             with open(metadata_path, 'w', encoding='utf-8') as f:
                 f.write(xml_content)
             
-            # Mostra a mensagem de sucesso rica apenas se foi uma ação direta do usuário
             if not is_automatic_resave:
                 metadata_uri = pathlib.Path(metadata_path).as_uri()
                 
@@ -1170,7 +1170,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
 
             with open(contacts_path, 'r', encoding='utf-8') as f:
                 self.contatos_predefinidos = json.load(f)
-            print("Arquivo de contatos carregado com sucesso.")
+            #print("Arquivo de contatos carregado com sucesso.")
 
         except FileNotFoundError:
             QMessageBox.warning(self, "Arquivo de Configuração Faltando",
@@ -1238,14 +1238,14 @@ class GeoMetadataDialog(QtWidgets.QDialog):
                 data_dict.get('contact_email') == preset_data.get('contact_email')):
                 
                 found_preset_key = preset_key
-                print(f"Dados de contato carregados correspondem ao preset: '{found_preset_key}'")
+                #print(f"Dados de contato carregados correspondem ao preset: '{found_preset_key}'")
                 break
 
         # Define a seleção do ComboBox de presets com base no que foi encontrado
         preset_to_set = found_preset_key if found_preset_key else 'nenhum'
         self.set_combobox_by_data(self.ui.comboBox_contact_presets, preset_to_set)
                 
-        print("Formulário preenchido com dados de um Metadado existente.")
+        #print("Formulário preenchido com dados de um Metadado existente.")
 
     def show_message(self, title, text, icon=QtWidgets.QMessageBox.Information):
         msg_box = QtWidgets.QMessageBox(self)
