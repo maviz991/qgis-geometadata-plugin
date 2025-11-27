@@ -1,5 +1,5 @@
 [general]
-name=GeoMetadata|CDHU
+name=GeoMetadata|Geohab Plugin
 qgisMinimumVersion=3.10
 qgisMaximumVersion=3.99
 description=Plugin para criação e publicação de metadados no padrão MGB 2.0, com integração direta ao Geoportal Geohab|CDHU.
@@ -13,7 +13,7 @@ icon=icon.png
 category=Web
 tags=metadata, mgb, geonetwork, geohab, cdhu, catalog, xml, qgis, plugin, publishing
 changelog=0.0.9 Pré-release (2025-09-10)
-    • Lançamento inicial do plugin GeoMetadata|CDHU
+    • Lançamento inicial do plugin GeoMetadata|Geohab Plugin
     • Criação e edição de metadados no padrão MGB 2.0
     • Preenchimento automático de título e BBOX
     • Persistência de dados com a função "Salvar" (arquivos sidecar)
