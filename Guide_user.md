@@ -1,21 +1,13 @@
-Excelente ideia! Um bom manual do usuário é o que transforma um software funcional em uma ferramenta que as pessoas realmente adotam e usam com confiança. Ele economiza tempo de suporte e capacita a equipe.
-
-Preparei um manual completo para o plugin **GeoMetadata**. Ele foi escrito pensando em um usuário de QGIS da CDHU, que não é um desenvolvedor, mas entende o contexto de geoprocessamento e metadados.
-
-Você pode copiar este texto e salvá-lo como um PDF ou em uma página da intranet da CDHU.
-
----
-
 ## **Manual do Usuário – Plugin GeoMetadata para QGIS**
 
-**Versão:** 1.0  
-**Data:** Outubro de 2023
+**Versão:** 1.0.1  
+**Data:** 27 Nov de 2025
 
 ### **1. Introdução**
 
-Bem-vindo ao **GeoMetadata**, o plugin oficial da CDHU para a criação e gerenciamento de metadados geoespaciais.
+Bem-vindo ao **GeoMetadata | Geohab Plugin**, o plugin oficial da CDHU para a criação e gerenciamento de metadados geoespaciais.
 
-Esta ferramenta foi desenvolvida para simplificar, padronizar e centralizar a documentação de nossas camadas, seguindo o padrão ISO 19115 e garantindo a integração perfeita com o nosso catálogo de dados, o **Geohab (GeoNetwork)**.
+Esta ferramenta foi desenvolvida para simplificar, padronizar e centralizar a documentação de nossas camadas, seguindo o padrão ISO 19115 e garantindo a integração perfeita com o nosso catálogo de dados do **Geohab**.
 
 Com este plugin, você pode:
 *   Criar metadados ricos e padronizados diretamente no QGIS.
@@ -64,7 +56,7 @@ Mostra quais serviços (WMS/WFS) do GeoServer foram vinculados a este metadado. 
 
 #### **Tarefa 1: Criar um Novo Metadado**
 
-1.  **Carregue a Camada:** Abra o QGIS e adicione a camada para a qual você deseja criar o metadado. Certifique-se de que ela esteja **selecionada** no Painel de Camadas.
+1.  **Carregue a Camada:** Abra o QGIS e adicione a camada para a qual você deseja criar o metadado (Local ou do banco de dados PostgreSQL). Certifique-se de que ela esteja **selecionada** no Painel de Camadas.
 2.  **Abra o Plugin:** Clique no ícone do GeoMetadata.
 3.  **Verifique os Campos Automáticos:** Note que o **Título** (baseado no nome da camada) e a **Extensão Geográfica** (Bounding Box) já foram preenchidos para você.
 4.  **Faça Login:** Clique em **ENTRAR** no canto superior direito. Use uma configuração salva do QGIS ou digite seu usuário e senha da rede. O login é necessário para associar camadas e exportar para o Geohab.
@@ -86,7 +78,7 @@ Mostra quais serviços (WMS/WFS) do GeoServer foram vinculados a este metadado. 
 
 1.  **Selecione a Camada:** No QGIS, selecione a camada cujo metadado você já salvou anteriormente (seja localmente ou no banco de dados).
 2.  **Abra o Plugin:** Clique no ícone do GeoMetadata.
-3.  **Mágica!** O plugin detectará o metadado salvo e preencherá todos os campos do formulário automaticamente.
+3.  **Carregamento:** O plugin detectará o metadado salvo e preencherá todos os campos do formulário automaticamente.
 4.  **Edite e Salve:** Faça as alterações desejadas e use os botões **Continuar depois** ou **Exportar para Geohab** para salvar suas modificações.
     *   **Importante:** Note que a **Extensão Geográfica** será sempre atualizada para refletir o estado *atual* da camada, mesmo que você tenha carregado um metadado antigo. Isso garante que a informação esteja sempre correta.
 
@@ -110,4 +102,4 @@ Mostra quais serviços (WMS/WFS) do GeoServer foram vinculados a este metadado. 
 
 ### **6. Suporte**
 
-Em caso de dúvidas, erros ou sugestões, por favor, entre em contato com a equipe de Geoprocessamento da CDHU.
+Em caso de dúvidas, erros ou sugestões, por favor, abra um CDA.
