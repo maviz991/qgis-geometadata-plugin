@@ -1,38 +1,45 @@
 [general]
-name=GeoMetadata|Geohab Plugin
+name=Geohab Plugin | GeoMetadata
 qgisMinimumVersion=3.16
 qgisMaximumVersion=3.99
-description=Plugin profissional para criação, gerenciamento e publicação de metadados no padrão MGB 2.0, com integração direta ao Geoportal Geohab|CDHU.
+description=Plugin para criação, gerenciamento e publicação de metadados no padrão MGB 2.0, com integração direta ao Geoportal da CDHU - Geohab.
 about=Este plugin oferece um fluxo de trabalho completo e robusto para metadados, desde a criação em um formulário inteligente até a publicação direta no catálogo (GeoNetwork) do Geohab, garantindo qualidade, consistência e facilidade de uso.
-version=1.0.0
+version=1.0.1
 author=Matheus Aviz | CDHU
 email=mdaviz@apoiocdhu.sp.gov.br
-tracker=https://github.com/maviz91/qgis-geometadata-plugin/issues
+tracker=https://github.com/maviz991/qgis-geometadata-plugin/issues
 repository=https://github.com/maviz91/qgis-geometadata-plugin
 icon=icon.png
 category=Web
 tags=metadata, mgb, geonetwork, geohab, cdhu, catalog, xml, qgis, plugin, publishing, iso19115
-changelog=1.0.0 (Data de Lançamento) 
-    Release de Produção; 
-    UX: Login persistente na sessão QGIS; 
-    Proteção contra perda de dados ao fechar; 
-    Busca de camadas aprimorada com autocompletar; 
-    Botão "Hoje" para data do metadado.
+changelog=Release de Produção (2025-11-28) - <a href="https://stor.cdhu.sp.gov.br/geo/publico/html/guide_user.html">Manual do usuário</a>
+    
+    <b>FUNÇÕES:</b>
+    1. Criação e edição de metadados MGB 2.0;
+    2. Preenchimento automático de título e BBOX;
+    3. Persistência de dados (sidecar/banco de dados); 
+    4. Exportação para XML;
+    5. Continuar depois - Salve metadado associado a uma camada;
+    6. Asssociação de GeoServiços WMS e WFS;
+    5. Publicação direta no Geohab.
 
-    ROBUSTEZ: Validação de campos obrigatórios; 
-    Limpeza inteligente de dados (palavras-chave, escala);
-    BBox dinâmico sempre atualizado pela camada;
-    Consistência de UUID na criação/atualização;
-    Prevenção de contatos duplicados no XML. 
+    <b>UX:</b> 
+    • Login persistente na sessão QGIS; 
+    • Proteção contra perda de dados ao fechar; 
+    • Busca de camadas aprimorada com autocompletar; 
+    • Botão "Hoje" para data do metadado.
+
+    <b>ROBUSTEZ:</b> 
+    • Validação de campos obrigatórios; 
+    • Limpeza inteligente de dados (palavras-chave, escala);
+    • BBox dinâmico sempre atualizado pela camada;
+    • Consistência de UUID na criação/atualização;
+    • Prevenção de contatos duplicados no XML. 
         
-    INTERFACE: Tema adaptativo (claro/escuro) automático;
-    Link para o manual do usuário. | 0.0.9 (Data) 
-    Pré-release: Lançamento inicial;
-    Criação e edição de metadados MGB 2.0;
-    Preenchimento automático de título e BBOX;
-    Persistência de dados (sidecar/banco de dados); 
-    Exportação para XML; 
-    Publicação direta no Geohab.
+    <b>INTERFACE:</b> 
+    • Tema adaptativo (claro/escuro) automático;
+    • Link para o manual do usuário.
+
 experimental=False
 deprecated=False
 server=False

@@ -19,25 +19,164 @@
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="10" column="4">
-    <widget class="QLineEdit" name="lineEdit_northBoundLatitude">
+   <item row="13" column="1">
+    <widget class="QComboBox" name="comboBox_hierarchyLevel">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <property name="cursor">
-      <cursorShape>BlankCursor</cursorShape>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-     <property name="readOnly">
-      <bool>true</bool>
+     <property name="toolTip">
+      <string>
+      • Conjunto de dados – Coleção organizada de dados estruturados, como um shapefile, uma imagem de satélite, uma tabela ou outras unidades de informação agregada.
+      </string>
      </property>
      <property name="placeholderText">
-      <string/>
+      <string>Selecione o tipo da camada</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="1">
+    <widget class="QDateTimeEdit" name="dateTimeEdit_date_creation">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="toolTip">
+      <string>Data e hora de criação da camada</string>
+     </property>
+     <property name="dateTime">
+      <datetime>
+       <hour>12</hour>
+       <minute>0</minute>
+       <second>0</second>
+       <year>2025</year>
+       <month>10</month>
+       <day>8</day>
+      </datetime>
+     </property>
+     <property name="date">
+      <date>
+       <year>2025</year>
+       <month>10</month>
+       <day>8</day>
+      </date>
+     </property>
+     <property name="minimumDateTime">
+      <datetime>
+       <hour>0</hour>
+       <minute>0</minute>
+       <second>0</second>
+       <year>1800</year>
+       <month>9</month>
+       <day>14</day>
+      </datetime>
+     </property>
+     <property name="displayFormat">
+      <string>dd/MM/yyyy HH:mm:ss</string>
+     </property>
+     <property name="calendarPopup">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="2">
+    <widget class="QLineEdit" name="lineEdit_contact_postalCode">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="placeholderText">
+      <string>01014-930</string>
+     </property>
+    </widget>
+   </item>
+   <item row="10" column="1">
+    <widget class="QComboBox" name="comboBox_LanguageCode">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="toolTip">
+      <string>Selecione o idioma da camada</string>
+     </property>
+     <property name="placeholderText">
+      <string>Selecione o idioma</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="1">
+    <widget class="QLabel" name="label_label_label_label_contact_individualName_2">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string>Nome/Sigla</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="1">
+    <widget class="QLineEdit" name="lineEdit_contact_individualName">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="placeholderText">
+      <string>CDHU</string>
+     </property>
+    </widget>
+   </item>
+   <item row="13" column="4">
+    <widget class="QLabel" name="label_southBoundLatitude">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string>Sul</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignHCenter|Qt::AlignTop</set>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="0">
+    <widget class="QLabel" name="label_MD_Keywords_5">
+     <property name="text">
+      <string>Palavra-chave</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="15" column="1">
+    <widget class="QLineEdit" name="lineEdit_thumbnail_url">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="placeholderText">
+      <string>https://stor.cdhu.sp.gov.br/public/img.png</string>
      </property>
     </widget>
    </item>
@@ -60,24 +199,40 @@
      </property>
     </widget>
    </item>
-   <item row="5" column="2">
-    <widget class="QLabel" name="label_label_label_label_contact_individualName_12">
+   <item row="1" column="4">
+    <widget class="QLabel" name="label_status_codeListValue">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
      <property name="text">
-      <string>CEP</string>
+      <string>Status</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="4">
+    <widget class="QLabel" name="label_label_label_label_contact_individualName_9">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string>País</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
      </property>
     </widget>
    </item>
-   <item row="10" column="1">
-    <widget class="QComboBox" name="comboBox_LanguageCode">
+   <item row="11" column="1">
+    <widget class="QComboBox" name="comboBox_characterSet">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
        <horstretch>0</horstretch>
@@ -85,10 +240,533 @@
       </sizepolicy>
      </property>
      <property name="toolTip">
-      <string>Selecione o idioma da camada</string>
+      <string>Mandatório em UTF-8</string>
      </property>
      <property name="placeholderText">
-      <string>Selecione o idioma</string>
+      <string>Selecione o Encoding</string>
+     </property>
+    </widget>
+   </item>
+   <item row="9" column="0">
+    <widget class="QLabel" name="label_spatialResolution_denominator">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string>Escala</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="3">
+    <widget class="QLabel" name="label_label_label_label_contact_individualName_10">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string>Email</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="3">
+    <widget class="QLabel" name="label_label_label_label_contact_individualName_5">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string>Telefone</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="3">
+    <widget class="QLineEdit" name="lineEdit_contact_email">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="placeholderText">
+      <string>cdhu@cdhu.sp.gov.br</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QLabel" name="label_label_label_date_creation">
+     <property name="text">
+      <string>Data de Criação</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="0">
+    <widget class="QLabel" name="label_label_label_label_contact_individualName_7">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string>Cidade</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="5">
+    <widget class="QLabel" name="label_label_label_label_contact_individualName_6">
+     <property name="text">
+      <string>Rua, nº, complemento</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="4">
+    <widget class="QLineEdit" name="lineEdit_contact_country">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="placeholderText">
+      <string>Brasil</string>
+     </property>
+    </widget>
+   </item>
+   <item row="9" column="1">
+    <widget class="QLineEdit" name="lineEdit_textEdit_spatialResolution_denominator">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="contextMenuPolicy">
+      <enum>Qt::DefaultContextMenu</enum>
+     </property>
+     <property name="toolTip">
+      <string>Escala da camada ex: 1:5000 → 5000</string>
+     </property>
+     <property name="echoMode">
+      <enum>QLineEdit::Normal</enum>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+     </property>
+     <property name="placeholderText">
+      <string>5000</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="3">
+    <widget class="QSpinBox" name="spinBox_edition">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="toolTip">
+      <string>Selecione a edição da camada</string>
+     </property>
+     <property name="autoFillBackground">
+      <bool>false</bool>
+     </property>
+     <property name="wrapping">
+      <bool>false</bool>
+     </property>
+     <property name="frame">
+      <bool>true</bool>
+     </property>
+     <property name="readOnly">
+      <bool>false</bool>
+     </property>
+     <property name="showGroupSeparator" stdset="0">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="4">
+    <widget class="QLabel" name="label_label_label_label_contact_individualName_4">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string>Cargo| Posição</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="3">
+    <widget class="QLineEdit" name="lineEdit_contact_phone">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="placeholderText">
+      <string>+55 11 0000-0000</string>
+     </property>
+    </widget>
+   </item>
+   <item row="12" column="4">
+    <widget class="QLineEdit" name="lineEdit_southBoundLatitude">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="cursor">
+      <cursorShape>BlankCursor</cursorShape>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+     <property name="readOnly">
+      <bool>true</bool>
+     </property>
+     <property name="placeholderText">
+      <string/>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="5">
+    <widget class="QComboBox" name="comboBox_contact_role">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Ignored" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="toolTip">
+      <string>
+      • Dono – Entidade que detém os direitos legais e de propriedade sobre o recurso.
+      • Autor – Entidade responsável pela criação original do recurso.
+      • Organizador – Entidade que estruturou, compilou ou preparou o recurso de forma sistemática.
+      • Distribuidor – Entidade encarregada de disponibilizar o recurso aos usuários finais.
+      • Depositário – Entidade responsável pela guarda, manutenção, preservação e arquivamento do recurso.
+      • Fornecedor do recurso – Entidade que fornece ou disponibiliza o recurso para uso, independentemente de tê-lo criado.
+      • Investigador principal – Entidade que liderou a pesquisa responsável pela geração do recurso.
+      • Originador – Entidade que desenvolveu ou produziu o recurso; equivalente a “autor” em muitos contextos.
+      • Ponto de contato – Entidade a ser contatada para informações adicionais, suporte ou esclarecimentos sobre o recurso.
+      • Publicador – Entidade que publica e torna o recurso acessível ao público.
+      • Utilizador – Entidade que faz uso do recurso em suas operações, análises ou atividades.
+      • Processador – Entidade que realizou atividades de processamento, transformação, análise ou tratamento dos dados.
+      </string>
+     </property>
+     <property name="placeholderText">
+      <string>Selecione</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="5">
+    <widget class="QLineEdit" name="lineEdit_contact_deliveryPoint">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="placeholderText">
+      <string>Rua Boa Vista, 170, Sé</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="0">
+    <widget class="QLabel" name="label_title">
+     <property name="text">
+      <string>Título</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="11" column="3">
+    <widget class="QLineEdit" name="lineEdit_eastBoundLongitude">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="cursor">
+      <cursorShape>BlankCursor</cursorShape>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+     <property name="readOnly">
+      <bool>true</bool>
+     </property>
+     <property name="placeholderText">
+      <string/>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="0">
+    <widget class="QLabel" name="label_label_label_label_contact_individualName">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string>Setores CDHU</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+     </property>
+    </widget>
+   </item>
+   <item row="8" column="0">
+    <widget class="QLabel" name="label_MD_SpatialRepresentationTypeCode">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string>Tipo de Representação Espacial</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="9" column="4">
+    <widget class="QLabel" name="label_northBoundLatitude">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string>Norte</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignBottom|Qt::AlignHCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="12" column="1">
+    <widget class="QComboBox" name="comboBox_topicCategory">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="toolTip">
+      <string>
+      • Limites Administrativos – Dados referentes a descrições legais de terras e a limites políticos ou administrativos.
+      • Planejamento Cadastral – Dados utilizados para planejamento territorial, zoneamento e gestão cadastral.
+      • Sociedade e Cultura – Dados sobre características sociais e culturais, incluindo demografia, educação, patrimônio e arqueologia.
+      • Estruturas – Dados sobre construções e obras civis, como edifícios, pontes, barragens e demais infraestruturas.
+      • Transportes – Dados sobre sistemas de transporte de pessoas e cargas, como rodovias, ferrovias, hidrovias e aeroportos.
+      • Localização – Dados relacionados a sistemas de endereçamento, códigos postais, marcos geodésicos e serviços de posicionamento.
+      • Imagens de Base – Dados de referência cartográfica, como ortofotos, imagens de satélite, mapas topográficos e mapeamentos de cobertura do solo.
+      • Altimetria, Batimetria ou Topografia – Dados de elevação ou profundidade, incluindo modelos digitais de terreno, curvas de nível e relevo.
+      • Saúde – Dados sobre saúde humana, serviços de saúde, epidemiologia e segurança pública.
+      • Águas Interiores – Dados sobre feições de águas continentais, como rios, lagos, reservatórios e bacias hidrográficas.
+      • Economia – Dados sobre atividades econômicas, indústria, comércio, turismo, emprego e recursos produtivos.
+      • Biota – Dados sobre flora, fauna, habitats, ecossistemas e biodiversidade.
+      • Climatologia, Meteorologia e Atmosfera – Dados sobre processos atmosféricos, incluindo clima, tempo, precipitação, temperatura e qualidade do ar.
+      • Geociências – Dados geológicos, geofísicos, pedológicos, hidrogeológicos, minerais, sismológicos e relacionados a processos da superfície terrestre.
+      • Inteligência Militar – Dados sobre instalações, estruturas, atividades e operações militares.
+      • Oceanos – Dados sobre feições e processos marinhos, incluindo marés, ondas, correntes, salinidade e características de corpos de água salgada.
+      • Serviços de Utilidade e Comunicação – Dados sobre infraestrutura de energia, abastecimento, saneamento, gestão de resíduos e redes de comunicação.
+      • Agricultura – Dados relacionados à produção agrícola, criação animal, aquicultura, manejo do solo e irrigação.
+      • Ambiente – Dados sobre recursos ambientais, conservação, impactos, poluição, gestão ambiental e áreas protegidas.
+      </string>
+     </property>
+     <property name="placeholderText">
+      <string>Selecione a categoria</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="5">
+    <widget class="QComboBox" name="comboBox_status_codeListValue">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="toolTip">
+      <string>
+      • Arquivo Antigo – Recurso mantido apenas para referência histórica; não recebe atualizações.
+      • Concluído – Recurso finalizado, com todos os dados ou conteúdos disponibilizados.
+      • Contínuo – Recurso atualizado de forma permanente ou em intervalos regulares.
+      • Em Andamento – Recurso em fase ativa de atualização, revisão ou coleta de dados.
+      • Em Desenvolvimento – Recurso em construção, ainda sem disponibilidade plena ou estrutura finalizada.
+      • Necessário – Recurso identificado como requerido, porém ainda não produzido.
+      • Obsoleto – Recurso descontinuado, substituído ou não recomendado para uso atual.
+      • Planejado – Recurso previsto para produção futura, sem início efetivo.
+      </string>
+     </property>
+     <property name="placeholderText">
+      <string>Selecione o status</string>
+     </property>
+    </widget>
+   </item>
+   <item row="8" column="1">
+    <widget class="QComboBox" name="comboBox_MD_SpatialRepresentationTypeCode">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="toolTip">
+      <string>
+      • Vetor – Dados estruturados em geometrias de pontos, linhas ou polígonos, representando feições como vias, hidrografia ou limites administrativos.
+      • Grade ou Raster – Dados organizados em matriz regular de células (pixels), cada uma contendo um valor, como imagens de satélite, ortofotos ou modelos digitais de elevação.
+      • Tabela de Texto – Dados tabulares ou textuais sem componente geométrica, a exemplo de planilhas, relatórios ou dados estatísticos.
+      • TIN – Modelo de superfície baseado em uma Rede Triangular Irregular formada por triângulos não sobrepostos, utilizado para representar relevo e terrenos tridimensionais.
+      • Modelo Estereoscópico – Representação 3D obtida a partir de par estereoscópico de imagens, permitindo visualização tridimensional e extração de feições.
+      • Vídeo – Sequência de imagens em movimento que pode incluir informações georreferenciadas, como registros de drones ou câmeras com GPS.
+      </string>
+     </property>
+     <property name="placeholderText">
+      <string>Selecione o tipo</string>
+     </property>
+    </widget>
+   </item>
+   <item row="16" column="3">
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeType">
+      <enum>QSizePolicy::Fixed</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>45</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="7" column="1" colspan="5">
+    <widget class="QLineEdit" name="lineEdit_MD_Keywords">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="toolTip">
+      <string>Palavra tag para localizar a camada, Separadas por vírgulas.
+(Não deve conter palavra repetida do Título)</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+     </property>
+     <property name="placeholderText">
+      <string>Separadas por vírgula: Ex.: Palavra-chave 1, Palavra-chave 2, [...]</string>
+     </property>
+    </widget>
+   </item>
+   <item row="12" column="0">
+    <widget class="QLabel" name="label_topicCategory">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string>Categoria Temática</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="15" column="0">
+    <widget class="QLabel" name="label">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="layoutDirection">
+      <enum>Qt::LeftToRight</enum>
+     </property>
+     <property name="text">
+      <string>URL Thumbnail</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="2">
+    <widget class="QLineEdit" name="lineEdit_contact_organisationName">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="placeholderText">
+      <string>Companhia de Des...</string>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="1">
+    <widget class="QComboBox" name="comboBox_contact_administrativeArea">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="placeholderText">
+      <string>Selecione</string>
      </property>
     </widget>
    </item>
@@ -105,6 +783,32 @@
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="10" column="0">
+    <widget class="QLabel" name="label_LanguageCode">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string>Idioma</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="1">
+    <widget class="QLabel" name="label_label_label_label_contact_individualName_8">
+     <property name="text">
+      <string>Estado</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
      </property>
     </widget>
    </item>
@@ -170,26 +874,10 @@
      </property>
     </widget>
    </item>
-   <item row="1" column="4">
-    <widget class="QLabel" name="label_status_codeListValue">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="text">
-      <string>Status</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-   </item>
    <item row="2" column="1" colspan="5">
     <widget class="QTextEdit" name="textEdit_abstract">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
@@ -215,58 +903,8 @@ p, li { white-space: pre-wrap; }
      </property>
     </widget>
    </item>
-   <item row="10" column="3">
-    <widget class="QLabel" name="label_label_label_eastBoundLongitude">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="text">
-      <string>Leste</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignBottom|Qt::AlignHCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item row="13" column="1">
-    <widget class="QComboBox" name="comboBox_hierarchyLevel">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="toolTip">
-      <string>
-      • Conjunto de dados – Coleção organizada de dados estruturados, como um shapefile, uma imagem de satélite, uma tabela ou outras unidades de informação agregada.
-      </string>
-     </property>
-     <property name="placeholderText">
-      <string>Selecione o tipo da camada</string>
-     </property>
-    </widget>
-   </item>
-   <item row="10" column="0">
-    <widget class="QLabel" name="label_LanguageCode">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="text">
-      <string>Idioma</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="0">
-    <widget class="QLabel" name="label_label_label_label_contact_individualName">
+   <item row="5" column="2">
+    <widget class="QLabel" name="label_label_label_label_contact_individualName_12">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
        <horstretch>0</horstretch>
@@ -274,31 +912,15 @@ p, li { white-space: pre-wrap; }
       </sizepolicy>
      </property>
      <property name="text">
-      <string>Setores CDHU</string>
+      <string>CEP</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
      </property>
     </widget>
    </item>
-   <item row="9" column="4">
-    <widget class="QLabel" name="label_northBoundLatitude">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="text">
-      <string>Norte</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignBottom|Qt::AlignHCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item row="12" column="4">
-    <widget class="QLineEdit" name="lineEdit_southBoundLatitude">
+   <item row="10" column="4">
+    <widget class="QLineEdit" name="lineEdit_northBoundLatitude">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
        <horstretch>0</horstretch>
@@ -316,425 +938,6 @@ p, li { white-space: pre-wrap; }
      </property>
      <property name="placeholderText">
       <string/>
-     </property>
-    </widget>
-   </item>
-   <item row="11" column="1">
-    <widget class="QComboBox" name="comboBox_characterSet">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="toolTip">
-      <string>Mandatório em UTF-8</string>
-     </property>
-     <property name="placeholderText">
-      <string>Selecione o Encoding</string>
-     </property>
-    </widget>
-   </item>
-   <item row="4" column="1">
-    <widget class="QLineEdit" name="lineEdit_contact_individualName">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="placeholderText">
-      <string>CDHU</string>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="3">
-    <widget class="QLabel" name="label_label_label_label_contact_individualName_5">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="text">
-      <string>Telefone</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
-     </property>
-    </widget>
-   </item>
-   <item row="13" column="4">
-    <widget class="QLabel" name="label_southBoundLatitude">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="text">
-      <string>Sul</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignHCenter|Qt::AlignTop</set>
-     </property>
-    </widget>
-   </item>
-   <item row="9" column="0">
-    <widget class="QLabel" name="label_spatialResolution_denominator">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="text">
-      <string>Escala</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item row="8" column="0">
-    <widget class="QLabel" name="label_MD_SpatialRepresentationTypeCode">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="text">
-      <string>Tipo de Representação Espacial</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item row="15" column="0">
-    <widget class="QLabel" name="label">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="layoutDirection">
-      <enum>Qt::LeftToRight</enum>
-     </property>
-     <property name="text">
-      <string>URL Thumbnail</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item row="5" column="4">
-    <widget class="QLabel" name="label_label_label_label_contact_individualName_9">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="text">
-      <string>País</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
-     </property>
-    </widget>
-   </item>
-   <item row="4" column="4">
-    <widget class="QLineEdit" name="lineEdit_contact_positionName">
-     <property name="enabled">
-      <bool>true</bool>
-     </property>
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="cursor">
-      <cursorShape>ArrowCursor</cursorShape>
-     </property>
-     <property name="readOnly">
-      <bool>false</bool>
-     </property>
-     <property name="placeholderText">
-      <string>/</string>
-     </property>
-    </widget>
-   </item>
-   <item row="8" column="1">
-    <widget class="QComboBox" name="comboBox_MD_SpatialRepresentationTypeCode">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="toolTip">
-      <string>
-      • Vetor – Dados estruturados em geometrias de pontos, linhas ou polígonos, representando feições como vias, hidrografia ou limites administrativos.
-      • Grade ou Raster – Dados organizados em matriz regular de células (pixels), cada uma contendo um valor, como imagens de satélite, ortofotos ou modelos digitais de elevação.
-      • Tabela de Texto – Dados tabulares ou textuais sem componente geométrica, a exemplo de planilhas, relatórios ou dados estatísticos.
-      • TIN – Modelo de superfície baseado em uma Rede Triangular Irregular formada por triângulos não sobrepostos, utilizado para representar relevo e terrenos tridimensionais.
-      • Modelo Estereoscópico – Representação 3D obtida a partir de par estereoscópico de imagens, permitindo visualização tridimensional e extração de feições.
-      • Vídeo – Sequência de imagens em movimento que pode incluir informações georreferenciadas, como registros de drones ou câmeras com GPS.
-      </string>
-     </property>
-     <property name="placeholderText">
-      <string>Selecione o tipo</string>
-     </property>
-    </widget>
-   </item>
-   <item row="11" column="3">
-    <widget class="QLineEdit" name="lineEdit_eastBoundLongitude">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="cursor">
-      <cursorShape>BlankCursor</cursorShape>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-     <property name="readOnly">
-      <bool>true</bool>
-     </property>
-     <property name="placeholderText">
-      <string/>
-     </property>
-    </widget>
-   </item>
-   <item row="7" column="1" colspan="5">
-    <widget class="QLineEdit" name="lineEdit_MD_Keywords">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="toolTip">
-      <string>Palavra tag para localizar a camada, Separadas por vírgulas.
-(Não deve conter palavra repetida do Título)</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
-     </property>
-     <property name="placeholderText">
-      <string>Separadas por vírgula: Ex.: Palavra-chave 1, Palavra-chave 2, [...]</string>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="4">
-    <widget class="QLineEdit" name="lineEdit_contact_country">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="placeholderText">
-      <string>Brasil</string>
-     </property>
-    </widget>
-   </item>
-   <item row="12" column="1">
-    <widget class="QComboBox" name="comboBox_topicCategory">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="toolTip">
-      <string>
-      • Limites Administrativos – Dados referentes a descrições legais de terras e a limites políticos ou administrativos.
-      • Planejamento Cadastral – Dados utilizados para planejamento territorial, zoneamento e gestão cadastral.
-      • Sociedade e Cultura – Dados sobre características sociais e culturais, incluindo demografia, educação, patrimônio e arqueologia.
-      • Estruturas – Dados sobre construções e obras civis, como edifícios, pontes, barragens e demais infraestruturas.
-      • Transportes – Dados sobre sistemas de transporte de pessoas e cargas, como rodovias, ferrovias, hidrovias e aeroportos.
-      • Localização – Dados relacionados a sistemas de endereçamento, códigos postais, marcos geodésicos e serviços de posicionamento.
-      • Imagens de Base – Dados de referência cartográfica, como ortofotos, imagens de satélite, mapas topográficos e mapeamentos de cobertura do solo.
-      • Altimetria, Batimetria ou Topografia – Dados de elevação ou profundidade, incluindo modelos digitais de terreno, curvas de nível e relevo.
-      • Saúde – Dados sobre saúde humana, serviços de saúde, epidemiologia e segurança pública.
-      • Águas Interiores – Dados sobre feições de águas continentais, como rios, lagos, reservatórios e bacias hidrográficas.
-      • Economia – Dados sobre atividades econômicas, indústria, comércio, turismo, emprego e recursos produtivos.
-      • Biota – Dados sobre flora, fauna, habitats, ecossistemas e biodiversidade.
-      • Climatologia, Meteorologia e Atmosfera – Dados sobre processos atmosféricos, incluindo clima, tempo, precipitação, temperatura e qualidade do ar.
-      • Geociências – Dados geológicos, geofísicos, pedológicos, hidrogeológicos, minerais, sismológicos e relacionados a processos da superfície terrestre.
-      • Inteligência Militar – Dados sobre instalações, estruturas, atividades e operações militares.
-      • Oceanos – Dados sobre feições e processos marinhos, incluindo marés, ondas, correntes, salinidade e características de corpos de água salgada.
-      • Serviços de Utilidade e Comunicação – Dados sobre infraestrutura de energia, abastecimento, saneamento, gestão de resíduos e redes de comunicação.
-      • Agricultura – Dados relacionados à produção agrícola, criação animal, aquicultura, manejo do solo e irrigação.
-      • Ambiente – Dados sobre recursos ambientais, conservação, impactos, poluição, gestão ambiental e áreas protegidas.
-      </string>
-     </property>
-     <property name="placeholderText">
-      <string>Selecione a categoria</string>
-     </property>
-    </widget>
-   </item>
-   <item row="5" column="3">
-    <widget class="QLabel" name="label_label_label_label_contact_individualName_10">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="text">
-      <string>Email</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
-     </property>
-    </widget>
-   </item>
-   <item row="7" column="0">
-    <widget class="QLabel" name="label_MD_Keywords_5">
-     <property name="text">
-      <string>Palavra-chave</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="4">
-    <widget class="QLabel" name="label_label_label_label_contact_individualName_4">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="text">
-      <string>Cargo| Posição</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="0">
-    <widget class="QLineEdit" name="lineEdit_contact_city">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="placeholderText">
-      <string>São Paulo</string>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="0">
-    <widget class="QLabel" name="label_label_label_date_creation">
-     <property name="text">
-      <string>Data de Criação</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item row="0" column="1" colspan="5">
-    <widget class="QLineEdit" name="lineEdit_title">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Nome da camada&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-     </property>
-     <property name="placeholderText">
-      <string>Título da camada</string>
-     </property>
-    </widget>
-   </item>
-   <item row="16" column="3">
-    <spacer name="verticalSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeType">
-      <enum>QSizePolicy::Fixed</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>45</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item row="11" column="0">
-    <widget class="QLabel" name="label_characterSet">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="text">
-      <string>Codificação</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item row="15" column="1">
-    <widget class="QLineEdit" name="lineEdit_thumbnail_url">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="placeholderText">
-      <string>https://stor.cdhu.sp.gov.br/public/img.png</string>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="5">
-    <widget class="QComboBox" name="comboBox_contact_role">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Ignored" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="toolTip">
-      <string>
-      • Dono – Entidade que detém os direitos legais e de propriedade sobre o recurso.
-      • Autor – Entidade responsável pela criação original do recurso.
-      • Organizador – Entidade que estruturou, compilou ou preparou o recurso de forma sistemática.
-      • Distribuidor – Entidade encarregada de disponibilizar o recurso aos usuários finais.
-      • Depositário – Entidade responsável pela guarda, manutenção, preservação e arquivamento do recurso.
-      • Fornecedor do recurso – Entidade que fornece ou disponibiliza o recurso para uso, independentemente de tê-lo criado.
-      • Investigador principal – Entidade que liderou a pesquisa responsável pela geração do recurso.
-      • Originador – Entidade que desenvolveu ou produziu o recurso; equivalente a “autor” em muitos contextos.
-      • Ponto de contato – Entidade a ser contatada para informações adicionais, suporte ou esclarecimentos sobre o recurso.
-      • Publicador – Entidade que publica e torna o recurso acessível ao público.
-      • Utilizador – Entidade que faz uso do recurso em suas operações, análises ou atividades.
-      • Processador – Entidade que realizou atividades de processamento, transformação, análise ou tratamento dos dados.
-      </string>
-     </property>
-     <property name="placeholderText">
-      <string>Selecione</string>
      </property>
     </widget>
    </item>
@@ -754,142 +957,43 @@ p, li { white-space: pre-wrap; }
      </property>
     </widget>
    </item>
-   <item row="4" column="2">
-    <widget class="QLineEdit" name="lineEdit_contact_organisationName">
+   <item row="16" column="0">
+    <widget class="QLabel" name="label_support_link">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <property name="placeholderText">
-      <string>Companhia de Des...</string>
+     <property name="font">
+      <font>
+       <pointsize>8</pointsize>
+      </font>
      </property>
-    </widget>
-   </item>
-   <item row="3" column="1">
-    <widget class="QLabel" name="label_label_label_label_contact_individualName_2">
      <property name="text">
-      <string>Nome/Sigla</string>
+      <string>Suporte</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
      </property>
     </widget>
    </item>
-   <item row="5" column="0">
-    <widget class="QLabel" name="label_label_label_label_contact_individualName_7">
+   <item row="1" column="2">
+    <widget class="QLabel" name="label_label_label_edition">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <property name="text">
-      <string>Cidade</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="1">
-    <widget class="QDateTimeEdit" name="dateTimeEdit_date_creation">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="toolTip">
-      <string>Data e hora de criação da camada</string>
-     </property>
-     <property name="dateTime">
-      <datetime>
-       <hour>12</hour>
-       <minute>0</minute>
-       <second>0</second>
-       <year>2025</year>
-       <month>10</month>
-       <day>8</day>
-      </datetime>
-     </property>
-     <property name="date">
-      <date>
-       <year>2025</year>
-       <month>10</month>
-       <day>8</day>
-      </date>
-     </property>
-     <property name="minimumDateTime">
-      <datetime>
-       <hour>0</hour>
-       <minute>0</minute>
-       <second>0</second>
-       <year>1800</year>
-       <month>9</month>
-       <day>14</day>
-      </datetime>
-     </property>
-     <property name="displayFormat">
-      <string>dd/MM/yyyy HH:mm:ss</string>
-     </property>
-     <property name="calendarPopup">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="12" column="0">
-    <widget class="QLabel" name="label_topicCategory">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
+     <property name="layoutDirection">
+      <enum>Qt::LeftToRight</enum>
      </property>
      <property name="text">
-      <string>Categoria Temática</string>
+      <string>             Edição</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item row="9" column="1">
-    <widget class="QLineEdit" name="lineEdit_textEdit_spatialResolution_denominator">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="contextMenuPolicy">
-      <enum>Qt::DefaultContextMenu</enum>
-     </property>
-     <property name="toolTip">
-      <string>Escala da camada ex: 1:5000 → 5000</string>
-     </property>
-     <property name="echoMode">
-      <enum>QLineEdit::Normal</enum>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-     </property>
-     <property name="placeholderText">
-      <string>5000</string>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="1">
-    <widget class="QComboBox" name="comboBox_contact_administrativeArea">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="placeholderText">
-      <string>Selecione</string>
      </property>
     </widget>
    </item>
@@ -915,18 +1019,43 @@ p, li { white-space: pre-wrap; }
      </property>
     </widget>
    </item>
-   <item row="5" column="5">
-    <widget class="QLabel" name="label_label_label_label_contact_individualName_11">
-     <property name="text">
-      <string>Responsabilidade</string>
+   <item row="6" column="0">
+    <widget class="QLineEdit" name="lineEdit_contact_city">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
      </property>
-     <property name="alignment">
-      <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+     <property name="placeholderText">
+      <string>São Paulo</string>
      </property>
     </widget>
    </item>
-   <item row="1" column="5">
-    <widget class="QComboBox" name="comboBox_status_codeListValue">
+   <item row="4" column="4">
+    <widget class="QLineEdit" name="lineEdit_contact_positionName">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="cursor">
+      <cursorShape>ArrowCursor</cursorShape>
+     </property>
+     <property name="readOnly">
+      <bool>false</bool>
+     </property>
+     <property name="placeholderText">
+      <string>/</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="1" colspan="5">
+    <widget class="QLineEdit" name="lineEdit_title">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
        <horstretch>0</horstretch>
@@ -934,65 +1063,36 @@ p, li { white-space: pre-wrap; }
       </sizepolicy>
      </property>
      <property name="toolTip">
-      <string>
-      • Arquivo Antigo – Recurso mantido apenas para referência histórica; não recebe atualizações.
-      • Concluído – Recurso finalizado, com todos os dados ou conteúdos disponibilizados.
-      • Contínuo – Recurso atualizado de forma permanente ou em intervalos regulares.
-      • Em Andamento – Recurso em fase ativa de atualização, revisão ou coleta de dados.
-      • Em Desenvolvimento – Recurso em construção, ainda sem disponibilidade plena ou estrutura finalizada.
-      • Necessário – Recurso identificado como requerido, porém ainda não produzido.
-      • Obsoleto – Recurso descontinuado, substituído ou não recomendado para uso atual.
-      • Planejado – Recurso previsto para produção futura, sem início efetivo.
-      </string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Nome da camada&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="placeholderText">
-      <string>Selecione o status</string>
+      <string>Título da camada</string>
      </property>
     </widget>
    </item>
-   <item row="1" column="2">
-    <layout class="QGridLayout" name="gridLayout_2">
-     <item row="0" column="0">
-      <widget class="QLabel" name="label_label_label_edition">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="layoutDirection">
-        <enum>Qt::LeftToRight</enum>
-       </property>
-       <property name="text">
-        <string>             Edição</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item row="3" column="5">
-    <widget class="QLabel" name="label_label_label_label_contact_individualName_6">
+   <item row="2" column="0">
+    <widget class="QLabel" name="label_abstract">
      <property name="text">
-      <string>Rua, nº, complemento</string>
+      <string>Resumo</string>
      </property>
      <property name="alignment">
-      <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+      <set>Qt::AlignRight|Qt::AlignTop|Qt::AlignTrailing</set>
      </property>
     </widget>
    </item>
-   <item row="4" column="3">
-    <widget class="QLineEdit" name="lineEdit_contact_phone">
+   <item row="10" column="3">
+    <widget class="QLabel" name="label_label_label_eastBoundLongitude">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+      <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <property name="placeholderText">
-      <string>+55 11 0000-0000</string>
+     <property name="text">
+      <string>Leste</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignBottom|Qt::AlignHCenter</set>
      </property>
     </widget>
    </item>
@@ -1012,31 +1112,29 @@ p, li { white-space: pre-wrap; }
      </property>
     </widget>
    </item>
-   <item row="14" column="2">
-    <widget class="QToolButton" name="toolButton_set_today">
-     <property name="font">
-      <font>
-       <pointsize>7</pointsize>
-      </font>
-     </property>
-     <property name="toolTip">
-      <string> Definir a data e hora para o momento atual</string>
-     </property>
-     <property name="text">
-      <string>Hoje</string>
-     </property>
-    </widget>
-   </item>
-   <item row="4" column="5">
-    <widget class="QLineEdit" name="lineEdit_contact_deliveryPoint">
+   <item row="11" column="0">
+    <widget class="QLabel" name="label_characterSet">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+      <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <property name="placeholderText">
-      <string>Rua Boa Vista, 170, Sé</string>
+     <property name="text">
+      <string>Codificação</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="5">
+    <widget class="QLabel" name="label_label_label_label_contact_individualName_11">
+     <property name="text">
+      <string>Responsabilidade</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
      </property>
     </widget>
    </item>
@@ -1056,110 +1154,78 @@ p, li { white-space: pre-wrap; }
      </property>
     </widget>
    </item>
-   <item row="6" column="3">
-    <widget class="QLineEdit" name="lineEdit_contact_email">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="placeholderText">
-      <string>cdhu@cdhu.sp.gov.br</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="0">
-    <widget class="QLabel" name="label_abstract">
-     <property name="text">
-      <string>Resumo</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTop|Qt::AlignTrailing</set>
-     </property>
-    </widget>
-   </item>
-   <item row="5" column="1">
-    <widget class="QLabel" name="label_label_label_label_contact_individualName_8">
-     <property name="text">
-      <string>Estado</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
-     </property>
-    </widget>
-   </item>
-   <item row="0" column="0">
-    <widget class="QLabel" name="label_title">
-     <property name="text">
-      <string>Título</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="3">
-    <widget class="QSpinBox" name="spinBox_edition">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="toolTip">
-      <string>Selecione a edição da camada</string>
-     </property>
-     <property name="autoFillBackground">
-      <bool>false</bool>
-     </property>
-     <property name="wrapping">
-      <bool>false</bool>
-     </property>
-     <property name="frame">
-      <bool>true</bool>
-     </property>
-     <property name="readOnly">
-      <bool>false</bool>
-     </property>
-     <property name="showGroupSeparator" stdset="0">
-      <bool>false</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="2">
-    <widget class="QLineEdit" name="lineEdit_contact_postalCode">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="placeholderText">
-      <string>01014-930</string>
-     </property>
-    </widget>
-   </item>
-   <item row="16" column="0">
-    <widget class="QLabel" name="label_support_link">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>8</pointsize>
-      </font>
-     </property>
-     <property name="text">
-      <string>Suporte</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
-     </property>
-    </widget>
+   <item row="14" column="2">
+    <layout class="QGridLayout" name="gridLayout_2">
+     <item row="0" column="0">
+      <widget class="QToolButton" name="toolButton_set_today">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Ignored">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>45</width>
+         <height>16777215</height>
+        </size>
+       </property>
+       <property name="sizeIncrement">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>7</pointsize>
+         <stylestrategy>PreferDefault</stylestrategy>
+         <kerning>true</kerning>
+        </font>
+       </property>
+       <property name="cursor">
+        <cursorShape>PointingHandCursor</cursorShape>
+       </property>
+       <property name="toolTip">
+        <string> Definir a data e hora para o momento atual</string>
+       </property>
+       <property name="layoutDirection">
+        <enum>Qt::LeftToRight</enum>
+       </property>
+       <property name="text">
+        <string>◄ Hoje</string>
+       </property>
+       <property name="toolButtonStyle">
+        <enum>Qt::ToolButtonIconOnly</enum>
+       </property>
+       <property name="autoRaise">
+        <bool>false</bool>
+       </property>
+       <property name="arrowType">
+        <enum>Qt::NoArrow</enum>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QLabel" name="label_2">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string> </string>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
   </layout>
  </widget>

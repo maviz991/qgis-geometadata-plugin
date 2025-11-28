@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manual do Usuário – GeoMetadata | Geohab Plugin para QGIS</title>
+    <title>Manual do Usuário – Geohab Plugin | GeoMetadata</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
@@ -428,6 +428,17 @@
             vertical-align: middle;
             margin: 0 4px;
         }
+        .header-icon {
+            height: auto;
+            width: 26px;
+            vertical-align: middle;
+            margin: 0 4px;
+        }
+        .sub-header{
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
 
         .guide-container {
             font-family: 'Montserrat', sans-serif;
@@ -474,6 +485,7 @@
         }
 
         .main-header {
+            display: bl;
             text-align: center;
             margin-bottom: 2rem;
         }
@@ -481,6 +493,14 @@
              font-family: 'Axiforma', 'Montserrat', sans-serif;
              font-size: 2.5em;
              color: #1a1a1a;
+        }
+        .main-header h4 {
+            display: flex;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.5em;
+            color: #1a1a1a;
+            align-items: center;
+            margin-bottom: 0;
         }
         .meta-info {
             color: #6c757d;
@@ -590,16 +610,19 @@
     <!-- =================================================================== -->
     <div class="module-intro-block">
         <div class="guide-container">
-
             <div class="main-header">
-                <h1>Manual do Usuário – Plugin GeoMetadata</h1>
+                <h1>Manual do Usuário – Geohab Plugin</h1>
+                <div class="sub-header">
+                    <span><img src="https://stor.cdhu.sp.gov.br/geo/publico/html/icon.png" class="header-icon"
+                        alt="Ícone do Plugin"></span><h4>GeoMetadata</h4>
+                </div>
                 <p class="meta-info">
                     <strong>Versão:</strong> 1.0.1 | <strong>Data:</strong> 27 de Novembro de 2025
                 </p>
             </div>
             <!-- Seção 1-->
             <h2 class="guide-container-title" id="secao1">1. Introdução</h2>
-            <p>Bem-vindo ao <strong>GeoMetadata | Geohab Plugin</strong>, o plugin oficial da CDHU para a criação e gerenciamento de metadados geoespaciais.</p>
+            <p>Bem-vindo ao <strong>Geohab Plugin | GeoMetadata</strong>, o plugin da CDHU para a criação e gerenciamento de metadados geoespaciais para o Geohab.</p>
             <p>Esta ferramenta foi desenvolvida para simplificar, padronizar e centralizar a documentação de nossas camadas, seguindo o padrão ISO 19115 (MGB 2.0) e garantindo a integração perfeita com o nosso catálogo de dados do <strong>Geohab</strong>.</p>
             <p>Está é uma versão <b>alfa</b>, poderá haver problemas durante a execução ou bugs.</p>
             <p>Com este plugin, você pode:</p>
@@ -615,10 +638,10 @@
             <h2 class="guide-container-title" id="secao2">2. Instalação</h2>
             <ol>
                 <li>Receba o arquivo <kbd>.zip</kbd> do plugin.</li>
-                <li>Ou baixe a ultima versão na página de <span class="info-badge"><a href="#" target="_blank" style="text-decoration: none; color: red;" data-toggle="tooltip" title="Clique aqui para baixar">Release</a></span> o <kbd>.zip</kbd> do plugin.</li>
+                <li>Ou baixe a ultima versão na página de <span class="info-badge"><a href="https://github.com/maviz991/qgis-geometadata-plugin/releases" target="_blank" style="text-decoration: none; color: red;" data-toggle="tooltip" title="Clique aqui para baixar">Release <span class="icon-custon icon-question"></span></a></span> o <kbd>.zip</kbd> do plugin.</li>
                 <li>No QGIS, vá até o menu <strong>Complementos > Gerenciar e Instalar Complementos...</strong>.</li>
                 <li>Na janela que se abre, selecione a aba <strong>Instalar a partir de ZIP</strong>.</li>
-                <li>Clique no botão <code>...</code> e selecione o arquivo <kbd>.zip</kbd> que você recebeu.</li>
+                <li>Clique no botão <kbd>...</kbd> e selecione o arquivo <kbd>.zip</kbd> que você recebeu.</li>
                 <li>Clique em <strong>Instalar Complemento</strong>.</li>
                 <li>Após a instalação, um novo ícone da CDHU aparecerá na sua barra de ferramentas.</li>
             </ol>
@@ -626,7 +649,7 @@
 
             <!-- Seção 3-->
             <h2 class="guide-container-title" id="secao3">3. Visão Geral da Interface</h2>
-            <p>Ao clicar no ícone do plugin, a janela principal será aberta. Ela é dividida em três áreas principais, como mostrado na imagem abaixo:</p>
+            <p>Ao clicar no ícone do plugin, a janela principal será aberta. Ela é dividida em três áreas principais, como mostrado na imagens abaixo (tema claro e escuro):</p>
             
             <!-- IMAGEM ANOTADA DA INTERFACE -->
             <div class="step-content-col-media">
@@ -679,7 +702,7 @@
                 <div class="step-number" style="background-color:#333;">B</div>
                 <div class="step-content-col-text">
                     <h3 class="step-title" style="font-size: 1.2em;">Formulário Principal</h3>
-                    <p>Área de preenchimento das informações, agrupadas logicamente (Identificação, Contato, Detalhes Técnicos). O campo <span class="info-badge">Bounding Box<span class="icon-custon icon-question"></span></span> é preenchido automaticamente a partir da camada e não pode ser editado.</p>
+                    <p>Área de preenchimento das informações, agrupadas logicamente (Identificação, Contato, Detalhes Técnicos). O campo <span class="info-badge" data-toggle="tooltip" title="Limites geográficos (N|S|L|W) máximos e mínimos da camada">Bounding Box<span class="icon-custon icon-question"></span></span> é preenchido automaticamente a partir da camada e não pode ser editado.</p>
                 </div>
             </div>
         
@@ -687,7 +710,7 @@
                 <div class="step-number" style="background-color:#333;">C</div>
                 <div class="step-content-col-text">
                     <h3 class="step-title" style="font-size: 1.2em;">Painel de Camadas Associadas</h3>
-                    <p>Mostra quais serviços (WMS/WFS) do GeoServer foram vinculados a este metadado. Você pode remover uma associação clicando no ícone <code>X</code>.</p>
+                    <p>Mostra quais serviços (WMS/WFS) do GeoServer foram vinculados a este metadado. Você pode remover uma associação clicando no ícone <kbd>×</kbd>.</p>
                 </div>
             </div>
             <hr>
@@ -714,7 +737,9 @@
                 <div class="step-number">3</div>
                 <div class="step-content-col-text">
                     <h3 class="step-title">Faça Login</h3>
-                    <p>Clique em <strong>ENTRAR</strong>. Use uma configuração salva do QGIS ou digite seu usuário e senha da rede. O login é necessário para as próximas etapas.</p>
+                    <p>Clique em <span class="badge-color-black" title="Item 1 da imagem abaixo" data-toggle="tooltip"
+                        data-placement="bottom"><img src="https://stor.cdhu.sp.gov.br/geo/publico/html/login_error.png"
+                            class="inline-icon" alt="Ícone Associar"> Entrar</span> . Use uma configuração salva do QGIS ou digite seu usuário e senha da rede. O login é necessário para as próximas etapas.</p>
                 </div>
             </div>
             <div class="step-content-layout-cols">
@@ -732,7 +757,8 @@
                 <div class="step-number">5</div>
                 <div class="step-content-col-text">
                     <h3 class="step-title">Salve ou Exporte</h3>
-                    <p>Se quiser salvar e continuar depois, clique em <strong>Continuar depois</strong>. Se o metadado estiver completo e pronto, clique em <strong>Exportar para Geohab</strong>.</p>
+                    <p>Se quiser salvar e continuar depois, clique em <span><img src="https://stor.cdhu.sp.gov.br/geo/publico/html/exp_save_icon_hover.png" class="inline-icon"
+                        alt="Ícone Salvar"> <strong>Continuar depois</strong> Salva seu progresso junto à camada.</span>. Se o metadado estiver completo e pronto, clique em <strong>Exportar para Geohab</strong>.</p>
                 </div>
             </div>
 
@@ -798,6 +824,39 @@
         </div>
     </div>
 
+    <!-- Item 2.1: Pós-envio de metadado -->
+    <div class="card">
+        <div class="card-header" id="headingTwopoiont2">
+            <h2 class="mb-0">
+                <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseTwopoint2" aria-expanded="false" aria-controls="collapseTwo">
+                    Se eu fizer upload de metadado já existente, ele substitui no Geohab?
+                </button>
+            </h2>
+        </div>
+        <div id="collapseTwopoint2" class="collapse" aria-labelledby="headingTwopoiont2" data-parent="#faqAccordion">
+            <div class="card-body">
+                <strong>Solução:</strong> Por motivos de proteção da dados, Não!<br><br>
+                 Por motivos de proteção contra perdas de dados, o plugin não substitui um metadado no Geohab, o <b>Revisor</b> ou <b>Administrador Local</b> devem entrar no Geohab e escolher qual metadado deve ficar na plataforma<br>
+            </div>
+        </div>
+    </div>    
+
+    <!-- Item 2.1: Pós-envio de metadado 2 -->
+    <div class="card">
+        <div class="card-header" id="headingTwopoiont3">
+            <h2 class="mb-0">
+                <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseTwopoint3" aria-expanded="false" aria-controls="collapseTwo">
+                    Enviei um metadado, mas nem toda a equipe consegue ver?
+                </button>
+            </h2>
+        </div>
+        <div id="collapseTwopoint3" class="collapse" aria-labelledby="headingTwopoiont3" data-parent="#faqAccordion">
+            <div class="card-body">
+                <strong>Solução:</strong> O 'Administrador Local' deve publicar o metadado na inteface do Geohab<br><br>
+                 Por conta de regras de negócio, o <b>'Administrador Local' é o único</b> que pode tornar publico os dados do seu setor, por isso, o plugin não envia como Publicado o metadado, o Administrador deve publicar manualmente, para outros setores.
+            </div>
+        </div>
+    </div>      
     <!-- Item 3: Permissão para Enviar -->
     <div class="card">
         <div class="card-header" id="headingThree">
@@ -825,7 +884,8 @@
         </div>
         <div id="collapseFour" class="collapse" aria-labelledby="headingFour" data-parent="#faqAccordion">
             <div class="card-body">
-                <strong>Solução:</strong> A função "Continuar depois" salva um arquivo de metadado (<kbd>.xml</kbd>) ao lado da sua camada. Isso requer que a camada esteja salva em um local onde você tenha permissão de escrita.<br>
+                <strong>Solução:</strong> A função <span><img src="https://stor.cdhu.sp.gov.br/geo/publico/html/exp_save_icon_hover.png" class="inline-icon"
+                    alt="Ícone Salvar"> <strong>Continuar depois</strong> Salva seu progresso junto à camada.</span> salva um arquivo de metadado <kbd>.xml</kbd> ao lado da sua camada. Isso requer que a camada esteja salva em um local onde você tenha permissão de escrita.<br>
                 <ul>
                     <li><strong>Para camadas em arquivo (Shapefile, GeoPackage):</strong> Certifique-se de que a camada está salva em uma pasta no seu computador (e não é uma camada temporária).</li>
                     <li><strong>Para camadas em Banco de Dados (PostgreSQL):</strong> A função salva o metadado em uma tabela específica <kbd>public.qgis_geometadata_plugin</kbd>. Verifique se seu usuário do banco tem permissão de escrita nessa tabela.</li>
@@ -909,7 +969,8 @@
         <div id="collapseNine" class="collapse" aria-labelledby="headingNine" data-parent="#faqAccordion">
             <div class="card-body">
                 <strong>Resposta: O plugin avisa!</strong> Se você fizer qualquer alteração no formulário, o plugin detecta e, ao tentar fechar, ele exibirá uma mensagem perguntando: <i>"Você tem alterações que não foram salvas. Deseja realmente sair?"</i>. Se você clicou "Sim" por engano, os dados serão perdidos.<br><br>
-                <strong>Dica:</strong> Se você precisa fazer uma pausa, use sempre o botão <img src="URL_DO_ICONE_SALVAR.png" class="inline-icon" alt="Ícone Continuar depois"> <strong>Continuar depois</strong>. Ele salva seu progresso e você pode fechar a janela com segurança.
+                <strong>Dica:</strong> Se você precisa fazer uma pausa, use sempre o botão <span><img src="https://stor.cdhu.sp.gov.br/geo/publico/html/exp_save_icon_hover.png" class="inline-icon"
+                    alt="Ícone Salvar"> <strong>Continuar depois:</strong> Salva seu progresso junto à camada.</span> <strong>Continuar depois</strong>. Ele salva seu progresso e você pode fechar a janela com segurança.
             </div>
         </div>
     </div>   
@@ -926,7 +987,7 @@
             <div class="card-body">
                 <strong>Explicação:</strong> Esta função cria um vínculo no metadado entre a sua camada de dados e os serviços web (WMS/WFS) correspondentes no GeoServer. Ao associar, você está dizendo: "os dados descritos neste metadado podem ser visualizados/baixados através destes links".<br><br>
                 Isso é crucial para o <strong>Geohab</strong>, pois permite que outros usuários e sistemas descubram não apenas que o dado existe, mas também <strong>como acessá-lo</strong> diretamente a partir do catálogo de metadados.<br><br>
-                Você pode associar apenas um ou ambos serviços dispobíveis (WMS e/ou WFS).
+                Você pode associar apenas um ou ambos serviços disponíveis (WMS e/ou WFS).
             </div>
         </div>
     </div>    
@@ -936,21 +997,25 @@
 <!-- =================================================================== -->
 <!--                 FIM: SEÇÃO 5 - FAQ COM ACCORDION                    -->
 <!-- =================================================================== -->
+
+<!-- =================================================================== -->
+<!--                       INÍCIO: SEÇÃO 6 - SUPORTE                     -->
+<!-- =================================================================== -->
             <!-- Seção 6-->
             <h2 class="guide-container-title" id="secao6">6. Suporte</h2>
-            <p>Em caso de dúvidas, erros ou sugestões, por favor, abra um <span class="info-badge" data-toggle="tooltip" title="Clique aqui para abrir um chamado"><a href="https://cda.cdhu.sp.gov.br/front/ticket.php" target="_blank" style="text-decoration: none; color: red;">CDA</a></span></p>
+            <p>Em caso de dúvidas, erros ou sugestões, por favor, abra um <span class="info-badge" data-toggle="tooltip" title="Clique aqui para abrir um chamado"><a href="https://cda.cdhu.sp.gov.br/front/ticket.php" target="_blank" style="text-decoration: none; color: red;">CDA <span class="icon-custon icon-question"></span></a></span></p>
 
         </div>
         <footer style="padding-left: 30px; padding-top: 30px;"><b>Contatos:</b><br>Email: mdaviz@apoio.cdhu.sp.gov.br<br>Ramal: 2479</footer>
         
     </div>
-    
-    <!-- =================================================================== -->
-    <!--                       FIM: MANUAL DO PLUGIN                         -->
-    <!-- =================================================================== -->
-    <!-- ======================================================= -->
-    <!--     SCRIPTS ESSENCIAIS (jQuery, Popper, Bootstrap)      -->
-    <!-- ======================================================= -->
+<!-- =================================================================== -->
+<!--                         FIM: SEÇÃO 6 - SUPORTE                      -->
+<!-- =================================================================== -->
+<!-- =================================================================== -->
+<!--                       FIM: MANUAL DO PLUGIN                         -->
+<!-- =================================================================== -->
+
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.min.js"></script>
