@@ -410,7 +410,8 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             plugin_dir = os.path.dirname(__file__)
             template_path = os.path.join(plugin_dir, 'tamplate_mgb20.xml')
             cdhu_data = self.contatos_predefinidos.get('cdhu', {})
-            xml_payload = xml_generator.generate_xml_from_template(metadata_dict, template_path, cdhu_data)
+            dpdu_data = self.contatos_predefinidos.get('dpdu', {})
+            xml_payload = xml_generator.generate_xml_from_template(metadata_dict, template_path, cdhu_data, dpdu_data)
             
             gn_urls = config_loader.get_geonetwork_url() 
             geonetwork_api_url = gn_urls.get('records_url')
@@ -637,7 +638,8 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             plugin_dir = os.path.dirname(__file__)
             template_path = os.path.join(plugin_dir, 'tamplate_mgb20.xml')
             cdhu_data = self.contatos_predefinidos.get('cdhu', {})
-            xml_content = xml_generator.generate_xml_from_template(metadata_dict, template_path, cdhu_data)
+            dpdu_data = self.contatos_predefinidos.get('dpdu', {})
+            xml_content = xml_generator.generate_xml_from_template(metadata_dict, template_path, cdhu_data, dpdu_data)
             safe_filename_base = self.sanitize_filename(metadata_dict.get('title', 'metadados'))
             suggested_filename = f"{safe_filename_base}.xml"
             
@@ -772,7 +774,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
                 combo.addItem(text, data)
         
         populate(self.ui.comboBox_status_codeListValue, [('Arquivo Antigo', 'historicalArchive'), ('Concluído', 'completed'), ('Contínuo', 'onGoing'), ('Em Desenvolvimento', 'underDevelopment'), ('Necessário', 'required'), ('Obsoleto', 'obsolete'), ('Planejado', 'planned')])
-        populate(self.ui.comboBox_contact_presets, [('CDHU', 'cdhu'), ('DPDU', 'dpdu'), ('SPHU', 'sphu'), ('SSARU', 'ssaru'), ('TERRAS', 'terras')])
+        populate(self.ui.comboBox_contact_presets, [('CDHU', 'cdhu'), ('DPDU', 'dpdu'), ('SPHU', 'sphu'), ('SSARU', 'ssaru'), ('TERRAS', 'terras'), ('CDHU | FIPE', 'cdhu_fipe')])
         populate(self.ui.comboBox_MD_SpatialRepresentationTypeCode, [('Vetor', 'vector'), ('Grid | Raster', 'grid'), ('Tabela de texto', 'textTable'), ('Rede triangular irregular (TIN)', 'tin'), ('Modelo estereofónico', 'stereoscopicModel'), ('Vídeo', 'video')])
         populate(self.ui.comboBox_LanguageCode, [('🇧🇷 Português', 'por'), ('🇺🇸 Inglês', 'eng'), ('🇪🇸 Espanhol', 'spa'), ('🇫🇷 Françês', 'fra'), ('🇩🇪 Alemão', 'ger')])
         populate(self.ui.comboBox_characterSet, [('UTF-8', 'utf8')])

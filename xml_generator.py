@@ -113,7 +113,9 @@ def update_contact_block(contact_wrapper_node, data_dict, ns_map):
     xlink_ns_uri = ns_map.get('xlink')
     if xlink_ns_uri:
         href_attr = f'{{{xlink_ns_uri}}}href'
-        if href_attr in contact_wrapper_node.attrib:
+        if href_attr not in contact_wrapper_node.attrib:
+            contact_wrapper_node.attrib[href_attr] = f"local://srv/api/registries/entries/{uuid_value}?lang=por&process=gmd:role/gmd:CI_RoleCode/@codeListValue~{role_value or ''}&schema=iso19139"
+        else:
             href = contact_wrapper_node.attrib[href_attr]
             href = href.replace('{uuid}', uuid_value).replace('{contact_role}', role_value or '')
             contact_wrapper_node.attrib[href_attr] = href
@@ -124,7 +126,8 @@ def remove_element_if_exists(parent_element, xpath, ns_map):
         element.getparent().remove(element)
 
 # ---------------------------- FUNÇÃO PRINCIPAL ----------------------------
-def generate_xml_from_template(data_dict, template_path, cdhu_contact_data):
+def generate_xml_from_template(data_dict, template_path, cdhu_contact_data, dpdu_contact_data=None):
+    if dpdu_contact_data is None: dpdu_contact_data = {}
     if not os.path.exists(template_path):
         raise FileNotFoundError(f"Template XML não encontrado em '{template_path}'")
 
@@ -138,22 +141,38 @@ def generate_xml_from_template(data_dict, template_path, cdhu_contact_data):
     is_duplicate_contact = (data_dict.get('uuid') and 
                             cdhu_contact_data.get('uuid') and
                             data_dict['uuid'] == cdhu_contact_data['uuid'])
-    
-    if is_duplicate_contact:
-        print("Gerador XML: Contato selecionado é o CDHU. Evitando duplicata.")
 
     # --- ETAPA 1: ATUALIZAR CONTATOS ---
+    is_cdhu_fipe = (data_dict.get('uuid') == '176ef54e-d52f-46ec-89a7-ec7c99366273')
     contact_wrappers_raiz = root.findall('./gmd:contact', namespaces=ns)
-    if len(contact_wrappers_raiz) >= 2:
-        # Bloco 1: Sempre preenchido com os dados CDHU
-        update_contact_block(contact_wrappers_raiz[0], cdhu_contact_data, ns)
-        
-        # Bloco 2: Preenchido com dados do usuário OU removido se for duplicata
-        if is_duplicate_contact:
-            contact_to_remove = contact_wrappers_raiz[1]
-            contact_to_remove.getparent().remove(contact_to_remove)
-        else:
-            update_contact_block(contact_wrappers_raiz[1], data_dict, ns)
+    
+    if is_cdhu_fipe:
+        if len(contact_wrappers_raiz) >= 2:
+            update_contact_block(contact_wrappers_raiz[0], cdhu_contact_data, ns)
+            update_contact_block(contact_wrappers_raiz[1], dpdu_contact_data, ns)
+            if len(contact_wrappers_raiz) >= 3:
+                update_contact_block(contact_wrappers_raiz[2], data_dict, ns)
+            else:
+                last_contact = contact_wrappers_raiz[-1]
+                index = root.index(last_contact)
+                new_contact = ET.Element(f"{{{ns['gmd']}}}contact")
+                root.insert(index + 1, new_contact)
+                update_contact_block(new_contact, data_dict, ns)
+    else:
+        # LÓGICA ANTIGA PARA OS OUTROS PRESETS (apenas 2 blocos)
+        if len(contact_wrappers_raiz) >= 2:
+            # Remove qualquer lixo de 3º bloco que a template possa ter tido (segurança)
+            if len(contact_wrappers_raiz) >= 3:
+                for c in contact_wrappers_raiz[2:]:
+                    c.getparent().remove(c)
+            # Bloco 1: CDHU
+            update_contact_block(contact_wrappers_raiz[0], cdhu_contact_data, ns)
+            
+            if is_duplicate_contact:
+                contact_to_remove = contact_wrappers_raiz[1]
+                contact_to_remove.getparent().remove(contact_to_remove)
+            else:
+                update_contact_block(contact_wrappers_raiz[1], data_dict, ns)
 
     # Ensure identificationInfo and MD_DataIdentification exist
     identification_info_node = root.find('./gmd:identificationInfo', namespaces=ns)
@@ -165,18 +184,31 @@ def generate_xml_from_template(data_dict, template_path, cdhu_contact_data):
         id_info = ET.SubElement(identification_info_node, f"{{{ns['gmd']}}}MD_DataIdentification")
 
     contact_wrappers_id = id_info.findall('./gmd:pointOfContact', namespaces=ns)
-    if len(contact_wrappers_id) >= 2:
-        # Bloco 1: Preenchido com dados do usuário (ou removido se for CDHU)
-        if is_duplicate_contact:
-            # Neste caso, o "contato do usuário" é o CDHU, que já está no outro bloco.
-            # Então, o primeiro pointOfContact pode ser removido ou limpo. Remover é mais limpo.
-            contact_to_remove = contact_wrappers_id[0]
-            contact_to_remove.getparent().remove(contact_to_remove)
-        else:
-            update_contact_block(contact_wrappers_id[0], data_dict, ns)
-
-        # Bloco 2: Sempre preenchido com os dados CDHU
-        update_contact_block(contact_wrappers_id[1], cdhu_contact_data, ns)
+    if is_cdhu_fipe:
+        if len(contact_wrappers_id) >= 2:
+            update_contact_block(contact_wrappers_id[0], dpdu_contact_data, ns)
+            update_contact_block(contact_wrappers_id[1], cdhu_contact_data, ns)
+            if len(contact_wrappers_id) >= 3:
+                update_contact_block(contact_wrappers_id[2], data_dict, ns)
+            else:
+                last_poc = contact_wrappers_id[-1]
+                index = id_info.index(last_poc)
+                new_poc = ET.Element(f"{{{ns['gmd']}}}pointOfContact")
+                id_info.insert(index + 1, new_poc)
+                update_contact_block(new_poc, data_dict, ns)
+    else:
+        # LÓGICA ANTIGA PARA OS OUTROS PRESETS (apenas 2 blocos)
+        if len(contact_wrappers_id) >= 2:
+            if len(contact_wrappers_id) >= 3:
+                for c in contact_wrappers_id[2:]:
+                    c.getparent().remove(c)
+            # No pointOfContact antigo: [0] = user/duplicata, [1] = CDHU
+            if is_duplicate_contact:
+                contact_to_remove = contact_wrappers_id[0]
+                contact_to_remove.getparent().remove(contact_to_remove)
+            else:
+                update_contact_block(contact_wrappers_id[0], data_dict, ns)
+            update_contact_block(contact_wrappers_id[1], cdhu_contact_data, ns)
 
     # Verifica se um UUID já existe no dicionário de dados (vindo de um XML carregado)
     existing_uuid = data_dict.get('metadata_uuid')

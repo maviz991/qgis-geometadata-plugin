@@ -1,4 +1,18 @@
 {
+    "cdhu_fipe": {
+        "uuid": "176ef54e-d52f-46ec-89a7-ec7c99366273",
+        "contact_individualName": "CDHU|FIPE",
+        "contact_organisationName": "Equipe de elaboração do Plano de Desenvolvimento Urbano e Habitacional do Estado de São Paulo - PDUH 2040",
+        "contact_positionName": "",
+        "contact_phone": "+55 11 2505-2553",
+        "contact_deliveryPoint": "Rua Boa Vista, 170, 8º andar",
+        "contact_city": "São Paulo",
+        "contact_postalCode": "01014-930",
+        "contact_country": "Brasil",
+        "contact_email": "pduh2040@cdhu.sp.gov.br",
+        "contact_administrativeArea": "São Paulo",
+        "contact_role": "author"
+    },
     "cdhu": {
         "uuid": "b98c4847-4d5c-43e1-a5eb-bd0228f6903a",
         "contact_individualName": "CDHU",

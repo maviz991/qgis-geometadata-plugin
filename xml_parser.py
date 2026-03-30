@@ -108,22 +108,24 @@ def parse_xml_to_dict(source, is_string=False):
             data['wms_data'] = wms_data
             data['wfs_data'] = wfs_data
 
-        all_contacts = root.findall('.//gmd:CI_ResponsibleParty', namespaces=ns)
+        all_contacts = root.findall('./gmd:contact/gmd:CI_ResponsibleParty', namespaces=ns)
         user_contact_node = None # Usando um nome mais claro que 'form_contact'
 
-        # ETAPA 1: Tenta encontrar um contato que NÃO seja o padrão (CDHU).
-        for contact in all_contacts:
-            org_name = get_element_text(contact, './gmd:organisationName/gco:CharacterString', ns)
-            if org_name and 'Companhia de Desenvolvimento Habitacional e Urbano' not in org_name:
-                user_contact_node = contact
-                break # Encontramos o contato do usuário (ex: DPDU), podemos parar.
-
-        # ETAPA 2: Se não encontrou um contato distinto (PLANO B).
-        if user_contact_node is None:
-            # ...significa que ou não há contatos, ou o único contato é o da CDHU.
-            # Neste caso, simplesmente pegamos o primeiro contato que encontrarmos.
-            if all_contacts: # Verifica se a lista não está vazia.
+        # Agora há até 3 blocos de contato: DPDU, CDHU, Usuário (Preset)
+        if len(all_contacts) >= 3:
+            user_contact_node = all_contacts[2]
+        elif len(all_contacts) == 2:
+            # Fallback legacy ou usuário selecionou um dos padrões
+            user_contact_node = None
+            for contact in all_contacts:
+                org_name = get_element_text(contact, './gmd:organisationName/gco:CharacterString', ns)
+                if org_name and 'Companhia de Desenvolvimento Habitacional e Urbano' not in org_name:
+                    user_contact_node = contact
+                    break
+            if user_contact_node is None:
                 user_contact_node = all_contacts[0]
+        elif len(all_contacts) == 1:
+            user_contact_node = all_contacts[0]
 
         # ETAPA 3: Preenche os dados se um contato foi encontrado (seja o do usuário ou o fallback).
         if user_contact_node is not None:
