@@ -776,7 +776,24 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         populate(self.ui.comboBox_MD_SpatialRepresentationTypeCode, [('Vetor', 'vector'), ('Grid | Raster', 'grid'), ('Tabela de texto', 'textTable'), ('Rede triangular irregular (TIN)', 'tin'), ('Modelo estereofónico', 'stereoscopicModel'), ('Vídeo', 'video')])
         populate(self.ui.comboBox_LanguageCode, [('🇧🇷 Português', 'por'), ('🇺🇸 Inglês', 'eng'), ('🇪🇸 Espanhol', 'spa'), ('🇫🇷 Françês', 'fra'), ('🇩🇪 Alemão', 'ger')])
         populate(self.ui.comboBox_characterSet, [('UTF-8', 'utf8')])
-        populate(self.ui.comboBox_topicCategory, [('Limites Administrativos', 'boundaries'), ('Planejamento e Cadastro', 'planningCadastre'), ('Sociedade e Cultura', 'society'), ('Infraestrutura', 'structure'), ('Transportes', 'transportation'), ('Localização', 'location'), ('Mapas ou imagens de Satélite', 'imageryBaseMapsEarthCover'), ('Altimetria, Batimetria ou Topografia', 'elevation'), ('Saúde', 'health'), ('Águas Interiores', 'inlandWaters'), ('Econômia', 'economy'), ('Biotipos', 'biota'), ('Climatologia ou Meteorologia', 'climatologyMeteorologyAtmosphere'), ('Informação GeoCientífica', 'geoscientificInformation'), ('Informação Militar', 'intelligenceMilitary'), ('Oceanos', 'oceans'), ('Infraestruturas de Comunicação', 'utilitiesCommunication'), ('Agricultura, pesca ou pecuária', 'farming')])
+        populate(self.ui.comboBox_topicCategory, [  ('Limites Administrativos', 'boundaries'),
+                                                    ('Planejamento e Cadastro', 'planningCadastre'),
+                                                    ('Sociedade e Cultura', 'society'),
+                                                    ('Infraestrutura', 'structure'),
+                                                    ('Transportes', 'transportation'),
+                                                    ('Localização', 'location'),
+                                                    ('Mapas ou imagens de Satélite', 'imageryBaseMapsEarthCover'),
+                                                    ('Altimetria, Batimetria ou Topografia', 'elevation'),
+                                                    ('Saúde', 'health'), ('Águas Interiores', 'inlandWaters'),
+                                                    ('Econômia', 'economy'),
+                                                    ('Biotipos', 'biota'),
+                                                    ('Climatologia ou Meteorologia', 'climatologyMeteorologyAtmosphere'),
+                                                    ('Informação GeoCientífica', 'geoscientificInformation'), 
+                                                    ('Informação Militar', 'intelligenceMilitary'),
+                                                    ('Ambiente', 'environment'),
+                                                    ('Oceanos', 'oceans'), 
+                                                    ('Infraestruturas de Comunicação', 'utilitiesCommunication'), 
+                                                    ('Agricultura, pesca ou pecuária', 'farming')])
         populate(self.ui.comboBox_hierarchyLevel, [('Conjunto de dados', 'dataset')])
         populate(self.ui.comboBox_contact_role, [('Dono', 'owner'), ('Autor', 'author'), ('Organizador', 'processor'), ('Distribuidor', 'distributor'), ('Depositário', 'custodian'), ('Fornecedor de recurso', 'resourceProvider'), ('Investigador principal', 'principalInvestigator'), ('Originador', 'originator'), ('Ponto de contato', 'pointOfContact'), ('Publicador', 'publisher'), ('Utilizador', 'user')])
         populate(self.ui.comboBox_contact_administrativeArea, [('São Paulo', 'SP'), ('Acre', 'AC'), ('Alagoas', 'AL'), ('Amapá', 'AP'), ('Amazonas', 'AM'), ('Bahia', 'BA'), ('Ceará', 'CE'), ('Distrito Federal', 'DF'), ('Espírito Santo', 'ES'), ('Goiás', 'GO'), ('Maranhão', 'MA'), ('Mato Grosso', 'MT'), ('Mato Grosso do Sul', 'MS'), ('Minas Gerais', 'MG'), ('Pará', 'PA'), ('Paraíba', 'PB'), ('Paraná', 'PR'), ('Pernambuco', 'PE'), ('Piauí', 'PI'), ('Rio de Janeiro', 'RJ'), ('Rio Grande do Norte', 'RN'), ('Rio Grande do Sul', 'RS'), ('Rondônia', 'RO'), ('Roraima', 'RR'), ('Santa Catarina', 'SC'), ('Sergipe', 'SE'), ('Tocantins', 'TO')])
