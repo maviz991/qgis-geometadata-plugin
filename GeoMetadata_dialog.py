@@ -779,7 +779,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         populate(self.ui.comboBox_topicCategory, [  ('Limites Administrativos', 'boundaries'),
                                                     ('Planejamento e Cadastro', 'planningCadastre'),
                                                     ('Sociedade e Cultura', 'society'),
-                                                    ('Infraestrutura', 'structure'),
+                                                    ('Infraestrutura ou Edificação', 'structure'),
                                                     ('Transportes', 'transportation'),
                                                     ('Localização', 'location'),
                                                     ('Mapas ou imagens de Satélite', 'imageryBaseMapsEarthCover'),
