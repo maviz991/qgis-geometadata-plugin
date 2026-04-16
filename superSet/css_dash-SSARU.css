@@ -1,0 +1,256 @@
+/* -------------------------------------------------------------------------- */
+/* 1. LIMPEZA DO CONTAINER PAI (Remove sombras e fundos padrão do Superset)   */
+/* -------------------------------------------------------------------------- */
+.dashboard-component-chart-holder {
+    background-color: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    /* Permite que o border-radius seja visível */
+}
+
+.dashboard-component {
+    padding: 0 !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* 2. ESTILIZAÇÃO E CORES DOS CARDS (Bordas arredondadas e alinhamento)       */
+/* -------------------------------------------------------------------------- */
+[data-test-chart-name="Total de edificações"],
+[data-test-chart-name="Edificações residenciais e mistas"],
+[data-test-chart-name="Edificações fechadas e recusas de pesquisas"],
+[data-test-chart-name="Famílias Numerosas"],
+[data-test-chart-name="Demanda confirmada"],
+[data-test-chart-name="Uso ocasional, vagas e em construção"],
+[data-test-chart-name="Vagas"],
+[data-test-chart-name="Em construção"],
+[data-test-chart-name="Demanda a definir"],
+[data-test-chart-name="Não requerem atentimento habitacional"],
+[data-test-chart-name="Comércio/Serviços"],
+[data-test-chart-name="Entidades religiosas e Entidades Associativa"],
+[data-test-chart-name="Não atendimento"],
+[data-test-chart-name="Demanda potencial"] {
+    border-radius: 35px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    height: 100% !important;
+    width: 100% !important;
+    overflow: hidden !important;
+    /* Garante o arredondamento das bordas */
+}
+
+/* Cor única para todos os cards */
+[data-test-chart-name="Total de edificações"],
+[data-test-chart-name="Edificações residenciais e mistas"],
+[data-test-chart-name="Edificações fechadas e recusas de pesquisas"],
+[data-test-chart-name="Famílias Numerosas"],
+[data-test-chart-name="Demanda confirmada"],
+[data-test-chart-name="Demanda potencial"] {
+    background-color: #A9C9D0 !important;
+}
+
+[data-test-chart-name="Uso ocasional, vagas e em construção"],
+[data-test-chart-name="Vagas"],
+[data-test-chart-name="Em construção"],
+[data-test-chart-name="Demanda a definir"] {
+    background-color: #f4e3c6 !important;
+}
+
+[data-test-chart-name="Não requerem atentimento habitacional"],
+[data-test-chart-name="Comércio/Serviços"],
+[data-test-chart-name="Entidades religiosas e Entidades Associativa"],
+[data-test-chart-name="Não atendimento"] {
+    background-color: #ecb7b7 !important;
+}
+
+/*---------------------------------------------- */
+/* -------------------- Aux -------------------- */
+/* Desenha a seta */
+.seta-conector {
+    width: 2px;
+    height: 50px;
+    /* Altura da sua seta */
+    background-color: #A9C9D0;
+    margin: 0 auto;
+    position: relative;
+}
+
+/* --- 1. A CHAVE EM "U" (Fork) --- */
+.fork-chave {
+    width: 50%;
+    /* Ajuste a largura conforme o espaço entre as caixas */
+    height: 40px;
+    border-left: 3px solid #333;
+    border-right: 3px solid #333;
+    border-bottom: 3px solid #333;
+    border-radius: 0 0 20px 20px;
+    margin: 0 auto;
+    position: relative;
+}
+
+/* O traço vertical que sai do meio da chave */
+.fork-chave::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: -40px;
+    height: 40px;
+    width: 3px;
+    background-color: #333;
+}
+
+/* --- 2. O SINAL DE MAIS (+) --- */
+.sinal-mais {
+    font-size: 100px;
+    font-weight: 600;
+    color: #A9C9D0;
+    text-align: center;
+    line-height: 50px;
+    margin: 10px 0;
+}
+
+/* --- lOGO CDHU --- */
+.logo-cdhu {
+    width: 200px;
+    height: 80px;
+    background-image: url('data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDIxNiA5MiI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC5jbHMtMSB7CiAgICAgICAgZmlsbDogI2U0MjMyMDsKICAgICAgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPGc+CiAgICA8ZyBpZD0iQ2FscXVlXzEiPgogICAgICA8Zz4KICAgICAgICA8cGF0aCBkPSJNNjAuMyw1MC40YzAtNy4zLDAtMTQuNiwwLTIxLjksMC0yLjksMS0zLjksMy44LTMuOSw2LjYsMCwxMy4zLDAsMTkuOSwwLDQuNiwwLDkuMSwxLDEzLjEsMy4zLDcuMSw0LDEwLjcsMTAuNCwxMS43LDE4LjQuNSw0LjUuNCw5LTEsMTMuMy0yLjgsOC45LTguOSwxNC4xLTE3LjgsMTYtMi40LjUtNSwuNy03LjUuOC02LjEuMS0xMi4yLDAtMTguMywwLTMsMC0zLjktMS0zLjktNCwwLTcuMywwLTE0LjcsMC0yMk04MSw2Mi4zYzEsMCwxLjksMCwyLjksMCwyLjYtLjIsNC45LTEuMSw2LjYtMy4yLDMuMi00LDMuOC04LjYsMi4yLTEzLjQtMS41LTQuNi01LTctOS44LTctMS42LDAtMy4yLDAtNC43LDAtMS43LDAtMi45LDEuMi0zLDIuOSwwLDAsMCwuMiwwLC4yLDAsNS43LDAsMTEuNCwwLDE3LjIsMCwyLDEuMiwzLjIsMy4yLDMuMi45LDAsMS44LDAsMi43LDAiPjwvcGF0aD4KICAgICAgICA8cGF0aCBkPSJNMTYwLjUsNTAuNmMwLDcuMywwLDE0LjcsMCwyMiwwLDIuOC0xLjEsMy45LTMuOCwzLjktMi41LDAtNS4xLDAtNy42LDAtMi42LDAtMy43LTEuMS0zLjctMy44LDAtMy43LDAtNy40LDAtMTEuMSwwLTIuNi0xLjEtMy43LTMuNi0zLjctMy40LDAtNi43LDAtMTAuMSwwLTEuMywwLTIuMi43LTIuNiwyLS4xLjQtLjEuOC0uMSwxLjMsMCwzLjgsMCw3LjUsMCwxMS4zLDAsMi45LTEuMSw0LTMuOSw0LTIuNiwwLTUuMiwwLTcuOCwwLTIsMC0zLjItMS4yLTMuMy0zLjIsMC0uMiwwLS40LDAtLjYsMC0xNC43LDAtMjkuNCwwLTQ0LjEsMC0uMywwLS42LDAtLjkuMi0xLjgsMS40LTIuOSwzLjItMi45LDIuNywwLDUuNSwwLDguMiwwLDIuNCwwLDMuNiwxLjIsMy42LDMuNywwLDQsMCw4LjEsMCwxMi4xLDAsMi4yLDEsMy4zLDMuMSwzLjMsMy40LDAsNi43LDAsMTAuMSwwLDIsMCwzLjItMS4yLDMuMi0zLjMsMC00LDAtOC4xLDAtMTIuMSwwLTIuNiwxLjEtMy43LDMuNy0zLjcsMi43LDAsNS4zLDAsOCwwLDIuMiwwLDMuNCwxLjIsMy40LDMuNSwwLDcuNSwwLDE1LDAsMjIuNSI+PC9wYXRoPgogICAgICAgIDxwYXRoIGQ9Ik0zMS45LDIzLjhjOC4zLDAsMTUuMSwyLjMsMjAuOCw3LjMsMS43LDEuNSwxLjgsMy4zLjMsNC45LTEuNiwxLjctMy4xLDMuMy00LjcsNC45LTEuNiwxLjctMy4xLDEuNy00LjkuMy00LjEtMy4yLTguNy00LjUtMTMuOC0zLTUuMywxLjYtOS42LDYuNS04LjYsMTQsLjgsNi4xLDYsMTAuNSwxMi4yLDEwLjUsNCwwLDcuNS0xLjMsMTAuNi0zLjksMS43LTEuNCwzLjEtMS4zLDQuNy4xLDEuNiwxLjUsMy4zLDMuMSw0LjksNC42LDEuOCwxLjcsMS44LDMuNS0uMSw1LjEtNS4zLDQuNy0xMS41LDcuMy0xOC41LDcuNy03LjEuNC0xMy43LTEtMTkuNS01LjQtNi41LTUtOS43LTExLjYtOS45LTE5LjctLjItMTIuNSw2LjYtMjIuNCwxOC0yNi4xLDEuNC0uNCwyLjctLjgsNC4xLTEsMS43LS4zLDMuNC0uMyw0LjMtLjQiPjwvcGF0aD4KICAgICAgICA8cGF0aCBkPSJNMTgxLDQxLjdjMCw0LjUsMCw5LDAsMTMuNSwwLDEuNS4zLDMsMS4yLDQuMywxLjIsMS44LDMuMSwyLjcsNS4yLDIuOSwxLjIuMSwyLjQsMCwzLjUtLjMsMi42LS44LDQuMi0yLjUsNC44LTUuMi4zLTEuNi4zLTMuMy4yLTUsMC0xLjIuNC0yLjEsMS4yLTMsMi42LTIuNSw1LjEtNS4xLDcuNy03LjcsMS4zLTEuMywyLjgtMS4zLDQuMSwwLC40LjQuOC44LDEuMiwxLjIuNS41LjgsMS4xLjcsMS44LDAsMy43LDAsNy41LDAsMTEuMiwwLDMtLjUsNS45LTEuNiw4LjgtMS43LDQuNS00LjksNy42LTkuMyw5LjYtMi45LDEuMy01LjksMi4xLTksMi4zLTQuMS4zLTguMSwwLTEyLTEuNS0yLjUtLjktNC44LTIuMS02LjgtMy44LTIuOC0yLjQtNC41LTUuNS01LjQtOS0uNS0yLS44LTQtLjgtNiwwLTkuNSwwLTE4LjksMC0yOC40LDAtMS43LDEuMy0zLDMtMywyLjksMCw1LjksMCw4LjgsMCwxLjksMCwzLjIsMS4zLDMuMiwzLjEsMCw0LjcsMCw5LjQsMCwxNC4xaDBaIj48L3BhdGg+CiAgICAgICAgPHBhdGggY2xhc3M9ImNscy0xIiBkPSJNMTk1LjksMzMuN2MwLTIuNiwwLTUuMSwwLTcuNywwLS45LjUtMS42LDEuNS0xLjYsNCwwLDcuOSwwLDExLjksMCwuOSwwLDEuNS41LDEuNSwxLjUsMCwzLjksMCw3LjgsMCwxMS43LDAsLjMsMCwuNS0uMS44LS4zLjktMS40LDEuMS0yLjEuNS0uOC0uNy0xLjUtMS41LTIuMy0yLjMtLjgtLjgtMS41LS44LTIuMiwwLTIsMi0zLjksNC01LjksNi0uMy4zLS43LjUtMS4xLjUtLjgsMC0xLjItLjYtMS4yLTEuNSwwLTIuNiwwLTUuMywwLTcuOSI+PC9wYXRoPgogICAgICA8L2c+CiAgICA8L2c+CiAgPC9nPgo8L3N2Zz4K');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: left;
+    margin-bottom: 20px;
+}
+
+/* --- Ajuste no btn 3 pontinhos --- */
+.dashboard-component-chart-holder {
+    position: relative !important;
+}
+
+/* Localiza o menu de 3 pontinhos */
+div[class*="css-"] button[aria-label="More Options"] {
+    position: absolute !important;
+    top: 7px !important;
+    right: 3px !important;
+    z-index: 1000 !important;
+    background: transparent !important;
+    border: none !important;
+}
+
+/* 1. Esconde o Título (Header) */
+.chart-slice .header-title,
+.chart-slice a {
+    display: none !important;
+}
+
+/* 3. Ajuste do Big Number (O contador) */
+.superset-legacy-chart-big-number {
+    font-weight: 500;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Força os wrappers intermediários entre o chart-container e o big-number a herdar altura */
+.chart-slice .chart-container > div {
+    height: 100% !important;
+    width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* 1. Força o subheader a quebrar linha e respeitar o limite do card */
+.subheader-line {
+    display: block !important;
+    white-space: normal !important;
+    /* Permite quebra de linha */
+    word-wrap: break-word !important;
+    /* Quebra palavras longas se necessário */
+    overflow-wrap: break-word !important;
+    max-width: 100% !important;
+    /* Dá uma margem de segurança nas laterais */
+    text-align: center !important;
+    margin: 0 auto !important;
+    line-height: 1.2 !important;
+    /* Ajusta o espaçamento entre as linhas */
+    font-size: 14px !important;
+    /* Tamanho fixo, para não diminuir automático */
+}
+
+/* 2. Garante que o container interno não bloqueie a quebra */
+.big-number-container {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 100% !important;
+    height: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* 3. MAXIMIZAR ÁREA ÚTIL DO SLICE/CARD                                        */
+/* -------------------------------------------------------------------------- */
+
+/* Colapsa a altura do header sem display:none (preserva o botão de 3 pontinhos) */
+.chart-slice .chart-header,
+.chart-slice .dragHandle,
+.chart-slice .header-controls-container,
+.chart-slice [class*="ChartHeader"],
+.chart-slice [class*="chart-header"] {
+    height: 0 !important;
+    min-height: 0 !important;
+    max-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    flex-shrink: 0 !important;
+}
+
+/* Colapsa o primeiro filho direto do chart-slice quando é o header */
+.chart-slice>div:first-child:not(.slice_container):not([class*="chart_container"]) {
+    height: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+}
+
+/* Remove padding interno do slice e faz ocupar 100% */
+.chart-slice {
+    padding: 0 !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+/* O container do slice ocupa todo o espaço restante */
+.slice_container,
+.chart_container {
+    padding: 0 !important;
+    margin: 0 !important;
+    height: 100% !important;
+    flex: 1 1 auto !important;
+}
+
+/* Faz a área de renderização ocupar tudo */
+.chart-slice .chart-container,
+.chart-slice .viz-container,
+.chart-slice [class*="Slice__ChartContainer"] {
+    height: 100% !important;
+    padding: 0 !important;
+}
+
+/* Garante que os wrappers internos se expandam */
+.chart-slice .chart-container>div,
+.chart-slice .viz-container>div {
+    height: 100% !important;
+}

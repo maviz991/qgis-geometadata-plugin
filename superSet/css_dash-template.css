@@ -1,0 +1,604 @@
+/* ============================================================================ */
+/* SUPERSET DASHBOARD — CSS TEMPLATE                                            */
+/* Se errar, só recarrgar o template                                            */
+/* ============================================================================ */
+
+/* ============================================================================ */
+/* >> CONFIGURAÇÕES — edite apenas este bloco <<                                */
+/* ============================================================================ */
+:root {
+    /* --- Fundo geral do dashboard - transparent=transparente, cores (black, red etc), hexadecial (#000000, #FF0000 etc) --- */
+    --painel-fundo: transparent;
+
+    /* --- Cards cor do fundo padrão - transparent=transparente, cores (black, red etc), hexadecial (#000000, #FF0000 etc) --- */
+    --card-fundo: #ccc;
+
+    /* arredondamento dos cantos dos cards (ex: 0px (quadrado), 8px, 35px, 999px (circulo))  */
+    --card-arredondamento: 35px;
+
+    /* espessura da borda (0px = sem borda) */
+    --card-borda-espessura: 0px;
+
+    /* cor da borda dos cards - transparent=transparente, cores (black, red etc), hexadecial (#000000, #FF0000 etc) */
+    --card-borda-cor: #cccccc;
+
+    /* estilo: solid = linha sólida, dashed=linha tracejada, dotted=linha pontilhada, none=sem borda*/
+    --card-borda-estilo: solid;
+
+    /* sombra: none=sem sombra, ex: 0 2px 8px rgba(0,0,0,0.15) */
+    --card-sombra: none;
+
+    /* --- Tipografia (Contadores) --- */
+    /* NOTA: a cor do número é controlada pelo próprio contador no Superset - em  Gráficos  > Customize > Font color       */
+
+    /*  */
+    --numero-negrito: 500;
+
+    /* cor do subtítulo inherit=padrão, cores (black, red etc), hexadecial (#000000, #FF0000 etc) */
+    --subtitulo-cor: inherit;
+
+    /* tamanho da fonte do subtítulo        */
+    --subtitulo-tamanho: 14px;
+
+    /* negrito do subtítulo  negrito: 400=normal, 700=bold               */
+    --subtitulo-negrito: 400;
+
+    /* --- Paleta de cores para grupos de cards - controle de cores individual --- */
+    /* Use nomes de cores (black, red etc) ou hexadecial (#000000, #FF0000 etc)*/
+    /* grupo azul                           */
+    --cor-azul: #A9C9D0;
+    /* grupo laranja                        */
+    --cor-laranja: #f4e3c6;
+    /* grupo vermelho                       */
+    --cor-vermelho: #ecb7b7;
+    /* grupo verde                          */
+    --cor-verde: #c8e6c9;
+    /* grupo roxo                           */
+    --cor-roxo: #d1c4e9;
+
+    /* --- Conectores entre cards --- */
+    /* cor das setas, símbolo (+) etc.          */
+    --conector-cor: #cccccc;
+}
+
+
+/* ============================================================================ */
+/* >> GRUPOS DE CORES — escreva os nomes dos charts em cada grupo <<            */
+/*                                                                               */
+/*    Copie e cole o nome EXATO do chart (MESMO nome exibido no dashboard)      */
+/*    Adicione ou remova linhas conforme necessário                              */
+/*    Para um novo grupo, duplique um bloco e troque a variável de cor          */
+/*    IMPORTANTE: esta seção deve ficar SEMPRE no final do arquivo              */
+/* ============================================================================ */
+
+/* --- GRUPO AZUL (--cor-azul) --- */
+.dashboard-component-chart-holder .chart-slice[data-test-chart-name="Nome do chart 1"],
+/*coloque os nomes entre aspas*/
+.dashboard-component-chart-holder .chart-slice[data-test-chart-name="Nome do chart 2"]
+/*coloque os nomes entre aspas*/
+
+    {
+    background-color: var(--cor-azul) !important;
+    border-color: var(--cor-azul) !important;
+}
+
+/*Não altere esta linha*/
+
+/* --- GRUPO LARANJA (--cor-laranja) --- */
+.dashboard-component-chart-holder .chart-slice[data-test-chart-name="Nome do chart 3"],
+.dashboard-component-chart-holder .chart-slice[data-test-chart-name="Nome do chart 4"]
+/* Para add novo card nesse grupo, não esqueçã da vírgula no final da linha anterior */
+
+    {
+    background-color: var(--cor-laranja) !important;
+    border-color: var(--cor-laranja) !important;
+}
+
+/*Não altere esta linha*/
+
+/* --- GRUPO VERMELHO (--cor-vermelho) --- */
+.dashboard-component-chart-holder .chart-slice[data-test-chart-name="Nome do chart 5"],
+.dashboard-component-chart-holder .chart-slice[data-test-chart-name="Nome do chart 6"] {
+    background-color: var(--cor-vermelho) !important;
+    border-color: var(--cor-vermelho) !important;
+}
+
+/* --- GRUPO VERDE (--cor-verde) --- */
+
+.dashboard-component-chart-holder .chart-slice[data-test-chart-name="Nome do chart 7"] {
+    background-color: var(--cor-verde) !important;
+    border-color: var(--cor-verde) !important;
+}
+
+
+/* --- GRUPO ROXO (--cor-roxo) --- */
+.dashboard-component-chart-holder .chart-slice[data-test-chart-name="Nome do chart 8"] {
+    background-color: var(--cor-roxo) !important;
+    border-color: var(--cor-roxo) !important;
+}
+
+/* ============================================================================ */
+/* NÃO ALTERE ABAIXO DESTA LINHA, exceto se souber o que está fazendo           */
+/* ============================================================================ */
+
+.dashboard-component-chart-holder {
+    background-color: var(--painel-fundo) !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    position: relative !important;
+}
+
+.dashboard-component {
+    padding: 0 !important;
+}
+
+/* data-test-chart-name fica no .chart-slice — fundo e borda vão nele          */
+/* Componentes de texto/HTML não têm .chart-slice, ficam transparentes         */
+.dashboard-component-chart-holder .chart-slice {
+    border-radius: var(--card-arredondamento) !important;
+    background-color: var(--card-fundo) !important;
+    border-width: var(--card-borda-espessura) !important;
+    border-color: var(--card-borda-cor) !important;
+    border-style: var(--card-borda-estilo) !important;
+    box-shadow: var(--card-sombra) !important;
+}
+
+.dashboard-component-chart-holder .slice_container {
+    border-radius: var(--card-arredondamento) !important;
+    overflow: hidden !important;
+}
+
+
+.chart-slice .header-title,
+.chart-slice a {
+    display: none !important;
+}
+
+.chart-slice .chart-header,
+.chart-slice .dragHandle,
+.chart-slice .header-controls-container,
+.chart-slice [class*="ChartHeader"],
+.chart-slice [class*="chart-header"] {
+    height: 0 !important;
+    min-height: 0 !important;
+    max-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    flex-shrink: 0 !important;
+}
+
+.chart-slice>div:first-child:not(.slice_container):not([class*="chart_container"]) {
+    height: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+}
+
+.chart-slice {
+    padding: 0 !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.slice_container,
+.chart_container {
+    padding: 0 !important;
+    margin: 0 !important;
+    height: 100% !important;
+    flex: 1 1 auto !important;
+}
+
+.chart-slice .chart-container,
+.chart-slice .viz-container,
+.chart-slice [class*="Slice__ChartContainer"] {
+    height: 100% !important;
+    padding: 0 !important;
+}
+
+.chart-slice .chart-container>div,
+.chart-slice .viz-container>div {
+    height: 100% !important;
+    width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.superset-legacy-chart-big-number {
+    font-weight: var(--numero-negrito) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.big-number-container {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 100% !important;
+    height: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.subheader-line {
+    display: block !important;
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    max-width: 100% !important;
+    text-align: center !important;
+    margin: 0 auto !important;
+    line-height: 1.2 !important;
+    font-size: var(--subtitulo-tamanho) !important;
+    color: var(--subtitulo-cor) !important;
+    font-weight: var(--subtitulo-negrito) !important;
+}
+
+div[class*="css-"] button[aria-label="More Options"] {
+    position: absolute !important;
+    top: 7px !important;
+    right: 3px !important;
+    z-index: 1000 !important;
+    background: transparent !important;
+    border: none !important;
+}
+
+
+/* ============================================================================ */
+/* ELEMENTOS DE LAYOUT — REFERÊNCIA RÁPIDA                                      */
+/*                                                                               */
+/*  Use no HTML do componente "Text" do Superset:                               */
+/*  <div class="CLASSE"></div>                                                   */
+/*                                                                               */
+/*  ┌─────────────────────────┬──────────────────────────────────────────────┐  */
+/*  │ Classe                  │ Descrição                                    │  */
+/*  ├─────────────────────────┼──────────────────────────────────────────────┤  */
+/*  │ seta-baixo              │ Linha vertical sólida com seta ▼             │  */
+/*  │ seta-baixo-tracejada    │ Linha tracejada vertical com seta ▼          │  */
+/*  │ seta-cima               │ Linha vertical sólida com seta ▲             │  */
+/*  │ seta-cima-tracejada     │ Linha tracejada vertical com seta ▲          │  */
+/*  │ seta-direita            │ Linha horizontal sólida com seta ►           │  */
+/*  │ seta-direita-tracejada  │ Linha tracejada horizontal com seta ►        │  */
+/*  │ seta-esquerda           │ Linha horizontal sólida com seta ◄           │  */
+/*  │ seta-esquerda-tracejada │ Linha tracejada horizontal com seta ◄        │  */
+/*  │ fork-chave              │ Chave em "U" (bifurcação de cima pra baixo)  │  */
+/*  │ fork-chave-inv          │ Chave em "∩" (bifurcação de baixo pra cima)  │  */
+/*  │ fork-3                  │ Pente 3 entradas → 1 saída (centro incluso)  │  */
+/*  │ linha-h                 │ Linha horizontal sólida separadora           │  */
+/*  │ linha-h-tracejada       │ Linha horizontal tracejada separadora        │  */
+/*  │ sinal-mais              │ Símbolo + grande — escreva + dentro do div   │  */
+/*  │ sinal-igual             │ Símbolo = grande — escreva = dentro do div   │  */
+/*  │ label-categoria         │ Rótulo/badge de texto centralizado           │  */
+/*  │ logo-projeto            │ Logo da organização (configure a URL abaixo) │  */
+/*  └─────────────────────────┴──────────────────────────────────────────────┘  */
+/*                                                                               */
+/*  Exemplo de uso combinado:                                                   */
+/*  <div class="seta-baixo"></div>                                              */
+/*  <div class="fork-chave"></div>                                              */
+/*  <div class="fork-3"></div>                                                  */
+/*  <div class="sinal-mais">+</div>    ← o caractere fica dentro do div        */
+/*  <div class="sinal-igual">=</div>   ← o caractere fica dentro do div        */
+/*  <div class="label-categoria">Grupo A</div>                                  */
+/*  <div class="logo-projeto"></div>                                            */
+/* ============================================================================ */
+
+/* --- Seta vertical sólida (↓) --- */
+.seta-baixo {
+    width: 3px;
+    height: 50px;
+    background-color: var(--conector-cor);
+    margin: 0 auto;
+    position: relative;
+}
+
+.seta-baixo::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-top: 10px solid var(--conector-cor);
+}
+
+/* --- Seta vertical tracejada (↓) --- */
+.seta-baixo-tracejada {
+    width: 0;
+    height: 50px;
+    border-left: 3px dashed var(--conector-cor);
+    margin: 0 auto;
+    position: relative;
+}
+
+.seta-baixo-tracejada::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-top: 10px solid var(--conector-cor);
+}
+
+/* --- Seta vertical sólida (↑) --- */
+.seta-cima {
+    width: 3px;
+    height: 50px;
+    background-color: var(--conector-cor);
+    margin: 0 auto;
+    position: relative;
+}
+
+.seta-cima::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-bottom: 10px solid var(--conector-cor);
+}
+
+/* --- Seta vertical tracejada (↑) --- */
+.seta-cima-tracejada {
+    width: 0;
+    height: 50px;
+    border-left: 3px dashed var(--conector-cor);
+    margin: 0 auto;
+    position: relative;
+}
+
+.seta-cima-tracejada::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-bottom: 10px solid var(--conector-cor);
+}
+
+/* --- Seta horizontal sólida (→) --- */
+.seta-direita {
+    height: 3px;
+    width: 80px;
+    background-color: var(--conector-cor);
+    margin: auto;
+    position: relative;
+    align-self: center;
+}
+
+.seta-direita::after {
+    content: '';
+    position: absolute;
+    right: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-top: 7px solid transparent;
+    border-bottom: 7px solid transparent;
+    border-left: 10px solid var(--conector-cor);
+}
+
+/* --- Seta horizontal tracejada (→) --- */
+.seta-direita-tracejada {
+    height: 0;
+    width: 80px;
+    border-top: 3px dashed var(--conector-cor);
+    margin: auto;
+    position: relative;
+    align-self: center;
+}
+
+.seta-direita-tracejada::after {
+    content: '';
+    position: absolute;
+    right: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-top: 7px solid transparent;
+    border-bottom: 7px solid transparent;
+    border-left: 10px solid var(--conector-cor);
+}
+
+/* --- Seta horizontal sólida (←) --- */
+.seta-esquerda {
+    height: 3px;
+    width: 80px;
+    background-color: var(--conector-cor);
+    margin: auto;
+    position: relative;
+    align-self: center;
+}
+
+.seta-esquerda::before {
+    content: '';
+    position: absolute;
+    left: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-top: 7px solid transparent;
+    border-bottom: 7px solid transparent;
+    border-right: 10px solid var(--conector-cor);
+}
+
+/* --- Seta horizontal tracejada (←) --- */
+.seta-esquerda-tracejada {
+    height: 0;
+    width: 80px;
+    border-top: 3px dashed var(--conector-cor);
+    margin: auto;
+    position: relative;
+    align-self: center;
+}
+
+.seta-esquerda-tracejada::before {
+    content: '';
+    position: absolute;
+    left: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-top: 7px solid transparent;
+    border-bottom: 7px solid transparent;
+    border-right: 10px solid var(--conector-cor);
+}
+
+/* --- Chave em "U" — bifurcação de cima pra baixo --- */
+.fork-chave {
+    width: 60%;
+    height: 40px;
+    border-left: 3px solid var(--conector-cor);
+    border-right: 3px solid var(--conector-cor);
+    border-bottom: 3px solid var(--conector-cor);
+    border-radius: 0 0 20px 20px;
+    margin: 0 auto;
+    position: relative;
+}
+
+.fork-chave::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: -40px;
+    height: 40px;
+    width: 3px;
+    background-color: var(--conector-cor);
+}
+
+/* --- Pente 3 entradas → 1 saída (U com haste central) --- */
+/*     left-top, center-top, right-top → bottom-center                        */
+.fork-3 {
+    width: 60%;
+    height: 40px;
+    border-left: 3px solid var(--conector-cor);
+    border-right: 3px solid var(--conector-cor);
+    border-bottom: 3px solid var(--conector-cor);
+    border-radius: 0 0 10px 10px;
+    margin: 0 auto;
+    position: relative;
+}
+
+/* haste central entrando pelo topo */
+.fork-3::before {
+    content: '';
+    position: absolute;
+    left: calc(50% - 1.5px);
+    top: -40px;
+    height: 40px;
+    width: 3px;
+    background-color: var(--conector-cor);
+}
+
+/* haste única saindo pela base */
+.fork-3::after {
+    content: '';
+    position: absolute;
+    left: calc(50% - 1.5px);
+    bottom: -40px;
+    height: 40px;
+    width: 3px;
+    background-color: var(--conector-cor);
+}
+
+/* --- Chave em "∩" — bifurcação de baixo pra cima --- */
+.fork-chave-inv {
+    width: 60%;
+    height: 40px;
+    border-left: 3px solid var(--conector-cor);
+    border-right: 3px solid var(--conector-cor);
+    border-top: 3px solid var(--conector-cor);
+    border-radius: 20px 20px 0 0;
+    margin: 0 auto;
+    position: relative;
+}
+
+.fork-chave-inv::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: -40px;
+    height: 40px;
+    width: 3px;
+    background-color: var(--conector-cor);
+}
+
+/* --- Linha horizontal sólida --- */
+.linha-h {
+    width: 80%;
+    height: 3px;
+    background-color: var(--conector-cor);
+    margin: 10px auto;
+    border-radius: 2px;
+}
+
+/* --- Linha horizontal tracejada --- */
+.linha-h-tracejada {
+    width: 80%;
+    height: 0;
+    border-top: 3px dashed var(--conector-cor);
+    margin: 10px auto;
+}
+
+/* --- Símbolo + --- */
+.sinal-mais {
+    font-size: 80px;
+    font-weight: 600;
+    color: var(--conector-cor);
+    text-align: center;
+    line-height: 60px;
+    margin: 5px 0;
+    user-select: none;
+}
+
+/* --- Símbolo = --- */
+.sinal-igual {
+    font-size: 80px;
+    font-weight: 600;
+    color: var(--conector-cor);
+    text-align: center;
+    line-height: 60px;
+    margin: 5px 0;
+    user-select: none;
+}
+
+/* --- Label / badge de categoria --- */
+.label-categoria {
+    display: inline-block;
+    background-color: var(--conector-cor);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 4px 16px;
+    border-radius: 20px;
+    text-align: center;
+    margin: 0 auto;
+    width: fit-content;
+}
+
+
+
+/* --- lOGO CDHU --- */
+.logo-cdhu {
+    width: 200px;
+    height: 80px;
+    background-image: url('data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDIxNiA5MiI+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC5jbHMtMSB7CiAgICAgICAgZmlsbDogI2U0MjMyMDsKICAgICAgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPGc+CiAgICA8ZyBpZD0iQ2FscXVlXzEiPgogICAgICA8Zz4KICAgICAgICA8cGF0aCBkPSJNNjAuMyw1MC40YzAtNy4zLDAtMTQuNiwwLTIxLjksMC0yLjksMS0zLjksMy44LTMuOSw2LjYsMCwxMy4zLDAsMTkuOSwwLDQuNiwwLDkuMSwxLDEzLjEsMy4zLDcuMSw0LDEwLjcsMTAuNCwxMS43LDE4LjQuNSw0LjUuNCw5LTEsMTMuMy0yLjgsOC45LTguOSwxNC4xLTE3LjgsMTYtMi40LjUtNSwuNy03LjUuOC02LjEuMS0xMi4yLDAtMTguMywwLTMsMC0zLjktMS0zLjktNCwwLTcuMywwLTE0LjcsMC0yMk04MSw2Mi4zYzEsMCwxLjksMCwyLjksMCwyLjYtLjIsNC45LTEuMSw2LjYtMy4yLDMuMi00LDMuOC04LjYsMi4yLTEzLjQtMS41LTQuNi01LTctOS44LTctMS42LDAtMy4yLDAtNC43LDAtMS43LDAtMi45LDEuMi0zLDIuOSwwLDAsMCwuMiwwLC4yLDAsNS43LDAsMTEuNCwwLDE3LjIsMCwyLDEuMiwzLjIsMy4yLDMuMi45LDAsMS44LDAsMi43LDAiPjwvcGF0aD4KICAgICAgICA8cGF0aCBkPSJNMTYwLjUsNTAuNmMwLDcuMywwLDE0LjcsMCwyMiwwLDIuOC0xLjEsMy45LTMuOCwzLjktMi41LDAtNS4xLDAtNy42LDAtMi42LDAtMy43LTEuMS0zLjctMy44LDAtMy43LDAtNy40LDAtMTEuMSwwLTIuNi0xLjEtMy43LTMuNi0zLjctMy40LDAtNi43LDAtMTAuMSwwLTEuMywwLTIuMi43LTIuNiwyLS4xLjQtLjEuOC0uMSwxLjMsMCwzLjgsMCw3LjUsMCwxMS4zLDAsMi45LTEuMSw0LTMuOSw0LTIuNiwwLTUuMiwwLTcuOCwwLTIsMC0zLjItMS4yLTMuMy0zLjIsMC0uMiwwLS40LDAtLjYsMC0xNC43LDAtMjkuNCwwLTQ0LjEsMC0uMywwLS42LDAtLjkuMi0xLjgsMS40LTIuOSwzLjItMi45LDIuNywwLDUuNSwwLDguMiwwLDIuNCwwLDMuNiwxLjIsMy42LDMuNywwLDQsMCw4LjEsMCwxMi4xLDAsMi4yLDEsMy4zLDMuMSwzLjMsMy40LDAsNi43LDAsMTAuMSwwLDIsMCwzLjItMS4yLDMuMi0zLjMsMC00LDAtOC4xLDAtMTIuMSwwLTIuNiwxLjEtMy43LDMuNy0zLjcsMi43LDAsNS4zLDAsOCwwLDIuMiwwLDMuNCwxLjIsMy40LDMuNSwwLDcuNSwwLDE1LDAsMjIuNSI+PC9wYXRoPgogICAgICAgIDxwYXRoIGQ9Ik0zMS45LDIzLjhjOC4zLDAsMTUuMSwyLjMsMjAuOCw3LjMsMS43LDEuNSwxLjgsMy4zLjMsNC45LTEuNiwxLjctMy4xLDMuMy00LjcsNC45LTEuNiwxLjctMy4xLDEuNy00LjkuMy00LjEtMy4yLTguNy00LjUtMTMuOC0zLTUuMywxLjYtOS42LDYuNS04LjYsMTQsLjgsNi4xLDYsMTAuNSwxMi4yLDEwLjUsNCwwLDcuNS0xLjMsMTAuNi0zLjksMS43LTEuNCwzLjEtMS4zLDQuNy4xLDEuNiwxLjUsMy4zLDMuMSw0LjksNC42LDEuOCwxLjcsMS44LDMuNS0uMSw1LjEtNS4zLDQuNy0xMS41LDcuMy0xOC41LDcuNy03LjEuNC0xMy43LTEtMTkuNS01LjQtNi41LTUtOS43LTExLjYtOS45LTE5LjctLjItMTIuNSw2LjYtMjIuNCwxOC0yNi4xLDEuNC0uNCwyLjctLjgsNC4xLTEsMS43LS4zLDMuNC0uMyw0LjMtLjQiPjwvcGF0aD4KICAgICAgICA8cGF0aCBkPSJNMTgxLDQxLjdjMCw0LjUsMCw5LDAsMTMuNSwwLDEuNS4zLDMsMS4yLDQuMywxLjIsMS44LDMuMSwyLjcsNS4yLDIuOSwxLjIuMSwyLjQsMCwzLjUtLjMsMi42LS44LDQuMi0yLjUsNC44LTUuMi4zLTEuNi4zLTMuMy4yLTUsMC0xLjIuNC0yLjEsMS4yLTMsMi42LTIuNSw1LjEtNS4xLDcuNy03LjcsMS4zLTEuMywyLjgtMS4zLDQuMSwwLC40LjQuOC44LDEuMiwxLjIuNS41LjgsMS4xLjcsMS44LDAsMy43LDAsNy41LDAsMTEuMiwwLDMtLjUsNS45LTEuNiw4LjgtMS43LDQuNS00LjksNy42LTkuMyw5LjYtMi45LDEuMy01LjksMi4xLTksMi4zLTQuMS4zLTguMSwwLTEyLTEuNS0yLjUtLjktNC44LTIuMS02LjgtMy44LTIuOC0yLjQtNC41LTUuNS01LjQtOS0uNS0yLS44LTQtLjgtNiwwLTkuNSwwLTE4LjksMC0yOC40LDAtMS43LDEuMy0zLDMtMywyLjksMCw1LjksMCw4LjgsMCwxLjksMCwzLjIsMS4zLDMuMiwzLjEsMCw0LjcsMCw5LjQsMCwxNC4xaDBaIj48L3BhdGg+CiAgICAgICAgPHBhdGggY2xhc3M9ImNscy0xIiBkPSJNMTk1LjksMzMuN2MwLTIuNiwwLTUuMSwwLTcuNywwLS45LjUtMS42LDEuNS0xLjYsNCwwLDcuOSwwLDExLjksMCwuOSwwLDEuNS41LDEuNSwxLjUsMCwzLjksMCw3LjgsMCwxMS43LDAsLjMsMCwuNS0uMS44LS4zLjktMS40LDEuMS0yLjEuNS0uOC0uNy0xLjUtMS41LTIuMy0yLjMtLjgtLjgtMS41LS44LTIuMiwwLTIsMi0zLjksNC01LjksNi0uMy4zLS43LjUtMS4xLjUtLjgsMC0xLjItLjYtMS4yLTEuNSwwLTIuNiwwLTUuMywwLTcuOSI+PC9wYXRoPgogICAgICA8L2c+CiAgICA8L2c+CiAgPC9nPgo8L3N2Zz4K');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: left;
+    margin-bottom: 20px;
+}
