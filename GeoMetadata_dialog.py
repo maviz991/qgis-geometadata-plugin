@@ -26,12 +26,13 @@ except ImportError:
 
 # --- 2. Imports de Bibliotecas de Terceiros ---
 import requests
-from qgis.PyQt import uic, QtWidgets
-from qgis.PyQt.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QWidget, QMessageBox
-from qgis.PyQt.QtCore import Qt, QDateTime, QSize, QUrl 
-from qgis.PyQt.QtGui import QDesktopServices, QCursor
-from qgis.PyQt.QtGui import QPixmap, QIcon
-from qgis.PyQt.QtWidgets import QSizePolicy
+from qgis.PyQt import QtWidgets
+from qgis.PyQt.QtWidgets import (
+    QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
+    QWidget, QMessageBox, QToolButton, QMenu, QAction, QSizePolicy
+)
+from qgis.PyQt.QtCore import Qt, QDateTime, QSize, QUrl
+from qgis.PyQt.QtGui import QDesktopServices, QCursor, QPixmap, QIcon
 from qgis.core import (
     Qgis,
     QgsApplication,
@@ -43,6 +44,7 @@ from qgis.core import (
 # --- 3. Imports de Módulos Locais do Plugin ---
 from .core import xml_generator, xml_parser
 from .ui.form_manager import FormManager
+from .ui.dynamic_form import DynamicForm
 from .core.metadata_service import MetadataService
 from .core.persistence_service import PersistenceService
 from . import resources
@@ -50,11 +52,7 @@ from .ui.layer_selection_dialog import LayerSelectionDialog
 from .core.plugin_config import config_loader
 from .ui.unified_login_dialog import UnifiedLoginDialog
 from .ui.entra_login_dialog import EntraLoginDialog
-from .ui.styles import STYLE_SHEET
-
-
-FORM_CLASS, _ = uic.loadUiType(os.path.join(
-    os.path.dirname(__file__), 'GeoMetadata_dialog_base.ui'))
+from .ui.styles import get_stylesheet
 
 class GeoMetadataDialog(QtWidgets.QDialog):
     def __init__(self, iface, plugin_instance, parent=None):
@@ -90,7 +88,20 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.form_manager = FormManager(self.ui, self, self.contatos_predefinidos)
 
         self._setup_connections_and_logic()
-        self.setStyleSheet(STYLE_SHEET)
+        img_dir = os.path.join(os.path.dirname(__file__), 'img').replace('\\', '/')
+        self.setStyleSheet(get_stylesheet(img_dir))
+
+        # Força estilo Fusion em TODOS os widgets para o QSS ser respeitado no Windows
+        from qgis.PyQt.QtWidgets import (
+            QComboBox, QSpinBox, QDateTimeEdit, QDateEdit, QTimeEdit,
+            QLineEdit, QTextEdit, QStyleFactory
+        )
+        fusion = QStyleFactory.create("Fusion")
+        if fusion:
+            for widget_class in (QComboBox, QSpinBox, QDateTimeEdit, QDateEdit,
+                                 QTimeEdit, QLineEdit, QTextEdit):
+                for w in self.findChildren(widget_class):
+                    w.setStyle(fusion)
 
         # --- CONFIGURAÇÃO DO LINK DE SUPORTE ---
         # 1. Define o texto como Rich Text para permitir links HTML
@@ -158,55 +169,65 @@ class GeoMetadataDialog(QtWidgets.QDialog):
 
 
     def _create_header(self):
-        """Cria o widget do cabeçalho com o novo estilo de navegação."""
+        """Cabeçalho com menus dropdown estilo portal web CDHU."""
         header_widget = QWidget()
         header_widget.setObjectName("Header")
         layout = QHBoxLayout(header_widget)
-        layout.setSpacing(10)
+        layout.setSpacing(6)
 
         logo_label = QLabel()
         pixmap = QPixmap(":/plugins/geometadata/img/header_logo.png")
         logo_label.setPixmap(pixmap.scaled(170, 80, Qt.KeepAspectRatio, Qt.SmoothTransformation))
 
-        # --- CRIAÇÃO E CONFIGURAÇÃO DOS BOTÕES ---
-        # Botão "Continuar depois"
-        self.header_btn_salvar = QPushButton("Continuar depois")
-        self.header_btn_salvar.setObjectName("HeaderButtonSave") # Nome para o QSS
-        
+        # --- Menu "Arquivo" ---
+        menu_arquivo = QMenu(self)
+        menu_arquivo.setObjectName("DropdownMenu")
 
-        # Botão "Exportar Metadado"
-        self.header_btn_exp_xml = QPushButton("Exportar Metadado")
-        self.header_btn_exp_xml.setObjectName("HeaderButtonXml") 
+        self._action_salvar = QAction("Continuar depois", self)
+        self._action_salvar.setToolTip("Salva o rascunho localmente sem enviar ao Geohab")
+        menu_arquivo.addAction(self._action_salvar)
 
-        # Botão "Exportar para Geohab"
-        self.header_btn_exp_geo = QPushButton("Exportar para Geohab")
-        self.header_btn_exp_geo.setObjectName("HeaderButtonGeo") 
+        self._action_exp_xml = QAction("Exportar Metadado (.xml)", self)
+        self._action_exp_xml.setToolTip("Gera e salva o arquivo XML MGB 2.0 no disco")
+        menu_arquivo.addAction(self._action_exp_xml)
 
-        # Botão "Associar Camada"
-        self.header_btn_distribution_info = QPushButton("Associar Camada")
-        self.header_btn_distribution_info.setObjectName("HeaderButtonAddLayer")
+        btn_arquivo = QToolButton()
+        btn_arquivo.setObjectName("HeaderDropdownButton")
+        btn_arquivo.setText("Arquivo ▾")
+        btn_arquivo.setPopupMode(QToolButton.InstantPopup)
+        btn_arquivo.setMenu(menu_arquivo)
 
-        # Botão "Entrar" (Login)
+        # --- Menu "Conectividade Geohab" ---
+        menu_geohab = QMenu(self)
+        menu_geohab.setObjectName("DropdownMenu")
+
+        self._action_exp_geo = QAction("Exportar para Geohab", self)
+        self._action_exp_geo.setToolTip("Publica o metadado no GeoNetwork (requer login)")
+        menu_geohab.addAction(self._action_exp_geo)
+
+        self._action_distribution = QAction("Associar Camada WMS/WFS", self)
+        self._action_distribution.setToolTip("Vincula uma camada publicada ao metadado")
+        menu_geohab.addAction(self._action_distribution)
+
+        self._btn_geohab = QToolButton()
+        self._btn_geohab.setObjectName("HeaderDropdownButton")
+        self._btn_geohab.setText("Geohab ▾")
+        self._btn_geohab.setPopupMode(QToolButton.InstantPopup)
+        self._btn_geohab.setMenu(menu_geohab)
+
+        # --- Botão de Login ---
         self.header_btn_login = QPushButton()
         self.header_btn_login.setObjectName("ConnectButton")
-        
-        # --- CONFIGURAÇÃO DO TAMANHO DO ÍCONE ---
-        icon_size = QSize(21, 21)
-        self.header_btn_salvar.setIconSize(icon_size)
-        self.header_btn_exp_xml.setIconSize(icon_size)
-        self.header_btn_exp_geo.setIconSize(icon_size)
-        self.header_btn_distribution_info.setIconSize(icon_size)
+        self.header_btn_login.setIconSize(QSize(20, 20))
 
-        # --- Montagem do Layout ---
+        # --- Montagem ---
         layout.addWidget(logo_label)
-        layout.addWidget(self.header_btn_exp_xml)
-        layout.addWidget(self.header_btn_salvar)        
-        layout.addWidget(self.header_btn_exp_geo)
-        layout.addWidget(self.header_btn_distribution_info)  
+        layout.addSpacing(8)
+        layout.addWidget(btn_arquivo)
+        layout.addWidget(self._btn_geohab)
         layout.addStretch()
         layout.addWidget(self.header_btn_login)
 
-        
         return header_widget
         
     def _create_distribution_display_panel(self):
@@ -288,56 +309,44 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         return widget
 
     def _create_form_card(self):
-        """
-        Cria o card principal, carrega o formulário e injeta o painel de distribuição
-        no layout do contêiner do formulário.
-        """
+        """Card principal com formulário dinâmico (QScrollArea) + painel de distribuição."""
         card_widget = QWidget()
         card_widget.setProperty("class", "Card")
         card_layout = QVBoxLayout(card_widget)
+        card_layout.setContentsMargins(0, 0, 0, 0)
+        card_layout.setSpacing(0)
 
-        # --- 1. CARREGA O FORMULÁRIO DO .UI EM UM CONTÊINER TEMPORÁRIO ---
-        self.ui = FORM_CLASS()
-        form_container = QWidget() # Este é o widget que será populado.
-        self.ui.setupUi(form_container)
-        
-        # Esconde os botões antigos
-        for btn_name in ['btn_exp_xml', 'btn_exp_geo', 'btn_salvar', 'btn_login']:
-            if hasattr(self.ui, btn_name):
-                getattr(self.ui, btn_name).hide()
-
-        # --- 2. CRIA O PAINEL DE DISTRIBUIÇÃO ---
+        # --- 1. PAINEL DE DISTRIBUIÇÃO (topo do card) ---
         distribution_panel = self._create_distribution_display_panel()
+        card_layout.addWidget(distribution_panel)
 
-        # --- 3. INJETA O PAINEL NO LAYOUT DO CONTÊINER DO FORMULÁRIO ---
-        # O QGridLayout é o layout do próprio `form_container`
-        target_layout = form_container.layout()
-        
-        # Verificação de segurança para garantir que o layout existe e é uma grade
-        if target_layout and isinstance(target_layout, QtWidgets.QGridLayout):
-            # addWidget(widget, linha, coluna, rowSpan, colSpan, alinhamento)
-            target_layout.addWidget(distribution_panel, 8, 4, 10, 2, Qt.AlignBottom)
-        else:
-            print("AVISO CRÍTICO: O widget principal do .ui não tem um QGridLayout aplicado!")
-            print("Abra o .ui, clique no fundo e aplique um layout de grade.")
+        # --- 2. FORMULÁRIO DINÂMICO (QScrollArea sem dependência de .ui) ---
+        self._dynamic_form = DynamicForm()
+        self.ui = self._dynamic_form   # FormManager acessa via self.ui.widget_name
+        card_layout.addWidget(self._dynamic_form.get_scroll_area(), 1)
 
-        # Adiciona o contêiner ao card
-        card_layout.addWidget(form_container)
-        
         return card_widget
 
     def _setup_button_connections(self):
-        """Conecta todos os sinais de widgets a seus respectivos slots."""
-        self.header_btn_salvar.clicked.connect(self.save_metadata)
-        self.header_btn_exp_xml.clicked.connect(self.exportar_to_xml)
-        self.header_btn_exp_geo.clicked.connect(self.exportar_to_geo)
+        """Conecta sinais do header (QActions) e widgets internos do formulário."""
+        # --- Header: menu Arquivo ---
+        self._action_salvar.triggered.connect(self.save_metadata)
+        self._action_exp_xml.triggered.connect(self.exportar_to_xml)
+
+        # --- Header: menu Geohab ---
+        self._action_exp_geo.triggered.connect(self.exportar_to_geo)
+        self._action_distribution.triggered.connect(self.open_distribution_workflow)
+
+        # --- Header: botão de login ---
         self.header_btn_login.clicked.connect(self.authenticate)
-        self.header_btn_distribution_info.clicked.connect(self.open_distribution_workflow)
-        
+
+        # --- Painel de distribuição ---
         self.wms_clear_button.clicked.connect(self.clear_wms_data)
         self.wfs_clear_button.clicked.connect(self.clear_wfs_data)
 
-        self.ui.comboBox_contact_presets.currentIndexChanged.connect(self.form_manager.on_contact_preset_changed)
+        # --- Formulário dinâmico ---
+        self.ui.comboBox_contact_presets.currentIndexChanged.connect(
+            self.form_manager.on_contact_preset_changed)
         self.ui.toolButton_set_today.clicked.connect(self._set_dateStamp_to_today)
 
     def _set_dateStamp_to_today(self):
@@ -432,13 +441,18 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.update_ui_for_login_status()
 
     def update_ui_for_login_status(self):
-        """Atualiza botões e ícone do header conforme o estado de login."""
+        """Habilita/desabilita QActions do menu Geohab e atualiza o botão de login."""
         is_logged_in = self.plugin.api_session is not None
-        self.header_btn_exp_geo.setEnabled(is_logged_in)
-        self.header_btn_distribution_info.setEnabled(is_logged_in)
-        
+        self._action_exp_geo.setEnabled(is_logged_in)
+        self._action_distribution.setEnabled(is_logged_in)
+        # Tooltip indica ao usuário o que falta quando desabilitado
+        tip_locked = "Faça login no Geohab para usar esta função"
+        self._action_exp_geo.setToolTip(
+            "Publica o metadado no GeoNetwork" if is_logged_in else tip_locked)
+        self._action_distribution.setToolTip(
+            "Vincula uma camada publicada ao metadado" if is_logged_in else tip_locked)
+
         if is_logged_in:
-            # Usa auth_username (genérico para Entra ID e Basic Auth)
             username = self.plugin.auth_username or "Usuário Conectado"
             self.header_btn_login.setIcon(self.icon_login_ok)
             self.header_btn_login.setText(f" {username}")
