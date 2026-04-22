@@ -45,12 +45,21 @@ def _f2(layout, lbl1, w1, lbl2, w2, req1=False, req2=False):
 
 def _tab_scroll(content_widget):
     """Envolve um widget numa QScrollArea para o conteúdo da aba."""
+    from qgis.PyQt.QtGui import QPalette, QColor
     scroll = QScrollArea()
     scroll.setWidgetResizable(True)
     scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
     scroll.setFrameShape(QFrame.NoFrame)
     scroll.setObjectName("TabScrollArea")
     scroll.setWidget(content_widget)
+    # Forçar fundo branco — QSS não atinge o viewport interno do QScrollArea
+    white = QColor("#ffffff")
+    for w in (scroll, scroll.viewport(), content_widget):
+        w.setAutoFillBackground(True)
+        pal = w.palette()
+        pal.setColor(QPalette.Window, white)
+        pal.setColor(QPalette.Base, white)
+        w.setPalette(pal)
     return scroll
 
 
@@ -155,11 +164,27 @@ class DynamicForm:
         self._tabs = QTabWidget()
         self._tabs.setObjectName("FormTabs")
         self._tabs.setDocumentMode(True)
+        # Força fundo cinza na barra de abas (Fusion pinta branco por padrão)
+        from qgis.PyQt.QtGui import QPalette, QColor
+        bar = self._tabs.tabBar()
+        bar.setExpanding(False)
+        bar.setDrawBase(False)
+        bar.setElideMode(Qt.ElideNone)
+        self._tabs.setUsesScrollButtons(True)
+        gray = QColor("#f1f5f9")
+        for w in (self._tabs, bar):
+            w.setAutoFillBackground(True)
+            pal = w.palette()
+            pal.setColor(QPalette.Window, gray)
+            pal.setColor(QPalette.Button, gray)
+            pal.setColor(QPalette.Base, gray)
+            w.setPalette(pal)
 
         self._tabs.addTab(self._tab_identificacao(), "Identificação")
         self._tabs.addTab(self._tab_classificacao(), "Classificação")
         self._tabs.addTab(self._tab_extensao(),      "Extensão Geográfica")
         self._tabs.addTab(self._tab_metadados(),     "Metadados")
+        self._tabs.addTab(self._tab_recursos(),      "Recursos associados")
 
         root_v.addWidget(self._tabs)
 
@@ -171,17 +196,66 @@ class DynamicForm:
     # ------------------------------------------------------------------
 
     def _tab_identificacao(self):
+        # Container principal — sem scroll
+        wrapper = QWidget()
+        wrapper.setObjectName("TabContent")
+        wrapper_v = QVBoxLayout(wrapper)
+        wrapper_v.setContentsMargins(0, 0, 0, 0)
+        wrapper_v.setSpacing(0)
+
+        # Sub-abas internas
+        sub_tabs = QTabWidget()
+        sub_tabs.setObjectName("SubTabs")
+        sub_tabs.setDocumentMode(True)
+        bar = sub_tabs.tabBar()
+        bar.setExpanding(False)
+        bar.setDrawBase(False)
+        bar.setElideMode(Qt.ElideNone)
+        # QSS direto — a cascata do parent nem sempre funciona no QGIS
+        sub_tabs.setStyleSheet("""
+            QTabWidget::pane {
+                border: none;
+                border-top: 1px solid #e2e8f0;
+                background-color: #ffffff;
+            }
+            QTabBar {
+                background: #ffffff;
+            }
+            QTabBar::tab {
+                background: transparent;
+                color: #64748b;
+                font-size: 12px;
+                font-weight: 600;
+                padding: 8px 14px;
+                border: none;
+                border-bottom: 2px solid transparent;
+                margin-right: 0px;
+            }
+            QTabBar::tab:hover {
+                color: #334155;
+                border-bottom: 2px solid #cbd5e1;
+            }
+            QTabBar::tab:selected {
+                color: #e5222d;
+                border-bottom: 2px solid #e5222d;
+            }
+        """)
+        sub_tabs.setUsesScrollButtons(True)
+
+        sub_tabs.addTab(self._subtab_dados_gerais(),    "Dados gerais")
+        sub_tabs.addTab(self._subtab_ponto_contato(),   "Ponto de contato")
+        sub_tabs.addTab(self._subtab_endereco(),        "Detalhes de endereço")
+
+        wrapper_v.addWidget(sub_tabs)
+        return wrapper
+
+    # --- Sub-aba 1: Dados gerais ---
+    def _subtab_dados_gerais(self):
         content = QWidget()
         content.setObjectName("TabContent")
         v = QVBoxLayout(content)
-        v.setContentsMargins(24, 24, 24, 24)
-        v.setSpacing(14)
-
-        # --- Seção: Informações de Identificação ---
-        lbl_id = QLabel("Informações de identificação")
-        lbl_id.setObjectName("SubSectionLabel")
-        lbl_id.setStyleSheet("font-size: 15px; font-weight: 700; padding: 0 0 4px 0;")
-        v.addWidget(lbl_id)
+        v.setContentsMargins(18, 16, 18, 18)
+        v.setSpacing(10)
 
         # Título
         self.lineEdit_title = QLineEdit()
@@ -204,7 +278,6 @@ class DynamicForm:
         self.timeEdit_date_creation.setDisplayFormat("HH:mm")
         self.timeEdit_date_creation.setTime(QDateTime.currentDateTime().time())
 
-        # Monta a linha de Data com 3 colunas
         date_row = QHBoxLayout()
         date_row.setSpacing(8)
         date_row.addWidget(_field("Tipo", self.comboBox_date_type, required=True), 2)
@@ -217,7 +290,7 @@ class DynamicForm:
         self.dateTimeEdit_date_creation.setVisible(False)
         v.addWidget(self.dateTimeEdit_date_creation)
 
-        # Resumo (full-width)
+        # Resumo
         self.textEdit_abstract = QTextEdit()
         self.textEdit_abstract.setPlaceholderText(
             "Resumo descritivo da camada, geoprocessos aplicados, escala etc.")
@@ -225,20 +298,20 @@ class DynamicForm:
         self.textEdit_abstract.setMaximumHeight(140)
         _f1(v, "Resumo", self.textEdit_abstract, required=True)
 
-        # Status (full-width, sozinho)
+        # Status
         self.comboBox_status_codeListValue = QComboBox()
         _f1(v, "Status", self.comboBox_status_codeListValue, required=True)
 
-        # --- Separador + Ponto de Contato ---
-        sep1 = QFrame()
-        sep1.setFrameShape(QFrame.HLine)
-        sep1.setObjectName("TableDivider")
-        v.addWidget(sep1)
+        v.addStretch()
+        return content
 
-        lbl_contact = QLabel("Ponto de Contato")
-        lbl_contact.setObjectName("SubSectionLabel")
-        lbl_contact.setStyleSheet("font-size: 14px; font-weight: 700; padding: 4px 0;")
-        v.addWidget(lbl_contact)
+    # --- Sub-aba 2: Ponto de contato ---
+    def _subtab_ponto_contato(self):
+        content = QWidget()
+        content.setObjectName("TabContent")
+        v = QVBoxLayout(content)
+        v.setContentsMargins(18, 16, 18, 18)
+        v.setSpacing(10)
 
         # Preset CDHU
         self.comboBox_contact_presets = QComboBox()
@@ -302,41 +375,43 @@ class DynamicForm:
         search_row.addWidget(btn_add)
         v.addLayout(search_row)
 
-        # --- Accordion: Detalhes de endereço (MGB 2.0) ---
-        accordion = self._build_accordion("Detalhes de endereço (MGB 2.0)")
-        acc_body = accordion["body"]
-        acc_v = QVBoxLayout(acc_body)
-        acc_v.setContentsMargins(16, 12, 16, 12)
-        acc_v.setSpacing(12)
+        v.addStretch()
+        return content
+
+    # --- Sub-aba 3: Detalhes de endereço ---
+    def _subtab_endereco(self):
+        content = QWidget()
+        content.setObjectName("TabContent")
+        v = QVBoxLayout(content)
+        v.setContentsMargins(18, 16, 18, 18)
+        v.setSpacing(10)
 
         self.lineEdit_contact_positionName = QLineEdit()
         self.lineEdit_contact_positionName.setPlaceholderText("Cargo | Posição")
         self.lineEdit_contact_phone = QLineEdit()
         self.lineEdit_contact_phone.setPlaceholderText("+55 11 0000-0000")
-        _f2(acc_v, "Cargo", self.lineEdit_contact_positionName,
+        _f2(v, "Cargo", self.lineEdit_contact_positionName,
             "Telefone", self.lineEdit_contact_phone)
 
         self.lineEdit_contact_deliveryPoint = QLineEdit()
         self.lineEdit_contact_deliveryPoint.setPlaceholderText("Rua, nº, complemento")
-        _f1(acc_v, "Endereço", self.lineEdit_contact_deliveryPoint, required=True)
+        _f1(v, "Endereço", self.lineEdit_contact_deliveryPoint, required=True)
 
         self.lineEdit_contact_city = QLineEdit()
         self.lineEdit_contact_city.setPlaceholderText("Cidade")
         self.comboBox_contact_administrativeArea = QComboBox()
-        _f2(acc_v, "Cidade", self.lineEdit_contact_city,
+        _f2(v, "Cidade", self.lineEdit_contact_city,
             "Estado", self.comboBox_contact_administrativeArea, req1=True, req2=True)
 
         self.lineEdit_contact_postalCode = QLineEdit()
         self.lineEdit_contact_postalCode.setPlaceholderText("01014-930")
         self.lineEdit_contact_country = QLineEdit()
         self.lineEdit_contact_country.setPlaceholderText("Brasil")
-        _f2(acc_v, "CEP", self.lineEdit_contact_postalCode,
+        _f2(v, "CEP", self.lineEdit_contact_postalCode,
             "País", self.lineEdit_contact_country, req1=True, req2=True)
 
-        v.addWidget(accordion["widget"])
-
         v.addStretch()
-        return _tab_scroll(content)
+        return content
 
     def _build_accordion(self, title, expanded=False):
         """Cria um painel colapsável (accordion) estilo GeoNetwork."""
@@ -350,17 +425,27 @@ class DynamicForm:
         header_btn.setObjectName("CollapsibleHeader")
         header_btn.setCursor(Qt.PointingHandCursor)
         header_btn.setFixedHeight(30)
+        header_btn.setProperty("expanded", expanded)
         section_v.addWidget(header_btn)
 
         body = QWidget()
         body.setObjectName("CollapsibleBody")
         body.setVisible(expanded)
+        # Força fundo cinza claro via palette (QSS sozinho não pinta sob filhos)
+        from qgis.PyQt.QtGui import QPalette, QColor
+        body.setAutoFillBackground(True)
+        pal = body.palette()
+        pal.setColor(QPalette.Window, QColor("#f1f5f9"))
+        body.setPalette(pal)
         section_v.addWidget(body)
 
         def toggle():
             is_visible = body.isVisible()
             body.setVisible(not is_visible)
             header_btn.setText(f"  ▼  {title}" if not is_visible else f"  ▶  {title}")
+            header_btn.setProperty("expanded", not is_visible)
+            header_btn.style().unpolish(header_btn)
+            header_btn.style().polish(header_btn)
 
         header_btn.clicked.connect(toggle)
         return {"widget": section, "body": body}
@@ -373,8 +458,8 @@ class DynamicForm:
         content = QWidget()
         content.setObjectName("TabContent")
         v = QVBoxLayout(content)
-        v.setContentsMargins(24, 24, 24, 24)
-        v.setSpacing(16)
+        v.setContentsMargins(18, 16, 18, 18)
+        v.setSpacing(10)
 
         self.comboBox_MD_SpatialRepresentationTypeCode = QComboBox()
         self.comboBox_hierarchyLevel = QComboBox()
@@ -486,6 +571,31 @@ class DynamicForm:
 
         v.addStretch()
         return content
+
+    # ------------------------------------------------------------------
+    # Aba 5 — Recursos associados (WMS/WFS)
+    # ------------------------------------------------------------------
+
+    def _tab_recursos(self):
+        content = QWidget()
+        content.setObjectName("TabContent")
+        v = QVBoxLayout(content)
+        v.setContentsMargins(24, 24, 24, 24)
+        v.setSpacing(16)
+
+        lbl = QLabel("Camadas Associadas")
+        lbl.setObjectName("SubSectionLabel")
+        lbl.setStyleSheet("font-size: 15px; font-weight: 700; padding: 0 0 4px 0;")
+        v.addWidget(lbl)
+
+        # Container que o Dialog preencherá com o painel de distribuição
+        self.recursos_container = QVBoxLayout()
+        self.recursos_container.setContentsMargins(0, 0, 0, 0)
+        self.recursos_container.setSpacing(8)
+        v.addLayout(self.recursos_container)
+
+        v.addStretch()
+        return _tab_scroll(content)
 
     # ------------------------------------------------------------------
     # Footer

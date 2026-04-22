@@ -7,6 +7,11 @@ def get_stylesheet(img_dir: str) -> str:
     """
     img = img_dir.replace("\\", "/")
 
+    # --- Variáveis de cor (alterar aqui muda globalmente) ---
+    accent = "#e5222d"          # cor principal (vermelho CDHU)
+    accent_hover = "#c0111b"    # hover mais escuro
+    accent_light = "#fef2f2"    # fundo leve de destaque
+
     return f"""
     /* ================================================================
        BASE — Tipografia
@@ -54,12 +59,12 @@ def get_stylesheet(img_dir: str) -> str:
     }}
     #HeaderDropdownButton:hover {{
         color: #0f172a;
-        border-bottom: 3px solid #2563eb;
+        border-bottom: 3px solid {accent};
         background-color: transparent;
     }}
     #HeaderDropdownButton:pressed {{
-        color: #2563eb;
-        border-bottom: 3px solid #2563eb;
+        color: {accent};
+        border-bottom: 3px solid {accent};
     }}
     #HeaderDropdownButton::menu-indicator {{ width: 0; image: none; }}
 
@@ -75,15 +80,14 @@ def get_stylesheet(img_dir: str) -> str:
 
     /* Botão de login */
     #ConnectButton {{
-        background-color: transparent;
-        color: #2563eb;
+        background-color: black;
+        color: white;
         font-weight: 700;
         font-size: 12px;
-        border: 2px solid #2563eb;
         border-radius: 8px;
         padding: 6px 16px;
     }}
-    #ConnectButton:hover {{ background-color: #eff6ff; }}
+    #ConnectButton:hover {{ background-color: #ccc; }}
     #GeoMetadataDialog[theme="dark"] #ConnectButton {{
         color: #38bdf8;
         border-color: #38bdf8;
@@ -109,8 +113,8 @@ def get_stylesheet(img_dir: str) -> str:
         margin: 1px 6px;
     }}
     #DropdownMenu::item:selected {{
-        background-color: #eff6ff;
-        color: #1d4ed8;
+        background-color: {accent_light};
+        color: {accent};
     }}
     #DropdownMenu::item:disabled {{ color: #cbd5e1; }}
     #DropdownMenu::separator {{
@@ -219,12 +223,24 @@ def get_stylesheet(img_dir: str) -> str:
 
     #CollapsibleHeader {{
         background-color: #f8fafc;
-        border: none;
-        border-top: 1px solid #e2e8f0;
-        padding: 0 16px;
+        border: 1px solid #e2e8f0;
+        border-radius: 4px;
+        padding: 0 12px;
         text-align: left;
+        font-size: 13px;
+        font-weight: 600;
+        color: #475569;
     }}
-    #CollapsibleHeader:hover {{ background-color: #f1f5f9; }}
+    #CollapsibleHeader:hover {{
+        background-color: #f1f5f9;
+        color: #1e293b;
+        border-color: #cbd5e1;
+    }}
+    #CollapsibleHeader[expanded="true"] {{
+        background-color: #f1f5f9;
+        border-bottom: none;
+        border-radius: 4px 4px 0 0;
+    }}
 
     #SectionTitle {{
         color: #334155;
@@ -241,7 +257,13 @@ def get_stylesheet(img_dir: str) -> str:
     }}
 
     #SectionDivider {{ color: #e2e8f0; max-height: 1px; }}
-    #CollapsibleBody {{ background-color: #ffffff; }}
+    #CollapsibleBody {{
+        background-color: #f1f5f9;
+        border: 1px solid #e2e8f0;
+        border-top: none;
+        border-radius: 0 0 4px 4px;
+        padding: 4px;
+    }}
 
     #GeoMetadataDialog[theme="dark"] #CollapsibleHeader {{
         background-color: #1e293b;
@@ -272,15 +294,15 @@ def get_stylesheet(img_dir: str) -> str:
         background-color: #f5f5f5;
         border: 1.5px solid #e0e0e0;
         border-radius: 2px;
-        padding: 7px 14px;
+        padding: 5px 10px;
         color: #1e293b;
         font-size: 13px;
-        selection-background-color: #3b82f6;
+        selection-background-color: {accent};
         selection-color: #ffffff;
     }}
     QTextEdit {{
-        border-radius: 12px;
-        padding: 10px 14px;
+        border-radius: 8px;
+        padding: 8px 10px;
     }}
     QLineEdit:hover, QTextEdit:hover, QSpinBox:hover, QDateTimeEdit:hover,
     QDateEdit:hover, QTimeEdit:hover {{
@@ -288,7 +310,7 @@ def get_stylesheet(img_dir: str) -> str:
     }}
     QLineEdit:focus, QTextEdit:focus, QSpinBox:focus, QDateTimeEdit:focus,
     QDateEdit:focus, QTimeEdit:focus {{
-        border: 2px solid #3b82f6;
+        border: 2px solid {accent};
         background-color: #ffffff;
         outline: none;
     }}
@@ -359,15 +381,13 @@ def get_stylesheet(img_dir: str) -> str:
         background-color: #f5f5f5;
         border: 1.5px solid #e0e0e0;
         border-radius: 8px;
-        padding: 7px 34px 7px 14px;
+        padding: 5px 30px 5px 10px;
         color: #1e293b;
         font-size: 13px;
-        min-height: 18px;
-        max-height: 18px;
     }}
     QComboBox:hover {{ border-color: #bdbdbd; }}
-    QComboBox:focus {{ border: 2px solid #3b82f6; padding: 6px 33px 6px 13px; }}
-    QComboBox:on    {{ border-color: #3b82f6; border-radius: 8px; }}
+    QComboBox:focus {{ border: 2px solid {accent}; padding: 6px 33px 6px 13px; }}
+    QComboBox:on    {{ border-color: {accent}; border-radius: 8px; }}
     QComboBox:disabled {{
         background-color: #eeeeee;
         color: #9e9e9e;
@@ -390,15 +410,15 @@ def get_stylesheet(img_dir: str) -> str:
     QComboBox QAbstractItemView {{
         background-color: #ffffff;
         border: 1px solid #e0e0e0;
-        border-radius: 10px;
-        padding: 6px;
-        selection-background-color: #eff6ff;
-        selection-color: #1d4ed8;
+        border-radius: 2px;
+        padding: 4px;
+        selection-background-color: {accent_light};
+        selection-color: {accent};
         outline: none;
     }}
     QComboBox QAbstractItemView::item {{
         padding: 10px 14px;
-        border-radius: 8px;
+        border-radius: 2px;
         min-height: 30px;
         color: #1e293b;
     }}
@@ -406,8 +426,8 @@ def get_stylesheet(img_dir: str) -> str:
         background-color: #f5f5f5;
     }}
     QComboBox QAbstractItemView::item:selected {{
-        background-color: #eff6ff;
-        color: #1d4ed8;
+        background-color: {accent_light};
+        color: {accent};
     }}
 
     /* Dark — combobox */
@@ -452,7 +472,7 @@ def get_stylesheet(img_dir: str) -> str:
         font-size: 12px;
         color: #1e293b;
     }}
-    #ContactCell:focus  {{ border: 2px solid #3b82f6; background: #ffffff; }}
+    #ContactCell:focus  {{ border: 2px solid {accent}; background: #ffffff; }}
     #ContactCell:hover  {{ border-color: #bdbdbd; }}
 
     #ContactSearch {{
@@ -464,7 +484,7 @@ def get_stylesheet(img_dir: str) -> str:
         color: #1e293b;
     }}
     #ContactSearch:focus {{
-        border: 2px solid #3b82f6;
+        border: 2px solid {accent};
         background-color: #ffffff;
     }}
 
@@ -479,7 +499,7 @@ def get_stylesheet(img_dir: str) -> str:
     #SearchButton:hover {{ background-color: #e2e8f0; }}
 
     #AddContactButton {{
-        background-color: #2563eb;
+        background-color: {accent};
         color: #ffffff;
         font-size: 18px;
         font-weight: bold;
@@ -487,8 +507,8 @@ def get_stylesheet(img_dir: str) -> str:
         border-radius: 8px;
         padding: 0;
     }}
-    #AddContactButton:hover   {{ background-color: #1d4ed8; }}
-    #AddContactButton:pressed {{ background-color: #1e40af; }}
+    #AddContactButton:hover   {{ background-color: {accent_hover}; }}
+    #AddContactButton:pressed {{ background-color: {accent_hover}; }}
 
     #RemoveContactButton {{
         background-color: transparent;
@@ -574,7 +594,7 @@ def get_stylesheet(img_dir: str) -> str:
        ABAS — QTabWidget estilo web
        ================================================================ */
     #FormTabs {{
-        background: transparent;
+        background: #f1f5f9;
         border: none;
     }}
 
@@ -592,12 +612,12 @@ def get_stylesheet(img_dir: str) -> str:
     #FormTabs QTabBar::tab {{
         background: transparent;
         color: #64748b;
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 600;
-        padding: 10px 20px;
+        padding: 8px 10px;
         border: none;
         border-bottom: 2px solid transparent;
-        margin-right: 2px;
+        margin-right: 0px;
     }}
     #FormTabs QTabBar::tab:hover {{
         color: #334155;
@@ -605,12 +625,45 @@ def get_stylesheet(img_dir: str) -> str:
         border-bottom: 2px solid #cbd5e1;
     }}
     #FormTabs QTabBar::tab:selected {{
-        color: #2563eb;
-        background: transparent;
-        border-bottom: 2px solid #2563eb;
+        color: #e5222d;
+        background: #ffffff;
+        border-bottom: 2px solid #e5222d;
     }}
     #FormTabs QTabBar::tab:disabled {{
         color: #cbd5e1;
+    }}
+
+    /* ================================================================
+       SUB-ABAS — dentro de Identificação
+       ================================================================ */
+    #SubTabs {{
+        background: #ffffff;
+        border: none;
+    }}
+    #SubTabs QTabWidget::pane {{
+        border: none;
+        border-top: 1px solid #e2e8f0;
+        background-color: #ffffff;
+    }}
+    #SubTabs QTabBar {{
+        background: #ffffff;
+    }}
+    #SubTabs QTabBar::tab {{
+        background: transparent;
+        color: #64748b;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 6px 12px;
+        border: none;
+        border-bottom: 2px solid transparent;
+    }}
+    #SubTabs QTabBar::tab:hover {{
+        color: #334155;
+        border-bottom: 2px solid #cbd5e1;
+    }}
+    #SubTabs QTabBar::tab:selected {{
+        color: {accent};
+        border-bottom: 2px solid {accent};
     }}
 
     /* Scroll dentro das abas */

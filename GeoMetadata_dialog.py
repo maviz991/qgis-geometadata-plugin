@@ -94,12 +94,15 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         # Força estilo Fusion em TODOS os widgets para o QSS ser respeitado no Windows
         from qgis.PyQt.QtWidgets import (
             QComboBox, QSpinBox, QDateTimeEdit, QDateEdit, QTimeEdit,
-            QLineEdit, QTextEdit, QStyleFactory
+            QLineEdit, QTextEdit, QPushButton, QToolButton,
+            QTabWidget, QTabBar, QStyleFactory
         )
         fusion = QStyleFactory.create("Fusion")
         if fusion:
             for widget_class in (QComboBox, QSpinBox, QDateTimeEdit, QDateEdit,
-                                 QTimeEdit, QLineEdit, QTextEdit):
+                                 QTimeEdit, QLineEdit, QTextEdit,
+                                 QPushButton, QToolButton,
+                                 QTabWidget, QTabBar):
                 for w in self.findChildren(widget_class):
                     w.setStyle(fusion)
 
@@ -309,21 +312,21 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         return widget
 
     def _create_form_card(self):
-        """Card principal com formulário dinâmico (QScrollArea) + painel de distribuição."""
+        """Card principal com formulário dinâmico (QScrollArea)."""
         card_widget = QWidget()
         card_widget.setProperty("class", "Card")
         card_layout = QVBoxLayout(card_widget)
         card_layout.setContentsMargins(0, 0, 0, 0)
         card_layout.setSpacing(0)
 
-        # --- 1. PAINEL DE DISTRIBUIÇÃO (topo do card) ---
-        distribution_panel = self._create_distribution_display_panel()
-        card_layout.addWidget(distribution_panel)
-
-        # --- 2. FORMULÁRIO DINÂMICO (QScrollArea sem dependência de .ui) ---
+        # --- FORMULÁRIO DINÂMICO (QScrollArea sem dependência de .ui) ---
         self._dynamic_form = DynamicForm()
         self.ui = self._dynamic_form   # FormManager acessa via self.ui.widget_name
         card_layout.addWidget(self._dynamic_form.get_scroll_area(), 1)
+
+        # --- PAINEL DE DISTRIBUIÇÃO (injetado na aba "Recursos associados") ---
+        distribution_panel = self._create_distribution_display_panel()
+        self.ui.recursos_container.addWidget(distribution_panel)
 
         return card_widget
 
