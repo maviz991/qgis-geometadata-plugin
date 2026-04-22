@@ -41,11 +41,13 @@ from qgis.core import (
 )
 
 # --- 3. Imports de Módulos Locais do Plugin ---
-from . import xml_generator, xml_parser, resources
-from .layer_selection_dialog import LayerSelectionDialog
-from .plugin_config import config_loader
-from .unified_login_dialog import UnifiedLoginDialog
-from .styles import STYLE_SHEET
+from .core import xml_generator, xml_parser
+from . import resources
+from .ui.layer_selection_dialog import LayerSelectionDialog
+from .core.plugin_config import config_loader
+from .ui.unified_login_dialog import UnifiedLoginDialog
+from .ui.entra_login_dialog import EntraLoginDialog
+from .ui.styles import STYLE_SHEET
 
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -329,41 +331,92 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.header_btn_login.setIconSize(QSize(20, 20))
 
     def authenticate(self):
+        """Gerencia o ciclo de login/logout.
+        
+        Usa Entra ID (MSAL + PKCE) se as credenciais do Azure estiverem configuradas
+        no config.json. Caso contrário, usa o método Basic Auth tradicional (fallback).
+        """
+        # --- LOGOUT ---
         if self.plugin.api_session:
             self.plugin.api_session = None
-            self.iface.messageBar().pushMessage("Info", "❌ Desconectado do Geohab.", level=Qgis.Info, duration=3)
-            self.show_message("Info", "<p style='font-size: 14px; font-weight: bold;'>Desconectado do Geohab!</p>", icon=QtWidgets.QMessageBox.Warning)
+            self.plugin.auth_username = None
+            self.iface.messageBar().pushMessage(
+                "Info", "❌ Desconectado do Geohab.",
+                level=Qgis.Info, duration=3
+            )
+            self.show_message(
+                "Info",
+                "<p style='font-size: 14px; font-weight: bold;'>Desconectado do Geohab!</p>",
+                icon=QtWidgets.QMessageBox.Warning
+            )
             self.update_ui_for_login_status()
             return
-        
-        # Passa o iface para o construtor
-        login_dialog = UnifiedLoginDialog(self, iface=self.iface)
-        
+
+        # --- LOGIN: Entra ID ou Basic Auth ---
+        if config_loader.has_entra_id_configured():
+            self._authenticate_entra_id()
+        else:
+            self._authenticate_basic_auth()
+
+    def _authenticate_entra_id(self):
+        """Fluxo de login via Microsoft Entra ID (MSAL + PKCE + Bearer Token)."""
+        entra_cfg = config_loader.get_entra_id_config()
+        login_dialog = EntraLoginDialog(
+            client_id=entra_cfg["client_id"],
+            tenant_id=entra_cfg["tenant_id"],
+            scopes=entra_cfg.get("scopes", ["openid", "profile", "email"]),
+            parent=self
+        )
+
         if login_dialog.exec_():
             self.plugin.api_session = login_dialog.get_session()
-            username = login_dialog.get_username()
+            self.plugin.auth_username = login_dialog.get_username()
 
-            self.iface.messageBar().pushMessage("Sucesso", f"✅ Conectado ao Geohab como {username}.", level=Qgis.Success, duration=4)
-            success_text = (
+            self.iface.messageBar().pushMessage(
+                "Sucesso",
+                f"✅ Conectado ao Geohab como {self.plugin.auth_username}.",
+                level=Qgis.Success, duration=4
+            )
+            self.show_message(
+                "Sucesso!",
                 f"<p style='font-size: 15px; font-weight: bold;'>Conectado ao Geohab!</p>"
-                f"<p><b>Usuário:</b> {username}</p>"                
-                f"<p style='color: rgba(0, 0, 0, 0.5);'>Você pode Associar camadas e Exportar para Geohab</p>")
-            self.show_message("Sucesso!", success_text)
-        
+                f"<p><b>Usuário:</b> {self.plugin.auth_username}</p>"
+                f"<p style='color: rgba(0,0,0,0.5);'>Você pode Associar camadas e Exportar para Geohab</p>"
+            )
+
+        self.update_ui_for_login_status()
+
+    def _authenticate_basic_auth(self):
+        """Fluxo de login via Basic Auth (método legado — fallback enquanto Entra ID não está configurado)."""
+        login_dialog = UnifiedLoginDialog(self, iface=self.iface)
+
+        if login_dialog.exec_():
+            self.plugin.api_session = login_dialog.get_session()
+            self.plugin.auth_username = login_dialog.get_username()
+
+            self.iface.messageBar().pushMessage(
+                "Sucesso",
+                f"✅ Conectado ao Geohab como {self.plugin.auth_username}.",
+                level=Qgis.Success, duration=4
+            )
+            self.show_message(
+                "Sucesso!",
+                f"<p style='font-size: 15px; font-weight: bold;'>Conectado ao Geohab!</p>"
+                f"<p><b>Usuário:</b> {self.plugin.auth_username}</p>"
+                f"<p style='color: rgba(0,0,0,0.5);'>Você pode Associar camadas e Exportar para Geohab</p>"
+            )
+
         self.update_ui_for_login_status()
 
     def update_ui_for_login_status(self):
+        """Atualiza botões e ícone do header conforme o estado de login."""
         is_logged_in = self.plugin.api_session is not None
         self.header_btn_exp_geo.setEnabled(is_logged_in)
         self.header_btn_distribution_info.setEnabled(is_logged_in)
         
         if is_logged_in:
-            try:
-                # Pega o nome do usuário que foi salvo durante o processo de login
-                username = self.plugin.api_session.auth[0] 
-            except (AttributeError, IndexError):
-                username = "Usuário Conectado"
-
+            # Usa auth_username (genérico para Entra ID e Basic Auth)
+            username = self.plugin.auth_username or "Usuário Conectado"
             self.header_btn_login.setIcon(self.icon_login_ok)
             self.header_btn_login.setText(f" {username}")
             self.header_btn_login.setToolTip("Clique para desconectar")
@@ -408,7 +461,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             self.iface.messageBar().pushMessage("Info", "Preparando e enviando metadados...", level=Qgis.Info, duration=3)
             metadata_dict = self.collect_data()
             plugin_dir = os.path.dirname(__file__)
-            template_path = os.path.join(plugin_dir, 'tamplate_mgb20.xml')
+            template_path = os.path.join(plugin_dir, 'assets', 'tamplate_mgb20.xml')
             cdhu_data = self.contatos_predefinidos.get('cdhu', {})
             xml_payload = xml_generator.generate_xml_from_template(metadata_dict, template_path, cdhu_data)
             
@@ -635,7 +688,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         try:
             metadata_dict = self.collect_data()
             plugin_dir = os.path.dirname(__file__)
-            template_path = os.path.join(plugin_dir, 'tamplate_mgb20.xml')
+            template_path = os.path.join(plugin_dir, 'assets', 'tamplate_mgb20.xml')
             cdhu_data = self.contatos_predefinidos.get('cdhu', {})
             xml_content = xml_generator.generate_xml_from_template(metadata_dict, template_path, cdhu_data)
             safe_filename_base = self.sanitize_filename(metadata_dict.get('title', 'metadados'))
@@ -935,7 +988,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
                     return
                                 
             metadata_dict = self.collect_data()
-            template_path = os.path.join(os.path.dirname(__file__), 'tamplate_mgb20.xml')
+            template_path = os.path.join(os.path.dirname(__file__), 'assets', 'tamplate_mgb20.xml')
             cdhu_data = self.contatos_predefinidos.get('cdhu', {})
             xml_content = xml_generator.generate_xml_from_template(metadata_dict, template_path, cdhu_data)
     
@@ -1078,7 +1131,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         # --- ETAPA 2: Lógica Principal de Salvamento ---
         try:
             metadata_dict = self.collect_data()
-            template_path = os.path.join(os.path.dirname(__file__), 'tamplate_mgb20.xml')
+            template_path = os.path.join(os.path.dirname(__file__), 'assets', 'tamplate_mgb20.xml')
             cdhu_data = self.contatos_predefinidos.get('cdhu', {})
             xml_content = xml_generator.generate_xml_from_template(metadata_dict, template_path, cdhu_data)
             
@@ -1195,7 +1248,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         try:
             # Constrói o caminho para o arquivo de forma segura
             plugin_dir = os.path.dirname(__file__)
-            contacts_path = os.path.join(plugin_dir, 'contacts.json')
+            contacts_path = os.path.join(plugin_dir, 'assets', 'contacts.json')
 
             with open(contacts_path, 'r', encoding='utf-8') as f:
                 self.contatos_predefinidos = json.load(f)

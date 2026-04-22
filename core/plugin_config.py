@@ -13,7 +13,7 @@ class PluginConfig:
 
     def _load_config(self):
         self.config = {}
-        config_path = os.path.join(os.path.dirname(__file__), 'config.json')
+        config_path = os.path.join(os.path.dirname(__file__), '..', 'assets', 'config.json')
         try:
             with open(config_path, 'r', encoding='utf-8') as f:
                 self.config = json.load(f)
@@ -50,6 +50,27 @@ class PluginConfig:
 
     def get_geoserver_url(self):
         return self.config.get("geoserver_url", "")
+
+    def get_entra_id_config(self):
+        """
+        Retorna as configurações do Microsoft Entra ID.
+        Retorna None se o bloco 'entra_id' não existir no config.
+        """
+        return self.config.get("entra_id", None)
+
+    def has_entra_id_configured(self) -> bool:
+        """
+        Retorna True somente se client_id e tenant_id estiverem preenchidos
+        (i.e., não são os valores placeholder 'AGUARDANDO_TI').
+        """
+        entra = self.get_entra_id_config()
+        if not entra:
+            return False
+        client_id = entra.get("client_id", "")
+        tenant_id = entra.get("tenant_id", "")
+        placeholder = "AGUARDANDO_TI"
+        return bool(client_id) and bool(tenant_id) and \
+               client_id != placeholder and tenant_id != placeholder
 
 # Cria uma instância única que pode ser importada em todo o plugin
 config_loader = PluginConfig()

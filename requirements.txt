@@ -1,0 +1,39 @@
+# =============================================================
+# GeoMetadata Plugin — Requirements
+# =============================================================
+# Instalar no venv de desenvolvimento:
+#   pip install -r requirements.txt
+#
+# Instalar no ambiente Python do QGIS (OSGeo4W Shell):
+#   pip install msal
+#   (requests, lxml, psycopg2 já vêm incluídos no QGIS)
+#
+# Bibliotecas stdlib Python NÃO listadas aqui:
+#   os, json, re, uuid, traceback, pathlib, sys,
+#   subprocess, unicodedata
+#
+# Bibliotecas QGIS NÃO listadas aqui (fornecidas pelo QGIS):
+#   qgis.core, qgis.gui, qgis.PyQt.*
+# =============================================================
+
+# --- Autenticação Microsoft Entra ID (v2.0 — NOVO) ---
+# Usado em: entra_auth_provider.py
+msal>=1.28.0
+
+# --- HTTP — Comunicação com GeoNetwork/GeoServer ---
+# Usado em: GeoMetadata_dialog.py, unified_login_dialog.py,
+#            layer_selection_dialog.py, entra_auth_provider.py
+requests>=2.28.0
+
+# --- XML — Geração e Parsing de metadados MGB 2.0 ---
+# Usado em: xml_generator.py, xml_parser.py, layer_selection_dialog.py
+lxml>=4.9.0
+
+# --- Banco de Dados — Persistência em PostGIS ---
+# Usado em: GeoMetadata_dialog.py (import condicional — opcional)
+psycopg2-binary>=2.9.0
+
+# --- Qt — Framework de UI (necessário fora do QGIS para dev/testes) ---
+# Usado em: resources.py e todos os módulos de UI
+# No QGIS, usa qgis.PyQt (já instalado). Fora do QGIS, instale via:
+PyQt5>=5.15.0

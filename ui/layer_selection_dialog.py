@@ -4,7 +4,7 @@ import os
 import requests
 from lxml import etree as ET
 from qgis.PyQt import uic, QtWidgets
-from .plugin_config import config_loader
+from ..core.plugin_config import config_loader
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtCore import Qt, QStringListModel
 

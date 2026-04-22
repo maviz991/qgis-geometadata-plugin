@@ -51,6 +51,7 @@ class GeoMetadata:
             'GeoMetadata_{}.qm'.format(locale))
 
         self.api_session = None
+        self.auth_username = None   # Armazena o username independente do método de auth
 
         if os.path.exists(locale_path):
             self.translator = QTranslator()

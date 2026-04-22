@@ -1,0 +1,9 @@
+{
+    "geonetwork_url": "https://geo-d.cdhu.sp.gov.br/geonetwork",
+    "geoserver_url": "https://geo-d.cdhu.sp.gov.br/geoserver",
+    "entra_id": {
+        "client_id": "AGUARDANDO_TI",
+        "tenant_id": "AGUARDANDO_TI",
+        "scopes": ["openid", "profile", "email"]
+    }
+}

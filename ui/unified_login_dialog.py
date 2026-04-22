@@ -4,7 +4,7 @@ import requests
 from qgis.PyQt import uic, QtWidgets
 from qgis.core import Qgis, QgsApplication
 from qgis.gui import QgsAuthConfigSelect
-from .plugin_config import config_loader
+from ..core.plugin_config import config_loader
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'unified_login_dialog_base.ui'))
