@@ -1,6 +1,9 @@
 # unified_login_dialog.py
 import os
 import requests
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 from qgis.PyQt import uic, QtWidgets
 from qgis.core import Qgis, QgsApplication
 from qgis.gui import QgsAuthConfigSelect

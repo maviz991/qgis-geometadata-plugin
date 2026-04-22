@@ -147,6 +147,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         """Conecta os sinais dos widgets e inicializa a lógica da UI."""
         self._setup_button_connections()
         self._setup_login_icons()
+        self.form_manager.populate_comboboxes()
         self.update_ui_for_login_status()
         self.auto_fill_from_layer()
         self.update_distribution_display()
@@ -404,6 +405,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
                 f"<p style='color: rgba(0,0,0,0.5);'>Você pode Associar camadas e Exportar para Geohab</p>"
             )
 
+        self.form_manager.populate_comboboxes()
         self.update_ui_for_login_status()
 
     def _authenticate_basic_auth(self):
@@ -426,6 +428,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
                 f"<p style='color: rgba(0,0,0,0.5);'>Você pode Associar camadas e Exportar para Geohab</p>"
             )
 
+        self.form_manager.populate_comboboxes()
         self.update_ui_for_login_status()
 
     def update_ui_for_login_status(self):
@@ -626,3 +629,37 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             self.show_message(title, message, icon=QtWidgets.QMessageBox.Critical)
             return False
         return True
+
+    def closeEvent(self, event):
+        """Executado quando o usuário tenta fechar a janela."""
+        if self.form_manager.get_is_dirty():
+            from qgis.PyQt import QtWidgets
+            reply = QtWidgets.QMessageBox.question(self, 
+                                        'Alterações não Salvas',
+                                        "Você tem alterações que não foram salvas.\nDeseja realmente sair?",
+                                        QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+                                        QtWidgets.QMessageBox.No)
+
+            if reply == QtWidgets.QMessageBox.Yes:
+                event.accept() 
+            else:
+                event.ignore() 
+        else:
+            event.accept()
+
+    def reject(self):
+        """Sobrescreve o comportamento padrão da tecla ESC."""
+        self.close()
+
+    def show_message(self, title, text, icon=None):
+        from qgis.PyQt import QtWidgets
+        from qgis.PyQt.QtCore import Qt
+        if icon is None:
+            icon = QtWidgets.QMessageBox.Information
+        msg_box = QtWidgets.QMessageBox(self)
+        msg_box.setIcon(icon)
+        msg_box.setTextFormat(Qt.RichText)
+        msg_box.setText(text)
+        msg_box.setWindowTitle(title)
+        msg_box.setStandardButtons(QtWidgets.QMessageBox.Ok)
+        msg_box.exec_()
