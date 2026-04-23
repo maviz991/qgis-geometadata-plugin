@@ -29,7 +29,8 @@ import requests
 from qgis.PyQt import QtWidgets
 from qgis.PyQt.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
-    QWidget, QMessageBox, QToolButton, QMenu, QAction, QSizePolicy
+    QWidget, QMessageBox, QToolButton, QMenu, QAction, QSizePolicy,
+    QStackedWidget
 )
 from qgis.PyQt.QtCore import Qt, QDateTime, QSize, QUrl
 from qgis.PyQt.QtGui import QDesktopServices, QCursor, QPixmap, QIcon
@@ -53,6 +54,23 @@ from .core.plugin_config import config_loader
 from .ui.unified_login_dialog import UnifiedLoginDialog
 from .ui.entra_login_dialog import EntraLoginDialog
 from .ui.styles import get_stylesheet
+from .ui.geoserver_panel import GeoServerPanel
+from .ui.home_panel import HomePanel
+
+
+class HoverMenuButton(QToolButton):
+    """
+    QToolButton que abre o menu dropdown automaticamente quando o mouse
+    passa sobre ele (comportamento de navbar web).
+
+    Usa DelayedPopup: clicar na área principal dispara `clicked` (navegação),
+    clicar na seta abre o menu. O hover sempre abre o menu.
+    """
+    def enterEvent(self, event):
+        if self.menu() and self.isEnabled():
+            self.showMenu()
+        super().enterEvent(event)
+
 
 class GeoMetadataDialog(QtWidgets.QDialog):
     def __init__(self, iface, plugin_instance, parent=None):
@@ -142,7 +160,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         #self.resize(1250, 620)
 
     def _build_ui_structure(self):
-        """Cria e organiza os widgets principais da UI (header, card)."""
+        """Cria e organiza os widgets principais da UI (header + QStackedWidget)."""
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
@@ -151,10 +169,25 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         main_layout.addWidget(header_widget)
         main_layout.addSpacing(15)
 
+        # --- QStackedWidget: roteador de painéis ---
+        self._stacked = QStackedWidget()
+        self._stacked.setObjectName("MainStack")
+
+        # Página 0 — Home (ponto de entrada)
+        home = HomePanel()
+        home.navigate_geonetwork.connect(self._navigate_to_geonetwork)
+        home.navigate_geoserver.connect(self._navigate_to_geoserver)
+        self._stacked.addWidget(home)
+
+        # Página 1 — GeoNetwork (formulário de metadados)
+        self._stacked.addWidget(self._create_geonetwork_panel())
+
+        # Página 2 — GeoServer (publicação de camadas)
+        self._stacked.addWidget(self._create_geoserver_panel())
+
         content_layout = QHBoxLayout()
         content_layout.setContentsMargins(15, 0, 15, 15)
-        form_card = self._create_form_card()
-        content_layout.addWidget(form_card)
+        content_layout.addWidget(self._stacked)
         main_layout.addLayout(content_layout)
 
     def _setup_connections_and_logic(self):
@@ -172,11 +205,17 @@ class GeoMetadataDialog(QtWidgets.QDialog):
 
 
     def _create_header(self):
-        """Cabeçalho com menus dropdown estilo portal web CDHU."""
+        """Cabeçalho com menus dropdown estilo portal web CDHU.
+        
+        Os botões 'Metadado' e 'GeoServer' são HoverMenuButton:
+        - hover → abre o dropdown automaticamente
+        - clique na área de texto → navega para o painel
+        - clique na seta → abre o dropdown
+        """
         header_widget = QWidget()
         header_widget.setObjectName("Header")
         layout = QHBoxLayout(header_widget)
-        layout.setSpacing(6)
+        layout.setSpacing(0)
 
         logo_label = QLabel()
         pixmap = QPixmap(":/plugins/geometadata/img/header_logo.png")
@@ -190,33 +229,71 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self._action_salvar.setToolTip("Salva o rascunho localmente sem enviar ao Geohab")
         menu_arquivo.addAction(self._action_salvar)
 
-        self._action_exp_xml = QAction("Exportar Metadado (.xml)", self)
-        self._action_exp_xml.setToolTip("Gera e salva o arquivo XML MGB 2.0 no disco")
-        menu_arquivo.addAction(self._action_exp_xml)
-
-        btn_arquivo = QToolButton()
+        btn_arquivo = HoverMenuButton()
         btn_arquivo.setObjectName("HeaderDropdownButton")
-        btn_arquivo.setText("Arquivo ▾")
+        btn_arquivo.setText("Arquivo")
         btn_arquivo.setPopupMode(QToolButton.InstantPopup)
         btn_arquivo.setMenu(menu_arquivo)
 
-        # --- Menu "Conectividade Geohab" ---
-        menu_geohab = QMenu(self)
-        menu_geohab.setObjectName("DropdownMenu")
+        # --- Menu "GeoNetwork" ---
+        menu_geonetwork = QMenu(self)
+        menu_geonetwork.setObjectName("DropdownMenu")
 
-        self._action_exp_geo = QAction("Exportar para Geohab", self)
+        # Sub-item de navegação: abre o painel do formulário
+        self._action_nav_metadados = QAction("Metadados", self)
+        self._action_nav_metadados.setToolTip("Abrir painel de criação e edição de metadados MGB 2.0")
+        menu_geonetwork.addAction(self._action_nav_metadados)
+        menu_geonetwork.addSeparator()
+
+        self._action_exp_geo = QAction("Exportar para GeoNetwork", self)
         self._action_exp_geo.setToolTip("Publica o metadado no GeoNetwork (requer login)")
-        menu_geohab.addAction(self._action_exp_geo)
+        menu_geonetwork.addAction(self._action_exp_geo)
 
         self._action_distribution = QAction("Associar Camada WMS/WFS", self)
-        self._action_distribution.setToolTip("Vincula uma camada publicada ao metadado")
-        menu_geohab.addAction(self._action_distribution)
+        self._action_distribution.setToolTip("Vincula uma camada publicada ao metadado (requer login)")
+        menu_geonetwork.addAction(self._action_distribution)
 
-        self._btn_geohab = QToolButton()
-        self._btn_geohab.setObjectName("HeaderDropdownButton")
-        self._btn_geohab.setText("Geohab ▾")
-        self._btn_geohab.setPopupMode(QToolButton.InstantPopup)
-        self._btn_geohab.setMenu(menu_geohab)
+        self._action_exp_xml = QAction("Exportar Metadado (.xml)", self)
+        self._action_exp_xml.setToolTip("Gera e salva o arquivo XML MGB 2.0 no disco")
+        menu_geonetwork.addSeparator()
+        menu_geonetwork.addAction(self._action_exp_xml)
+
+        self._action_import_metadata = QAction("Importar Metadado (.xml)...", self)
+        self._action_import_metadata.setToolTip("Abre um XML MGB 2.0 existente para edição (em breve)")
+        self._action_import_metadata.setEnabled(False)  # placeholder
+        menu_geonetwork.addAction(self._action_import_metadata)
+
+        self._btn_geonetwork = HoverMenuButton()
+        self._btn_geonetwork.setObjectName("HeaderDropdownButton")
+        self._btn_geonetwork.setText("GeoNetwork")
+        self._btn_geonetwork.setPopupMode(QToolButton.DelayedPopup)
+        self._btn_geonetwork.setMenu(menu_geonetwork)
+
+        # --- Menu "GeoServer" ---
+        menu_geoserver = QMenu(self)
+        menu_geoserver.setObjectName("DropdownMenu")
+
+        # Sub-item de navegação: abre o painel GeoServer
+        self._action_nav_geoserver = QAction("GeoServer", self)
+        self._action_nav_geoserver.setToolTip("Abrir painel de publicação GeoServer")
+        menu_geoserver.addAction(self._action_nav_geoserver)
+        menu_geoserver.addSeparator()
+
+        # Aviso de Fase 2 (visual informativo)
+        self._action_gs_fase2 = QAction("Em desenvolvimento  —  Fase 2", self)
+        self._action_gs_fase2.setEnabled(False)
+        menu_geoserver.addAction(self._action_gs_fase2)
+
+        self._action_gs_publish = QAction("Publicar Camada...", self)
+        self._action_gs_publish.setToolTip("Publicação GeoServer disponível na Fase 2")
+        self._action_gs_publish.setEnabled(False)
+        menu_geoserver.addAction(self._action_gs_publish)
+
+        self._btn_geoserver = HoverMenuButton()
+        self._btn_geoserver.setObjectName("HeaderDropdownButton")
+        self._btn_geoserver.setText("GeoServer")
+        self._btn_geoserver.setPopupMode(QToolButton.DelayedPopup)
+        self._btn_geoserver.setMenu(menu_geoserver)
 
         # --- Botão de Login ---
         self.header_btn_login = QPushButton()
@@ -227,7 +304,8 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         layout.addWidget(logo_label)
         layout.addSpacing(8)
         layout.addWidget(btn_arquivo)
-        layout.addWidget(self._btn_geohab)
+        layout.addWidget(self._btn_geonetwork)
+        layout.addWidget(self._btn_geoserver)
         layout.addStretch()
         layout.addWidget(self.header_btn_login)
 
@@ -311,34 +389,60 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         
         return widget
 
-    def _create_form_card(self):
-        """Card principal com formulário dinâmico (QScrollArea)."""
-        card_widget = QWidget()
-        card_widget.setProperty("class", "Card")
-        card_layout = QVBoxLayout(card_widget)
-        card_layout.setContentsMargins(0, 0, 0, 0)
-        card_layout.setSpacing(0)
+    def _create_geonetwork_panel(self):
+        """Painel GeoNetwork: formulário dinâmico MGB 2.0 + painel de distribuição."""
+        panel = QWidget()
+        panel.setObjectName("GeoNetworkPanel")
+        panel.setProperty("class", "Card")
+        layout = QVBoxLayout(panel)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
 
         # --- FORMULÁRIO DINÂMICO (QScrollArea sem dependência de .ui) ---
         self._dynamic_form = DynamicForm()
         self.ui = self._dynamic_form   # FormManager acessa via self.ui.widget_name
-        card_layout.addWidget(self._dynamic_form.get_scroll_area(), 1)
+        layout.addWidget(self._dynamic_form.get_scroll_area(), 1)
 
         # --- PAINEL DE DISTRIBUIÇÃO (injetado na aba "Recursos associados") ---
         distribution_panel = self._create_distribution_display_panel()
         self.ui.recursos_container.addWidget(distribution_panel)
 
-        return card_widget
+        return panel
+
+    def _create_geoserver_panel(self):
+        """Painel GeoServer: publicação de camadas (placeholder Fase 2)."""
+        return GeoServerPanel()
+
+    def _navigate_to_home(self):
+        """Navega para a Home (índice 0)."""
+        self._stacked.setCurrentIndex(0)
+
+    def _navigate_to_geonetwork(self):
+        """Navega para o painel GeoNetwork (índice 1)."""
+        self._stacked.setCurrentIndex(1)
+
+    def _navigate_to_geoserver(self):
+        """Navega para o painel GeoServer (índice 2)."""
+        self._stacked.setCurrentIndex(2)
 
     def _setup_button_connections(self):
         """Conecta sinais do header (QActions) e widgets internos do formulário."""
         # --- Header: menu Arquivo ---
         self._action_salvar.triggered.connect(self.save_metadata)
-        self._action_exp_xml.triggered.connect(self.exportar_to_xml)
 
-        # --- Header: menu Geohab ---
+        # --- Header: menu GeoNetwork ---
+        self._action_nav_metadados.triggered.connect(self._navigate_to_geonetwork)
+        self._action_exp_xml.triggered.connect(self.exportar_to_xml)
         self._action_exp_geo.triggered.connect(self.exportar_to_geo)
         self._action_distribution.triggered.connect(self.open_distribution_workflow)
+        # _action_import_metadata: placeholder (não conectado ainda)
+
+        # --- Header: menu GeoServer ---
+        self._action_nav_geoserver.triggered.connect(self._navigate_to_geoserver)
+
+        # --- Header: navegação por painel (clique no botão principal) ---
+        self._btn_geonetwork.clicked.connect(self._navigate_to_geonetwork)
+        self._btn_geoserver.clicked.connect(self._navigate_to_geoserver)
 
         # --- Header: botão de login ---
         self.header_btn_login.clicked.connect(self.authenticate)
@@ -444,16 +548,21 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.update_ui_for_login_status()
 
     def update_ui_for_login_status(self):
-        """Habilita/desabilita QActions do menu Geohab e atualiza o botão de login."""
+        """Habilita/desabilita QActions de GeoNetwork e GeoServer; atualiza botão de login."""
         is_logged_in = self.plugin.api_session is not None
+        tip_locked = "Faça login para usar esta função"
+
+        # --- GeoNetwork ---
         self._action_exp_geo.setEnabled(is_logged_in)
         self._action_distribution.setEnabled(is_logged_in)
-        # Tooltip indica ao usuário o que falta quando desabilitado
-        tip_locked = "Faça login no Geohab para usar esta função"
         self._action_exp_geo.setToolTip(
             "Publica o metadado no GeoNetwork" if is_logged_in else tip_locked)
         self._action_distribution.setToolTip(
             "Vincula uma camada publicada ao metadado" if is_logged_in else tip_locked)
+
+        # --- GeoServer (placeholder — desabilitado até Fase 2) ---
+        self._action_gs_publish.setEnabled(False)
+        self._action_gs_publish.setToolTip("Publicação GeoServer disponível na Fase 2")
 
         if is_logged_in:
             username = self.plugin.auth_username or "Usuário Conectado"

@@ -46,7 +46,7 @@ def get_stylesheet(img_dir: str) -> str:
         border-bottom: 1px solid #334155;
     }}
 
-    /* Botões de menu dropdown (Arquivo, Conectividade Geohab) */
+    /* Botões de menu dropdown (Arquivo, Metadado, GeoServer, etc.) */
     #HeaderDropdownButton {{
         background-color: transparent;
         color: #475569;
@@ -54,8 +54,8 @@ def get_stylesheet(img_dir: str) -> str:
         font-weight: 600;
         border: none;
         border-bottom: 3px solid transparent;
-        padding: 10px 16px;
-        margin: 0 2px;
+        padding: 10px 14px 10px 16px;
+        margin: 0 1px;
     }}
     #HeaderDropdownButton:hover {{
         color: #0f172a;
@@ -66,6 +66,21 @@ def get_stylesheet(img_dir: str) -> str:
         color: {accent};
         border-bottom: 3px solid {accent};
     }}
+
+    /* Seta do menu (modo DelayedPopup / MenuButtonPopup) — remove área preta */
+    #HeaderDropdownButton::menu-button {{
+        background: transparent;
+        border: none;
+        border-left: none;
+        width: 16px;
+        padding-right: 4px;
+    }}
+    #HeaderDropdownButton::menu-arrow {{
+        image: none;
+        width: 0;
+        height: 0;
+    }}
+    /* Indicador de menu para InstantPopup */
     #HeaderDropdownButton::menu-indicator {{ width: 0; image: none; }}
 
     #GeoMetadataDialog[theme="dark"] #HeaderDropdownButton {{ color: #94a3b8; }}
@@ -76,6 +91,10 @@ def get_stylesheet(img_dir: str) -> str:
     #GeoMetadataDialog[theme="dark"] #HeaderDropdownButton:pressed {{
         color: #38bdf8;
         border-bottom: 3px solid #38bdf8;
+    }}
+    #GeoMetadataDialog[theme="dark"] #HeaderDropdownButton::menu-button {{
+        background: transparent;
+        border: none;
     }}
 
     /* Botão de login */
@@ -116,7 +135,17 @@ def get_stylesheet(img_dir: str) -> str:
         background-color: {accent_light};
         color: {accent};
     }}
-    #DropdownMenu::item:disabled {{ color: #cbd5e1; }}
+    /* Item de navegacao principal — negrito, cor accent */
+    #DropdownMenu::item[objectName="NavAction"] {{
+        font-weight: 700;
+        color: #1e293b;
+    }}
+    #DropdownMenu::item[objectName="NavAction"]:selected {{
+        background-color: {accent_light};
+        color: {accent};
+    }}
+    /* Item desabilitado padrao */
+    #DropdownMenu::item:disabled {{ color: #94a3b8; font-style: italic; }}
     #DropdownMenu::separator {{
         height: 1px;
         background: #e2e8f0;
@@ -602,7 +631,7 @@ def get_stylesheet(img_dir: str) -> str:
     #FormTabs QTabWidget::pane {{
         border: none;
         border-top: 2px solid #e2e8f0;
-        background-color: #ffffff;
+        background-color: transparent;
     }}
 
     /* Barra de abas */
@@ -620,17 +649,18 @@ def get_stylesheet(img_dir: str) -> str:
         margin-right: 0px;
     }}
     #FormTabs QTabBar::tab:hover {{
-        color: #334155;
+        color: #6d7075;
         background: #f8fafc;
         border-bottom: 2px solid #cbd5e1;
     }}
     #FormTabs QTabBar::tab:selected {{
         color: #e5222d;
-        background: #ffffff;
+        background: transparent;
         border-bottom: 2px solid #e5222d;
     }}
     #FormTabs QTabBar::tab:disabled {{
         color: #cbd5e1;
+        background: gray;
     }}
 
     /* ================================================================
@@ -738,6 +768,229 @@ def get_stylesheet(img_dir: str) -> str:
 
     #GeoMetadataDialog[theme="dark"] QScrollBar::handle:vertical {{ background: #334155; }}
     #GeoMetadataDialog[theme="dark"] QScrollBar::handle:vertical:hover {{ background: #475569; }}
+
+    /* ================================================================
+       GEOSERVER PANEL — placeholder Fase 2
+       ================================================================ */
+    #GeoServerPanel {{
+        background-color: #f1f5f9;
+    }}
+    #GeoMetadataDialog[theme="dark"] #GeoServerPanel {{
+        background-color: #0f172a;
+    }}
+
+    #GeoServerPlaceholderCard {{
+        background-color: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+    }}
+    #GeoMetadataDialog[theme="dark"] #GeoServerPlaceholderCard {{
+        background-color: #1e293b;
+        border-color: #334155;
+    }}
+
+    #GeoServerPlaceholderTitle {{
+        font-size: 18px;
+        font-weight: 700;
+        color: #1e293b;
+    }}
+    #GeoMetadataDialog[theme="dark"] #GeoServerPlaceholderTitle {{
+        color: #f1f5f9;
+    }}
+
+    #GeoServerPlaceholderDesc {{
+        font-size: 13px;
+        color: #64748b;
+        line-height: 1.6;
+    }}
+    #GeoMetadataDialog[theme="dark"] #GeoServerPlaceholderDesc {{
+        color: #94a3b8;
+    }}
+
+    #PlaceholderSeparator {{
+        color: #e2e8f0;
+        max-height: 1px;
+    }}
+    #GeoMetadataDialog[theme="dark"] #PlaceholderSeparator {{
+        color: #334155;
+    }}
+
+    #GeoServerIconLabel {{
+        font-size: 48px;
+    }}
+
+    #FeatureEmoji {{
+        font-size: 16px;
+    }}
+
+    #FeatureText {{
+        font-size: 13px;
+        color: #475569;
+    }}
+    #GeoMetadataDialog[theme="dark"] #FeatureText {{
+        color: #94a3b8;
+    }}
+
+    #ComingSoonBadge {{
+        background-color: #fef3c7;
+        color: #92400e;
+        border: 1px solid #fde68a;
+        border-radius: 20px;
+        padding: 6px 20px;
+        font-size: 12px;
+        font-weight: 700;
+    }}
+    #GeoMetadataDialog[theme="dark"] #ComingSoonBadge {{
+        background-color: #1c1917;
+        color: #fbbf24;
+        border-color: #78350f;
+    }}
+
+    /* ================================================================
+       HOME PANEL — tela inicial com cards de módulos
+       ================================================================ */
+    #HomePanel {{
+        background-color: #f1f5f9;
+    }}
+    #GeoMetadataDialog[theme="dark"] #HomePanel {{
+        background-color: #0f172a;
+    }}
+
+    #HomeTitleBar {{ background: transparent; }}
+
+    #HomeTitle {{
+        font-size: 22px;
+        font-weight: 800;
+        color: #0f172a;
+        letter-spacing: -0.3px;
+    }}
+    #GeoMetadataDialog[theme="dark"] #HomeTitle {{ color: #f1f5f9; }}
+
+    #HomeSubtitle {{
+        font-size: 13px;
+        color: #64748b;
+        line-height: 1.6;
+    }}
+    #GeoMetadataDialog[theme="dark"] #HomeSubtitle {{ color: #94a3b8; }}
+
+    #HomeCardsContainer {{ background: transparent; }}
+
+    /* Card base */
+    #HomeCard_active, #HomeCard_soon {{
+        background-color: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+    }}
+    #HomeCard_active:hover {{
+        border-color: {accent};
+        background-color: #fefefe;
+    }}
+    #HomeCard_soon {{
+        background-color: #fafafa;
+        border-color: #e2e8f0;
+        opacity: 0.85;
+    }}
+    #GeoMetadataDialog[theme="dark"] #HomeCard_active,
+    #GeoMetadataDialog[theme="dark"] #HomeCard_soon {{
+        background-color: #1e293b;
+        border-color: #334155;
+    }}
+    #GeoMetadataDialog[theme="dark"] #HomeCard_active:hover {{
+        border-color: {accent};
+    }}
+
+    /* Ícone do card */
+    #CardIcon {{
+        font-size: 36px;
+    }}
+
+    /* Título do card */
+    #CardTitle {{
+        font-size: 17px;
+        font-weight: 800;
+        color: #0f172a;
+        letter-spacing: -0.2px;
+    }}
+    #GeoMetadataDialog[theme="dark"] #CardTitle {{ color: #f1f5f9; }}
+
+    /* Subtítulo (badge de status) */
+    #CardSubtitle {{
+        font-size: 11px;
+        font-weight: 700;
+        color: {accent};
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        padding: 2px 0;
+    }}
+    #CardSubtitleSoon {{
+        font-size: 11px;
+        font-weight: 700;
+        color: #f59e0b;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        padding: 2px 0;
+    }}
+
+    /* Separador */
+    #CardSeparator {{ color: #e2e8f0; max-height: 1px; }}
+    #GeoMetadataDialog[theme="dark"] #CardSeparator {{ color: #334155; }}
+
+    /* Descrição */
+    #CardDescription {{
+        font-size: 12px;
+        color: #475569;
+        line-height: 1.6;
+    }}
+    #GeoMetadataDialog[theme="dark"] #CardDescription {{ color: #94a3b8; }}
+
+    /* Bullet de funcionalidade */
+    #CardBullet {{
+        color: {accent};
+        font-weight: 900;
+        font-size: 14px;
+    }}
+    #CardBulletSoon {{
+        color: #f59e0b;
+        font-weight: 900;
+        font-size: 14px;
+    }}
+
+    #CardFeature {{
+        font-size: 12px;
+        color: #334155;
+    }}
+    #GeoMetadataDialog[theme="dark"] #CardFeature {{ color: #94a3b8; }}
+
+    /* Botão de ação do card */
+    #CardButton {{
+        background-color: {accent};
+        color: #ffffff;
+        font-size: 13px;
+        font-weight: 700;
+        border: none;
+        border-radius: 10px;
+        padding: 11px 0;
+    }}
+    #CardButton:hover  {{ background-color: {accent_hover}; }}
+    #CardButton:pressed {{ background-color: {accent_hover}; }}
+
+    #CardButtonSoon {{
+        background-color: transparent;
+        color: #94a3b8;
+        font-size: 13px;
+        font-weight: 600;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 11px 0;
+    }}
+    #GeoMetadataDialog[theme="dark"] #CardButton {{
+        background-color: {accent};
+        color: #ffffff;
+    }}
+    #GeoMetadataDialog[theme="dark"] #CardButtonSoon {{
+        border-color: #334155;
+        color: #475569;
+    }}
 """
 
 
