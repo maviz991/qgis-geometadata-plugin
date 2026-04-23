@@ -67,13 +67,20 @@ def _tab_scroll(content_widget):
 # Linha de contato
 # ---------------------------------------------------------------------------
 
+from qgis.PyQt.QtCore import pyqtSignal
+
 class _ContactRow(QWidget):
-    def __init__(self, removable=True, parent=None):
+    move_up_sig = pyqtSignal(QWidget)
+    move_down_sig = pyqtSignal(QWidget)
+    remove_sig = pyqtSignal(QWidget)
+
+    def __init__(self, is_primary=False, parent=None):
         super().__init__(parent)
         self.setObjectName("ContactRow")
+        self.is_primary = is_primary
         h = QHBoxLayout(self)
         h.setContentsMargins(0, 3, 0, 3)
-        h.setSpacing(8)
+        h.setSpacing(4)
 
         self.field_org = QLineEdit()
         self.field_org.setObjectName("ContactCell")
@@ -99,21 +106,32 @@ class _ContactRow(QWidget):
         h.addWidget(self.field_email, 3)
         h.addWidget(self.field_role, 2)
 
-        if removable:
+        # Action buttons
+        self.btn_up = QPushButton("▲")
+        self.btn_up.setObjectName("RemoveContactButton")
+        self.btn_up.setFixedSize(24, 24)
+        self.btn_up.setToolTip("Subir posição")
+        self.btn_up.clicked.connect(lambda: self.move_up_sig.emit(self))
+        h.addWidget(self.btn_up)
+
+        self.btn_down = QPushButton("▼")
+        self.btn_down.setObjectName("RemoveContactButton")
+        self.btn_down.setFixedSize(24, 24)
+        self.btn_down.setToolTip("Descer posição")
+        self.btn_down.clicked.connect(lambda: self.move_down_sig.emit(self))
+        h.addWidget(self.btn_down)
+
+        if not is_primary:
             btn = QPushButton("×")
             btn.setObjectName("RemoveContactButton")
-            btn.setFixedSize(28, 28)
+            btn.setFixedSize(24, 24)
             btn.setToolTip("Remover contato")
-            btn.clicked.connect(self._remove)
+            btn.clicked.connect(lambda: self.remove_sig.emit(self))
             h.addWidget(btn)
         else:
             sp = QWidget()
-            sp.setFixedWidth(28)
+            sp.setFixedWidth(24)
             h.addWidget(sp)
-
-    def _remove(self):
-        self.setParent(None)
-        self.deleteLater()
 
     def collect(self):
         return {
@@ -313,11 +331,33 @@ class DynamicForm:
         v.setContentsMargins(18, 16, 18, 18)
         v.setSpacing(10)
 
-        # Preset CDHU
-        self.comboBox_contact_presets = QComboBox()
-        self.comboBox_contact_presets.setToolTip(
-            "Selecione um setor para preencher os campos automaticamente")
-        _f1(v, "Preencher com setor CDHU", self.comboBox_contact_presets)
+        # -- BARRA DE BUSCA HÍBRIDA --
+        search_layout = QVBoxLayout()
+        search_layout.setSpacing(6)
+        
+        lbl_search = QLabel("Diretório de Contatos")
+        lbl_search.setStyleSheet("font-size: 13px; font-weight: 600; color: #475569;")
+        search_layout.addWidget(lbl_search)
+        
+        row_b = QHBoxLayout()
+        row_b.setSpacing(8)
+        self.lineEdit_contact_search = QLineEdit()
+        self.lineEdit_contact_search.setPlaceholderText("Busque por nome, sigla ou e-mail...")
+        self.lineEdit_contact_search.setObjectName("ContactSearch") 
+        row_b.addWidget(self.lineEdit_contact_search, 1)
+        
+        self.btn_contact_add = QPushButton("Vincular Contato")
+        self.btn_contact_add.setObjectName("ActionBtn")
+        self.btn_contact_add.setToolTip("Adiciona o contato. Se a lista estiver vazia, ele se tornará o principal.")
+        row_b.addWidget(self.btn_contact_add)
+        
+        search_layout.addLayout(row_b)
+        v.addLayout(search_layout)
+
+        div_top = QFrame()
+        div_top.setFrameShape(QFrame.HLine)
+        div_top.setObjectName("TableDivider")
+        v.addWidget(div_top)
 
         # Cabeçalho da tabela
         hdr = QHBoxLayout()
@@ -341,39 +381,19 @@ class DynamicForm:
         v.addWidget(div)
 
         # Linha primária → FormManager
-        self._primary_row = _ContactRow(removable=False)
+        self._primary_row = _ContactRow(is_primary=True)
+        self._setup_row_signals(self._primary_row)
         self.lineEdit_contact_organisationName = self._primary_row.field_org
         self.lineEdit_contact_individualName   = self._primary_row.field_name
         self.lineEdit_contact_email            = self._primary_row.field_email
         self.comboBox_contact_role             = self._primary_row.field_role
         v.addWidget(self._primary_row)
 
-        # 2 linhas extras por padrão
+        # Layout para futuras linhas extras
         self._rows_layout = QVBoxLayout()
         self._rows_layout.setSpacing(4)
         self._rows_layout.setContentsMargins(0, 0, 0, 0)
-        for _ in range(2):
-            row = _ContactRow(removable=True)
-            self._rows_layout.addWidget(row)
-            self._extra_contact_rows.append(row)
         v.addLayout(self._rows_layout)
-
-        # Busca + [+]
-        search_row = QHBoxLayout()
-        self._contact_search = QLineEdit()
-        self._contact_search.setPlaceholderText("Busque o contato")
-        self._contact_search.setObjectName("ContactSearch")
-        search_row.addWidget(self._contact_search, 1)
-        btn_search = QPushButton("🔍︎")
-        btn_search.setObjectName("SearchButton")
-        btn_search.setFixedSize(34, 34)
-        search_row.addWidget(btn_search)
-        btn_add = QPushButton("+")
-        btn_add.setObjectName("AddContactButton")
-        btn_add.setFixedSize(34, 34)
-        btn_add.clicked.connect(self._add_contact_row)
-        search_row.addWidget(btn_add)
-        v.addLayout(search_row)
 
         v.addStretch()
         return content
@@ -499,13 +519,49 @@ class DynamicForm:
 
 
     def _add_contact_row(self):
-        row = _ContactRow(removable=True)
-        text = self._contact_search.text().strip()
-        if text:
-            row.field_org.setText(text)
-            self._contact_search.clear()
+        row = _ContactRow(is_primary=False)
+        self._setup_row_signals(row)
         self._rows_layout.addWidget(row)
         self._extra_contact_rows.append(row)
+        return row
+
+    def _setup_row_signals(self, row):
+        row.move_up_sig.connect(self._on_move_up)
+        row.move_down_sig.connect(self._on_move_down)
+        row.remove_sig.connect(self._on_remove)
+
+    def _get_all_contact_rows(self):
+        return [self._primary_row] + self._extra_contact_rows
+
+    def _on_move_up(self, row):
+        rows = self._get_all_contact_rows()
+        try:
+            idx = rows.index(row)
+            if idx > 0:
+                self._swap_contact_data(rows[idx], rows[idx-1])
+        except ValueError:
+            pass
+
+    def _on_move_down(self, row):
+        rows = self._get_all_contact_rows()
+        try:
+            idx = rows.index(row)
+            if idx < len(rows) - 1:
+                self._swap_contact_data(rows[idx], rows[idx+1])
+        except ValueError:
+            pass
+
+    def _swap_contact_data(self, rowA, rowB):
+        dataA = rowA.collect()
+        dataB = rowB.collect()
+        rowA.populate(dataB)
+        rowB.populate(dataA)
+
+    def _on_remove(self, row):
+        if row in self._extra_contact_rows:
+            self._extra_contact_rows.remove(row)
+            row.setParent(None)
+            row.deleteLater()
 
     def get_extra_contacts(self):
         return [r.collect() for r in self._extra_contact_rows

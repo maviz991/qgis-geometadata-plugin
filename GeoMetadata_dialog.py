@@ -298,6 +298,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.auto_fill_from_layer()
         self.update_distribution_display()
         self._setup_layer_association()
+        self._setup_contact_search()
         self.form_manager.connect_dirty_signals(self.on_metadata_changed)
 
     def on_metadata_changed(self):
@@ -575,8 +576,6 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.wfs_clear_button.clicked.connect(self.clear_wfs_data)
 
         # --- Formulário dinâmico ---
-        self.ui.comboBox_contact_presets.currentIndexChanged.connect(
-            self.form_manager.on_contact_preset_changed)
         self.ui.toolButton_set_today.clicked.connect(self._set_dateStamp_to_today)
 
     def _set_dateStamp_to_today(self):
@@ -958,6 +957,104 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.ui.lineEdit_layer_search.clear()
         self.ui.lineEdit_layer_search.setEnabled(False)
         self.iface.messageBar().pushMessage("Sucesso", f"Recurso {service_type.upper()} associado.", level=Qgis.Success)
+
+    # --- INTEGRAÇÃO DA SELEÇÃO DE CONTATOS (HIBRIDA) ---
+    def _setup_contact_search(self):
+        """Prepara os widgets e lógica da aba Ponto de Contato."""
+        self.contact_completer = QtWidgets.QCompleter(self)
+        self.contact_completer_model = QStringListModel(self)
+        self.contact_completer.setModel(self.contact_completer_model)
+        self.contact_completer.setFilterMode(Qt.MatchContains)
+        self.contact_completer.setCaseSensitivity(Qt.CaseInsensitive)
+        self.ui.lineEdit_contact_search.setCompleter(self.contact_completer)
+
+        self.contact_debounce_timer = QTimer(self)
+        self.contact_debounce_timer.setSingleShot(True)
+        self.contact_debounce_timer.timeout.connect(self._fetch_contacts_online)
+
+        self.ui.lineEdit_contact_search.textEdited.connect(self._on_contact_search_edited)
+        self.contact_completer.activated.connect(self._on_contact_selected)
+        
+        self.ui.btn_contact_add.clicked.connect(self._add_contact_action)
+        
+        self.contacts_cache_map = {}
+        self.selected_contact_data = None
+
+    def _on_contact_search_edited(self, text):
+        self._update_offline_contacts(text)
+        if self.plugin.api_session and len(text) >= 2:
+            self.contact_debounce_timer.start(800)
+            
+    def _update_offline_contacts(self, filter_text):
+        display_list = []
+        lower_filt = filter_text.lower()
+        
+        for key, data in self.form_manager.contatos_predefinidos.items():
+            if key == 'nenhum': continue
+            org = data.get('contact_organisationName', '')
+            sigla = data.get('contact_individualName', '')
+            email = data.get('contact_email', '')
+            
+            if not lower_filt or lower_filt in org.lower() or lower_filt in sigla.lower() or lower_filt in email.lower():
+                display_str = f"{org} ({sigla}) - {email}"
+                display_list.append(display_str)
+                self.contacts_cache_map[display_str] = data
+                
+        self.contact_completer_model.setStringList(display_list)
+
+    def _fetch_contacts_online(self):
+        filter_text = self.ui.lineEdit_contact_search.text()
+        if not filter_text: return
+        
+        try:
+            gn_urls = config_loader.get_geonetwork_url()
+            base_url = gn_urls.get('records_url') 
+            if not base_url: return
+            api_url = base_url.replace('/records', '/registries')
+            url = f"{api_url}/entries?type=contact&q={filter_text}"
+            
+            response = self.plugin.api_session.get(url, timeout=10, headers={'Accept': 'application/json'}, verify=False)
+            if response.status_code == 200:
+                results = response.json()
+        except Exception:
+            pass
+            
+    def _on_contact_selected(self, selected_text):
+        if selected_text in self.contacts_cache_map:
+            self.selected_contact_data = self.contacts_cache_map[selected_text]
+        else:
+            self.selected_contact_data = None
+            
+    def _add_contact_action(self):
+        if not self.selected_contact_data:
+            QtWidgets.QMessageBox.warning(self, "Aviso", "Selecione um contato da lista primeiro.")
+            return
+
+        org_text = self.ui._primary_row.field_org.text().strip()
+        name_text = self.ui._primary_row.field_name.text().strip()
+
+        if not org_text and not name_text:
+            self.form_manager.populate_primary_contact(self.selected_contact_data)
+            self.iface.messageBar().pushMessage("Sucesso", "Contato primário definido.", level=Qgis.Success)
+        else:
+            org = self.selected_contact_data.get('contact_organisationName', '')
+            name = self.selected_contact_data.get('contact_individualName', '')
+            email = self.selected_contact_data.get('contact_email', '')
+            role = self.selected_contact_data.get('contact_role', 'pointOfContact')
+            
+            row = self.ui._add_contact_row()
+            row.field_org.setText(org)
+            row.field_name.setText(name)
+            row.field_email.setText(email)
+            
+            index = row.field_role.findData(role)
+            if index != -1: row.field_role.setCurrentIndex(index)
+            self.iface.messageBar().pushMessage("Sucesso", "Contato anexado à lista.", level=Qgis.Success)
+
+        # Limpa após adicionar
+        self.ui.lineEdit_contact_search.clear()
+        self.selected_contact_data = None
+
 
     # GeoMetadata_dialog.py -> adicione este método à classe
 

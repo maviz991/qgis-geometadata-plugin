@@ -82,7 +82,6 @@ class FormManager:
                 combo.addItem(text, data)
         
         populate(self.ui.comboBox_status_codeListValue, [('Arquivo Antigo', 'historicalArchive'), ('Concluído', 'completed'), ('Contínuo', 'onGoing'), ('Em Desenvolvimento', 'underDevelopment'), ('Necessário', 'required'), ('Obsoleto', 'obsolete'), ('Planejado', 'planned')])
-        populate(self.ui.comboBox_contact_presets, [('CDHU', 'cdhu'), ('DPDU', 'dpdu'), ('SPHU', 'sphu'), ('SSARU', 'ssaru'), ('TERRAS', 'terras'), ('nenhum', 'nenhum')])
         populate(self.ui.comboBox_MD_SpatialRepresentationTypeCode, [('Vetor', 'vector'), ('Grid | Raster', 'grid'), ('Tabela de texto', 'textTable'), ('Rede triangular irregular (TIN)', 'tin'), ('Modelo estereofônico', 'stereoscopicModel'), ('Vídeo', 'video')])
         populate(self.ui.comboBox_LanguageCode, [('🇧🇷 Português', 'por'), ('🇺🇸 Inglês', 'eng'), ('🇪🇸 Espanhol', 'spa'), ('🇫🇷 Francês', 'fra'), ('🇩🇪 Alemão', 'ger')])
         populate(self.ui.comboBox_characterSet, [('UTF-8', 'utf8')])
@@ -93,9 +92,6 @@ class FormManager:
 
     def collect_data(self):
         data = {}
-        preset_key = self.ui.comboBox_contact_presets.currentData()
-        if preset_key and preset_key != 'nenhum': 
-            data['uuid'] = self.contatos_predefinidos.get(preset_key, {}).get('uuid')
 
         raw_keywords_text = self.ui.lineEdit_MD_Keywords.text()
         normalized_text = re.sub(r'[\s;./]+', ',', raw_keywords_text)
@@ -135,7 +131,7 @@ class FormManager:
             'eastBoundLongitude': self.ui.lineEdit_eastBoundLongitude.text(),
             'southBoundLatitude': self.ui.lineEdit_southBoundLatitude.text(),
             'northBoundLatitude': self.ui.lineEdit_northBoundLatitude.text(),
-            'contact_preset_key': self.ui.comboBox_contact_presets.currentData(),
+            'contact_preset_key': 'nenhum', # Legacy maintain
             'thumbnail_url': self.ui.lineEdit_thumbnail_url.text(),
             'metadata_uuid': self.current_metadata_uuid
         })
@@ -181,21 +177,9 @@ class FormManager:
         self.distribution_data['wfs_data'] = data_dict.get('wfs_data', {})
         self.ui.lineEdit_thumbnail_url.setText(data_dict.get('thumbnail_url', ''))
 
-        found_preset_key = None
-        for preset_key, preset_data in self.contatos_predefinidos.items():
-            if preset_key == 'nenhum': continue
-            if (data_dict.get('contact_individualName') == preset_data.get('contact_individualName') and
-                data_dict.get('contact_organisationName') == preset_data.get('contact_organisationName') and
-                data_dict.get('contact_email') == preset_data.get('contact_email')):
-                found_preset_key = preset_key
-                break
+        # Legacy preset logic removed.
 
-        preset_to_set = found_preset_key if found_preset_key else 'nenhum'
-        self.set_combobox_by_data(self.ui.comboBox_contact_presets, preset_to_set)
-
-    def on_contact_preset_changed(self):
-        preset_key = self.ui.comboBox_contact_presets.currentData()
-        contact_data = self.contatos_predefinidos.get(preset_key, {})
+    def populate_primary_contact(self, contact_data):
         self.ui.lineEdit_contact_individualName.setText(contact_data.get('contact_individualName', ''))
         self.ui.lineEdit_contact_organisationName.setText(contact_data.get('contact_organisationName', ''))
         self.ui.lineEdit_contact_positionName.setText(contact_data.get('contact_positionName', ''))
@@ -239,7 +223,7 @@ class FormManager:
             self.ui.comboBox_status_codeListValue, self.ui.comboBox_MD_SpatialRepresentationTypeCode,
             self.ui.comboBox_LanguageCode, self.ui.comboBox_characterSet, self.ui.comboBox_topicCategory,
             self.ui.comboBox_hierarchyLevel, self.ui.comboBox_contact_administrativeArea,
-            self.ui.comboBox_contact_role, self.ui.comboBox_contact_presets
+            self.ui.comboBox_contact_role
         ]:
             if combo: combo.currentIndexChanged.connect(mark_dirty)
 
