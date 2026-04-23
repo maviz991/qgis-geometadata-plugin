@@ -46,7 +46,7 @@ def get_stylesheet(img_dir: str) -> str:
         border-bottom: 1px solid #334155;
     }}
 
-    /* Botões de menu dropdown (Arquivo, Metadado, GeoServer, etc.) */
+    /* Botões de menu dropdown (Arquivo, GeoNetwork, GeoServer) — base */
     #HeaderDropdownButton {{
         background-color: transparent;
         color: #475569;
@@ -57,96 +57,24 @@ def get_stylesheet(img_dir: str) -> str:
         padding: 10px 14px 10px 16px;
         margin: 0 1px;
     }}
-    #HeaderDropdownButton[hovered="true"] {{
-        color: #6d7075;
-        background: #f8fafc;
-        border-bottom: 3px solid #cbd5e1;
-    }}
-    #HeaderDropdownButton:pressed {{
-        color: {accent};
-        border-bottom: 3px solid {accent};
-    }}
+    /* Hover e navActive gerenciados por NavButton._update_style() via setStyleSheet() */
 
-    /* Seta do menu (modo DelayedPopup / MenuButtonPopup) — remove área preta */
-    #HeaderDropdownButton::menu-button {{
-        background: transparent;
-        border: none;
-        border-left: none;
-        width: 16px;
-        padding-right: 4px;
-    }}
-    #HeaderDropdownButton::menu-arrow {{
-        image: none;
-        width: 0;
-        height: 0;
-    }}
-    /* Indicador de menu para InstantPopup */
+    /* Remove artefatos visuais do menu embutido no QPushButton */
+    #HeaderDropdownButton::menu-button {{ background: transparent; border: none; width: 0; }}
+    #HeaderDropdownButton::menu-arrow  {{ image: none; width: 0; height: 0; }}
     #HeaderDropdownButton::menu-indicator {{ width: 0; image: none; }}
 
     #GeoMetadataDialog[theme="dark"] #HeaderDropdownButton {{ color: #94a3b8; }}
-    #GeoMetadataDialog[theme="dark"] #HeaderDropdownButton[hovered="true"] {{
-        color: #94a3b8;
-        background: #273549;
-        border-bottom: 3px solid #475569;
-    }}
-    #GeoMetadataDialog[theme="dark"] #HeaderDropdownButton:pressed {{
-        color: #38bdf8;
-        border-bottom: 3px solid #38bdf8;
-    }}
-    #GeoMetadataDialog[theme="dark"] #HeaderDropdownButton::menu-button {{
+
+    /* Logo clicável — navega para Home */
+    #LogoButton {{
         background: transparent;
         border: none;
+        padding: 0;
+        margin: 0 4px 0 0;
     }}
-
-    /* Estado ativo dropdown buttons */
-    #HeaderDropdownButton[navActive="true"] {{
-        color: {accent};
-        border-bottom: 3px solid {accent};
-        font-weight: 700;
-    }}
-    #GeoMetadataDialog[theme="dark"] #HeaderDropdownButton[navActive="true"] {{
-        color: #38bdf8;
-        border-bottom: 3px solid #38bdf8;
-    }}
-
-    /* Botão Home — ancora de navegacao principal */
-    #HomeButton {{
-        background-color: transparent;
-        color: #475569;
-        font-size: 14px;
-        font-weight: 700;
-        border: none;
-        border-bottom: 3px solid transparent;
-        padding: 10px 14px 10px 16px;
-        margin: 0 1px;
-    }}
-    #HomeButton[hovered="true"] {{
-        color: #6d7075;
-        background: #f8fafc;
-        border-bottom: 3px solid #cbd5e1;
-    }}
-    /* navActive DEPOIS de hovered — mesma especificidade, último vence */
-    #HomeButton[navActive="true"] {{
-        color: {accent};
-        background: transparent;
-        border-bottom: 3px solid {accent};
-        font-weight: 700;
-    }}
-    #HomeButton:pressed {{
-        color: {accent};
-        border-bottom: 3px solid {accent};
-    }}
-    #GeoMetadataDialog[theme="dark"] #HomeButton {{ color: #94a3b8; }}
-    #GeoMetadataDialog[theme="dark"] #HomeButton[hovered="true"] {{
-        color: #94a3b8;
-        background: #273549;
-        border-bottom: 3px solid #475569;
-    }}
-    #GeoMetadataDialog[theme="dark"] #HomeButton[navActive="true"] {{
-        color: #38bdf8;
-        background: transparent;
-        border-bottom: 3px solid #38bdf8;
-    }}
+    #LogoButton:hover {{ background: transparent; }}
+    #LogoButton:pressed {{ background: transparent; }}
 
     /* Botão de login */
     #ConnectButton {{
@@ -157,10 +85,10 @@ def get_stylesheet(img_dir: str) -> str:
         border-radius: 8px;
         padding: 6px 16px;
     }}
-    #ConnectButton:hover {{ background-color: #ccc; }}
+    #ConnectButton:hover {{ background-color: #363636; }}
     #GeoMetadataDialog[theme="dark"] #ConnectButton {{
-        color: #38bdf8;
-        border-color: #38bdf8;
+        color: #363636;
+        border-color: #363636;
     }}
     #GeoMetadataDialog[theme="dark"] #ConnectButton:hover {{
         background-color: rgba(56,189,248,0.1);
@@ -172,14 +100,14 @@ def get_stylesheet(img_dir: str) -> str:
     #DropdownMenu {{
         background-color: #ffffff;
         border: 1px solid #e2e8f0;
-        border-radius: 10px;
-        padding: 6px 0;
+        border-radius: 8px;
+        padding: 4px 0;
     }}
     #DropdownMenu::item {{
         color: #1e293b;
         font-size: 13px;
-        padding: 10px 20px;
-        border-radius: 6px;
+        padding: 8px 20px;
+        border-radius: 4px;
         margin: 1px 6px;
     }}
     #DropdownMenu::item:selected {{

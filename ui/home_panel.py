@@ -81,12 +81,12 @@ class HomePanel(QWidget):
                 subtitle    = "Metadados MGB 2.0",
                 description = (
                     "Crie, edite e publique metadados geoespaciais no padrão MGB 2.0. "
-                    "Exporte para XML ou envie diretamente ao catálogo GeoNetwork corporativo."
+                    "Exporte para XML ou envie diretamente ao catálogo do Geohab."
                 ),
                 features    = [
                     "Formulário MGB 2.0 completo",
                     "Exportar / Importar XML",
-                    "Publicar no GeoNetwork",
+                    "Publicar no catálogo",
                     "Associar camadas WMS/WFS",
                 ],
                 btn_label   = "Abrir GeoNetwork",
@@ -98,7 +98,7 @@ class HomePanel(QWidget):
                 title       = "GeoServer",
                 subtitle    = "Publicação de Camadas",
                 description = (
-                    "Publique camadas vetoriais diretamente no GeoServer corporativo, "
+                    "Publique camadas vetoriais diretamente no Geohab, "
                     "exporte estilos SLD e gerencie workspaces — sem sair do QGIS."
                 ),
                 features    = [

@@ -60,42 +60,50 @@ from .ui.home_panel import HomePanel
 
 class NavButton(QPushButton):
     """
-    Botao de navegacao do header com comportamento hover estilo web.
-
-    Design:
-    - NAO usa CSS ':hover' (que fica preso quando popups estao abertos).
-      Em vez disso, gerencia a propriedade 'hovered' em Python + update().
-    - Usa unpolish()/polish() para invalidar cache QSS de seletores de
-      propriedade dinâmica, seguido de re-aplicacao de WA_Hover (que o
-      Fusion style reseta durante polish()).
-    - WA_Hover garante enterEvent/leaveEvent no Fusion style do QGIS.
-    - _switch_to_me() limpa explicitamente o estado hover do botao anterior.
-    - _maybe_close() verifica widget._nav_menu para nao manter menu aberto
-      quando cursor esta sobre botao sem menu (ex: Home).
+    Botão de navegação do header — hover e estado ativo via setStyleSheet()
+    direto no widget. Sem seletores QSS de propriedade, sem polish().
     """
 
-    _active = None  # NavButton | None
+    _HOVER_LIGHT  = "color:#6d7075;background:#f8fafc;border-bottom:3px solid #cbd5e1;"
+    _ACTIVE_LIGHT = "color:#e5222d;background:transparent;border-bottom:3px solid #e5222d;font-weight:700;"
+    _HOVER_DARK   = "color:#94a3b8;background:#273549;border-bottom:3px solid #475569;"
+    _ACTIVE_DARK  = "color:#38bdf8;background:transparent;border-bottom:3px solid #38bdf8;font-weight:700;"
+
+    _active = None  # botão com menu atualmente aberto
 
     def __init__(self, text="", parent=None):
         super().__init__(text, parent)
         self._nav_menu = None
+        self._hovered = False
+        self._nav_active = False
         self._timer = QTimer(self)
         self._timer.setSingleShot(True)
         self._timer.setInterval(200)
         self._timer.timeout.connect(self._maybe_close)
         self.setAttribute(Qt.WA_Hover, True)
-        self.setProperty("hovered", "false")
 
     # ------------------------------------------------------------------
+    def _is_dark(self):
+        w = self.window()
+        return bool(w and w.property("theme") == "dark")
+
+    def _update_style(self):
+        """Aplica inline style: ativo > hover > padrão (herda do parent stylesheet)."""
+        dark = self._is_dark()
+        if self._nav_active:
+            self.setStyleSheet(self._ACTIVE_DARK if dark else self._ACTIVE_LIGHT)
+        elif self._hovered:
+            self.setStyleSheet(self._HOVER_DARK if dark else self._HOVER_LIGHT)
+        else:
+            self.setStyleSheet("")
+
     def _apply_hover(self, value):
-        """Define 'hovered' e força o QSS a reler a propriedade."""
-        # Usa string literal — bool Python não é confiável com seletores QSS
-        self.setProperty("hovered", "true" if value else "false")
-        self.style().unpolish(self)
-        self.style().polish(self)
-        # Fusion style reseta WA_Hover durante polish() — precisa reaplicar
-        self.setAttribute(Qt.WA_Hover, True)
-        self.update()
+        self._hovered = bool(value)
+        self._update_style()
+
+    def set_nav_active(self, value):
+        self._nav_active = bool(value)
+        self._update_style()
 
     # ------------------------------------------------------------------
     def set_nav_menu(self, menu):
@@ -295,6 +303,23 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         pass # Optional logic when metadata becomes dirty
 
 
+    def _make_menu(self):
+        """QMenu com cantos arredondados sem artefatos no Windows.
+
+        WA_TranslucentBackground + FramelessWindowHint ativam o canal alpha
+        da janela nativa, tornando os pixels fora do border-radius transparentes
+        em vez de pretos. NoDropShadowWindowHint remove a sombra retangular do OS.
+        """
+        menu = QMenu(self)
+        menu.setObjectName("DropdownMenu")
+        menu.setWindowFlags(
+            menu.windowFlags()
+            | Qt.FramelessWindowHint
+            | Qt.NoDropShadowWindowHint
+        )
+        menu.setAttribute(Qt.WA_TranslucentBackground, True)
+        return menu
+
     def _create_header(self):
         """Cabeçalho com menus hover estilo portal web CDHU.
 
@@ -309,13 +334,19 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         layout = QHBoxLayout(header_widget)
         layout.setSpacing(0)
 
-        logo_label = QLabel()
+        # Logo clicável — navega para Home
         pixmap = QPixmap(":/plugins/geometadata/img/header_logo.png")
-        logo_label.setPixmap(pixmap.scaled(170, 80, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        scaled = pixmap.scaled(170, 80, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        self._logo_btn = QPushButton()
+        self._logo_btn.setObjectName("LogoButton")
+        self._logo_btn.setIcon(QIcon(scaled))
+        self._logo_btn.setIconSize(scaled.size())
+        self._logo_btn.setFlat(True)
+        self._logo_btn.setFixedSize(scaled.size())
+        self._logo_btn.setCursor(Qt.PointingHandCursor)
 
         # --- Menu "Arquivo" ---
-        menu_arquivo = QMenu(self)
-        menu_arquivo.setObjectName("DropdownMenu")
+        menu_arquivo = self._make_menu()
 
         self._action_salvar = QAction("Continuar depois", self)
         self._action_salvar.setToolTip("Salva o rascunho localmente sem enviar ao Geohab")
@@ -326,8 +357,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         btn_arquivo.set_nav_menu(menu_arquivo)
 
         # --- Menu "GeoNetwork" ---
-        menu_geonetwork = QMenu(self)
-        menu_geonetwork.setObjectName("DropdownMenu")
+        menu_geonetwork = self._make_menu()
 
         # Sub-item de navegação: abre o painel do formulário
         self._action_nav_metadados = QAction("Metadados", self)
@@ -358,8 +388,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self._btn_geonetwork.set_nav_menu(menu_geonetwork)
 
         # --- Menu "GeoServer" ---
-        menu_geoserver = QMenu(self)
-        menu_geoserver.setObjectName("DropdownMenu")
+        menu_geoserver = self._make_menu()
 
         # Sub-item de navegação: abre o painel GeoServer
         self._action_nav_geoserver = QAction("GeoServer", self)
@@ -381,20 +410,14 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self._btn_geoserver.setObjectName("HeaderDropdownButton")
         self._btn_geoserver.set_nav_menu(menu_geoserver)
 
-        # --- Botao Home ---
-        self._btn_home = NavButton("Home")
-        self._btn_home.setObjectName("HomeButton")
-        self._btn_home.setCursor(Qt.PointingHandCursor)
-
         # --- Botão de Login ---
         self.header_btn_login = QPushButton()
         self.header_btn_login.setObjectName("ConnectButton")
         self.header_btn_login.setIconSize(QSize(20, 20))
 
         # --- Montagem ---
-        layout.addWidget(logo_label)
+        layout.addWidget(self._logo_btn)
         layout.addSpacing(8)
-        layout.addWidget(self._btn_home)
         layout.addWidget(btn_arquivo)
         layout.addWidget(self._btn_geonetwork)
         layout.addWidget(self._btn_geoserver)
@@ -507,24 +530,13 @@ class GeoMetadataDialog(QtWidgets.QDialog):
 
     # ------------------------------------------------------------------
     def _set_active_nav_btn(self, active_btn):
-        """
-        Marca visualmente qual botão de navegação está ativo (painel atual).
-        Define a propriedade CSS 'navActive' e reaplica o estilo via polish.
-
-        Nota: o Fusion style reseta WA_Hover durante o polish, então
-        precisamos reaplicá-lo explicitamente após cada ciclo de polish.
-        """
-        for btn in (self._btn_home, self._btn_geonetwork, self._btn_geoserver):
-            btn.setProperty("navActive", "true" if btn is active_btn else "false")
-            btn.style().unpolish(btn)
-            btn.style().polish(btn)
-            btn.setAttribute(Qt.WA_Hover, True)
-            btn.update()
+        for btn in (self._btn_geonetwork, self._btn_geoserver):
+            btn.set_nav_active(btn is active_btn)
 
     def _navigate_to_home(self):
         """Navega para a Home (índice 0)."""
         self._stacked.setCurrentIndex(0)
-        self._set_active_nav_btn(self._btn_home)
+        self._set_active_nav_btn(None)  # logo é Home — nenhum botão nav ativo
 
     def _navigate_to_geonetwork(self):
         """Navega para o painel GeoNetwork (índice 1)."""
@@ -551,8 +563,8 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         # --- Header: menu GeoServer ---
         self._action_nav_geoserver.triggered.connect(self._navigate_to_geoserver)
 
-        # --- Header: navegação por clique (apenas Home — dropdown só via QAction) ---
-        self._btn_home.clicked.connect(self._navigate_to_home)
+        # --- Header: logo navega para Home ---
+        self._logo_btn.clicked.connect(self._navigate_to_home)
 
         # --- Header: botão de login ---
         self.header_btn_login.clicked.connect(self.authenticate)
