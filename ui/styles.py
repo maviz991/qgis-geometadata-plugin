@@ -57,10 +57,10 @@ def get_stylesheet(img_dir: str) -> str:
         padding: 10px 14px 10px 16px;
         margin: 0 1px;
     }}
-    #HeaderDropdownButton:hover {{
-        color: #0f172a;
-        border-bottom: 3px solid {accent};
-        background-color: transparent;
+    #HeaderDropdownButton[hovered="true"] {{
+        color: #6d7075;
+        background: #f8fafc;
+        border-bottom: 3px solid #cbd5e1;
     }}
     #HeaderDropdownButton:pressed {{
         color: {accent};
@@ -84,9 +84,10 @@ def get_stylesheet(img_dir: str) -> str:
     #HeaderDropdownButton::menu-indicator {{ width: 0; image: none; }}
 
     #GeoMetadataDialog[theme="dark"] #HeaderDropdownButton {{ color: #94a3b8; }}
-    #GeoMetadataDialog[theme="dark"] #HeaderDropdownButton:hover {{
-        color: #f1f5f9;
-        border-bottom: 3px solid #38bdf8;
+    #GeoMetadataDialog[theme="dark"] #HeaderDropdownButton[hovered="true"] {{
+        color: #94a3b8;
+        background: #273549;
+        border-bottom: 3px solid #475569;
     }}
     #GeoMetadataDialog[theme="dark"] #HeaderDropdownButton:pressed {{
         color: #38bdf8;
@@ -95,6 +96,56 @@ def get_stylesheet(img_dir: str) -> str:
     #GeoMetadataDialog[theme="dark"] #HeaderDropdownButton::menu-button {{
         background: transparent;
         border: none;
+    }}
+
+    /* Estado ativo dropdown buttons */
+    #HeaderDropdownButton[navActive="true"] {{
+        color: {accent};
+        border-bottom: 3px solid {accent};
+        font-weight: 700;
+    }}
+    #GeoMetadataDialog[theme="dark"] #HeaderDropdownButton[navActive="true"] {{
+        color: #38bdf8;
+        border-bottom: 3px solid #38bdf8;
+    }}
+
+    /* Botão Home — ancora de navegacao principal */
+    #HomeButton {{
+        background-color: transparent;
+        color: #475569;
+        font-size: 14px;
+        font-weight: 700;
+        border: none;
+        border-bottom: 3px solid transparent;
+        padding: 10px 14px 10px 16px;
+        margin: 0 1px;
+    }}
+    #HomeButton[hovered="true"] {{
+        color: #6d7075;
+        background: #f8fafc;
+        border-bottom: 3px solid #cbd5e1;
+    }}
+    /* navActive DEPOIS de hovered — mesma especificidade, último vence */
+    #HomeButton[navActive="true"] {{
+        color: {accent};
+        background: transparent;
+        border-bottom: 3px solid {accent};
+        font-weight: 700;
+    }}
+    #HomeButton:pressed {{
+        color: {accent};
+        border-bottom: 3px solid {accent};
+    }}
+    #GeoMetadataDialog[theme="dark"] #HomeButton {{ color: #94a3b8; }}
+    #GeoMetadataDialog[theme="dark"] #HomeButton[hovered="true"] {{
+        color: #94a3b8;
+        background: #273549;
+        border-bottom: 3px solid #475569;
+    }}
+    #GeoMetadataDialog[theme="dark"] #HomeButton[navActive="true"] {{
+        color: #38bdf8;
+        background: transparent;
+        border-bottom: 3px solid #38bdf8;
     }}
 
     /* Botão de login */
