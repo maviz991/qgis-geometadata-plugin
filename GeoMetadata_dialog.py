@@ -1010,12 +1010,67 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             gn_urls = config_loader.get_geonetwork_url()
             base_url = gn_urls.get('records_url') 
             if not base_url: return
-            api_url = base_url.replace('/records', '/registries')
-            url = f"{api_url}/entries?type=contact&q={filter_text}"
             
-            response = self.plugin.api_session.get(url, timeout=10, headers={'Accept': 'application/json'}, verify=False)
+            # GeoNetwork 4.x usa o endpoint /search/records/_search do ES
+            es_url = base_url.replace('/records', '/search/records/_search')
+            payload = {"size": 100, "query": {"term": {"isTemplate": "s"}}}
+            
+            response = self.plugin.api_session.post(es_url, json=payload, timeout=5, headers={'Accept': 'application/json'}, verify=False)
             if response.status_code == 200:
-                results = response.json()
+                hits = response.json().get('hits', {}).get('hits', [])
+                
+                current_list = list(self.contact_completer_model.stringList())
+                lower_filt = filter_text.lower()
+                
+                for hit in hits:
+                    import re
+                    src = hit.get('_source', {})
+                    title = src.get('resourceTitleObject', {}).get('default', '')
+                    
+                    # Extrai sigla dos parênteses se existir
+                    sigla_match = re.search(r'\((.*?)\)', title)
+                    sigla = sigla_match.group(1).strip() if sigla_match else ''
+                    
+                    # Se 'Org' não vier, usa o title sem a sigla
+                    if 'Org' in src and src['Org']:
+                        org = src['Org'].strip()
+                    else:
+                        org = title.replace(f" ({sigla})", "").strip() if sigla else title.strip()
+                        
+                    email = src.get('email', '').strip()
+                    
+                    if lower_filt in org.lower() or lower_filt in email.lower() or lower_filt in sigla.lower():
+                        display_str = f"{org} [GeoNetwork] - {email}"
+                        if display_str not in current_list:
+                            current_list.append(display_str)
+                            
+                            # Tenta herdar metadados ricos (como role e Endereço) do offline map (usando email como hook)
+                            fallback_data = None
+                            for key, preset in self.form_manager.contatos_predefinidos.items():
+                                if key != 'nenhum' and preset.get('contact_email') == email:
+                                    fallback_data = preset
+                                    break
+                                    
+                            if fallback_data:
+                                rich_data = fallback_data.copy()
+                                rich_data['contact_organisationName'] = org
+                                rich_data['contact_individualName'] = sigla or rich_data.get('contact_individualName', '')
+                                rich_data['is_geonetwork'] = True
+                                rich_data['uuid'] = src.get('uuid')
+                                self.contacts_cache_map[display_str] = rich_data
+                            else:
+                                self.contacts_cache_map[display_str] = {
+                                    'is_geonetwork': True,
+                                    'uuid': src.get('uuid'),
+                                    'contact_organisationName': org,
+                                    'contact_individualName': sigla,
+                                    'contact_email': email,
+                                    'contact_role': 'pointOfContact' 
+                                }
+                                
+                self.contact_completer_model.setStringList(current_list)
+                # Força a atualização e expansão do popup do Completer após atualização assíncrona
+                self.contact_completer.complete()
         except Exception:
             pass
             
@@ -1030,17 +1085,45 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             QtWidgets.QMessageBox.warning(self, "Aviso", "Selecione um contato da lista primeiro.")
             return
 
+        c_data = self.selected_contact_data.copy()
+
+        # Intercepta se veio do GeoNetwork e puxa o XML real para capturar Regra exata e Nome
+        if c_data.get('is_geonetwork') and c_data.get('uuid'):
+            try:
+                gn_urls = config_loader.get_geonetwork_url()
+                base_url = gn_urls.get('records_url')
+                if base_url:
+                    xml_url = f"{base_url}/{c_data['uuid']}/formatters/xml"
+                    response = self.plugin.api_session.get(xml_url, timeout=5, verify=False)
+                    if response.status_code == 200:
+                        xml_text = response.text
+                        import re
+                        
+                        role_match = re.search(r'CI_RoleCode[^>]*codeListValue="([^"]+)"', xml_text)
+                        if role_match:
+                            c_data['contact_role'] = role_match.group(1)
+                            
+                        name_match = re.search(r'<gmd:individualName>.*?<gco:CharacterString>([^<]+)</gco:CharacterString>', xml_text, re.DOTALL)
+                        if name_match:
+                            c_data['contact_individualName'] = name_match.group(1).strip()
+                            
+                        org_match = re.search(r'<gmd:organisationName>.*?<gco:CharacterString>([^<]+)</gco:CharacterString>', xml_text, re.DOTALL)
+                        if org_match:
+                            c_data['contact_organisationName'] = org_match.group(1).strip()
+            except Exception:
+                pass
+
         org_text = self.ui._primary_row.field_org.text().strip()
         name_text = self.ui._primary_row.field_name.text().strip()
 
         if not org_text and not name_text:
-            self.form_manager.populate_primary_contact(self.selected_contact_data)
+            self.form_manager.populate_primary_contact(c_data)
             self.iface.messageBar().pushMessage("Sucesso", "Contato primário definido.", level=Qgis.Success)
         else:
-            org = self.selected_contact_data.get('contact_organisationName', '')
-            name = self.selected_contact_data.get('contact_individualName', '')
-            email = self.selected_contact_data.get('contact_email', '')
-            role = self.selected_contact_data.get('contact_role', 'pointOfContact')
+            org = c_data.get('contact_organisationName', '')
+            name = c_data.get('contact_individualName', '')
+            email = c_data.get('contact_email', '')
+            role = c_data.get('contact_role', 'pointOfContact')
             
             row = self.ui._add_contact_row()
             row.field_org.setText(org)
