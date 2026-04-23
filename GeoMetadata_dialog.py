@@ -835,6 +835,27 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.completer.setModel(self.completer_model)
         self.completer.setFilterMode(Qt.MatchContains)
         self.completer.setCaseSensitivity(Qt.CaseInsensitive)
+        
+        # Estilização para evitar o esmagamento das linhas (padding)
+        completer_style = """
+            QListView {
+                background-color: #ffffff;
+                border: 1px solid #cbd5e1;
+                border-radius: 4px;
+            }
+            QListView::item {
+                min-height: 28px;
+                padding: 8px 6px;
+                border-bottom: 1px solid #f1f5f9;
+            }
+            QListView::item:selected {
+                background-color: #f1f5f9;
+                color: #0f172a;
+                border-radius: 4px;
+            }
+        """
+        self.completer.popup().setStyleSheet(completer_style)
+        
         self.ui.lineEdit_layer_search.setCompleter(self.completer)
 
         # Configurar UI combo de serviço
@@ -966,6 +987,26 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.contact_completer.setModel(self.contact_completer_model)
         self.contact_completer.setFilterMode(Qt.MatchContains)
         self.contact_completer.setCaseSensitivity(Qt.CaseInsensitive)
+        
+        completer_style = """
+            QListView {
+                background-color: #ffffff;
+                border: 1px solid #cbd5e1;
+                border-radius: 4px;
+            }
+            QListView::item {
+                min-height: 28px;
+                padding: 8px 6px;
+                border-bottom: 1px solid #f1f5f9;
+            }
+            QListView::item:selected {
+                background-color: #f1f5f9;
+                color: #0f172a;
+                border-radius: 4px;
+            }
+        """
+        self.contact_completer.popup().setStyleSheet(completer_style)
+        
         self.ui.lineEdit_contact_search.setCompleter(self.contact_completer)
 
         self.contact_debounce_timer = QTimer(self)
@@ -981,9 +1022,13 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.selected_contact_data = None
 
     def _on_contact_search_edited(self, text):
-        self._update_offline_contacts(text)
-        if self.plugin.api_session and len(text) >= 2:
-            self.contact_debounce_timer.start(800)
+        if self.plugin.api_session:
+            self.contacts_cache_map.clear()
+            self.contact_completer_model.setStringList([])
+            if len(text) >= 2:
+                self.contact_debounce_timer.start(800)
+        else:
+            self._update_offline_contacts(text)
             
     def _update_offline_contacts(self, filter_text):
         display_list = []
@@ -996,7 +1041,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             email = data.get('contact_email', '')
             
             if not lower_filt or lower_filt in org.lower() or lower_filt in sigla.lower() or lower_filt in email.lower():
-                display_str = f"{org} ({sigla}) - {email}"
+                display_str = f"{sigla} - {org} - {email}" if sigla else f"{org} - {email}"
                 display_list.append(display_str)
                 self.contacts_cache_map[display_str] = data
                 
@@ -1019,7 +1064,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             if response.status_code == 200:
                 hits = response.json().get('hits', {}).get('hits', [])
                 
-                current_list = list(self.contact_completer_model.stringList())
+                current_list = []
                 lower_filt = filter_text.lower()
                 
                 for hit in hits:
@@ -1040,7 +1085,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
                     email = src.get('email', '').strip()
                     
                     if lower_filt in org.lower() or lower_filt in email.lower() or lower_filt in sigla.lower():
-                        display_str = f"{org} [GeoNetwork] - {email}"
+                        display_str = f"{sigla} - {org} - {email}" if sigla else f"{org} - {email}"
                         if display_str not in current_list:
                             current_list.append(display_str)
                             
