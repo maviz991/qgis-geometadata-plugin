@@ -522,13 +522,19 @@ def get_stylesheet(img_dir: str) -> str:
         background-color: {accent};
         color: #ffffff;
         font-size: 13px;
-        font-weight: 500;
+        font-weight: 600;
         border: none;
         border-radius: 8px;
-        padding: 5px 5px;
+        padding: 8px 16px;
+        min-height: 20px;
     }}
-    #ActionBtn:hover   {{ background-color: {accent_hover}; }}
-    #ActionBtn:pressed {{ background-color: {accent_hover}; }}
+    #ActionBtn:hover {{
+        background-color: {accent_hover};
+        cursor: pointer;
+    }}
+    #ActionBtn:pressed {{
+        background-color: {accent_hover};
+    }}
     #ActionBtn:disabled {{
         background-color: #cbd5e1;
         color: #94a3b8;

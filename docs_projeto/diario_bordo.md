@@ -140,6 +140,7 @@ O `FormManager` acessa `self.ui.widget_name`. O `DynamicForm` expõe **exatament
 | `lineEdit_contact_*`, `comboBox_contact_administrativeArea` | `_tab_contato()` (detalhes) |
 | `lineEdit_*BoundLatitude/Longitude` | `_tab_extensao()` |
 | `dateTimeEdit_*`, `toolButton_set_today` | `_tab_metadados()` |
+| `comboBox_service_type`, `lineEdit_layer_search`, `btn_addservice` | `_tab_recursos()` |
 | `label_support_link`, `label_2` | `_build_footer()` |
 
 #### Header (`GeoMetadata_dialog.py → _create_header`)
@@ -180,14 +181,29 @@ O `img_dir` é injetado no QSS para que `url({img}/chevron_down.svg)` resolva co
 #### Refinamentos Estéticos e Estruturais — Padrão GeoNetwork (22/04/2026)
 
 **1. Reorganização das Abas:**
-- **Aba "Identificação":** Agora é a tela principal "Home", contendo Título, Data, Resumo, Status e toda a seção de **Ponto de Contato**. Segue o fluxo do GeoNetwork onde o usuário resolve o essencial na primeira aba.
-- **Aba "Classificação":** Nova aba técnica que absorveu campos como Representação Espacial, Idioma, Categoria e Escala.
 - **Aba "Metadados":** Simplificada para conter apenas a Data do Metadado.
+- **Aba "Recursos associados":** Nova aba que centraliza a associação de serviços WMS/WFS via GeoServer, com busca em tempo real e painel de badges.
 
 **2. Componentes de UI Refinados:**
 - **Campo de Data Dinâmico:** Dividido em 3 colunas: `[Tipo ▾]` (Combo), `[Data 📅]` (QDateEdit) e `[Hora 🕐]` (QTimeEdit).
 - **Accordion de Endereço:** Implementado `_build_accordion` para a seção "Detalhes de endereço (MGB 2.0)", mantendo o formulário de contato limpo e organizado.
 - **Estilo Fusion Universal:** Forçada a aplicação do `QStyleFactory.create("Fusion")` para **todos** os widgets (`QLineEdit`, `QComboBox`, `QSpinBox`, `QDateEdit`, `QTimeEdit`, `QTextEdit`) no Windows, garantindo que o QSS de bordas arredondadas e cores seja respeitado em toda a interface.
+
+**3. Especificações Visuais Finais:**
+- **Background:** `#f5f5f5` para inputs (cinza claro moderno).
+- **Border-Radius:** 
+    - `2px` para `QLineEdit` e `QSpinBox` (estética GeoNetwork tradicional).
+    - `8px` para `QComboBox` (~0.5rem).
+    - `12px` para `QTextEdit` (Resumo) para manter a suavidade em caixas grandes.
+- **Header:** Limpeza de botões redundantes e consolidação nos menus dropdown.
+
+**4. Integração GeoNetwork 4.x (ElasticSearch):**
+- **Busca Híbrida Inteligente:** Implementado sistema que consulta o ElasticSearch (`/search/records/_search`) para autocompletar contatos em tempo real.
+- **Formatação de Busca:** Sigla aparece primeiro no autocomplete (ex: "CDHU - ...") para facilitar busca direta por acrônimos.
+- **Extração de Metadados via XML:** Ao vincular um contato, o plugin agora faz uma requisição isolada ao XML raiz do subtemplate para extrair a Regra (Role), Nome Individual e Organização com 100% de precisão.
+- **UX de Reordenação:** Setas `▲`/`▼` permitem mudar a prioridade dos contatos no metadado final sem deletar/recriar.
+
+#### Próximos Passos (Roadmap v2.1)
 
 **3. Especificações Visuais Finais:**
 - **Background:** `#f5f5f5` para inputs (cinza claro moderno).

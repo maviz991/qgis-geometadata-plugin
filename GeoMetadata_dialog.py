@@ -26,14 +26,14 @@ except ImportError:
 
 # --- 2. Imports de Bibliotecas de Terceiros ---
 import requests
-from qgis.PyQt import QtWidgets
+from qgis.PyQt import QtWidgets, QtCore
 from qgis.PyQt.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
     QWidget, QMessageBox, QToolButton, QMenu, QAction, QSizePolicy,
-    QStackedWidget, QApplication
+    QStackedWidget, QApplication, QStyledItemDelegate, QStyle
 )
-from qgis.PyQt.QtCore import Qt, QDateTime, QSize, QUrl, QTimer, QEvent, QStringListModel
-from qgis.PyQt.QtGui import QDesktopServices, QCursor, QPixmap, QIcon
+from qgis.PyQt.QtCore import Qt, QDateTime, QSize, QUrl, QTimer, QEvent, QStringListModel, QRect
+from qgis.PyQt.QtGui import QDesktopServices, QCursor, QPixmap, QIcon, QColor, QPainter
 from lxml import etree as ET
 from qgis.core import (
     Qgis,
@@ -58,6 +58,49 @@ from .ui.geoserver_panel import GeoServerPanel
 from .ui.home_panel import HomePanel
 
 
+# --- 4. Helpers de Estilo ---
+class CustomHeightDelegate(QStyledItemDelegate):
+    def __init__(self, parent=None, height=30, font_size=9):
+        super().__init__(parent)
+        self.forced_height = height
+        self.forced_font_size = font_size
+
+    def sizeHint(self, option, index):
+        size = super().sizeHint(option, index)
+        size.setHeight(self.forced_height)
+        return size
+
+    def paint(self, painter, option, index):
+        painter.save()
+        painter.setRenderHint(QPainter.Antialiasing)
+        
+        # 1. Fundo (Hover ou Seleção)
+        is_selected = option.state & QStyle.State_Selected
+        is_hovered  = option.state & QStyle.State_MouseOver
+        
+        if is_selected or is_hovered:
+            # Cor de fundo da combo (cinza claro)
+            painter.fillRect(option.rect, QColor("#f5f5f5"))
+            # Borda interna sutil
+            painter.setPen(QColor("#d1d5db"))
+            painter.drawRect(option.rect.adjusted(0, 0, -1, -1))
+        else:
+            painter.fillRect(option.rect, QColor("#ffffff"))
+
+        # 2. Texto
+        painter.setPen(QColor("#1e293b"))
+        font = option.font
+        font.setPointSize(self.forced_font_size)
+        if is_selected:
+            font.setWeight(600)
+        painter.setFont(font)
+        
+        # Margem para o texto
+        text_rect = option.rect.adjusted(10, 0, -10, 0)
+        display_text = index.data(Qt.DisplayRole)
+        painter.drawText(text_rect, Qt.AlignVCenter | Qt.AlignLeft, display_text)
+        
+        painter.restore()
 class NavButton(QPushButton):
     """
     Botão de navegação do header — hover e estado ativo via setStyleSheet()
@@ -828,33 +871,30 @@ class GeoMetadataDialog(QtWidgets.QDialog):
 
     # --- INTEGRAÇÃO DA SELEÇÃO DE CAMADAS ---
     def _setup_layer_association(self):
-        """Prepara os widgets e lógica da aba Recursos associados."""
-        # Setup Completer
-        self.completer = QtWidgets.QCompleter(self)
-        self.completer_model = QStringListModel(self)
-        self.completer.setModel(self.completer_model)
-        self.completer.setFilterMode(Qt.MatchContains)
+        self.completer_model = QtCore.QStringListModel()
+        self.completer = QtWidgets.QCompleter(self.completer_model, self)
         self.completer.setCaseSensitivity(Qt.CaseInsensitive)
+        self.completer.setCompletionMode(QtWidgets.QCompleter.PopupCompletion)
+        self.completer.setFilterMode(Qt.MatchContains)
         
-        # Estilização para evitar o esmagamento das linhas (padding)
+        # Estilização forçada para o Popup do Completer
         completer_style = """
-            QListView {
+            QAbstractItemView#CompleterPopup {
                 background-color: #ffffff;
-                border: 1px solid #cbd5e1;
+                border: 1px solid #e0e0e0;
                 border-radius: 4px;
-            }
-            QListView::item {
-                min-height: 28px;
-                padding: 8px 6px;
-                border-bottom: 1px solid #f1f5f9;
-            }
-            QListView::item:selected {
-                background-color: #f1f5f9;
-                color: #0f172a;
-                border-radius: 4px;
+                outline: none;
             }
         """
-        self.completer.popup().setStyleSheet(completer_style)
+        
+        popup = self.completer.popup()
+        popup.setObjectName("CompleterPopup")
+        popup.setMouseTracking(True)
+        popup.setStyleSheet(completer_style)
+        
+        # Uso do Delegate global para forçar altura, hover e fonte
+        self._delegate1 = CustomHeightDelegate(popup, height=30, font_size=9)
+        popup.setItemDelegate(self._delegate1)
         
         self.ui.lineEdit_layer_search.setCompleter(self.completer)
 
@@ -982,31 +1022,29 @@ class GeoMetadataDialog(QtWidgets.QDialog):
     # --- INTEGRAÇÃO DA SELEÇÃO DE CONTATOS (HIBRIDA) ---
     def _setup_contact_search(self):
         """Prepara os widgets e lógica da aba Ponto de Contato."""
-        self.contact_completer = QtWidgets.QCompleter(self)
-        self.contact_completer_model = QStringListModel(self)
-        self.contact_completer.setModel(self.contact_completer_model)
+        # Autocomplete de contatos (igual ao de camadas)
+        self.contact_completer_model = QtCore.QStringListModel()
+        self.contact_completer = QtWidgets.QCompleter(self.contact_completer_model, self)
         self.contact_completer.setFilterMode(Qt.MatchContains)
         self.contact_completer.setCaseSensitivity(Qt.CaseInsensitive)
         
         completer_style = """
-            QListView {
+            QAbstractItemView#ContactCompleterPopup {
                 background-color: #ffffff;
-                border: 1px solid #cbd5e1;
+                border: 1px solid #e0e0e0;
                 border-radius: 4px;
-            }
-            QListView::item {
-                min-height: 28px;
-                padding: 8px 6px;
-                border-bottom: 1px solid #f1f5f9;
-            }
-            QListView::item:selected {
-                background-color: #f1f5f9;
-                color: #0f172a;
-                border-radius: 4px;
+                outline: none;
             }
         """
-        self.contact_completer.popup().setStyleSheet(completer_style)
+        contact_popup = self.contact_completer.popup()
+        contact_popup.setObjectName("ContactCompleterPopup")
+        contact_popup.setMouseTracking(True)
+        contact_popup.setStyleSheet(completer_style)
         
+        # Reutilizando o Delegate global
+        self._delegate2 = CustomHeightDelegate(contact_popup, height=30, font_size=9)
+        contact_popup.setItemDelegate(self._delegate2)
+            
         self.ui.lineEdit_contact_search.setCompleter(self.contact_completer)
 
         self.contact_debounce_timer = QTimer(self)
