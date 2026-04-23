@@ -573,9 +573,6 @@ class DynamicForm:
         return content
 
     # ------------------------------------------------------------------
-    # Aba 5 — Recursos associados (WMS/WFS)
-    # ------------------------------------------------------------------
-
     def _tab_recursos(self):
         content = QWidget()
         content.setObjectName("TabContent")
@@ -583,7 +580,45 @@ class DynamicForm:
         v.setContentsMargins(24, 24, 24, 24)
         v.setSpacing(16)
 
-        lbl = QLabel("Camadas Associadas")
+        # -- NOVA SEÇÃO: Adicionar Serviço OGC --
+        add_group = QWidget()
+        add_v = QVBoxLayout(add_group)
+        add_v.setContentsMargins(0, 0, 0, 0)
+        
+        lbl_add = QLabel("Associação de Serviços OGC")
+        lbl_add.setObjectName("SubSectionLabel")
+        lbl_add.setStyleSheet("font-size: 15px; font-weight: 700; padding: 0 0 4px 0;")
+        add_v.addWidget(lbl_add)
+
+        self.comboBox_service_type = QComboBox()
+        self.comboBox_service_type.addItem("Selecione um serviço...", None)
+        # Itens WMS e WFS serão adicionados pelo controle principal
+        
+        self.lineEdit_layer_search = QLineEdit()
+        self.lineEdit_layer_search.setPlaceholderText("Selecione o serviço OGC primeiro...")
+        self.lineEdit_layer_search.setEnabled(False)
+
+        _f2(add_v, "Tipo de Serviço", self.comboBox_service_type,
+            "Buscar Camada", self.lineEdit_layer_search)
+
+        self.btn_addservice = QPushButton("Vincular Camada")
+        self.btn_addservice.setObjectName("ActionBtn")
+        self.btn_addservice.setFixedWidth(150)
+        
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
+        btn_layout.addWidget(self.btn_addservice)
+        add_v.addLayout(btn_layout)
+
+        v.addWidget(add_group)
+
+        div = QFrame()
+        div.setFrameShape(QFrame.HLine)
+        div.setObjectName("TableDivider")
+        v.addWidget(div)
+
+        # -- SEÇÃO EXISTENTE: Camadas Vinculadas --
+        lbl = QLabel("Camadas Vinculadas")
         lbl.setObjectName("SubSectionLabel")
         lbl.setStyleSheet("font-size: 15px; font-weight: 700; padding: 0 0 4px 0;")
         v.addWidget(lbl)
@@ -596,6 +631,7 @@ class DynamicForm:
 
         v.addStretch()
         return _tab_scroll(content)
+
 
     # ------------------------------------------------------------------
     # Footer

@@ -32,8 +32,9 @@ from qgis.PyQt.QtWidgets import (
     QWidget, QMessageBox, QToolButton, QMenu, QAction, QSizePolicy,
     QStackedWidget, QApplication
 )
-from qgis.PyQt.QtCore import Qt, QDateTime, QSize, QUrl, QTimer, QEvent
+from qgis.PyQt.QtCore import Qt, QDateTime, QSize, QUrl, QTimer, QEvent, QStringListModel
 from qgis.PyQt.QtGui import QDesktopServices, QCursor, QPixmap, QIcon
+from lxml import etree as ET
 from qgis.core import (
     Qgis,
     QgsApplication,
@@ -49,7 +50,6 @@ from .ui.dynamic_form import DynamicForm
 from .core.metadata_service import MetadataService
 from .core.persistence_service import PersistenceService
 from . import resources
-from .ui.layer_selection_dialog import LayerSelectionDialog
 from .core.plugin_config import config_loader
 from .ui.unified_login_dialog import UnifiedLoginDialog
 from .ui.entra_login_dialog import EntraLoginDialog
@@ -297,6 +297,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.update_ui_for_login_status()
         self.auto_fill_from_layer()
         self.update_distribution_display()
+        self._setup_layer_association()
         self.form_manager.connect_dirty_signals(self.on_metadata_changed)
 
     def on_metadata_changed(self):
@@ -821,25 +822,142 @@ class GeoMetadataDialog(QtWidgets.QDialog):
 
     def open_distribution_workflow(self):
         """
-        Inicia o fluxo de seleção de camada, reaproveitando a sessão de login principal.
+        Navega para a aba de associação de Recursos (índice 4).
         """
-        # PASSO 1: VERIFICAR SE O USUÁRIO JÁ ESTÁ LOGADO NO PORTAL
-        if not self.plugin.api_session:
-            self.show_message("Conexão Necessária", icon=QtWidgets.QMessageBox.Information)
+        self._navigate_to_geonetwork()
+        self.ui._tabs.setCurrentIndex(4)
+
+    # --- INTEGRAÇÃO DA SELEÇÃO DE CAMADAS ---
+    def _setup_layer_association(self):
+        """Prepara os widgets e lógica da aba Recursos associados."""
+        # Setup Completer
+        self.completer = QtWidgets.QCompleter(self)
+        self.completer_model = QStringListModel(self)
+        self.completer.setModel(self.completer_model)
+        self.completer.setFilterMode(Qt.MatchContains)
+        self.completer.setCaseSensitivity(Qt.CaseInsensitive)
+        self.ui.lineEdit_layer_search.setCompleter(self.completer)
+
+        # Configurar UI combo de serviço
+        self.icon_wms = QIcon(":/plugins/geometadata/img/wms_icon.png")
+        self.icon_wfs = QIcon(":/plugins/geometadata/img/wfs_icon.png")
+        self.ui.comboBox_service_type.addItem(self.icon_wms, "WMS [ Mapa ]", "wms")
+        self.ui.comboBox_service_type.addItem(self.icon_wfs, "WFS [ Vetor ]", "wfs")
+
+        # Conectar sinais
+        self.ui.comboBox_service_type.currentIndexChanged.connect(self._fetch_layers)
+        self.completer.activated.connect(self._on_layer_selected)
+        self.ui.btn_addservice.clicked.connect(self._add_service_selection)
+
+        # Dados
+        self.distribution_layers_cache = []
+        self.layer_data_map = {}
+        self.selected_layer_data = None
+
+    def _fetch_layers(self):
+        service = self.ui.comboBox_service_type.currentData()
+        self.distribution_layers_cache.clear()
+        self.layer_data_map.clear()
+        self.completer_model.setStringList([])
+        self.ui.lineEdit_layer_search.clear()
+        self.selected_layer_data = None
+
+        if not service:
+            self.ui.lineEdit_layer_search.setEnabled(False)
             return
 
-        # PASSO 2: SE ESTIVER LOGADO, ABRE A JANELA DE SELEÇÃO PASSANDO A SESSÃO
-        # A LayerSelectionDialog agora receberá a sessão, não mais as credenciais.
-        selection_dialog = LayerSelectionDialog(self.plugin.api_session, self)
-        
-        # Alimenta o diálogo de seleção com os dados já existentes
-        selection_dialog.set_data(self.distribution_data)
+        if not self.plugin.api_session:
+            self.show_message("Sessão não iniciada", "Faça login no Geohab primeiro.", icon=QtWidgets.QMessageBox.Warning)
+            self.ui.comboBox_service_type.blockSignals(True)
+            self.ui.comboBox_service_type.setCurrentIndex(0)
+            self.ui.comboBox_service_type.blockSignals(False)
+            return
 
-        # Apenas se o usuário preencher e clicar em "OK"...
-        if selection_dialog.exec_() == QtWidgets.QDialog.Accepted:
-            self.distribution_data.update(selection_dialog.get_data())
-            self.update_distribution_display()
-            self.iface.messageBar().pushMessage("Sucesso", "Informações de distribuição salvas.", level=Qgis.Success)
+        self.ui.lineEdit_layer_search.setText("Carregando...")
+        self.ui.lineEdit_layer_search.setEnabled(False)
+
+        geoserver_url = config_loader.get_geoserver_url()
+        if service == 'wms':
+            url = f"{geoserver_url}/ows?service=WMS&version=1.3.0&request=GetCapabilities"
+        else: # wfs
+            url = f"{geoserver_url}/ows?service=WFS&version=1.1.0&request=GetCapabilities"
+
+        try:
+            response = self.plugin.api_session.get(url, timeout=20, verify=False)
+            response.raise_for_status()
+            
+            root = ET.fromstring(response.content)
+            layers_found = []
+            
+            if service == 'wms':
+                ns = {'wms': 'http://www.opengis.net/wms'}
+                for layer_node in root.findall('.//wms:Layer/wms:Name/..', namespaces=ns):
+                    name = layer_node.find('wms:Name', ns).text
+                    title = layer_node.find('wms:Title', ns).text
+                    if name and title: layers_found.append({'name': name, 'title': title})
+            else: # wfs
+                ns = {'wfs': 'http://www.opengis.net/wfs'}
+                for feature_type in root.findall('.//wfs:FeatureType', namespaces=ns):
+                    name = feature_type.find('wfs:Name', ns).text
+                    title = feature_type.find('wfs:Title', ns).text
+                    if name and title: layers_found.append({'name': name, 'title': title})
+
+            self.distribution_layers_cache = sorted(layers_found, key=lambda x: x['title'])
+            
+            display_list = []
+            for layer in self.distribution_layers_cache:
+                display_text = f"{layer.get('title')} ({layer.get('name')})"
+                display_list.append(display_text)
+                self.layer_data_map[display_text] = layer
+
+            self.completer_model.setStringList(display_list)
+            
+            self.ui.lineEdit_layer_search.setEnabled(True)
+            self.ui.lineEdit_layer_search.clear()
+            self.ui.lineEdit_layer_search.setFocus()
+
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(self, "Erro de Conexão", f"Falha ao carregar camadas do GeoServer: {e}")
+            self.ui.lineEdit_layer_search.setText("Falha ao carregar")
+
+    def _filter_layer_list(self, filter_text, show_popup=True):
+        """Filtra a lista do QCompleter - método opcional se o Qt Completer for suficiente. (Deixado para compatibilidade)"""
+        pass
+
+    def _on_layer_selected(self, selected_text):
+        if selected_text in self.layer_data_map:
+            self.selected_layer_data = self.layer_data_map[selected_text]
+        else:
+            self.selected_layer_data = None            
+
+    def _add_service_selection(self):
+        service_type = self.ui.comboBox_service_type.currentData()
+        selected_layer = self.selected_layer_data 
+
+        if not service_type or not selected_layer:
+            QtWidgets.QMessageBox.warning(self, "Aviso", "Selecione uma camada na lista.")
+            return
+
+        geoserver_url = config_loader.get_geoserver_url()
+        service_data = {
+            'geoserver_base_url': geoserver_url,
+            'geoserver_layer_name': selected_layer.get('name'),
+            'geoserver_layer_title': selected_layer.get('title'),
+            'online_protocol': service_type.upper()
+        }
+
+        if service_type == "wms":
+            self.distribution_data['wms_data'] = service_data
+        elif service_type == "wfs":
+            self.distribution_data['wfs_data'] = service_data
+        
+        self.update_distribution_display()
+        
+        # Reset UI
+        self.ui.comboBox_service_type.setCurrentIndex(0)
+        self.ui.lineEdit_layer_search.clear()
+        self.ui.lineEdit_layer_search.setEnabled(False)
+        self.iface.messageBar().pushMessage("Sucesso", f"Recurso {service_type.upper()} associado.", level=Qgis.Success)
 
     # GeoMetadata_dialog.py -> adicione este método à classe
 

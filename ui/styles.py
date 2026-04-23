@@ -510,13 +510,34 @@ def get_stylesheet(img_dir: str) -> str:
         background-color: {accent};
         color: #ffffff;
         font-size: 18px;
-        font-weight: bold;
+        font-weight: 700;
         border: none;
         border-radius: 8px;
-        padding: 0;
+        padding: 0 4px;
     }}
     #AddContactButton:hover   {{ background-color: {accent_hover}; }}
     #AddContactButton:pressed {{ background-color: {accent_hover}; }}
+
+    #ActionBtn {{
+        background-color: {accent};
+        color: #ffffff;
+        font-size: 13px;
+        font-weight: 500;
+        border: none;
+        border-radius: 8px;
+        padding: 5px 5px;
+    }}
+    #ActionBtn:hover   {{ background-color: {accent_hover}; }}
+    #ActionBtn:pressed {{ background-color: {accent_hover}; }}
+    #ActionBtn:disabled {{
+        background-color: #cbd5e1;
+        color: #94a3b8;
+    }}
+    #GeoMetadataDialog[theme="dark"] #ActionBtn:disabled {{
+        background-color: #334155;
+        color: #475569;
+    }}
+
 
     #RemoveContactButton {{
         background-color: transparent;

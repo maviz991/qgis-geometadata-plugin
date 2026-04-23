@@ -230,80 +230,89 @@ O plugin abre sempre na Home (índice 0). A navegação é controlada por `_navi
 | `ui/home_panel.py` | **NOVO** — Tela inicial com cards de módulo. Emite sinais `navigate_geonetwork` e `navigate_geoserver`. |
 | `ui/geoserver_panel.py` | **NOVO** — Placeholder visual da Fase 2 com lista de funcionalidades previstas. |
 
-#### 3. Header como Navbar
-
-O cabeçalho foi refatorado para uma barra de navegação estilo portal web:
+#### 3. Header como Navbar — Layout Final
 
 ```
-[Logo]  [Home]  [Arquivo ▾]  [GeoNetwork ▾]  [GeoServer ▾]  ........  [ENTRAR]
-                                   │                  │
-                              Metadados          GeoServer (navega)
-                              ────────           ────────────────────
-                              Exportar GN        Em desenvolvimento — Fase 2
-                              Assoc. WMS/WFS     Publicar Camada... (disabled)
+[Logo CDHU 🖱️]  [Arquivo ▾]  [GeoNetwork ▾]  [GeoServer ▾]  ........  [ENTRAR]
+      │                            │                  │
+   (navega                    Metadados          GeoServer (navega)
+    para Home)                ────────           ────────────────────
+                              Exportar GeoNetwork   Em desenvolvimento — Fase 2
+                              Assoc. WMS/WFS        Publicar Camada... (disabled)
                               ────────
                               Exportar .xml
                               Importar... (placeholder)
 ```
 
-#### 4. Classe `NavButton` — Hover Menu estilo Web
+> O **logo** passou a ser um `QPushButton` clicável (`#LogoButton`) e é o ponto de retorno à Home, eliminando o botão "Home" textual.
 
-Substituiu `QToolButton` com `DelayedPopup` por um `QPushButton` customizado com controle total do comportamento de hover:
+#### 4. Classe `NavButton` — Implementação Final
 
-| Aspecto | Solução |
-|---|---|
-| Hover abre menu | `enterEvent` → `_switch_to_me()` → `QMenu.popup()` não-bloqueante |
-| Trocar entre menus sem sair | `eventFilter` no `MouseMove` do `QMenu` detecta cursor sobre outro `NavButton` |
-| Menu fecha ao sair | `leaveEvent` inicia timer 200 ms → `_maybe_close()` verifica `widgetAt()` |
-| Hover "preso" no CSS | Substituído `:hover` por propriedade Python `hovered=True/False` + `update()` |
-| `WA_Hover` resetado pelo Fusion style | Removido `polish()` — `update()` apenas re-pinta sem resetar atributos |
-| Estado ativo persistente após navegar | `_set_active_nav_btn()` define `navActive=True` no botão ativo + `update()` |
+Substituiu `QToolButton` com `DelayedPopup` por `QPushButton` com controle total. Evolução em iterações:
 
-#### 5. Arquivos Modificados
+| Aspecto | Abordagem inicial | Solução final |
+|---|---|---|
+| Hover abre menu | `enterEvent` → `popup()` | idem ✓ |
+| Trocar entre menus | `eventFilter MouseMove` | idem ✓ |
+| Menu fecha ao sair | timer 200ms + `widgetAt()` | idem ✓ |
+| Estilo hover e ativo | `[hovered]` QSS prop + `update()` | **`setStyleSheet()` inline** — mais confiável |
+| Hover "preso" | `polish()` + `WA_Hover` | `setStyleSheet("")` limpa inline; sem `polish()` |
+| Estado ativo | `setProperty(navActive)` + `update()` | `set_nav_active(bool)` → `setStyleSheet(inline)` |
+| Detecção dark mode | — | `_is_dark()` lê `window().property("theme")` |
+
+Constantes de estilo inline (isolam cores do QSS global):
+```python
+_HOVER_LIGHT  = "color:#6d7075;background:#f8fafc;border-bottom:3px solid #cbd5e1;"
+_ACTIVE_LIGHT = "color:#e5222d;background:transparent;border-bottom:3px solid #e5222d;font-weight:700;"
+_HOVER_DARK   = "color:#94a3b8;background:#273549;border-bottom:3px solid #475569;"
+_ACTIVE_DARK  = "color:#38bdf8;background:transparent;border-bottom:3px solid #38bdf8;font-weight:700;"
+```
+
+#### 5. `_make_menu()` — Menus com cantos arredondados no Windows
+
+Método factory para criação de `QMenu` com flags que ativam o canal alpha da janela nativa:
+```python
+menu.setWindowFlags(flags | Qt.FramelessWindowHint | Qt.NoDropShadowWindowHint)
+menu.setAttribute(Qt.WA_TranslucentBackground, True)
+```
+Isso torna transparentes os pixels fora do `border-radius` do QSS, eliminando o fundo preto quadrado em cantos no Windows.
+
+#### 6. Arquivos Modificados
 
 | Arquivo | Mudança |
 |---|---|
-| `GeoMetadata_dialog.py` | `QStackedWidget`, `NavButton`, `_create_header`, `_navigate_to_*`, `_set_active_nav_btn` |
-| `ui/styles.py` | Estilos para `HomePanel`, `GeoServerPanel`, `HomeCard_*`, `NavButton` (hovered/navActive), `DropdownMenu` |
+| `GeoMetadata_dialog.py` | `NavButton` (refactor completo), `_make_menu()`, logo → `_logo_btn`, `_set_active_nav_btn()` simplificado |
+| `ui/styles.py` | QSS `NavButton` simplificado (estados via inline), `#LogoButton`, ajustes `DropdownMenu` |
+| `ui/home_panel.py` | Branding: "GeoNetwork" → "catálogo do Geohab" nos cards |
 
 ---
 
 ## 🐛 Backlog / Features Abertas
 
-### [FEATURE] Header — Refinamento Visual e UX (aberto em 23/04/2026)
+### [FEATURE] Header — Refinamento Visual e UX
 
+**Aberto em:** 23/04/2026  
+**Atualizado em:** 23/04/2026  
 **Prioridade:** Média  
 **Módulo:** `GeoMetadata_dialog.py` → `_create_header` + `ui/styles.py`
 
-#### Problemas conhecidos / Melhorias desejadas
+#### Progresso
 
-1. **Hover ainda instável em algumas interações rápidas**
-   - Ao mover o mouse muito rapidamente entre botões enquanto um `QMenu.popup()` está ativo, pode haver atraso na troca de menus.
-   - _Investigar_: aumentar frequência de verificação no `MouseMove` do eventFilter.
+| Item | Status | Obs |
+|---|---|---|
+| Hover instável / múltiplos hovers presos | ✅ Resolvido | `setStyleSheet()` inline + `_apply_hover(False)` explícito em `_switch_to_me()` |
+| Logo navega para Home | ✅ Resolvido | `_logo_btn` (QPushButton clicável) substituiu botão "Home" textual |
+| Menus com cantos arredondados (sem fundo preto) | ✅ Resolvido | `_make_menu()` com `FramelessWindowHint + WA_TranslucentBackground` |
+| Branding consistente ("Geohab" em vez de "GeoNetwork") | ✅ Resolvido | `home_panel.py` atualizado |
+| Seta `▾` indicadora nos botões de menu | 📋 Pendente | — |
+| Menu `Arquivo > Importar Metadado` funcional | 📋 Pendente | Implementar via `QFileDialog` + `xml_parser.py` |
+| "Continuar depois" com feedback visual | 📋 Pendente | Toast/notificação de sucesso/falha |
+| Responsividade em janelas estreitas | 📋 Pendente | Detectar largura mínima, recolher label para ícone |
 
-2. **Seta indicadora ausente nos botões de menu**
-   - Os botões `GeoNetwork` e `GeoServer` não exibem nenhum indicador visual (▾) de que possuem submenu.
-   - _Sugestão_: Adicionar texto `▾` como sufixo ao label, ou usar um `QLabel` de ícone SVG ao lado do texto do botão.
-
-3. **Botão `Home` sem ícone** 
-   - Atualmente apenas texto. Adicionar ícone SVG (ex: 🏠 ou ícone CDHU) para melhorar a identidade visual.
-
-4. **Menu `Arquivo` sem funcionalidade real**
-   - "Continuar depois" está conectado a `save_metadata()`, mas não há feedback visual de sucesso/falha.
-   - _Próximo passo_: Implementar lógica de draft local com notificação.
-
-5. **Responsividade do header**
-   - Em janelas estreitas, os botões do header podem se sobrepor ao botão de login.
-   - _Sugestão_: Detectar largura mínima e recolher menus ou usar ícones apenas.
-
-6. **`Arquivo > Importar Metadado (.xml)`** — placeholder sem implementação
-   - Ação criada, desabilitada, sem lógica de importação.
-   - _Próximo passo_: Implementar via `QFileDialog` + `xml_parser.py`.
-
-#### Critérios de conclusão desta feature
-- [ ] Seta `▾` visível nos botões com submenu
-- [ ] Ícone no botão Home
-- [ ] Hover estável em 100% dos cenários de navegação rápida
-- [ ] Importar Metadado funcional (ou removido se premature)
+#### Critérios de conclusão
+- [x] Hover estável em 100% dos cenários de navegação rápida
+- [x] Logo como ponto de retorno à Home
+- [x] Cantos arredondados nos menus dropdown (sem artefatos Windows)
+- [ ] Seta `▾` visível nos botões `GeoNetwork` e `GeoServer`
+- [ ] `Importar Metadado (.xml)` funcional (ou removido se prematuro)
 - [ ] Header responsivo para janelas estreitas
-
