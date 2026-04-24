@@ -725,7 +725,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             self.header_btn_login.setToolTip("Clique para desconectar")
         else:
             self.header_btn_login.setIcon(self.icon_login_error)
-            self.header_btn_login.setText(" ENTRAR")
+            self.header_btn_login.setText(" Entrar")
             self.header_btn_login.setToolTip("Clique para fazer login no Geohab")
 
     def exportar_to_xml(self):
