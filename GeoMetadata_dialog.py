@@ -78,12 +78,11 @@ class CustomHeightDelegate(QStyledItemDelegate):
         is_selected = option.state & QStyle.State_Selected
         is_hovered  = option.state & QStyle.State_MouseOver
         
-        if is_selected or is_hovered:
-            # Cor de fundo da combo (cinza claro)
-            painter.fillRect(option.rect, QColor("#f5f5f5"))
-            # Borda interna sutil
-            painter.setPen(QColor("#d1d5db"))
-            painter.drawRect(option.rect.adjusted(0, 0, -1, -1))
+        if is_selected:
+            painter.fillRect(option.rect, QColor("#fef2f2"))
+        elif is_hovered:
+            painter.fillRect(option.rect, QColor("#bdbdbd"))
+            painter.fillRect(option.rect.adjusted(1, 1, -1, -1), QColor("#f5f5f5"))
         else:
             painter.fillRect(option.rect, QColor("#ffffff"))
 
@@ -124,6 +123,8 @@ class NavButton(QPushButton):
         self._timer.setInterval(200)
         self._timer.timeout.connect(self._maybe_close)
         self.setAttribute(Qt.WA_Hover, True)
+        # Expande verticalmente para preencher o header — border-bottom alinha ao fundo
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
 
     # ------------------------------------------------------------------
     def _is_dark(self):
@@ -378,6 +379,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         header_widget.setObjectName("Header")
         layout = QHBoxLayout(header_widget)
         layout.setSpacing(0)
+        layout.setContentsMargins(16, 0, 16, 0)  # sem margem vertical — botões preenchem altura total
 
         # Logo clicável — navega para Home
         pixmap = QPixmap(":/plugins/geometadata/img/header_logo.png")

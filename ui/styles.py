@@ -38,7 +38,6 @@ def get_stylesheet(img_dir: str) -> str:
     #Header {{
         background-color: #ffffff;
         border-bottom: 1px solid #e2e8f0;
-        padding: 0 16px;
         min-height: 64px;
     }}
     #GeoMetadataDialog[theme="dark"] #Header {{
@@ -54,7 +53,7 @@ def get_stylesheet(img_dir: str) -> str:
         font-weight: 600;
         border: none;
         border-bottom: 3px solid transparent;
-        padding: 10px 14px 10px 16px;
+        padding: 0 16px;
         margin: 0 1px;
     }}
     /* Hover e navActive gerenciados por NavButton._update_style() via setStyleSheet() */
