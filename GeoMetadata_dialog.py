@@ -60,17 +60,21 @@ from .ui.home_panel import HomePanel
 
 # --- 4. Helpers de Estilo ---
 class CustomHeightDelegate(QStyledItemDelegate):
+    """Delegate para QCompleter popups: altura fixa, hover com borda e seleção com acento."""
+
     def __init__(self, parent=None, height=30, font_size=9):
         super().__init__(parent)
         self.forced_height = height
         self.forced_font_size = font_size
 
     def sizeHint(self, option, index):
+        """Retorna o tamanho do item com altura forçada."""
         size = super().sizeHint(option, index)
         size.setHeight(self.forced_height)
         return size
 
     def paint(self, painter, option, index):
+        """Pinta fundo (hover/seleção/neutro) e texto do item."""
         painter.save()
         painter.setRenderHint(QPainter.Antialiasing)
         
@@ -128,6 +132,7 @@ class NavButton(QPushButton):
 
     # ------------------------------------------------------------------
     def _is_dark(self):
+        """Retorna True se o tema ativo da janela for escuro."""
         w = self.window()
         return bool(w and w.property("theme") == "dark")
 
@@ -142,15 +147,18 @@ class NavButton(QPushButton):
             self.setStyleSheet("")
 
     def _apply_hover(self, value):
+        """Atualiza estado hover e redesenha o botão."""
         self._hovered = bool(value)
         self._update_style()
 
     def set_nav_active(self, value):
+        """Marca/desmarca este botão como destino ativo de navegação."""
         self._nav_active = bool(value)
         self._update_style()
 
     # ------------------------------------------------------------------
     def set_nav_menu(self, menu):
+        """Vincula um QMenu ao botão e instala o filtro de eventos para manter o hover coeso."""
         self._nav_menu = menu
         menu.installEventFilter(self)
 
@@ -170,6 +178,7 @@ class NavButton(QPushButton):
 
     # ------------------------------------------------------------------
     def enterEvent(self, event):
+        """Ativa hover e abre o menu ao entrar no botão."""
         self._timer.stop()
         self._apply_hover(True)
         if self._nav_menu and self.isEnabled():
@@ -177,12 +186,14 @@ class NavButton(QPushButton):
         super().enterEvent(event)
 
     def leaveEvent(self, event):
+        """Remove hover e inicia temporizador de fechamento ao sair do botão."""
         self._timer.start()
         self._apply_hover(False)
         super().leaveEvent(event)
 
     # ------------------------------------------------------------------
     def _maybe_close(self):
+        """Fecha o menu após o timer expirar se o cursor não estiver sobre ele ou outro NavButton."""
         if not (self._nav_menu and self._nav_menu.isVisible()):
             NavButton._active = None
             self._apply_hover(False)
@@ -199,6 +210,7 @@ class NavButton(QPushButton):
 
     # ------------------------------------------------------------------
     def eventFilter(self, obj, event):
+        """Mantém o menu aberto enquanto o cursor transita entre botão e menu; troca de menu ao entrar em outro NavButton."""
         if obj is self._nav_menu:
             t = event.type()
             if t == QEvent.Enter:
@@ -217,7 +229,7 @@ class NavButton(QPushButton):
 
 class GeoMetadataDialog(QtWidgets.QDialog):
     def __init__(self, iface, plugin_instance, parent=None):
-        """Construtor."""
+        """Inicializa o diálogo: detecta tema, constrói UI, conecta serviços e aplica estilos."""
         super(GeoMetadataDialog, self).__init__(parent)
         
         # --- Atributos da Classe ---
@@ -346,7 +358,8 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.form_manager.connect_dirty_signals(self.on_metadata_changed)
 
     def on_metadata_changed(self):
-        pass # Optional logic when metadata becomes dirty
+        """Callback disparado quando qualquer campo do formulário é editado (dirty flag)."""
+        pass
 
 
     def _make_menu(self):
@@ -578,6 +591,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
 
     # ------------------------------------------------------------------
     def _set_active_nav_btn(self, active_btn):
+        """Ativa o indicador visual no botão de navegação correspondente; passa None para desativar todos."""
         for btn in (self._btn_geonetwork, self._btn_geoserver):
             btn.set_nav_active(btn is active_btn)
 
@@ -808,6 +822,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             self.form_manager.set_is_dirty(False)
 
     def sanitize_title(self, value):
+        """Remove caracteres especiais e normaliza espaços para uso como nome de arquivo."""
         if not value: return ""
         title = value.replace('_', ' ').replace('-', ' ')
         title = re.sub(r'[^a-zA-Z0-9À-ÿ\s]', '', title)
@@ -918,6 +933,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.selected_layer_data = None
 
     def _fetch_layers(self):
+        """Carrega a lista de camadas WMS ou WFS do GeoServer e preenche o QCompleter."""
         service = self.ui.comboBox_service_type.currentData()
         self.distribution_layers_cache.clear()
         self.layer_data_map.clear()
@@ -988,12 +1004,14 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         pass
 
     def _on_layer_selected(self, selected_text):
+        """Armazena os dados da camada escolhida no completer para uso na associação."""
         if selected_text in self.layer_data_map:
             self.selected_layer_data = self.layer_data_map[selected_text]
         else:
             self.selected_layer_data = None            
 
     def _add_service_selection(self):
+        """Confirma a seleção de camada WMS/WFS e grava em distribution_data."""
         service_type = self.ui.comboBox_service_type.currentData()
         selected_layer = self.selected_layer_data 
 
@@ -1063,6 +1081,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.selected_contact_data = None
 
     def _on_contact_search_edited(self, text):
+        """Despacha para busca online (com debounce) ou offline conforme estado de sessão."""
         if self.plugin.api_session:
             self.contacts_cache_map.clear()
             self.contact_completer_model.setStringList([])
@@ -1072,6 +1091,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             self._update_offline_contacts(text)
             
     def _update_offline_contacts(self, filter_text):
+        """Filtra contatos do arquivo local contacts.json sem requerer sessão ativa."""
         display_list = []
         lower_filt = filter_text.lower()
         
@@ -1089,6 +1109,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.contact_completer_model.setStringList(display_list)
 
     def _fetch_contacts_online(self):
+        """Busca contatos no GeoNetwork via Elasticsearch e mescla com dados locais enriquecidos."""
         filter_text = self.ui.lineEdit_contact_search.text()
         if not filter_text: return
         
@@ -1161,12 +1182,14 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             pass
             
     def _on_contact_selected(self, selected_text):
+        """Armazena o contato escolhido no completer para uso na adição."""
         if selected_text in self.contacts_cache_map:
             self.selected_contact_data = self.contacts_cache_map[selected_text]
         else:
             self.selected_contact_data = None
             
     def _add_contact_action(self):
+        """Preenche o contato primário ou adiciona nova linha de contato conforme o estado do formulário."""
         if not self.selected_contact_data:
             QtWidgets.QMessageBox.warning(self, "Aviso", "Selecione um contato da lista primeiro.")
             return
@@ -1225,19 +1248,6 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.selected_contact_data = None
 
 
-    # GeoMetadata_dialog.py -> adicione este método à classe
-
-    def reject(self):
-        """
-        Sobrescreve o comportamento padrão da tecla ESC.
-        
-        Em vez de fechar a janela diretamente, este método chama self.close(),
-        que por sua vez acionará o nosso closeEvent(). Isso garante que a
-        verificação de alterações não salvas seja executada tanto para a tecla ESC
-        quanto para o botão 'X' da janela.
-        """
-        self.close()
-
     def _check_auth_system(self):
         """
         Verifica se o sistema de autenticação do QGIS está funcional.
@@ -1284,6 +1294,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.close()
 
     def show_message(self, title, text, icon=None):
+        """Exibe um QMessageBox com suporte a Rich Text (HTML)."""
         from qgis.PyQt import QtWidgets
         from qgis.PyQt.QtCore import Qt
         if icon is None:
