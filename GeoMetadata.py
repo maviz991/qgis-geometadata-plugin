@@ -17,9 +17,10 @@
  *                                                                         *
  ***************************************************************************/
 """
-from qgis.PyQt.QtCore import QSettings, QTranslator, qVersion, QCoreApplication
+from qgis.PyQt.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QTimer
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
+from qgis.core import Qgis
 
 # Initialize Qt resources from file resources.py
 from .resources import *
@@ -167,6 +168,43 @@ class GeoMetadata:
             text=self.tr(u'GeoMetadata'),
             callback=self.run,
             parent=self.iface.mainWindow())
+
+        # Verifica e instala msal em background após QGIS carregar completamente
+        QTimer.singleShot(3000, self._check_and_install_dependencies)
+
+    def _check_and_install_dependencies(self):
+        from .core.entra_auth_provider import is_msal_available
+        if is_msal_available():
+            return
+        from .core.dependency_installer import DependencyInstaller
+        self.iface.messageBar().pushMessage(
+            "GeoMetadata — SSO",
+            "Instalando dependência 'msal' para login corporativo. Aguarde...",
+            level=Qgis.Info,
+            duration=0
+        )
+        self._dep_installer = DependencyInstaller("msal")
+        self._dep_installer.install_success.connect(self._on_dep_installed)
+        self._dep_installer.install_failed.connect(self._on_dep_install_failed)
+        self._dep_installer.start()
+
+    def _on_dep_installed(self, _pkg: str):
+        self.iface.messageBar().clearWidgets()
+        self.iface.messageBar().pushMessage(
+            "GeoMetadata — SSO",
+            "✅ 'msal' instalado com sucesso. Reinicie o QGIS para ativar o login corporativo.",
+            level=Qgis.Success,
+            duration=15
+        )
+
+    def _on_dep_install_failed(self, _pkg: str, _error: str):
+        self.iface.messageBar().clearWidgets()
+        self.iface.messageBar().pushMessage(
+            "GeoMetadata — SSO",
+            "⚠ Falha ao instalar 'msal'. Abra o OSGeo4W Shell e execute: pip install msal",
+            level=Qgis.Warning,
+            duration=15
+        )
 
 
     def unload(self):
