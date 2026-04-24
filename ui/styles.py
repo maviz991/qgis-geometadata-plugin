@@ -38,7 +38,6 @@ def get_stylesheet(img_dir: str) -> str:
     #Header {{
         background-color: #ffffff;
         border-bottom: 1px solid #e2e8f0;
-        min-height: 64px;
     }}
     #GeoMetadataDialog[theme="dark"] #Header {{
         background-color: #1e293b;
@@ -70,7 +69,7 @@ def get_stylesheet(img_dir: str) -> str:
         background: transparent;
         border: none;
         padding: 0;
-        margin: 0 4px 0 0;
+        margin: 0 8px 0 0;
     }}
     #LogoButton:hover {{ background: transparent; }}
     #LogoButton:pressed {{ background: transparent; }}

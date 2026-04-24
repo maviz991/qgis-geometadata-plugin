@@ -377,13 +377,14 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         """
         header_widget = QWidget()
         header_widget.setObjectName("Header")
+        header_widget.setFixedHeight(64)
         layout = QHBoxLayout(header_widget)
         layout.setSpacing(0)
-        layout.setContentsMargins(16, 0, 16, 0)  # sem margem vertical — botões preenchem altura total
+        layout.setContentsMargins(0, 0, 16, 0)
 
         # Logo clicável — navega para Home
         pixmap = QPixmap(":/plugins/geometadata/img/header_logo.png")
-        scaled = pixmap.scaled(170, 80, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        scaled = pixmap.scaled(170, 58, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self._logo_btn = QPushButton()
         self._logo_btn.setObjectName("LogoButton")
         self._logo_btn.setIcon(QIcon(scaled))
