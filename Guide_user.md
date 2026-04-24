@@ -1,7 +1,7 @@
 ## **Manual do Usuário – Plugin GeoMetadata para QGIS**
 
-**Versão:** 1.0.1  
-**Data:** 27 Nov de 2025
+**Versão:** 1.0.3  
+**Data:** 24 Abr de 2026
 
 ### **1. Introdução**
 
@@ -37,7 +37,7 @@ Ao clicar no ícone do plugin, a janela principal será aberta. Ela é dividida 
 *   **Continuar depois:** Salva o seu progresso atual junto à camada. Permite que você feche o plugin e, ao reabri-lo na mesma camada, todos os dados estarão lá.
 *   **Exportar para Geohab:** A ação final. Envia o metadado para o catálogo oficial da CDHU.
 *   **Associar Camada:** Abre uma janela para vincular sua camada a um serviço WMS ou WFS existente no GeoServer.
-*   **Entrar / [Seu Nome]:** Botão para fazer login no Geohab. Uma vez logado, ele exibe seu nome e permite desconectar.
+*   **Entrar / [Seu Nome]:** Botão para fazer login no Geohab via conta corporativa (Microsoft Entra ID / SSO). Uma vez logado, ele exibe seu nome e permite desconectar.
 
 #### **B. Formulário Principal**
 É onde você preenche as informações do metadado. Os campos são agrupados logicamente:
@@ -59,7 +59,7 @@ Mostra quais serviços (WMS/WFS) do GeoServer foram vinculados a este metadado. 
 1.  **Carregue a Camada:** Abra o QGIS e adicione a camada para a qual você deseja criar o metadado (Local ou do banco de dados PostgreSQL). Certifique-se de que ela esteja **selecionada** no Painel de Camadas.
 2.  **Abra o Plugin:** Clique no ícone do GeoMetadata.
 3.  **Verifique os Campos Automáticos:** Note que o **Título** (baseado no nome da camada) e a **Extensão Geográfica** (Bounding Box) já foram preenchidos para você.
-4.  **Faça Login:** Clique em **ENTRAR** no canto superior direito. Use uma configuração salva do QGIS ou digite seu usuário e senha da rede. O login é necessário para associar camadas e exportar para o Geohab.
+4.  **Faça Login:** Clique em **ENTRAR** no canto superior direito. Uma janela será aberta e o **navegador padrão** abrirá automaticamente com a página de login da Microsoft. Entre com sua **conta corporativa CDHU** (o mesmo usuário e senha do Windows/e-mail). Após confirmar, o navegador fecha e o plugin exibe seu nome. O login é necessário para associar camadas e exportar para o Geohab.
 5.  **Preencha os Campos:** Complete os campos obrigatórios, como **Resumo** e **Palavras-chave**.
     *   **Dica:** Para as palavras-chave, separe-as por **vírgula (`,`)**. O sistema também entende ponto-e-vírgula (`;`) e corrige automaticamente.
     *   **Dica:** Para a **Escala**, digite apenas o número (ex: `5000`). O sistema é inteligente e consegue extrair o número de formatos como `1:5.000`.
@@ -82,24 +82,38 @@ Mostra quais serviços (WMS/WFS) do GeoServer foram vinculados a este metadado. 
 4.  **Edite e Salve:** Faça as alterações desejadas e use os botões **Continuar depois** ou **Exportar para Geohab** para salvar suas modificações.
     *   **Importante:** Note que a **Extensão Geográfica** será sempre atualizada para refletir o estado *atual* da camada, mesmo que você tenha carregado um metadado antigo. Isso garante que a informação esteja sempre correta.
 
-### **5. Solução de Problemas (FAQ)**
+### **5. Primeiro Uso — Instalação Automática de Dependência**
+
+Na primeira vez que o plugin for carregado, ele verifica se a biblioteca `msal` (necessária para o login corporativo) está instalada no QGIS.
+
+*   **Se não estiver instalada:** Uma mensagem azul aparecerá na barra do QGIS: *"Instalando dependência 'msal'..."*. Aguarde até 5 minutos. Ao término, uma mensagem verde confirmará o sucesso. **Reinicie o QGIS** uma vez para ativar o login.
+*   **Se a instalação automática falhar:** Ao clicar em **ENTRAR**, um painel aparecerá com o botão **Instalar Automaticamente**. Clique nele. Se ainda assim falhar (ex: sem acesso à internet), abra o **OSGeo4W Shell** e execute: `pip install msal`.
+*   **Nas próximas sessões:** `msal` já estará instalado e o login funcionará normalmente, sem nenhuma ação adicional.
+
+---
+
+### **6. Solução de Problemas (FAQ)**
 
 *   **Aparece a mensagem "Campos Faltando" ao tentar exportar.**
     *   **Causa:** Você não preencheu todos os campos obrigatórios (como Título, Resumo, etc.).
     *   **Solução:** Preencha os campos listados na mensagem de erro e tente novamente.
 
-*   **Não consigo fazer login no Geohab.**
-    *   **Causa:** Usuário/senha incorretos, ou você não está conectado à rede da CDHU (ou VPN).
-    *   **Solução:** Verifique suas credenciais e sua conexão de rede.
+*   **O navegador não abre ao clicar em Entrar.**
+    *   **Causa:** O sistema pode estar bloqueando a abertura do navegador padrão.
+    *   **Solução:** Verifique se há um navegador padrão configurado no Windows. Se o problema persistir, abra um CDA.
+
+*   **Não consigo fazer login — a página da Microsoft diz que minha conta não tem acesso.**
+    *   **Causa:** Sua conta corporativa não está com permissão no sistema QGIS-Plugin-Geohab-SSO.
+    *   **Solução:** Solicite acesso ao TI informando seu usuário e o nome do aplicativo: **QGIS-Plugin-Geohab-SSO**.
 
 *   **O plugin está com um tema claro, mas meu QGIS está com tema escuro (ou vice-versa).**
     *   **Causa:** O plugin detecta o tema do QGIS na inicialização.
-    *   **Solução:** O plugin se adaptará automaticamente ao tema do QGIS. Se você mudar o tema do QGIS, é necessário **reiniciar o QGIS** para que o plugin também mude de cor.
+    *   **Solução:** O plugin se adapta automaticamente. Se você mudar o tema do QGIS, **reinicie o QGIS** para que o plugin também mude de cor.
 
 *   **Os botões de "Exportar para Geohab" e "Associar Camada" estão desabilitados.**
     *   **Causa:** Você não está logado.
-    *   **Solução:** Clique no botão **ENTRAR** e faça a autenticação.
+    *   **Solução:** Clique no botão **ENTRAR** e autentique com sua conta corporativa.
 
-### **6. Suporte**
+### **7. Suporte**
 
 Em caso de dúvidas, erros ou sugestões, por favor, abra um CDA.
