@@ -51,8 +51,7 @@ from .core.metadata_service import MetadataService
 from .core.persistence_service import PersistenceService
 from . import resources
 from .core.plugin_config import config_loader
-from .ui.unified_login_dialog import UnifiedLoginDialog
-from .ui.entra_login_dialog import EntraLoginDialog
+from .ui.login_dialog import LoginDialog
 from .ui.styles import get_stylesheet
 from .ui.geoserver_panel import GeoServerPanel
 from .ui.home_panel import HomePanel
@@ -652,8 +651,8 @@ class GeoMetadataDialog(QtWidgets.QDialog):
     def authenticate(self):
         """Gerencia o ciclo de login/logout.
         
-        Usa Entra ID (MSAL + PKCE) se as credenciais do Azure estiverem configuradas
-        no config.json. Caso contrário, usa o método Basic Auth tradicional (fallback).
+        Abre o diálogo unificado que oferece login via Entra ID (Corporativo) 
+        ou Basic Auth (Administrador).
         """
         # --- LOGOUT ---
         if self.plugin.api_session:
@@ -671,44 +670,17 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             self.update_ui_for_login_status()
             return
 
-        # --- LOGIN: Entra ID ou Basic Auth ---
-        if config_loader.has_entra_id_configured():
-            self._authenticate_entra_id()
-        else:
-            self._authenticate_basic_auth()
-
-    def _authenticate_entra_id(self):
-        """Fluxo de login via Microsoft Entra ID (MSAL + PKCE + Bearer Token)."""
+        # --- LOGIN UNIFICADO ---
         entra_cfg = config_loader.get_entra_id_config()
-        login_dialog = EntraLoginDialog(
-            client_id=entra_cfg["client_id"],
-            tenant_id=entra_cfg["tenant_id"],
+        geoserver_url = config_loader.get_geoserver_url()
+        
+        login_dialog = LoginDialog(
+            client_id=entra_cfg.get("client_id", ""),
+            tenant_id=entra_cfg.get("tenant_id", ""),
             scopes=entra_cfg.get("scopes", ["openid", "profile", "email"]),
+            geoserver_url=geoserver_url,
             parent=self
         )
-
-        if login_dialog.exec_():
-            self.plugin.api_session = login_dialog.get_session()
-            self.plugin.auth_username = login_dialog.get_username()
-
-            self.iface.messageBar().pushMessage(
-                "Sucesso",
-                f"✅ Conectado ao Geohab como {self.plugin.auth_username}.",
-                level=Qgis.Success, duration=4
-            )
-            self.show_message(
-                "Sucesso!",
-                f"<p style='font-size: 15px; font-weight: bold;'>Conectado ao Geohab!</p>"
-                f"<p><b>Usuário:</b> {self.plugin.auth_username}</p>"
-                f"<p style='color: rgba(0,0,0,0.5);'>Você pode Associar camadas e Exportar para Geohab</p>"
-            )
-
-        self.form_manager.populate_comboboxes()
-        self.update_ui_for_login_status()
-
-    def _authenticate_basic_auth(self):
-        """Fluxo de login via Basic Auth (método legado — fallback enquanto Entra ID não está configurado)."""
-        login_dialog = UnifiedLoginDialog(self, iface=self.iface)
 
         if login_dialog.exec_():
             self.plugin.api_session = login_dialog.get_session()
