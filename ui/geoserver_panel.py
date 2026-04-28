@@ -51,7 +51,7 @@ class GeoServerPanel(QWidget):
             # Fallback: emoji como texto
             icon_label.setText("🗄️")
             font = QFont()
-            font.setPointSize(48)
+            font.setPointSize(68)
             icon_label.setFont(font)
         else:
             icon_label.setPixmap(
@@ -70,8 +70,7 @@ class GeoServerPanel(QWidget):
         # Subtítulo / descrição
         desc = QLabel(
             "Este painel permitirá publicar camadas vetoriais diretamente no GeoServer "
-            "corporativo, exportar estilos SLD e gerenciar workspaces — "
-            "sem sair do QGIS."
+            "corporativo, exportar estilos SLD e gerenciar workspaces - sem sair do QGIS."
         )
         desc.setObjectName("GeoServerPlaceholderDesc")
         desc.setAlignment(Qt.AlignCenter)

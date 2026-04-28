@@ -677,7 +677,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         login_dialog = LoginDialog(
             client_id=entra_cfg.get("client_id", ""),
             tenant_id=entra_cfg.get("tenant_id", ""),
-            scopes=entra_cfg.get("scopes", ["openid", "profile", "email"]),
+            scopes=entra_cfg.get("scopes", ["User.Read"]),
             geoserver_url=geoserver_url,
             parent=self
         )

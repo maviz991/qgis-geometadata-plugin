@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """
 login_dialog.py — GeoMetadata Plugin
-===========================================
-Diálogo de login unificado: SSO (Entra ID) + Administrador (Local).
+=====================================
+Diálogo de autenticação unificado.
 
-Este componente substitui o fluxo anterior que roteava para diálogos separados.
-Se msal não estiver instalado, oferece a instalação inline no card Corporativo.
+  1. Conta Corporativa — Microsoft Entra ID (SSO / PKCE)
+  2. Administrador     — usuário + senha locais (Basic Auth)
 
 Autor: GeoMetadata Plugin | CDHU
 """
@@ -13,30 +13,31 @@ Autor: GeoMetadata Plugin | CDHU
 import os
 import requests
 import urllib3
-import re
-from typing import Optional
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 from qgis.PyQt.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QProgressBar, QWidget, QLineEdit, QFrame
 )
-from qgis.PyQt.QtCore import Qt, QThread, pyqtSignal, QSize, QTimer
-from qgis.PyQt.QtGui import QIcon, QPixmap, QFont
+from qgis.PyQt.QtCore import Qt, QThread, pyqtSignal, QSize
+from qgis.PyQt.QtGui import QPixmap, QIcon
 
 from ..core.entra_auth_provider import EntraAuthProvider, is_msal_available
 from ..core.dependency_installer import DependencyInstaller
-from ..core.plugin_config import config_loader
 
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+_PLUGIN_ROOT  = os.path.dirname(os.path.dirname(__file__))
+_LOGO_PATH    = os.path.join(_PLUGIN_ROOT, "img", "logo.png")
+_FAVICON_PATH = os.path.join(_PLUGIN_ROOT, "img", "favcon_cdhu.png")
+_ACCENT       = "#e5222d"
+_ACCENT_HOVER = "#c0111b"
+
 
 # ---------------------------------------------------------------------------
-# Workers — roda a autenticação em threads separadas
+# Worker — SSO (Entra ID) em background
 # ---------------------------------------------------------------------------
-
-class _AuthWorker(QThread):
-    """Executa o fluxo interativo do MSAL em background."""
+class _SsoWorker(QThread):
     auth_success = pyqtSignal(object)  # EntraAuthProvider
-    auth_failed  = pyqtSignal(str)     # mensagem de erro
+    auth_failed  = pyqtSignal(str)
 
     def __init__(self, provider: EntraAuthProvider):
         super().__init__()
@@ -44,421 +45,506 @@ class _AuthWorker(QThread):
 
     def run(self):
         try:
-            success = self._provider.authenticate_interactive()
-            if success:
+            if self._provider.authenticate_interactive():
                 self.auth_success.emit(self._provider)
             else:
-                error = self._provider.get_error()
-                self.auth_failed.emit(error or "Autenticação cancelada ou falhou.")
+                self.auth_failed.emit(self._provider.get_error() or "Autenticação cancelada.")
         except Exception as e:
             self.auth_failed.emit(str(e))
 
 
+# ---------------------------------------------------------------------------
+# Worker — Basic Auth em background
+# ---------------------------------------------------------------------------
 class _AdminWorker(QThread):
-    """Verifica credenciais Basic Auth contra o GeoServer."""
-    success = pyqtSignal(object, str)  # (requests.Session, username)
-    failed  = pyqtSignal(str)          # mensagem de erro
+    login_success = pyqtSignal(object, str)  # session, username
+    login_failed  = pyqtSignal(str)
 
-    def __init__(self, url: str, user: str, password: str):
+    def __init__(self, user: str, password: str, geoserver_url: str):
         super().__init__()
-        self._url = url
-        self._user = user
+        self._user     = user
         self._password = password
+        self._url      = f"{geoserver_url.rstrip('/')}/ows?version=1.3.0"
 
     def run(self):
-        session = requests.Session()
-        session.verify = False
-        session.auth = (self._user, self._password)
-        
-        # Testamos contra o GetCapabilities do WMS ou apenas a URL base + ows
-        test_url = f"{self._url.rstrip('/')}/ows?version=1.3.0"
-        
         try:
-            response = session.get(test_url, timeout=12, verify=False)
-            if response.status_code == 401:
-                self.failed.emit("Usuário ou senha inválidos.")
-            elif response.status_code >= 400:
-                self.failed.emit(f"Servidor retornou erro {response.status_code}.")
+            session        = requests.Session()
+            session.verify = False
+            session.auth   = (self._user, self._password)
+            resp = session.get(self._url, timeout=12)
+            if resp.status_code == 401:
+                self.login_failed.emit("Usuário ou senha inválidos.")
+            elif resp.status_code == 403:
+                self.login_failed.emit("Acesso negado. Verifique as permissões do usuário.")
             else:
-                self.success.emit(session, self._user)
-        except requests.exceptions.RequestException as e:
-            self.failed.emit(f"Falha de conexão: {str(e)}")
+                # 200 ou qualquer outra resposta = servidor alcançado, credenciais aceitas
+                self.login_success.emit(session, self._user)
+        except requests.exceptions.ConnectionError:
+            self.login_failed.emit("Sem conexão com o servidor. Verifique a rede ou VPN.")
+        except requests.exceptions.Timeout:
+            self.login_failed.emit("Servidor não respondeu. Tente novamente.")
         except Exception as e:
-            self.failed.emit(str(e))
+            self.login_failed.emit(str(e))
 
 
 # ---------------------------------------------------------------------------
-# LoginDialog — Janela Unificada
+# LoginDialog
 # ---------------------------------------------------------------------------
-
 class LoginDialog(QDialog):
     """
-    Diálogo de login consolidado.
-    
-    Retorna Accepted se autenticado com sucesso.
+    Diálogo de autenticação unificado (SSO + Admin local).
+
+    Após exec_() retornar Accepted:
+        session  = dialog.get_session()   # requests.Session autenticada
+        username = dialog.get_username()  # nome / e-mail do usuário
     """
 
-    ACCENT_COLOR = "#e5222d"
-    ACCENT_HOVER = "#c0111b"
-
-    def __init__(self, client_id: str, tenant_id: str, scopes: list, geoserver_url: str, parent=None):
+    def __init__(self, client_id: str, tenant_id: str, scopes: list,
+                 geoserver_url: str, parent=None):
         super().__init__(parent)
-        self._client_id = client_id
-        self._tenant_id = tenant_id
-        self._scopes = scopes
+        self._client_id    = client_id
+        self._tenant_id    = tenant_id
+        self._scopes       = scopes
         self._geoserver_url = geoserver_url
+        self._session      = None
+        self._username     = ""
+        self._sso_worker   = None
+        self._adm_worker   = None
+        self._installer    = None
 
-        self._session: Optional[requests.Session] = None
-        self._username: Optional[str] = None
-        self._worker = None
-        self._installer = None
-
-        self._init_ui()
-
-    def _init_ui(self):
+        self._build_ui()
         self.setWindowTitle("Geohab | Identificação")
-        self.setFixedSize(480, 560)
+        self.setFixedWidth(460)
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
-        self.setStyleSheet(self._get_base_stylesheet())
+        self.setStyleSheet(self._stylesheet())
 
-        main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(35, 30, 35, 20)
-        main_layout.setSpacing(0)
-
-        # 1. Logo
-        logo_container = QHBoxLayout()
-        logo_container.addStretch()
-        self._logo_label = QLabel()
-        self._load_logo()
-        logo_container.addWidget(self._logo_label)
-        logo_container.addStretch()
-        main_layout.addLayout(logo_container)
-        main_layout.addSpacing(30)
-
-        # 2. Seção Corporativa (Entra ID)
-        self._card_sso = self._build_sso_card()
-        main_layout.addWidget(self._card_sso)
-        main_layout.addSpacing(20)
-
-        # 3. Divisor
-        main_layout.addLayout(self._build_divider("ou"))
-        main_layout.addSpacing(20)
-
-        # 4. Seção Administrador (Basic Auth)
-        self._card_admin = self._build_admin_card()
-        main_layout.addWidget(self._card_admin)
-        main_layout.addStretch()
-
-        # 5. Botão Cancelar
-        cancel_btn = QPushButton("Cancelar")
-        cancel_btn.setObjectName("CancelButton")
-        cancel_btn.setCursor(Qt.PointingHandCursor)
-        cancel_btn.clicked.connect(self.reject)
-        
-        cancel_layout = QHBoxLayout()
-        cancel_layout.addStretch()
-        cancel_layout.addWidget(cancel_btn)
-        cancel_layout.addStretch()
-        main_layout.addLayout(cancel_layout)
-
-        # Estado inicial (msal check)
         if not is_msal_available():
-            self._set_sso_install_mode()
+            self._enter_install_mode()
 
-    def _load_logo(self):
-        """Carrega o logo diretamente do sistema de arquivos."""
-        try:
-            # Sobe 1 nível (ui -> root) depois img/logo.png
-            plugin_root = os.path.dirname(os.path.dirname(__file__))
-            logo_path = os.path.join(plugin_root, 'img', 'logo.png')
-            
-            if os.path.exists(logo_path):
-                pix = QPixmap(logo_path)
-                scaled = pix.scaledToHeight(55, Qt.SmoothTransformation)
-                self._logo_label.setPixmap(scaled)
+    # ------------------------------------------------------------------
+    # Build UI
+    # ------------------------------------------------------------------
+
+    def _build_ui(self):
+        root = QVBoxLayout(self)
+        root.setContentsMargins(36, 32, 36, 24)
+        root.setSpacing(0)
+
+        # Logo
+        root.addWidget(self._make_logo(), 0, Qt.AlignHCenter)
+        root.addSpacing(6)
+
+        tagline = QLabel("Autentique-se para acessar o Geohab")
+        tagline.setObjectName("Tagline")
+        tagline.setAlignment(Qt.AlignCenter)
+        root.addWidget(tagline)
+        root.addSpacing(28)
+
+        # Card Corporativo
+        root.addWidget(self._build_sso_card())
+        root.addSpacing(16)
+
+        # Divisor
+        root.addWidget(self._make_divider())
+        root.addSpacing(16)
+
+        # Card Administrador
+        root.addWidget(self._build_admin_card())
+        root.addSpacing(20)
+
+        # Cancelar
+        btn_cancel = QPushButton("Cancelar")
+        btn_cancel.setObjectName("CancelBtn")
+        btn_cancel.setCursor(Qt.PointingHandCursor)
+        btn_cancel.clicked.connect(self.reject)
+        row = QHBoxLayout()
+        row.addStretch()
+        row.addWidget(btn_cancel)
+        row.addStretch()
+        root.addLayout(row)
+
+    def _make_logo(self) -> QLabel:
+        lbl = QLabel()
+        pix = QPixmap(_LOGO_PATH)
+        if not pix.isNull():
+            lbl.setPixmap(pix.scaledToHeight(64, Qt.SmoothTransformation))
+        else:
+            lbl.setText("<b style='font-size:24px;color:#e5222d;'>GEOHAB</b>")
+            lbl.setTextFormat(Qt.RichText)
+        lbl.setAlignment(Qt.AlignCenter)
+        return lbl
+
+    def _make_divider(self) -> QWidget:
+        w   = QWidget()
+        row = QHBoxLayout(w)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(12)
+        for side in ("L", "R"):
+            line = QFrame()
+            line.setFrameShape(QFrame.HLine)
+            line.setObjectName("DivLine")
+            if side == "L":
+                row.addWidget(line, 1)
+                lbl = QLabel("acesso administrativo")
+                lbl.setObjectName("DivText")
+                row.addWidget(lbl)
             else:
-                # Fallback se o arquivo sumir
-                self._logo_label.setText("<b style='font-size:24px; color:#e5222d;'>GEOHAB</b>")
-        except Exception:
-            pass
+                row.addWidget(line, 1)
+        return w
+
+    # ------ Card SSO -------------------------------------------------------
 
     def _build_sso_card(self) -> QFrame:
-        card = QFrame()
-        card.setObjectName("Card")
-        lyt = QVBoxLayout(card)
-        lyt.setContentsMargins(0, 0, 0, 0)
-        lyt.setSpacing(12)
-
-        title = QLabel("Corporativo")
-        title.setObjectName("SectionTitle")
-        lyt.addWidget(title)
-
-        plugin_root = os.path.dirname(os.path.dirname(__file__))
-        icon_path = os.path.join(plugin_root, 'img', 'favcon_cdhu.png')
-        
-        self._btn_sso = QPushButton(" Entrar com conta CDHU")
-        if os.path.exists(icon_path):
-            self._btn_sso.setIcon(QIcon(icon_path))
-            self._btn_sso.setIconSize(QSize(18, 18))
-            
-        self._btn_sso.setObjectName("SSOButton")
-        self._btn_sso.setCursor(Qt.PointingHandCursor)
-        self._btn_sso.setFixedHeight(45)
-        self._btn_sso.clicked.connect(self._start_sso_auth)
-        lyt.addWidget(self._btn_sso)
-
-        self._sso_status = QLabel("")
-        self._sso_status.setObjectName("StatusLabel")
-        self._sso_status.setWordWrap(True)
-        self._sso_status.setAlignment(Qt.AlignCenter)
-        lyt.addWidget(self._sso_status)
-
-        self._sso_progress = QProgressBar()
-        self._sso_progress.setRange(0, 0)
-        self._sso_progress.setVisible(False)
-        self._sso_progress.setFixedHeight(4)
-        lyt.addWidget(self._sso_progress)
-
-        return card
-
-    def _build_admin_card(self) -> QFrame:
-        card = QFrame()
-        lyt = QVBoxLayout(card)
-        lyt.setContentsMargins(0, 0, 0, 0)
+        self._sso_card = QFrame()
+        self._sso_card.setObjectName("SsoCard")
+        lyt = QVBoxLayout(self._sso_card)
+        lyt.setContentsMargins(20, 18, 20, 18)
         lyt.setSpacing(10)
 
-        title = QLabel("Administrador")
-        title.setObjectName("SectionTitle")
-        lyt.addWidget(title)
+        # Header do card
+        hdr = QHBoxLayout()
+        hdr.setSpacing(10)
+        col = QVBoxLayout()
+        col.setSpacing(1)
+        col.addWidget(self._lbl("Conta Corporativa", bold=True))
+        col.addWidget(self._lbl("Entre com sua conta CDHU",
+                                size=11, color="#64748b"))
+        hdr.addLayout(col)
+        hdr.addStretch()
+        lyt.addLayout(hdr)
 
-        self._le_user = QLineEdit()
-        self._le_user.setPlaceholderText("Usuário")
-        self._le_user.setFixedHeight(38)
-        lyt.addWidget(self._le_user)
+        # Status + progress
+        self._sso_status = QLabel("")
+        self._sso_status.setObjectName("Status")
+        self._sso_status.setAlignment(Qt.AlignCenter)
+        self._sso_status.setWordWrap(True)
+        self._sso_status.setTextFormat(Qt.RichText)
+        self._sso_status.setVisible(False)
+        lyt.addWidget(self._sso_status)
 
-        self._le_pass = QLineEdit()
-        self._le_pass.setPlaceholderText("Senha")
-        self._le_pass.setEchoMode(QLineEdit.Password)
-        self._le_pass.setFixedHeight(38)
-        self._le_pass.returnPressed.connect(self._start_admin_auth)
-        lyt.addWidget(self._le_pass)
+        self._sso_prog = QProgressBar()
+        self._sso_prog.setRange(0, 0)
+        self._sso_prog.setFixedHeight(4)
+        self._sso_prog.setVisible(False)
+        lyt.addWidget(self._sso_prog)
 
+        # Botão SSO
+        self._btn_sso = QPushButton()
+        self._btn_sso.setObjectName("SsoBtn")
+        self._btn_sso.setMinimumHeight(44)
+        self._btn_sso.setCursor(Qt.PointingHandCursor)
+        pix = QPixmap(_FAVICON_PATH)
+        if not pix.isNull():
+            self._btn_sso.setIcon(QIcon(pix))
+            self._btn_sso.setIconSize(QSize(20, 20))
+            self._btn_sso.setText("  Entrar com conta CDHU")
+        else:
+            self._btn_sso.setText("Entrar com conta CDHU")
+        self._btn_sso.clicked.connect(self._start_sso)
+        lyt.addWidget(self._btn_sso)
+
+        return self._sso_card
+
+    # ------ Card Admin -----------------------------------------------------
+
+    def _build_admin_card(self) -> QFrame:
+        self._admin_card = QFrame()
+        self._admin_card.setObjectName("AdminCard")
+        lyt = QVBoxLayout(self._admin_card)
+        lyt.setContentsMargins(20, 18, 20, 18)
+        lyt.setSpacing(10)
+
+        # Header do card
+        hdr = QHBoxLayout()
+        hdr.setSpacing(10)
+
+        col = QVBoxLayout()
+        col.setSpacing(1)
+        col.addWidget(self._lbl("Administrador", bold=True))
+        col.addWidget(self._lbl("Entre com usuário e senha locais",
+                                size=11, color="#64748b"))
+        hdr.addLayout(col)
+        hdr.addStretch()
+        lyt.addLayout(hdr)
+
+        # Campos
+        self._f_user = QLineEdit()
+        self._f_user.setPlaceholderText("Usuário")
+        self._f_user.setObjectName("Field")
+        self._f_user.setMinimumHeight(36)
+        lyt.addWidget(self._f_user)
+
+        self._f_pass = QLineEdit()
+        self._f_pass.setPlaceholderText("Senha")
+        self._f_pass.setEchoMode(QLineEdit.Password)
+        self._f_pass.setObjectName("Field")
+        self._f_pass.setMinimumHeight(36)
+        self._f_pass.returnPressed.connect(self._start_admin)
+        lyt.addWidget(self._f_pass)
+
+        # Status + progress
+        self._adm_status = QLabel("")
+        self._adm_status.setObjectName("Status")
+        self._adm_status.setWordWrap(True)
+        self._adm_status.setTextFormat(Qt.RichText)
+        self._adm_status.setVisible(False)
+        lyt.addWidget(self._adm_status)
+
+        self._adm_prog = QProgressBar()
+        self._adm_prog.setRange(0, 0)
+        self._adm_prog.setFixedHeight(4)
+        self._adm_prog.setVisible(False)
+        lyt.addWidget(self._adm_prog)
+
+        # Botão Admin
         self._btn_admin = QPushButton("Entrar")
-        self._btn_admin.setObjectName("AdminButton")
+        self._btn_admin.setObjectName("AdminBtn")
+        self._btn_admin.setMinimumHeight(44)
         self._btn_admin.setCursor(Qt.PointingHandCursor)
-        self._btn_admin.setFixedHeight(40)
-        self._btn_admin.clicked.connect(self._start_admin_auth)
+        self._btn_admin.clicked.connect(self._start_admin)
         lyt.addWidget(self._btn_admin)
 
-        self._admin_status = QLabel("")
-        self._admin_status.setObjectName("StatusLabel")
-        self._admin_status.setWordWrap(True)
-        self._admin_status.setAlignment(Qt.AlignCenter)
-        lyt.addWidget(self._admin_status)
-
-        self._admin_progress = QProgressBar()
-        self._admin_progress.setRange(0, 0)
-        self._admin_progress.setVisible(False)
-        self._admin_progress.setFixedHeight(4)
-        lyt.addWidget(self._admin_progress)
-
-        return card
-
-    def _build_divider(self, text: str) -> QHBoxLayout:
-        lyt = QHBoxLayout()
-        line1 = QFrame()
-        line1.setFrameShape(QFrame.HLine)
-        line1.setObjectName("DividerLine")
-        
-        lbl = QLabel(text)
-        lbl.setObjectName("DividerText")
-        
-        line2 = QFrame()
-        line2.setFrameShape(QFrame.HLine)
-        line2.setObjectName("DividerLine")
-        
-        lyt.addWidget(line1)
-        lyt.addWidget(lbl)
-        lyt.addWidget(line2)
-        return lyt
+        return self._admin_card
 
     # ------------------------------------------------------------------
-    # Lógica SSO (Entra ID)
+    # Fluxo SSO
     # ------------------------------------------------------------------
 
-    def _set_sso_install_mode(self):
-        self._btn_sso.setText("⬇  Instalar msal (necessário)")
-        self._btn_sso.setStyleSheet(f"background-color: #334155;")
-        self._sso_status.setText(
-            "<span style='color:#64748b; font-size:11px;'>"
-            "A biblioteca corporal é necessária para este método."
-            "</span>"
+    def _enter_install_mode(self):
+        self._btn_sso.setObjectName("InstallBtn")
+        self._btn_sso.setIcon(QIcon())
+        self._btn_sso.setText("⬇  Instalar dependência (msal)")
+        self._btn_sso.style().unpolish(self._btn_sso)
+        self._btn_sso.style().polish(self._btn_sso)
+        self._set_sso_status(
+            "<span style='color:#92400e;'>⚠ <b>msal</b> não instalado. "
+            "Clique para instalar automaticamente e reinicie o QGIS.</span>"
         )
-        try:
-            self._btn_sso.clicked.disconnect()
-        except: pass
+        self._btn_sso.clicked.disconnect()
         self._btn_sso.clicked.connect(self._run_install)
 
-    def _run_install(self):
-        self._btn_sso.setEnabled(False)
-        self._sso_progress.setVisible(True)
-        self._sso_status.setText("<span style='color:#1a73e8;'>Instalando, aguarde...</span>")
-        
-        self._installer = DependencyInstaller("msal")
-        self._installer.install_success.connect(self._on_install_ok)
-        self._installer.install_failed.connect(self._on_install_err)
-        self._installer.start()
-
-    def _on_install_ok(self):
-        self._sso_progress.setVisible(False)
-        self._sso_status.setText(
-            "<span style='color:#10b981;'><b>✅ Pronto!</b> Reinicie o QGIS para ativar.</span>"
-        )
-
-    def _on_install_err(self, pkg, err):
-        self._sso_progress.setVisible(False)
-        self._sso_status.setText(f"<span style='color:#d93025;'>Falha: {err[:50]}...</span>")
-        self._btn_sso.setEnabled(True)
-
-    def _start_sso_auth(self):
-        self._set_busy(True)
-        self._sso_status.setText("<span style='color:#1a73e8;'>🌐 Verificando navegador...</span>")
-        self._sso_progress.setVisible(True)
-
+    def _start_sso(self):
+        self._lock(True)
+        self._sso_prog.setVisible(True)
+        self._set_sso_status("<span style='color:#1a73e8;'>🌐 Aguardando login no navegador...</span>")
         provider = EntraAuthProvider(self._client_id, self._tenant_id, self._scopes)
-        self._worker = _AuthWorker(provider)
-        self._worker.auth_success.connect(self._on_sso_success)
-        self._worker.auth_failed.connect(self._on_sso_failed)
-        self._worker.start()
+        self._sso_worker = _SsoWorker(provider)
+        self._sso_worker.auth_success.connect(self._on_sso_ok)
+        self._sso_worker.auth_failed.connect(self._on_sso_fail)
+        self._sso_worker.start()
 
-    def _on_sso_success(self, provider: EntraAuthProvider):
-        self._session = provider.get_session()
+    def _on_sso_ok(self, provider: EntraAuthProvider):
+        self._session  = provider.get_session()
         self._username = provider.get_username()
         self.accept()
 
-    def _on_sso_failed(self, msg):
-        self._set_busy(False)
-        self._sso_progress.setVisible(False)
-        self._sso_status.setText(f"<span style='color:#d93025;'>{msg}</span>")
+    def _on_sso_fail(self, msg: str):
+        self._sso_prog.setVisible(False)
+        self._set_sso_status(f"<span style='color:#d93025;'>❌ {msg}</span>")
+        self._lock(False)
 
     # ------------------------------------------------------------------
-    # Lógica Admin (Basic)
+    # Fluxo instalação msal
     # ------------------------------------------------------------------
 
-    def _start_admin_auth(self):
-        user = self._le_user.text().strip()
-        pwd = self._le_pass.text().strip()
-        
-        if not user or not pwd:
-            self._admin_status.setText("<span style='color:#d93025;'>Preencha todos os campos.</span>")
+    def _run_install(self):
+        self._lock(True)
+        self._sso_prog.setVisible(True)
+        self._set_sso_status("<span style='color:#1a73e8;'>Instalando msal, aguarde...</span>")
+        self._installer = DependencyInstaller("msal")
+        self._installer.install_success.connect(self._on_install_ok)
+        self._installer.install_failed.connect(self._on_install_fail)
+        self._installer.start()
+
+    def _on_install_ok(self, _pkg: str):
+        self._sso_prog.setVisible(False)
+        self._set_sso_status(
+            "<span style='color:#2e7d32;'>✅ msal instalado! "
+            "<b>Reinicie o QGIS</b> e clique em Entrar.</span>"
+        )
+        self._btn_sso.setEnabled(False)
+        self._f_user.setEnabled(True)
+        self._f_pass.setEnabled(True)
+        self._btn_admin.setEnabled(True)
+
+    def _on_install_fail(self, _pkg: str, _err: str):
+        self._sso_prog.setVisible(False)
+        self._set_sso_status(
+            "<span style='color:#d93025;'>❌ Falha. Abra o <b>OSGeo4W Shell</b> "
+            "e execute: <code>pip install msal</code></span>"
+        )
+        self._lock(False)
+
+    # ------------------------------------------------------------------
+    # Fluxo Admin
+    # ------------------------------------------------------------------
+
+    def _start_admin(self):
+        user = self._f_user.text().strip()
+        pw   = self._f_pass.text()
+        if not user or not pw:
+            self._set_adm_status("<span style='color:#d93025;'>❌ Preencha usuário e senha.</span>")
             return
+        self._lock(True)
+        self._adm_prog.setVisible(True)
+        self._set_adm_status("<span style='color:#1a73e8;'>Verificando credenciais...</span>")
+        self._adm_worker = _AdminWorker(user, pw, self._geoserver_url)
+        self._adm_worker.login_success.connect(self._on_admin_ok)
+        self._adm_worker.login_failed.connect(self._on_admin_fail)
+        self._adm_worker.start()
 
-        self._set_busy(True)
-        self._admin_status.setText("<span style='color:#1a73e8;'>Conectando...</span>")
-        self._admin_progress.setVisible(True)
-
-        self._worker = _AdminWorker(self._geoserver_url, user, pwd)
-        self._worker.success.connect(self._on_admin_success)
-        self._worker.failed.connect(self._on_admin_failed)
-        self._worker.start()
-
-    def _on_admin_success(self, session, username):
-        self._session = session
+    def _on_admin_ok(self, session, username: str):
+        self._session  = session
         self._username = username
         self.accept()
 
-    def _on_admin_failed(self, msg):
-        self._set_busy(False)
-        self._admin_progress.setVisible(False)
-        self._admin_status.setText(f"<span style='color:#d93025;'>{msg}</span>")
+    def _on_admin_fail(self, msg: str):
+        self._adm_prog.setVisible(False)
+        self._set_adm_status(f"<span style='color:#d93025;'>❌ {msg}</span>")
+        self._lock(False)
 
     # ------------------------------------------------------------------
-    # Utilidades
+    # Helpers
     # ------------------------------------------------------------------
 
-    def _set_busy(self, busy: bool):
-        self._btn_sso.setEnabled(not busy)
-        self._btn_admin.setEnabled(not busy)
-        self._le_user.setEnabled(not busy)
-        self._le_pass.setEnabled(not busy)
-        if not busy:
-            self._sso_status.setText("")
-            self._admin_status.setText("")
+    def _lock(self, locked: bool):
+        self._btn_sso.setEnabled(not locked)
+        self._btn_admin.setEnabled(not locked)
+        self._f_user.setEnabled(not locked)
+        self._f_pass.setEnabled(not locked)
+        if not locked:
+            self._sso_prog.setVisible(False)
+            self._adm_prog.setVisible(False)
 
-    def get_session(self) -> Optional[requests.Session]:
+    def _set_sso_status(self, html: str):
+        self._sso_status.setText(html)
+        self._sso_status.setVisible(bool(html))
+
+    def _set_adm_status(self, html: str):
+        self._adm_status.setText(html)
+        self._adm_status.setVisible(bool(html))
+
+    @staticmethod
+    def _lbl(text: str, bold=False, size=13, color="#1e293b") -> QLabel:
+        lbl = QLabel(text)
+        s = f"font-size:{size}px; color:{color};"
+        if bold:
+            s += " font-weight:700;"
+        lbl.setStyleSheet(s)
+        return lbl
+
+    def get_session(self):
         return self._session
 
-    def get_username(self) -> Optional[str]:
+    def get_username(self) -> str:
         return self._username
 
-    def _get_base_stylesheet(self) -> str:
+    # ------------------------------------------------------------------
+    # Stylesheet
+    # ------------------------------------------------------------------
+
+    def _stylesheet(self) -> str:
         return f"""
-            QDialog {{ background-color: #ffffff; }}
-            
-            #SectionTitle {{
-                font-weight: 700;
-                font-size: 11px;
-                color: #94a3b8;
-                text-transform: uppercase;
-                letter-spacing: 1px;
-            }}
-            
-            QLineEdit {{
-                border: 1px solid #e2e8f0;
-                border-radius: 6px;
-                padding: 0 12px;
-                background-color: #f8fafc;
-                font-size: 13px;
-            }}
-            QLineEdit:focus {{
-                border: 2px solid {self.ACCENT_COLOR};
-                background-color: #ffffff;
-            }}
-            
-            #SSOButton {{
-                background-color: #000000;
-                color: #ffffff;
-                border: none;
-                border-radius: 8px;
-                font-weight: 700;
-                font-size: 13px;
-            }}
-            #SSOButton:hover {{ background-color: #334155; }}
-            #SSOButton:disabled {{ background-color: #e2e8f0; color: #94a3b8; }}
+        QDialog {{
+            background-color: #ffffff;
+        }}
 
-            #AdminButton {{
-                background-color: {self.ACCENT_COLOR};
-                color: #ffffff;
-                border: none;
-                border-radius: 8px;
-                font-weight: 700;
-                font-size: 13px;
-            }}
-            #AdminButton:hover {{ background-color: {self.ACCENT_HOVER}; }}
-            #AdminButton:disabled {{ background-color: #fca5a5; color: #ffffff; }}
+        #Tagline {{
+            font-size: 12px;
+            color: #64748b;
+        }}
 
-            #CancelButton {{
-                background: transparent;
-                border: none;
-                color: #64748b;
-                font-weight: 600;
-                font-size: 12px;
-                padding: 8px 16px;
-            }}
-            #CancelButton:hover {{ color: {self.ACCENT_COLOR}; text-decoration: underline; }}
+        /* Cards */
+        #SsoCard {{
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+        }}
+        #AdminCard {{
+            background: #fff8f8;
+            border: 1px solid #fecaca;
+            border-radius: 12px;
+        }}
 
-            #DividerLine {{ color: #e2e8f0; min-width: 60px; }}
-            #DividerText {{ color: #94a3b8; font-size: 12px; font-weight: 600; padding: 0 10px; }}
-            
-            #StatusLabel {{ font-size: 12px; }}
-            
-            QProgressBar {{
-                background-color: #f1f5f9;
-                border: none;
-                border-radius: 2px;
-            }}
-            QProgressBar::chunk {{
-                background-color: {self.ACCENT_COLOR};
-                border-radius: 2px;
-            }}
+        /* Divisor */
+        #DivLine {{ color: #e2e8f0; }}
+        #DivText {{
+            color: #94a3b8;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }}
+
+        /* Campos de texto */
+        #Field {{
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 0 10px;
+            font-size: 13px;
+            background: #ffffff;
+        }}
+        #Field:focus {{
+            border: 2px solid {_ACCENT};
+            background: #ffffff;
+        }}
+
+        /* Botão SSO */
+        #SsoBtn {{
+            background-color: #1e293b;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 13px;
+        }}
+        #SsoBtn:hover  {{ background-color: #334155; }}
+        #SsoBtn:disabled {{ background-color: #94a3b8; }}
+
+        /* Botão instalar msal */
+        #InstallBtn {{
+            background-color: #b45309;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 13px;
+        }}
+        #InstallBtn:hover {{ background-color: #92400e; }}
+        #InstallBtn:disabled {{ background-color: #d97706; }}
+
+        /* Botão Admin */
+        #AdminBtn {{
+            background-color: {_ACCENT};
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 13px;
+        }}
+        #AdminBtn:hover    {{ background-color: {_ACCENT_HOVER}; }}
+        #AdminBtn:disabled {{ background-color: #fca5a5; }}
+
+        /* Cancelar */
+        #CancelBtn {{
+            background: transparent;
+            border: none;
+            color: #64748b;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 6px 16px;
+        }}
+        #CancelBtn:hover {{ color: {_ACCENT}; text-decoration: underline; }}
+
+        /* Status e progresso */
+        #Status {{ font-size: 12px; }}
+
+        QProgressBar {{
+            background-color: #f1f5f9;
+            border: none;
+            border-radius: 2px;
+        }}
+        QProgressBar::chunk {{
+            background-color: {_ACCENT};
+            border-radius: 2px;
+        }}
         """
