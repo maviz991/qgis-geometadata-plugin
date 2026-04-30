@@ -85,7 +85,7 @@
     font-weight: 600;
     font-size: 12px;
     border-radius: 10px;
-    padding: 4px 8px;
+    padding: 7px 14px;
 }
 
 #ConnectButton:hover {
@@ -114,14 +114,14 @@
 #DropdownMenu::item {
     color: #1e293b;
     font-size: 13px;
+    font-weight: 500;
     padding: 8px 20px;
     border-radius: 4px;
     margin: 1px 6px;
 }
 
 #DropdownMenu::item:selected {
-    background-color: VAR_ACCENT_LIGHT;
-    color: VAR_ACCENT;
+    background-color: #fcebec;
 }
 
 /* Item de navegacao principal — negrito, cor accent */
@@ -418,7 +418,6 @@ QSpinBox::down-button {
 
 QSpinBox::up-button {
     subcontrol-position: top right;
-    transform: rotate(180deg) !important;
 }
 
 QSpinBox::down-button {
@@ -426,21 +425,23 @@ QSpinBox::down-button {
 }
 
 QSpinBox::up-arrow {
-    image: url(VAR_IMG/chevron_down.svg);
-    width: 14px;
-    height: 14px;
+    image: url(VAR_IMG/chevron_up.svg);
+    width: 12px;
+    height: 12px;
 }
 
 QSpinBox::down-arrow {
     image: url(VAR_IMG/chevron_down.svg);
-    width: 14px;
-    height: 14px;
+    width: 12px;
+    height: 12px;
 }
 
-/* DateTimeEdit */
+/* Removido para evitar redundância */
+
+/* DateTimeEdit / DateEdit / TimeEdit */
 QDateTimeEdit::drop-down {
     subcontrol-position: center right;
-    width: 28px;
+    width: 30px;
     border: none;
     background: transparent;
 }
@@ -449,6 +450,22 @@ QDateTimeEdit::down-arrow {
     image: url(VAR_IMG/chevron_down.svg);
     width: 14px;
     height: 14px;
+}
+
+QDateTimeEdit::up-button, QDateTimeEdit::down-button {
+    width: 22px;
+    border: none;
+    background: transparent;
+}
+
+QDateTimeEdit::up-arrow {
+    image: url(VAR_IMG/chevron_up.svg);
+    width: 12px;
+    height: 12px;
+}
+
+QDateTimeEdit::down-arrow:pressed, QDateTimeEdit::down-arrow:hover {
+    /* Opcional: feedback visual */
 }
 
 /* Dark — inputs */
@@ -474,6 +491,23 @@ QDateTimeEdit::down-arrow {
 #GeoMetadataDialog[theme="dark"] QDateTimeEdit:focus {
     border: 2px solid #38bdf8;
     background-color: #0d1929;
+}
+
+#GeoMetadataDialog[theme="dark"] QSpinBox::up-arrow {
+    image: url(VAR_IMG/chevron_up_white.svg);
+}
+
+#GeoMetadataDialog[theme="dark"] QSpinBox::down-arrow {
+    image: url(VAR_IMG/chevron_down_white.svg);
+}
+
+#GeoMetadataDialog[theme="dark"] QDateTimeEdit::down-arrow,
+#GeoMetadataDialog[theme="dark"] QDateTimeEdit::down-button QDateTimeEdit::down-arrow {
+    image: url(VAR_IMG/chevron_down_white.svg);
+}
+
+#GeoMetadataDialog[theme="dark"] QDateTimeEdit::up-arrow {
+    image: url(VAR_IMG/chevron_up_white.svg);
 }
 
 /* ================================================================

@@ -693,9 +693,11 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             )
             self.show_message(
                 "Sucesso!",
-                f"<p style='font-size: 15px; font-weight: bold;'>Conectado ao Geohab!</p>"
+                f"<p style='font-size: 15px; font-weight: bold;'>Autenticação concluída!</p>"
                 f"<p><b>Usuário:</b> {self.plugin.auth_username}</p>"
                 f"<p style='color: rgba(0,0,0,0.5);'>Você pode Associar camadas e Exportar para Geohab</p>"
+                f"<p>Por favor, feche a aba aberta no navegador!</p>"
+                f"<p style='font-size: 11px;'>⚠️ <b>Para sua segurança:</b> Não compartilhe conteúdos, barra de endereços ou faça capturas de tela da aba aberta no navegador.</p>"
             )
 
         self.form_manager.populate_comboboxes()
