@@ -139,7 +139,6 @@ class LoginDialog(QDialog):
             self._init_web(QWebEngineView, QWebChannel)
             
         except (ImportError, RuntimeError) as e:
-            # Conforme solicitação: não usamos mais QSS.
             # Se falhar, avisamos o usuário que o ambiente está quebrado.
             from qgis.PyQt.QtWidgets import QMessageBox
             QMessageBox.critical(

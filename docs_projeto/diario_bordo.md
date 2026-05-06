@@ -470,3 +470,39 @@ bridge.meu_slot(arg, function(resultado) {
 });
 ```
 Nunca usar `await bridge.meu_slot()` — QWebChannel não é Promise-based.
+
+---
+
+## Registro 8 — Formulário Completo de Metadados (HTML) (06/05/2026)
+
+### O que foi feito
+Migração do formulário MGB 2.0 do PyQt (`DynamicForm` + `FormManager`) para HTML puro no painel `editor.html`.
+
+### Arquivos modificados
+
+| Arquivo | Mudança |
+|---|---|
+| `ui/templates/panels/editor.html` | Formulário completo com 4 abas e todos os campos |
+| `ui/templates/js/app.js` | `showTab`, `collectFormData`, `validateForm`, `populateForm`, `tryExport*` |
+| `ui/templates/main.html` | Botões de ação chamam `tryExportXml/Geohab/Save()` em vez do bridge direto |
+| `ui/main_bridge.py` | `export_xml`, `export_geohab`, `save_metadata` recebem `QVariant` (dict do form) |
+| `GeoMetadata_dialog.py` | Os três métodos aceitam `metadata_dict=None`; novo helper `_normalize_dates()` |
+
+### Abas do formulário
+
+| Aba | Campos |
+|---|---|
+| Identificação | Título\*, Edição, Resumo\*, Palavras-chave\*, Escala, Thumbnail URL |
+| Classificação | Status\*, Tipo Espacial\*, Categoria Temática\*, Nível Hierárquico\*, Idioma\*, Charset |
+| Extensão | BBox N/S/L/O\*, Data do metadado, Data de criação |
+| Contato | Sigla\*, Organização\*, Cargo, Tel., E-mail\*, Responsabilidade\*, Endereço\*, Cidade\*, Estado\*, CEP\*, País\* |
+
+### Fluxo de exportação
+1. Usuário clica "Exportar .xml" ou "Publicar no Catálogo" no header
+2. `tryExportXml()` / `tryExportGeohab()` chama `collectFormData()` → dict JS
+3. `validateForm()` verifica campos obrigatórios; marca borda vermelha nos inválidos
+4. Se válido: `bridge.export_xml(data)` / `bridge.export_geohab(data)`
+5. Python recebe o dict, normaliza datas (`HH:MM` → `HH:MM:00Z`) e gera o XML
+
+### Compatibilidade com legado
+`exportar_to_xml(metadata_dict=None)` — se `None`, cai no `form_manager` PyQt (caso ainda exista). Se vier dict do JS, usa diretamente. Sem quebra de compatibilidade.

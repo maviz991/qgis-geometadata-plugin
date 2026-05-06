@@ -2,10 +2,10 @@
 
     <!-- ABAS -->
     <div class="form-tabs">
-        <button class="tab-link active"  onclick="showTab('identificacao', this)">Identificação</button>
-        <button class="tab-link"         onclick="showTab('classificacao', this)">Classificação</button>
-        <button class="tab-link"         onclick="showTab('extensao',      this)">Extensão</button>
-        <button class="tab-link"         onclick="showTab('contato',       this)">Contato</button>
+        <button class="tab-link active" onclick="showTab('identificacao', this)">Identificação</button>
+        <button class="tab-link" onclick="showTab('classificacao', this)">Classificação</button>
+        <button class="tab-link" onclick="showTab('extensao',      this)">Extensão</button>
+        <button class="tab-link" onclick="showTab('contato',       this)">Contato</button>
     </div>
 
     <!-- TAB: IDENTIFICAÇÃO -->
@@ -55,7 +55,8 @@
                 </select>
             </div>
             <div class="form-group">
-                <label for="f-MD_SpatialRepresentationTypeCode">Tipo de Representação Espacial <span class="req">*</span></label>
+                <label for="f-MD_SpatialRepresentationTypeCode">Tipo de Representação Espacial <span
+                        class="req">*</span></label>
                 <select id="f-MD_SpatialRepresentationTypeCode">
                     <option value="">— Selecione —</option>
                     <option value="vector">Vetor</option>
@@ -251,117 +252,134 @@
 </div>
 
 <style>
-.editor-panel {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-}
+    .editor-panel {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        width: 100%;
+    }
 
-/* --- Abas --- */
-.form-tabs {
-    display: flex;
-    border-bottom: 1px solid var(--border);
-    background: white;
-    padding: 0 24px;
-    flex-shrink: 0;
-}
+    /* --- Abas --- */
+    .form-tabs {
+        display: flex;
+        border-bottom: 1px solid var(--border);
+        background: white;
+        padding: 0 24px;
+        flex-shrink: 0;
+    }
 
-.tab-link {
-    background: none;
-    border: none;
-    border-bottom: 3px solid transparent;
-    padding: 14px 18px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--fg-muted);
-    cursor: pointer;
-    transition: color 0.2s, border-color 0.2s;
-    margin-bottom: -1px;
-}
+    .tab-link {
+        background: none;
+        border: none;
+        border-bottom: 3px solid transparent;
+        padding: 14px 18px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--fg-muted);
+        cursor: pointer;
+        transition: color 0.2s, border-color 0.2s;
+        margin-bottom: -1px;
+    }
 
-.tab-link:hover { color: var(--fg); }
+    .tab-link:hover {
+        color: var(--fg);
+    }
 
-.tab-link.active {
-    color: var(--accent);
-    border-bottom-color: var(--accent);
-}
+    .tab-link.active {
+        color: var(--accent);
+        border-bottom-color: var(--accent);
+    }
 
-/* --- Conteúdo --- */
-.tab-content {
-    display: none;
-    overflow-y: auto;
-    flex: 1;
-}
+    /* --- Conteúdo --- */
+    .tab-content {
+        display: none;
+        overflow-y: auto;
+        flex: 1;
+    }
 
-.tab-content.active { display: block; }
+    .tab-content.active {
+        display: block;
+    }
 
-/* --- Grid de campos --- */
-.form-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    padding: 28px;
-    max-width: 900px;
-}
+    /* --- Grid de campos --- */
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
 
-.form-group { display: flex; flex-direction: column; }
-.form-group.span-2 { grid-column: span 2; }
+        padding: 28px;
+        max-width: 100%;
+    }
 
-.form-group label {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--fg-muted);
-    margin-bottom: 6px;
-}
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
 
-.form-group input,
-.form-group select,
-.form-group textarea {
-    padding: 9px 12px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    font-size: 14px;
-    color: var(--fg);
-    background: white;
-    outline: none;
-    transition: border-color 0.15s, box-shadow 0.15s;
-    font-family: inherit;
-}
+    .form-group.span-2 {
+        grid-column: span 2;
+    }
 
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(229,34,45,0.08);
-}
+    .form-group label {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--fg-muted);
+        margin-bottom: 6px;
+    }
 
-.form-group textarea { resize: vertical; min-height: 100px; }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        padding: 9px 12px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        font-size: 14px;
+        color: var(--fg);
+        background: white;
+        outline: none;
+        transition: border-color 0.15s, box-shadow 0.15s;
+        font-family: inherit;
+    }
 
-.form-group input.error,
-.form-group select.error,
-.form-group textarea.error {
-    border-color: var(--accent);
-    background: #fff5f5;
-}
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(229, 34, 45, 0.08);
+    }
 
-.req { color: var(--accent); }
+    .form-group textarea {
+        resize: vertical;
+        min-height: 100px;
+    }
 
-/* --- Bounding Box --- */
-.bbox-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 8px;
-    align-items: end;
-    margin-top: 8px;
-}
+    .form-group input.error,
+    .form-group select.error,
+    .form-group textarea.error {
+        border-color: var(--accent);
+        background: #fff5f5;
+    }
 
-.bbox-center {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 38px;
-    font-size: 22px;
-}
+    .req {
+        color: var(--accent);
+    }
+
+    /* --- Bounding Box --- */
+    .bbox-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 8px;
+        align-items: end;
+        margin-top: 8px;
+    }
+
+    .bbox-center {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 38px;
+        font-size: 22px;
+    }
 </style>

@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GeoMetadata Plugin</title>
+    <title>Geohab Plugin</title>
     <link rel="stylesheet" href="css/styles.css">
 </head>
+
 <body>
     <!-- HEADER / NAVBAR -->
     <header class="navbar">
@@ -40,7 +42,7 @@
                 <span class="user-name">Usuário</span>
                 <div class="status-dot"></div>
             </div>
-            <button id="login-btn" class="btn btn-primary" onclick="bridge.start_login()">ENTRAR</button>
+            <button id="login-btn" class="btn btn-login" onclick="bridge.start_login()">Entrar</button>
         </div>
     </header>
 
@@ -52,12 +54,14 @@
 
     <!-- FOOTER -->
     <footer class="footer">
-        <span class="support-text">Se erro abrir um ticket no <a href="https://cda.cdhu.sp.gov.br" target="_blank">CDA</a></span>
-        <span class="version-tag">v3.0.0</span>
+        <span class="support-text">Se problemas, abrir um ticket no <a href="https://cda.cdhu.sp.gov.br"
+                target="_blank">CDA</a></span>
+        <span class="version-tag">v1.0.4 (Beta)</span>
     </footer>
 
     <!-- SCRIPTS -->
     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
     <script src="js/app.js"></script>
 </body>
+
 </html>

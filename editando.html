@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geohab Plugin</title>
+    <link rel="stylesheet" href="ui/templates/css/styles.css">
+
+    <style>
+        /* ── Layout geral ─────────────────────────────────────── */
+        .editor-panel {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+        }
+
+        /* ── Abas ─────────────────────────────────────────────── */
+        .form-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            background: white;
+            padding: 0 24px;
+            flex-shrink: 0;
+        }
+
+        .tab-link {
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            padding: 14px 18px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--fg-muted);
+            cursor: pointer;
+            transition: color 0.2s, border-color 0.2s;
+            margin-bottom: -1px;
+        }
+
+        .tab-link:hover { color: var(--fg); }
+        .tab-link.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+        .tab-content { display: none; overflow-y: auto; flex: 1; }
+        .tab-content.active { display: block; }
+
+        /* ── Grid de campos ───────────────────────────────────── */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 28px;
+            max-width: 100%;
+        }
+
+        .form-group { display: flex; flex-direction: column; }
+        .form-group.span-2 { grid-column: span 2; }
+
+        .form-group label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--fg-muted);
+            margin-bottom: 6px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 9px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
+            color: var(--fg);
+            background: white;
+            outline: none;
+            transition: border-color 0.15s, box-shadow 0.15s;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(229, 34, 45, 0.08);
+        }
+
+        .form-group textarea { resize: vertical; min-height: 100px; }
+
+        .form-group input.error,
+        .form-group select.error,
+        .form-group textarea.error {
+            border-color: var(--accent);
+            background: #fff5f5;
+        }
+
+        .form-group input:disabled,
+        .form-group select:disabled {
+            opacity: 0.38;
+            cursor: not-allowed;
+            background: #f8fafc;
+        }
+
+        .req { color: var(--accent); }
+
+        /* ── Linha inline (dois campos lado a lado) ────────────── */
+        .inline-row {
+            display: flex;
+            gap: 8px;
+        }
+        .inline-row select { flex: 0 0 160px; }
+        .inline-row input  { flex: 1; }
+
+        /* ── BBox ─────────────────────────────────────────────── */
+        .bbox-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            align-items: end;
+            margin-top: 8px;
+        }
+        .bbox-center {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 38px;
+            font-size: 22px;
+        }
+
+        /* ── Barra de busca de contatos ───────────────────────── */
+        .contacts-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 20px 28px 0;
+        }
+        .contacts-toolbar input {
+            flex: 1;
+            padding: 9px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            outline: none;
+        }
+        .contacts-toolbar input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(229,34,45,0.08);
+        }
+        .btn-icon {
+            padding: 8px 14px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: white;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.15s, border-color 0.15s;
+            white-space: nowrap;
+            font-weight: 600;
+            color: var(--fg);
+        }
+        .btn-icon:hover { background: #f1f5f9; border-color: #cbd5e1; }
+        .btn-icon.accent { background: var(--accent); color: white; border-color: var(--accent); }
+        .btn-icon.accent:hover { background: var(--accent-hover); }
+
+        /* ── Tabela de contatos ───────────────────────────────── */
+        .contacts-table-wrap { padding: 16px 28px 0; }
+        .contacts-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .contacts-table th {
+            text-align: left;
+            padding: 8px 12px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--fg-muted);
+            border-bottom: 1px solid var(--border);
+        }
+        .contacts-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+        .contacts-table tr:last-child td { border-bottom: none; }
+        .empty-state { color: var(--fg-muted); font-style: italic; text-align: center; padding: 24px !important; }
+        .role-select {
+            padding: 5px 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 12px;
+            background: white;
+            cursor: pointer;
+        }
+        .btn-remove {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        .btn-remove:hover { color: var(--accent); background: #fff0f0; }
+
+        /* ── Formulário manual (colapsável) ───────────────────── */
+        .manual-form-wrap {
+            margin: 12px 28px 0;
+            border: 1px dashed var(--border);
+            border-radius: 8px;
+            background: #fafbfc;
+            overflow: hidden;
+        }
+        .manual-form-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--fg-muted);
+            cursor: pointer;
+            user-select: none;
+        }
+        .manual-form-header:hover { background: #f1f5f9; }
+        .manual-form-body {
+            display: none;
+            padding: 16px;
+        }
+        .manual-form-body .form-grid { padding: 0; gap: 12px; }
+        .manual-form-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            padding: 12px 16px;
+            border-top: 1px solid var(--border);
+        }
+
+        /* ── Accordions de contatos ───────────────────────────── */
+        .contacts-accordions { padding: 12px 28px 28px; }
+        .contact-accordion {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            overflow: hidden;
+        }
+        .accordion-header {
+            width: 100%;
+            text-align: left;
+            background: white;
+            border: none;
+            padding: 12px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--fg);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .accordion-header:hover { background: #f8fafc; }
+        .acc-arrow { font-size: 11px; color: var(--fg-muted); min-width: 12px; }
+        .badge-manual {
+            margin-left: auto;
+            background: #eff6ff;
+            color: #3b82f6;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .badge-preset {
+            margin-left: auto;
+            background: #f0fdf4;
+            color: #16a34a;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .accordion-body {
+            display: none;
+            border-top: 1px solid var(--border);
+            background: #fafbfc;
+        }
+        .accordion-body .form-grid { padding: 16px; gap: 12px; }
+        .readonly-field {
+            padding: 9px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
+            color: var(--fg);
+            background: #f8fafc;
+            font-family: inherit;
+            cursor: default;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+    <header class="navbar">
+        <div class="nav-left">
+            <button class="logo-link">
+                <img src="logo.png" alt="CDHU" class="logo-img" onerror="this.style.display='none'">
+            </button>
+            <div class="dropdown">
+                <button class="dropbtn">Arquivo <span class="chevron">▾</span></button>
+                <div class="dropdown-content">
+                    <a href="#">Continuar depois</a>
+                    <a href="#">Exportar .xml</a>
+                </div>
+            </div>
+            <div class="dropdown">
+                <button class="dropbtn">Catálogo Geohab <span class="chevron">▾</span></button>
+                <div class="dropdown-content">
+                    <a href="#">Editar Metadados</a>
+                    <a href="#">Publicar no Catálogo</a>
+                </div>
+            </div>
+            <div class="dropdown">
+                <button class="dropbtn">GeoServer <span class="chevron">▾</span></button>
+                <div class="dropdown-content">
+                    <a href="#">Publicar Camada</a>
+                </div>
+            </div>
+        </div>
+        <div class="nav-right">
+            <div class="user-badge" style="display:none;">
+                <span class="user-name">Usuário</span>
+                <div class="status-dot"></div>
+            </div>
+            <button class="btn btn-primary">Entrar</button>
+        </div>
+    </header>
+
+    <main id="app-container">
+        <div class="editor-panel">
+
+            <!-- ABAS -->
+            <div class="form-tabs">
+                <button class="tab-link active"  onclick="showTab('identificacao', this)">Identificação</button>
+                <button class="tab-link"          onclick="showTab('classificacao', this)">Classificação</button>
+                <button class="tab-link"          onclick="showTab('extensao',      this)">Extensão</button>
+                <button class="tab-link"          onclick="showTab('contato',       this)">Contato</button>
+            </div>
+
+            <!-- ══ TAB 1: IDENTIFICAÇÃO ══════════════════════════════ -->
+            <div id="tab-identificacao" class="tab-content active">
+                <div class="form-grid">
+
+                    <div class="form-group span-2">
+                        <label for="f-title">Título <span class="req">*</span></label>
+                        <input id="f-title" type="text" placeholder="Título do conjunto de dados...">
+                    </div>
+
+                    <div class="form-group span-2">
+                        <label>Data e hora do dado <span class="req">*</span></label>
+                        <div class="inline-row">
+                            <select id="f-dateType">
+                                <option value="creation">Criação</option>
+                                <option value="publication">Publicação</option>
+                                <option value="revision">Revisão</option>
+                            </select>
+                            <input id="f-date" type="datetime-local">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="f-edition">Edição</label>
+                        <input id="f-edition" type="number" value="0" min="0"
+                            oninput="toggleEditionDate(this.value)">
+                    </div>
+                    <div class="form-group">
+                        <label for="f-date_edition">Data da Edição</label>
+                        <input id="f-date_edition" type="datetime-local" disabled>
+                    </div>
+
+                    <div class="form-group span-2">
+                        <label for="f-abstract">Resumo <span class="req">*</span></label>
+                        <textarea id="f-abstract" rows="4" placeholder="Descreva o conjunto de dados..."></textarea>
+                    </div>
+
+                    <div class="form-group span-2">
+                        <label for="f-purpose">Finalidade</label>
+                        <textarea id="f-purpose" rows="3" placeholder="Descreva processos, objetivos e uso previsto..."></textarea>
+                    </div>
+
+                    <div class="form-group span-2">
+                        <label for="f-credit">Crédito <span class="req">*</span></label>
+                        <input id="f-credit" type="text" placeholder="Técnico responsável / organização creditada">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="f-status_codeListValue">Status <span class="req">*</span></label>
+                        <select id="f-status_codeListValue">
+                            <option value="">— Selecione —</option>
+                            <option value="historicalArchive">Arquivo Antigo</option>
+                            <option value="completed">Concluído</option>
+                            <option value="onGoing">Contínuo</option>
+                            <option value="underDevelopment">Em Desenvolvimento</option>
+                            <option value="required">Necessário</option>
+                            <option value="obsolete">Obsoleto</option>
+                            <option value="planned">Planejado</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="f-MD_Keywords">Palavras-chave <span class="req">*</span></label>
+                        <input id="f-MD_Keywords" type="text" placeholder="habitação, CDHU, São Paulo">
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ══ TAB 2: CLASSIFICAÇÃO ═══════════════════════════════ -->
+            <div id="tab-classificacao" class="tab-content">
+                <div class="form-grid">
+
+                    <div class="form-group">
+                        <label for="f-MD_SpatialRepresentationTypeCode">Tipo de Representação Espacial <span class="req">*</span></label>
+                        <select id="f-MD_SpatialRepresentationTypeCode">
+                            <option value="">— Selecione —</option>
+                            <option value="vector">Vetor</option>
+                            <option value="grid">Grid | Raster</option>
+                            <option value="textTable">Tabela de texto</option>
+                            <option value="tin">Rede triangular irregular (TIN)</option>
+                            <option value="stereoscopicModel">Modelo estereofônico</option>
+                            <option value="video">Vídeo</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="f-topicCategory">Categoria Temática <span class="req">*</span></label>
+                        <select id="f-topicCategory">
+                            <option value="">— Selecione —</option>
+                            <option value="boundaries">Limites Administrativos</option>
+                            <option value="planningCadastre">Planejamento e Cadastro</option>
+                            <option value="society">Sociedade e Cultura</option>
+                            <option value="structure">Infraestrutura ou Edificação</option>
+                            <option value="transportation">Transportes</option>
+                            <option value="location">Localização</option>
+                            <option value="imageryBaseMapsEarthCover">Mapas ou imagens de Satélite</option>
+                            <option value="elevation">Altimetria, Batimetria ou Topografia</option>
+                            <option value="health">Saúde</option>
+                            <option value="inlandWaters">Águas Interiores</option>
+                            <option value="economy">Economia</option>
+                            <option value="biota">Biotipos</option>
+                            <option value="climatologyMeteorologyAtmosphere">Climatologia ou Meteorologia</option>
+                            <option value="geoscientificInformation">Informação GeoCientífica</option>
+                            <option value="intelligenceMilitary">Informação Militar</option>
+                            <option value="environment">Ambiente</option>
+                            <option value="oceans">Oceanos</option>
+                            <option value="utilitiesCommunication">Infraestruturas de Comunicação</option>
+                            <option value="farming">Agricultura, pesca ou pecuária</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="f-hierarchyLevel">Nível Hierárquico <span class="req">*</span></label>
+                        <select id="f-hierarchyLevel">
+                            <option value="dataset">Conjunto de dados</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="f-LanguageCode">Idioma <span class="req">*</span></label>
+                        <select id="f-LanguageCode">
+                            <option value="por">🇧🇷 Português</option>
+                            <option value="eng">🇺🇸 Inglês</option>
+                            <option value="spa">🇪🇸 Espanhol</option>
+                            <option value="fra">🇫🇷 Francês</option>
+                            <option value="ger">🇩🇪 Alemão</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="f-characterSet">Codificação de Caracteres</label>
+                        <select id="f-characterSet">
+                            <option value="utf8">UTF-8</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="f-thumbnail_url">URL da Miniatura</label>
+                        <input id="f-thumbnail_url" type="text" placeholder="https://...">
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ══ TAB 3: EXTENSÃO ════════════════════════════════════ -->
+            <div id="tab-extensao" class="tab-content">
+                <div class="form-grid">
+                    <div class="form-group span-2">
+                        <label>Coordenadas Geográficas (WGS 84) <span class="req">*</span></label>
+                        <div class="bbox-grid">
+                            <div></div>
+                            <div class="form-group">
+                                <label for="f-northBoundLatitude">Norte</label>
+                                <input id="f-northBoundLatitude" type="number" step="0.000001" placeholder="-19.0">
+                            </div>
+                            <div></div>
+                            <div class="form-group">
+                                <label for="f-westBoundLongitude">Oeste</label>
+                                <input id="f-westBoundLongitude" type="number" step="0.000001" placeholder="-53.0">
+                            </div>
+                            <div class="bbox-center">🗺️</div>
+                            <div class="form-group">
+                                <label for="f-eastBoundLongitude">Leste</label>
+                                <input id="f-eastBoundLongitude" type="number" step="0.000001" placeholder="-44.0">
+                            </div>
+                            <div></div>
+                            <div class="form-group">
+                                <label for="f-southBoundLatitude">Sul</label>
+                                <input id="f-southBoundLatitude" type="number" step="0.000001" placeholder="-26.0">
+                            </div>
+                            <div></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="f-dateStamp">Data do Metadado</label>
+                        <input id="f-dateStamp" type="datetime-local">
+                    </div>
+                    <div class="form-group">
+                        <label for="f-spatialResolution_denominator">Escala (denominador)</label>
+                        <input id="f-spatialResolution_denominator" type="text" placeholder="ex: 25000">
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ TAB 4: CONTATO ══════════════════════════════════════ -->
+            <div id="tab-contato" class="tab-content">
+
+                <!-- Barra de busca -->
+                <div class="contacts-toolbar">
+                    <input id="contact-search" type="text" placeholder="Buscar organização no catálogo Geohab..."
+                        onkeydown="if(event.key==='Enter') searchContacts()">
+                    <button class="btn-icon" onclick="searchContacts()">🔍 Buscar</button>
+                    <button class="btn-icon accent" onclick="toggleManualForm()">+ Manual</button>
+                </div>
+
+                <!-- Formulário de adição manual (colapsável) -->
+                <div class="manual-form-wrap" id="manual-form-wrap" style="display:none;">
+                    <div class="manual-form-header" onclick="toggleManualForm()">
+                        <span>➕ Novo contato manual</span>
+                        <span style="font-size:18px; font-weight:300;">×</span>
+                    </div>
+                    <div class="manual-form-body">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Sigla <span class="req">*</span></label>
+                                <input id="mf-sigla" type="text" placeholder="ex: CDHU">
+                            </div>
+                            <div class="form-group">
+                                <label>Organização <span class="req">*</span></label>
+                                <input id="mf-org" type="text" placeholder="Nome completo">
+                            </div>
+                            <div class="form-group">
+                                <label>E-mail</label>
+                                <input id="mf-email" type="email" placeholder="contato@exemplo.com">
+                            </div>
+                            <div class="form-group">
+                                <label>Regra</label>
+                                <select id="mf-role">
+                                    <option value="">— Selecione —</option>
+                                    <option value="owner">Dono</option>
+                                    <option value="author">Autor</option>
+                                    <option value="processor">Organizador</option>
+                                    <option value="distributor">Distribuidor</option>
+                                    <option value="custodian">Depositário</option>
+                                    <option value="resourceProvider">Fornecedor de recurso</option>
+                                    <option value="principalInvestigator">Investigador principal</option>
+                                    <option value="originator">Originador</option>
+                                    <option value="pointOfContact">Ponto de contato</option>
+                                    <option value="publisher">Publicador</option>
+                                    <option value="user">Utilizador</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Cargo / Departamento</label>
+                                <input id="mf-position" type="text">
+                            </div>
+                            <div class="form-group">
+                                <label>Telefone</label>
+                                <input id="mf-phone" type="text" placeholder="(11) 0000-0000">
+                            </div>
+                            <div class="form-group span-2">
+                                <label>Endereço</label>
+                                <input id="mf-address" type="text" placeholder="Rua, número">
+                            </div>
+                            <div class="form-group">
+                                <label>Cidade</label>
+                                <input id="mf-city" type="text">
+                            </div>
+                            <div class="form-group">
+                                <label>Estado</label>
+                                <select id="mf-state">
+                                    <option value="">—</option>
+                                    <option value="SP">São Paulo</option>
+                                    <option value="AC">Acre</option><option value="AL">Alagoas</option>
+                                    <option value="AM">Amazonas</option><option value="BA">Bahia</option>
+                                    <option value="CE">Ceará</option><option value="DF">Distrito Federal</option>
+                                    <option value="ES">Espírito Santo</option><option value="GO">Goiás</option>
+                                    <option value="MA">Maranhão</option><option value="MG">Minas Gerais</option>
+                                    <option value="MT">Mato Grosso</option><option value="MS">Mato Grosso do Sul</option>
+                                    <option value="PA">Pará</option><option value="PB">Paraíba</option>
+                                    <option value="PR">Paraná</option><option value="PE">Pernambuco</option>
+                                    <option value="PI">Piauí</option><option value="RJ">Rio de Janeiro</option>
+                                    <option value="RN">Rio Grande do Norte</option><option value="RS">Rio Grande do Sul</option>
+                                    <option value="RO">Rondônia</option><option value="RR">Roraima</option>
+                                    <option value="SC">Santa Catarina</option><option value="SE">Sergipe</option>
+                                    <option value="TO">Tocantins</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>CEP</label>
+                                <input id="mf-zip" type="text" placeholder="00000-000">
+                            </div>
+                            <div class="form-group">
+                                <label>País</label>
+                                <input id="mf-country" type="text" value="Brasil">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="manual-form-footer">
+                        <button class="btn-icon" onclick="toggleManualForm()">Cancelar</button>
+                        <button class="btn-icon accent" onclick="submitManualContact()">Adicionar contato</button>
+                    </div>
+                </div>
+
+                <!-- Tabela resumo -->
+                <div class="contacts-table-wrap">
+                    <table class="contacts-table">
+                        <thead>
+                            <tr>
+                                <th>Nome da organização</th>
+                                <th>Sigla</th>
+                                <th>E-mail</th>
+                                <th>Regra</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="contacts-tbody">
+                            <tr>
+                                <td colspan="5" class="empty-state">
+                                    Nenhum contato. Use a busca ou clique em <b>+ Manual</b>.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Accordions de detalhes -->
+                <div class="contacts-accordions" id="contacts-accordions"></div>
+
+            </div>
+            <!-- ═══════════════════════════════════════════════════════ -->
+
+        </div>
+    </main>
+
+    <footer class="footer">
+        <span>Se problemas, abrir um ticket no <a href="https://cda.cdhu.sp.gov.br" target="_blank">CDA</a></span>
+        <span>v1.0.4 (Beta)</span>
+    </footer>
+
+    <script>
+        // ─── Abas ─────────────────────────────────────────────────────
+        function showTab(tabId, btn) {
+            document.querySelectorAll(".tab-content").forEach(function (el) { el.classList.remove("active"); });
+            document.querySelectorAll(".tab-link").forEach(function (el) { el.classList.remove("active"); });
+            var p = document.getElementById("tab-" + tabId);
+            if (p) p.classList.add("active");
+            if (btn) btn.classList.add("active");
+        }
+
+        // ─── Edição condicional ────────────────────────────────────────
+        function toggleEditionDate(val) {
+            var el = document.getElementById("f-date_edition");
+            if (!el) return;
+            var hasValue = parseInt(val, 10) > 0;
+            el.disabled = !hasValue;
+            if (!hasValue) el.value = "";
+        }
+
+        // ─── Contatos: estado ──────────────────────────────────────────
+        var contacts = [];
+
+        var ROLE_LABELS = {
+            "owner": "Dono", "author": "Autor", "processor": "Organizador",
+            "distributor": "Distribuidor", "custodian": "Depositário",
+            "resourceProvider": "Fornecedor de recurso",
+            "principalInvestigator": "Investigador principal",
+            "originator": "Originador", "pointOfContact": "Ponto de contato",
+            "publisher": "Publicador", "user": "Utilizador"
+        };
+
+        var ROLE_OPTIONS = Object.keys(ROLE_LABELS).map(function(v) {
+            return { value: v, label: ROLE_LABELS[v] };
+        });
+
+        function buildRoleSelect(idx, current, alwaysEditable) {
+            var opts = '<option value="">— Selecione —</option>' +
+                ROLE_OPTIONS.map(function(r) {
+                    return '<option value="' + r.value + '"' + (r.value === current ? ' selected' : '') + '>' + r.label + '</option>';
+                }).join('');
+            return '<select class="role-select" onchange="updateRole(' + idx + ', this.value)">' + opts + '</select>';
+        }
+
+        function updateRole(idx, val) {
+            if (contacts[idx]) contacts[idx].data.role = val;
+        }
+
+        // ─── Contatos: render ──────────────────────────────────────────
+        function renderContacts() {
+            var tbody = document.getElementById("contacts-tbody");
+            var accDiv = document.getElementById("contacts-accordions");
+            if (!tbody) return;
+
+            if (contacts.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Nenhum contato. Use a busca ou clique em <b>+ Manual</b>.</td></tr>';
+                if (accDiv) accDiv.innerHTML = "";
+                return;
+            }
+
+            tbody.innerHTML = contacts.map(function(c, idx) {
+                return '<tr>' +
+                    '<td>' + (c.data.org || '—') + '</td>' +
+                    '<td>' + (c.data.sigla || '—') + '</td>' +
+                    '<td>' + (c.data.email || '—') + '</td>' +
+                    '<td>' + buildRoleSelect(idx, c.data.role) + '</td>' +
+                    '<td><button class="btn-remove" onclick="removeContact(' + idx + ')" title="Remover">✕</button></td>' +
+                    '</tr>';
+            }).join('');
+
+            if (accDiv) {
+                accDiv.innerHTML = contacts.map(function(c, idx) {
+                    return buildAccordion(c, idx);
+                }).join('');
+            }
+        }
+
+        function buildAccordion(c, idx) {
+            var d = c.data;
+            var label = 'Contato ' + (idx + 1) + (d.sigla ? ' — ' + d.sigla : '');
+            var badge = c.isManual
+                ? '<span class="badge-manual">Manual</span>'
+                : '<span class="badge-preset">Catálogo</span>';
+
+            var fields = buildAccordionFields(d, idx, c.isManual);
+
+            return '<div class="contact-accordion">' +
+                '<button class="accordion-header" onclick="toggleAccordion(' + idx + ')">' +
+                '<span class="acc-arrow" id="arr-' + idx + '">▸</span>' +
+                label + badge +
+                '</button>' +
+                '<div class="accordion-body" id="acc-body-' + idx + '">' +
+                '<div class="form-grid">' + fields + '</div>' +
+                '</div>' +
+                '</div>';
+        }
+
+        function field(label, val, editable, inputId) {
+            var input = editable
+                ? '<input id="' + inputId + '" type="text" value="' + (val || '') + '">'
+                : '<div class="readonly-field">' + (val || '—') + '</div>';
+            return '<div class="form-group"><label>' + label + '</label>' + input + '</div>';
+        }
+
+        function buildAccordionFields(d, idx, isManual) {
+            var ro = !isManual;
+            var roleOpts = '<option value="">— Selecione —</option>' +
+                ROLE_OPTIONS.map(function(r) {
+                    return '<option value="' + r.value + '"' + (r.value === d.role ? ' selected' : '') + '>' + r.label + '</option>';
+                }).join('');
+            var roleField = '<div class="form-group"><label>Regra</label>' +
+                '<select class="role-select" style="padding:9px 12px;border-radius:6px;font-size:14px;border:1px solid var(--border)" ' +
+                'onchange="updateRole(' + idx + ', this.value)">' + roleOpts + '</select></div>';
+
+            return field('Sigla', d.sigla, isManual, 'acc-' + idx + '-sigla') +
+                field('Organização', d.org, isManual, 'acc-' + idx + '-org') +
+                roleField +
+                field('E-mail', d.email, isManual, 'acc-' + idx + '-email') +
+                field('Cargo', d.position, isManual, 'acc-' + idx + '-position') +
+                field('Telefone', d.phone, isManual, 'acc-' + idx + '-phone') +
+                '<div class="form-group span-2">' +
+                    '<label>Endereço</label>' +
+                    (isManual ? '<input id="acc-' + idx + '-address" type="text" value="' + (d.address || '') + '">'
+                              : '<div class="readonly-field">' + (d.address || '—') + '</div>') +
+                '</div>' +
+                field('Cidade', d.city, isManual, 'acc-' + idx + '-city') +
+                field('CEP', d.zip, isManual, 'acc-' + idx + '-zip') +
+                field('País', d.country, isManual, 'acc-' + idx + '-country');
+        }
+
+        function toggleAccordion(idx) {
+            var body = document.getElementById("acc-body-" + idx);
+            var arr  = document.getElementById("arr-" + idx);
+            if (!body) return;
+            var open = body.style.display === "block";
+            body.style.display = open ? "none" : "block";
+            if (arr) arr.textContent = open ? "▸" : "▾";
+        }
+
+        function removeContact(idx) {
+            contacts.splice(idx, 1);
+            renderContacts();
+        }
+
+        // ─── Busca (simulada no preview) ───────────────────────────────
+        function searchContacts() {
+            var q = document.getElementById("contact-search").value.trim();
+            if (!q) return;
+            // Mock de retorno do GeoNetwork para preview
+            contacts.push({
+                isManual: false,
+                data: {
+                    sigla: "CDHU",
+                    org: "Companhia de Desenvolvimento Habitacional e Urbano do Estado de São Paulo",
+                    email: "geoprocessamento@cdhu.sp.gov.br",
+                    role: "pointOfContact",
+                    position: "Gerência de Geoprocessamento",
+                    phone: "(11) 3132-5000",
+                    address: "Rua Boa Vista, 170",
+                    city: "São Paulo",
+                    state: "SP",
+                    zip: "01014-000",
+                    country: "Brasil"
+                }
+            });
+            document.getElementById("contact-search").value = "";
+            renderContacts();
+        }
+
+        // ─── Formulário manual ─────────────────────────────────────────
+        function toggleManualForm() {
+            var wrap = document.getElementById("manual-form-wrap");
+            if (!wrap) return;
+            wrap.style.display = wrap.style.display === "none" ? "block" : "none";
+        }
+
+        function submitManualContact() {
+            var g = function(id) { var el = document.getElementById("mf-" + id); return el ? el.value.trim() : ""; };
+            var sigla = g("sigla"), org = g("org");
+            if (!sigla && !org) { alert("Informe ao menos Sigla ou Organização."); return; }
+            contacts.push({
+                isManual: true,
+                data: {
+                    sigla: sigla, org: org,
+                    email: g("email"), role: g("role"),
+                    position: g("position"), phone: g("phone"),
+                    address: g("address"), city: g("city"),
+                    state: g("state"), zip: g("zip"),
+                    country: g("country") || "Brasil"
+                }
+            });
+            ["sigla","org","email","role","position","phone","address","city","state","zip"].forEach(function(f) {
+                var el = document.getElementById("mf-" + f); if (el) el.value = "";
+            });
+            document.getElementById("mf-country").value = "Brasil";
+            toggleManualForm();
+            renderContacts();
+            // Abre o accordion recém-criado
+            setTimeout(function() { toggleAccordion(contacts.length - 1); }, 50);
+        }
+    </script>
+
+</body>
+</html>

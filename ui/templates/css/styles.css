@@ -1,13 +1,13 @@
 :root {
-    --accent:       #e5222d;
+    --accent: #e5222d;
     --accent-hover: #c0111b;
-    --bg:           #f8fafc;
-    --navbar-bg:    #ffffff;
-    --fg:           #1e293b;
-    --fg-muted:     #64748b;
-    --border:       #e2e8f0;
-    --shadow:       0 1px 3px rgba(0,0,0,0.1);
-    --radius:       8px;
+    --bg: #f8fafc;
+    --navbar-bg: #ffffff;
+    --fg: #1e293b;
+    --fg-muted: #64748b;
+    --border: #e2e8f0;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    --radius: 8px;
 }
 
 * {
@@ -38,7 +38,8 @@ body {
     z-index: 100;
 }
 
-.nav-left, .nav-right {
+.nav-left,
+.nav-right {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -84,7 +85,7 @@ body {
     position: absolute;
     background-color: #fff;
     min-width: 180px;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
     border-radius: 8px;
     border: 1px solid var(--border);
     padding: 8px 0;
@@ -127,6 +128,11 @@ body {
 
 .btn-primary {
     background-color: var(--accent);
+    color: white;
+}
+
+.btn-login {
+    background-color: black;
     color: white;
 }
 
