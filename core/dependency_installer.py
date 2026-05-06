@@ -46,12 +46,18 @@ class DependencyInstaller(QThread):
 
     def run(self):
         python = _find_python_executable()
+        # No Windows, impede abertura de janela de console (tela preta)
+        creation_flags = 0
+        if os.name == 'nt':
+            creation_flags = subprocess.CREATE_NO_WINDOW
+
         try:
             result = subprocess.run(
                 [python, "-m", "pip", "install", self._package, "--quiet"],
                 capture_output=True,
                 text=True,
-                timeout=300  # 5 min: redes corporativas podem ser lentas
+                timeout=300,
+                creationflags=creation_flags
             )
             if result.returncode == 0:
                 self.install_success.emit(self._package)
@@ -86,6 +92,11 @@ class MultiPackageInstaller(QThread):
     def run(self):
         total  = len(self._packages)
         python = _find_python_executable()
+        
+        # No Windows, impede abertura de janela de console (tela preta)
+        creation_flags = 0
+        if os.name == 'nt':
+            creation_flags = subprocess.CREATE_NO_WINDOW
 
         for idx, pkg in enumerate(self._packages):
             self.package_started.emit(pkg)
@@ -95,7 +106,8 @@ class MultiPackageInstaller(QThread):
                     [python, "-m", "pip", "install", pkg, "--quiet"],
                     capture_output=True,
                     text=True,
-                    timeout=300
+                    timeout=300,
+                    creationflags=creation_flags
                 )
                 if result.returncode == 0:
                     self.package_done.emit(pkg)
