@@ -670,12 +670,9 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             return
 
         # --- LOGIN UNIFICADO ---
-        # Verifica deps antes de tentar importar QWebEngineView
-        from .core.env_checker import missing_packages
-        pkgs = missing_packages()
-        if pkgs:
-            from .ui.setup_dialog import SetupDialog
-            SetupDialog(pkgs, parent=self).exec_()
+        # 1. Verifica dependências (msal)
+        from .core.env_checker import check_and_run_setup
+        if not check_and_run_setup(parent=self):
             return
 
         from .ui.login_dialog import LoginDialog

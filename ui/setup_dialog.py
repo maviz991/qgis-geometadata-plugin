@@ -89,7 +89,7 @@ class SetupDialog(QDialog):
         root.addSpacing(20)
 
         # Título
-        title = QLabel("Bem-vindo ao GeoMetadata")
+        title = QLabel("Bem-vindo ao Geohab Plugin")
         title.setObjectName("Title")
         title.setAlignment(Qt.AlignCenter)
         root.addWidget(title)
@@ -139,10 +139,12 @@ class SetupDialog(QDialog):
         root.addSpacing(14)
 
         # Status geral
-        self._status_lbl = QLabel("Iniciando...")
-        self._status_lbl.setObjectName("Status")
+        self._status_lbl = QLabel("Verificando ambiente...")
+        self._status_lbl.setObjectName("StatusLbl")
         self._status_lbl.setAlignment(Qt.AlignCenter)
         self._status_lbl.setWordWrap(True)
+        self._status_lbl.setOpenExternalLinks(True)
+        self._status_lbl.setTextInteractionFlags(Qt.TextBrowserInteraction)
         root.addWidget(self._status_lbl)
         root.addSpacing(20)
 
@@ -199,16 +201,17 @@ class SetupDialog(QDialog):
             msg = (
                 f"Falha ao carregar a interface visual.\n\n"
                 f"Isso ocorre por uma incompatibilidade do ambiente QGIS.\n"
-                f"SOLUÇÃO: Abra um ticket no CDA (cda.cdhu.sp.gov.br)."
+                f"SOLUÇÃO: Abra um ticket no CDA (<a href='https://cda.cdhu.sp.gov.br'>cda.cdhu.sp.gov.br</a>)."
             )
         else:
             msg = (
-                f"Falha ao configurar componente de login.\n"
-                f"Por favor, abra um ticket no CDA (cda.cdhu.sp.gov.br)."
+                "Falha ao configurar componente de login.<br><br>"
+                "Por favor, entre em contato com o suporte técnico no "
+                "<a href='https://cda.cdhu.sp.gov.br'>CDA (cda.cdhu.sp.gov.br)</a>."
             )
 
         short = error[:120] + "..." if len(error) > 120 else error
-        self._status_lbl.setText(f"{msg}\n\nDetalhe: {short}")
+        self._status_lbl.setText(f"{msg}<br><br><b>Detalhe:</b> {short}")
         self._btn.setVisible(True)
 
     def _on_progress(self, done: int, total: int):

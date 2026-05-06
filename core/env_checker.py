@@ -11,6 +11,9 @@ import os
 import site
 from typing import List
 
+# Trava global para evitar múltiplos SetupDialogs abertos simultaneamente
+_setup_dialog_open = False
+
 # ---------------------------------------------------------------------------
 # FIX: Injeção de Path para Windows User Site-Packages
 # ---------------------------------------------------------------------------
@@ -89,8 +92,32 @@ def missing_packages() -> List[str]:
     return pkgs
 
 
+def check_and_run_setup(parent=None):
+    """
+    Verifica se há pacotes faltando e abre o SetupDialog de forma segura
+    (evitando duplicatas).
+    """
+    global _setup_dialog_open
+    
+    if _setup_dialog_open:
+        return False
+        
+    pkgs = missing_packages()
+    if not pkgs:
+        return True
+        
+    _setup_dialog_open = True
+    try:
+        from ..ui.setup_dialog import SetupDialog
+        dlg = SetupDialog(pkgs, parent=parent)
+        dlg.exec_()
+        # Após o exec, verificamos novamente se ainda falta algo
+        return not bool(missing_packages())
+    finally:
+        _setup_dialog_open = False
+
 # Rótulos amigáveis exibidos na SetupDialog
 PACKAGE_LABELS = {
-    "msal":          "Login corporativo (Entra ID)",
+    "msal":          "Login corporativo",
     "PyQtWebEngine": "Interface visual nativa",
 }

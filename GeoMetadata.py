@@ -173,22 +173,8 @@ class GeoMetadata:
         QTimer.singleShot(3000, self._check_and_install_dependencies)
 
     def _check_and_install_dependencies(self):
-        if self._setup_in_progress:
-            return
-            
-        from .core.env_checker import missing_packages
-        pkgs = missing_packages()
-        
-        if not pkgs:
-            return
-
-        self._setup_in_progress = True
-        try:
-            from .ui.setup_dialog import SetupDialog
-            dlg = SetupDialog(pkgs, parent=self.iface.mainWindow())
-            dlg.exec_()
-        finally:
-            self._setup_in_progress = False
+        from .core.env_checker import check_and_run_setup
+        check_and_run_setup(parent=self.iface.mainWindow())
 
 
     def unload(self):
