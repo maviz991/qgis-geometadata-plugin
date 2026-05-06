@@ -364,4 +364,44 @@ O usuário enfrentava um loop infinito no `SetupDialog` causado por um falso pos
 ### Resultados
 - Loop de instalação resolvido.
 - Interface HTML funcionando com scrollbar nativa e design premium.
-- Estabilidade garantida via workers em `QThread` para não travar a UI durante o login.
+- [x] Estabilidade garantida via workers em `QThread` para não travar a UI durante o login.
+
+---
+
+## Registro 6 — Refinamento de UX e Estabilização do Ambiente de Instalação (06/05/2026)
+
+### Contexto
+Após a ativação da interface HTML, foram identificados pontos de atrito na experiência do usuário, como mensagens excessivamente técnicas, abertura de múltiplos diálogos e a exibição de janelas de terminal ("tela preta") durante a instalação de dependências.
+
+### Decisões Tomadas
+
+1. **Comunicação Humanizada:** 
+    - Removidos nomes técnicos (`msal`, `PyQtWebEngine`) das mensagens de interface. 
+    - Substituídos por termos amigáveis: "Login corporativo" e "Interface visual nativa".
+    - Botão de instalação alterado para "Configurar ambiente de login".
+2. **Integração de Suporte (CDA):** 
+    - Inclusão de links HTML clicáveis para `https://cda.cdhu.sp.gov.br` em todos os diálogos de erro.
+    - Configurado `setOpenExternalLinks(True)` no `SetupDialog` para abertura automática no navegador do sistema.
+3. **Instalação Silenciosa (Stealth Mode):** 
+    - Implementada a flag `subprocess.CREATE_NO_WINDOW` no `DependencyInstaller`. 
+    - Isso suprime a janela de console do Windows durante o `pip install`, mantendo o foco do usuário apenas na barra de progresso do plugin.
+4. **Centralização e Travas de UI:** 
+    - Criada a trava global `_setup_dialog_open` no `env_checker.py`.
+    - Implementada a função `check_and_run_setup()` para garantir que apenas uma instância do diálogo de configuração seja aberta, independente de quem a dispare (timer ou botão de login).
+
+### Arquivos Modificados
+
+| Arquivo | Mudança |
+|---|---|
+| `core/env_checker.py` | Trava global, rótulos amigáveis e função `check_and_run_setup`. |
+| `core/dependency_installer.py` | Implementação de `CREATE_NO_WINDOW` para instalação silenciosa. |
+| `ui/setup_dialog.py` | Título "Geohab Plugin", links clicáveis e mensagens humanizadas. |
+| `ui/templates/login.html` | Mensagens de suporte e link para o CDA integrados. |
+| `ui/web_bridge.py` | Mensagens de erro com link HTML para o CDA. |
+| `GeoMetadata.py` | Migração para a chamada centralizada de setup. |
+| `GeoMetadata_dialog.py` | Migração para a chamada centralizada de setup no botão de login. |
+
+### Resultados
+- Experiência de usuário polida e profissional.
+- Processo de configuração totalmente em background (sem janelas invasivas).
+- Canal de suporte (CDA) acessível diretamente pela interface.

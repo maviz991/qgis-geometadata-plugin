@@ -46,14 +46,25 @@ from qgis.core import (
 # --- 3. Imports de Módulos Locais do Plugin ---
 from .core import xml_generator, xml_parser
 from .ui.form_manager import FormManager
-from .ui.dynamic_form import DynamicForm
 from .core.metadata_service import MetadataService
 from .core.persistence_service import PersistenceService
 from . import resources
 from .core.plugin_config import config_loader
 from .ui.styles import get_stylesheet
-from .ui.geoserver_panel import GeoServerPanel
-from .ui.home_panel import HomePanel
+
+# WebEngine imports (Robust detection)
+try:
+    from qgis.PyQt.QtWebEngineWidgets import QWebEngineView
+    from qgis.PyQt.QtWebChannel import QWebChannel
+except ImportError:
+    try:
+        from PyQt5.QtWebEngineWidgets import QWebEngineView
+        from PyQt5.QtWebChannel import QWebChannel
+    except ImportError:
+        QWebEngineView = None
+        QWebChannel = None
+
+from .ui.main_bridge import MainBridge
 
 
 # --- 4. Helpers de Estilo ---
@@ -253,14 +264,15 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self._setup_main_window()
         self._build_ui_structure()
         
-        # --- Inicialização dos Microsserviços e Bridge (AGORA SEGUROS) ---
+        # --- Inicialização dos Microsserviços ---
+        from .core.metadata_service import MetadataService
+        from .core.persistence_service import PersistenceService
         self.metadata_service = MetadataService(self.plugin.api_session)
         self.persistence_service = PersistenceService(self.iface)
-        self.form_manager = FormManager(self.ui, self, self.contatos_predefinidos)
+        # O FormManager será inicializado sob demanda ou vinculado à bridge
+        self.ui = None # Será atualizado quando o editor HTML carregar
 
         self._setup_connections_and_logic()
-        img_dir = os.path.join(os.path.dirname(__file__), 'img').replace('\\', '/')
-        self.setStyleSheet(get_stylesheet(img_dir))
 
         # Força estilo Fusion em TODOS os widgets para o QSS ser respeitado no Windows
         from qgis.PyQt.QtWidgets import (
@@ -276,18 +288,6 @@ class GeoMetadataDialog(QtWidgets.QDialog):
                                  QTabWidget, QTabBar):
                 for w in self.findChildren(widget_class):
                     w.setStyle(fusion)
-
-        # --- CONFIGURAÇÃO DO LINK DE SUPORTE ---
-        # 1. Define o texto como Rich Text para permitir links HTML
-        self.ui.label_support_link.setTextFormat(Qt.RichText)
-        self.ui.label_support_link.setText(
-            '<a href="https://stor.cdhu.sp.gov.br/geo/publico/html/guide_user.html" style="color: #888; text-decoration: none;">'
-            'Precisa de ajuda? Acesse o Manual do Usuário'
-            '</a>'
-        )
-        # 2. Permite que o QLabel interaja com os links
-        self.ui.label_support_link.setOpenExternalLinks(True)
-        self.ui.label_support_link.setCursor(QCursor(Qt.PointingHandCursor))
         
     def _load_contacts(self):
         """Lê o arquivo contacts.json e carrega os dados em self.contatos_predefinidos."""
@@ -308,52 +308,32 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.setObjectName("GeoMetadataDialog")
         self.setWindowTitle("Geohab Plugin | GeoMetadata")
         self.setMinimumSize(1250, 620)
-        #self.setMaximumSize(1640, 800)
-        #self.setStyleSheet(STYLE_SHEET)
-        #self.resize(1250, 620)
 
     def _build_ui_structure(self):
-        """Cria e organiza os widgets principais da UI (header + QStackedWidget)."""
-        main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(0)
+        """Cria o QWebEngineView que carregará toda a interface HTML."""
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
 
-        header_widget = self._create_header()
-        main_layout.addWidget(header_widget)
-        main_layout.addSpacing(15)
+        self.web_view = QWebEngineView()
+        self.web_view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
-        # --- QStackedWidget: roteador de painéis ---
-        self._stacked = QStackedWidget()
-        self._stacked.setObjectName("MainStack")
+        # Configura o QWebChannel para comunicação
+        self.bridge = MainBridge(self)
+        self.channel = QWebChannel(self.web_view.page())
+        self.channel.registerObject("bridge", self.bridge)
+        self.web_view.page().setWebChannel(self.channel)
 
-        # Página 0 — Home (ponto de entrada)
-        home = HomePanel()
-        home.navigate_geonetwork.connect(self._navigate_to_geonetwork)
-        home.navigate_geoserver.connect(self._navigate_to_geoserver)
-        self._stacked.addWidget(home)
+        # Carrega o arquivo HTML principal
+        template_path = os.path.join(os.path.dirname(__file__), "ui", "templates", "main.html")
+        self.web_view.load(QUrl.fromLocalFile(template_path))
 
-        # Página 1 — GeoNetwork (formulário de metadados)
-        self._stacked.addWidget(self._create_geonetwork_panel())
-
-        # Página 2 — GeoServer (publicação de camadas)
-        self._stacked.addWidget(self._create_geoserver_panel())
-
-        content_layout = QHBoxLayout()
-        content_layout.setContentsMargins(15, 0, 15, 15)
-        content_layout.addWidget(self._stacked)
-        main_layout.addLayout(content_layout)
+        layout.addWidget(self.web_view)
 
     def _setup_connections_and_logic(self):
-        """Conecta os sinais dos widgets e inicializa a lógica da UI."""
-        self._setup_button_connections()
-        self._setup_login_icons()
-        self.form_manager.populate_comboboxes()
+        """Conecta os sinais lógicos e inicializa o status."""
         self.update_ui_for_login_status()
-        self.auto_fill_from_layer()
-        self.update_distribution_display()
-        self._setup_layer_association()
-        self._setup_contact_search()
-        self.form_manager.connect_dirty_signals(self.on_metadata_changed)
+        # auto_fill_from_layer e outros serão reativados na Etapa 3 (Editor HTML)
 
     def on_metadata_changed(self):
         """Callback disparado quando qualquer campo do formulário é editado (dirty flag)."""
@@ -604,42 +584,15 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self._set_active_nav_btn(self._btn_geonetwork)
 
     def _navigate_to_geoserver(self):
-        """Navega para o painel GeoServer (índice 2)."""
+        """Os métodos de navegação antigos foram substituídos pela lógica no app.js e main_bridge.py
+        Navega para o painel GeoServer (índice 2)."""
         self._stacked.setCurrentIndex(2)
         self._set_active_nav_btn(self._btn_geoserver)
 
     def _setup_button_connections(self):
-        """Conecta sinais do header (QActions) e widgets internos do formulário."""
-        # --- Header: menu Arquivo ---
-        self._action_salvar.triggered.connect(self.save_metadata)
-
-        # --- Header: menu GeoNetwork ---
-        self._action_nav_metadados.triggered.connect(self._navigate_to_geonetwork)
-        self._action_exp_xml.triggered.connect(self.exportar_to_xml)
-        self._action_exp_geo.triggered.connect(self.exportar_to_geo)
-        self._action_distribution.triggered.connect(self.open_distribution_workflow)
-        # _action_import_metadata: placeholder (não conectado ainda)
-
-        # --- Header: menu GeoServer ---
-        self._action_nav_geoserver.triggered.connect(self._navigate_to_geoserver)
-
-        # --- Header: logo navega para Home ---
-        self._logo_btn.clicked.connect(self._navigate_to_home)
-
-        # --- Header: botão de login ---
-        self.header_btn_login.clicked.connect(self.authenticate)
-
-        # --- Painel de distribuição ---
-        self.wms_clear_button.clicked.connect(self.clear_wms_data)
-        self.wfs_clear_button.clicked.connect(self.clear_wfs_data)
-
-        # --- Formulário dinâmico ---
-        self.ui.toolButton_set_today.clicked.connect(self._set_dateStamp_to_today)
-
-    def _set_dateStamp_to_today(self):
-        """Define o valor do dateTimeEdit_dateStamp para a data e hora atuais."""
-        current_datetime = QDateTime.currentDateTime()
-        self.ui.dateTimeEdit_dateStamp.setDateTime(current_datetime)
+        """Conecta ações lógicas (não visuais)."""
+        # Ações de menu agora são disparadas via Bridge (JS -> Python)
+        pass
 
     def _setup_login_icons(self):
         """Carrega os ícones de login a partir dos recursos."""
@@ -706,40 +659,24 @@ class GeoMetadataDialog(QtWidgets.QDialog):
                 f"<p style='font-size: 11px;'>⚠️ <b>Para sua segurança:</b> Não compartilhe conteúdos, barra de endereços ou faça capturas de tela da aba aberta no navegador.</p>"
             )
 
-        self.form_manager.populate_comboboxes()
         self.update_ui_for_login_status()
 
     def update_ui_for_login_status(self):
-        """Habilita/desabilita QActions de GeoNetwork e GeoServer; atualiza botão de login."""
+        """Notifica a ponte web sobre o status de autenticação."""
         is_logged_in = self.plugin.api_session is not None
-        tip_locked = "Faça login para usar esta função"
-
-        # --- GeoNetwork ---
-        self._action_exp_geo.setEnabled(is_logged_in)
-        self._action_distribution.setEnabled(is_logged_in)
-        self._action_exp_geo.setToolTip(
-            "Publica o metadado no GeoNetwork" if is_logged_in else tip_locked)
-        self._action_distribution.setToolTip(
-            "Vincula uma camada publicada ao metadado" if is_logged_in else tip_locked)
-
-        # --- GeoServer (placeholder — desabilitado até Fase 2) ---
-        self._action_gs_publish.setEnabled(False)
-        self._action_gs_publish.setToolTip("Publicação GeoServer disponível na Fase 2")
-
-        if is_logged_in:
-            username = self.plugin.auth_username or "Usuário Conectado"
-            self.header_btn_login.setIcon(self.icon_login_ok)
-            self.header_btn_login.setText(f" {username}")
-            self.header_btn_login.setToolTip("Clique para desconectar")
-        else:
-            self.header_btn_login.setIcon(self.icon_login_error)
-            self.header_btn_login.setText(" Entrar")
-            self.header_btn_login.setToolTip("Clique para fazer login no Geohab")
+        username = self.plugin.auth_username or "Visitante"
+        
+        # Notifica o JavaScript para atualizar a UI (badge, botões, etc)
+        if hasattr(self, 'bridge'):
+            self.bridge.auth_status.emit(is_logged_in, username)
 
     def exportar_to_xml(self):
         """Gera o XML e permite salvar no disco manual."""
+        if not hasattr(self, 'form_manager') or not self.form_manager:
+            QtWidgets.QMessageBox.information(self, 'Em desenvolvimento', 'A exportação será integrada ao formulário HTML em breve.')
+            return
         if not self.form_manager.validate_form(): return
-        
+
         metadata_dict = self.form_manager.collect_data()
         try:
             import os
@@ -761,11 +698,14 @@ class GeoMetadataDialog(QtWidgets.QDialog):
 
     def exportar_to_geo(self):
         """Exporta para o GeoNetwork usando o MetadataService."""
+        if not hasattr(self, 'form_manager') or not self.form_manager:
+            QtWidgets.QMessageBox.information(self, 'Em desenvolvimento', 'A exportação será integrada ao formulário HTML em breve.')
+            return
         if not self.form_manager.validate_form(): return
         if not self.plugin.api_session:
             QtWidgets.QMessageBox.warning(self, 'Não Autenticado', 'Conecte ao Geohab primeiro.')
             return
-            
+
         metadata_dict = self.form_manager.collect_data()
         reply = QtWidgets.QMessageBox.question(self, 'Confirmar', f"Exportar {metadata_dict.get('title')}?", QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel)
         if reply != QtWidgets.QMessageBox.Ok: return
@@ -789,8 +729,10 @@ class GeoMetadataDialog(QtWidgets.QDialog):
 
     def save_metadata(self, is_automatic_resave=False):
         """Usa o PersistenceService para salvar no DB ou XML Sidecar."""
+        if not hasattr(self, 'form_manager') or not self.form_manager:
+            return
         if not is_automatic_resave and not self.form_manager.validate_form(): return
-        
+
         metadata_dict = self.form_manager.collect_data()
         layer = self.iface.activeLayer()
         import os
@@ -816,7 +758,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             return
             
         xml_content = self.persistence_service.load(layer)
-        if xml_content:
+        if xml_content and hasattr(self, 'form_manager') and self.form_manager:
             data_dict = xml_parser.parse_xml_to_dict(xml_content, is_string=True)
             self.form_manager.populate_form_from_dict(data_dict)
             self.form_manager.set_is_dirty(False)
@@ -1075,7 +1017,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         display_list = []
         lower_filt = filter_text.lower()
         
-        for key, data in self.form_manager.contatos_predefinidos.items():
+        for key, data in self.contatos_predefinidos.items():
             if key == 'nenhum': continue
             org = data.get('contact_organisationName', '')
             sigla = data.get('contact_individualName', '')
@@ -1133,7 +1075,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
                             
                             # Tenta herdar metadados ricos (como role e Endereço) do offline map (usando email como hook)
                             fallback_data = None
-                            for key, preset in self.form_manager.contatos_predefinidos.items():
+                            for key, preset in self.contatos_predefinidos.items():
                                 if key != 'nenhum' and preset.get('contact_email') == email:
                                     fallback_data = preset
                                     break
@@ -1202,6 +1144,9 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             except Exception:
                 pass
 
+        if not hasattr(self, 'ui') or not self.ui or not hasattr(self, 'form_manager') or not self.form_manager:
+            return
+
         org_text = self.ui._primary_row.field_org.text().strip()
         name_text = self.ui._primary_row.field_name.text().strip()
 
@@ -1213,7 +1158,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             name = c_data.get('contact_individualName', '')
             email = c_data.get('contact_email', '')
             role = c_data.get('contact_role', 'pointOfContact')
-            
+
             row = self.ui._add_contact_row()
             row.field_org.setText(org)
             row.field_name.setText(name)
@@ -1254,7 +1199,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
 
     def closeEvent(self, event):
         """Executado quando o usuário tenta fechar a janela."""
-        if self.form_manager.get_is_dirty():
+        if hasattr(self, 'form_manager') and self.form_manager and self.form_manager.get_is_dirty():
             from qgis.PyQt import QtWidgets
             reply = QtWidgets.QMessageBox.question(self, 
                                         'Alterações não Salvas',

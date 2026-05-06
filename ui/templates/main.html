@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoMetadata Plugin</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <!-- HEADER / NAVBAR -->
+    <header class="navbar">
+        <div class="nav-left">
+            <button id="logo-btn" class="logo-link" onclick="bridge.navigate('home')">
+                <img src="../../logo.png" alt="CDHU" class="logo-img">
+            </button>
+            <div class="dropdown">
+                <button class="dropbtn">Arquivo <span class="chevron">▾</span></button>
+                <div class="dropdown-content">
+                    <a href="#" onclick="bridge.save_metadata()">Continuar depois</a>
+                    <a href="#" onclick="bridge.export_xml()">Exportar .xml</a>
+                </div>
+            </div>
+            <div class="dropdown">
+                <button class="dropbtn">Catálogo Geohab <span class="chevron">▾</span></button>
+                <div class="dropdown-content">
+                    <a href="#" onclick="bridge.navigate('editor')">Editar Metadados</a>
+                    <a href="#" onclick="bridge.export_geohab()">Publicar no Catálogo</a>
+                </div>
+            </div>
+            <div class="dropdown">
+                <button class="dropbtn">GeoServer <span class="chevron">▾</span></button>
+                <div class="dropdown-content">
+                    <a href="#" onclick="bridge.navigate('geoserver')">Publicar Camada</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="nav-right">
+            <div id="user-info" class="user-badge" style="display: none;">
+                <span class="user-name">Usuário</span>
+                <div class="status-dot"></div>
+            </div>
+            <button id="login-btn" class="btn btn-primary" onclick="bridge.start_login()">ENTRAR</button>
+        </div>
+    </header>
+
+    <!-- CONTEÚDO DINÂMICO (PAINÉIS) -->
+    <main id="app-container">
+        <!-- O conteúdo será injetado aqui via JS -->
+        <div class="loader">Carregando interface...</div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <span class="support-text">Se erro abrir um ticket no <a href="https://cda.cdhu.sp.gov.br" target="_blank">CDA</a></span>
+        <span class="version-tag">v3.0.0</span>
+    </footer>
+
+    <!-- SCRIPTS -->
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,63 @@
+<div class="editor-panel">
+    <div class="panel-header">
+        <h2>Editor de Metadados (MGB 2.0)</h2>
+        <p>Ajuste as informações da camada selecionada antes de publicar.</p>
+    </div>
+
+    <!-- TABS (Implementaremos a lógica real em breve) -->
+    <div class="form-tabs">
+        <button class="tab-link active">Identificação</button>
+        <button class="tab-link">Classificação</button>
+        <button class="tab-link">Extensão</button>
+        <button class="tab-link">Metadados</button>
+    </div>
+
+    <div class="form-content">
+        <div style="padding:40px; text-align:center; color: var(--fg-muted);">
+            <p>O formulário completo está sendo migrado...</p>
+            <br>
+            <button class="btn btn-primary" onclick="navigate('home')">Voltar para Home</button>
+        </div>
+    </div>
+</div>
+
+<style>
+.editor-panel {
+    padding: 24px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.panel-header {
+    margin-bottom: 24px;
+}
+
+.form-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 20px;
+}
+
+.tab-link {
+    background: none;
+    border: none;
+    padding: 10px 20px;
+    font-weight: 600;
+    color: var(--fg-muted);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+}
+
+.tab-link.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+.form-content {
+    flex: 1;
+    background: white;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+}
+</style>
