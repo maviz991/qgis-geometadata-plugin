@@ -147,8 +147,14 @@ function collectFormData() {
         eastBoundLongitude:               get("eastBoundLongitude"),
         southBoundLatitude:               get("southBoundLatitude"),
         northBoundLatitude:               get("northBoundLatitude"),
-        dateStamp:                        get("dateStamp"),
         spatialResolution_denominator:    get("spatialResolution_denominator"),
+        epsgCode:                         get("epsgCode"),
+        epsgTitle:                        get("epsgTitle"),
+        zMin:                             get("zMin"),
+        zMax:                             get("zMax"),
+        temporalFrom:                     get("temporalFrom"),
+        temporalTo:                       get("temporalTo"),
+        dateStamp:                        get("dateStamp"),
         // Flat contact fields (first contact) for XML generator
         contact_individualName:           c.sigla    || "",
         contact_organisationName:         c.org      || "",
@@ -181,7 +187,9 @@ var REQUIRED_LABELS = {
     westBoundLongitude:               "Longitude Oeste",
     eastBoundLongitude:               "Longitude Leste",
     southBoundLatitude:               "Latitude Sul",
-    northBoundLatitude:               "Latitude Norte"
+    northBoundLatitude:               "Latitude Norte",
+    epsgCode:                         "Código EPSG",
+    epsgTitle:                        "Título do SRC"
 };
 
 function validateForm(data) {
@@ -220,7 +228,8 @@ function populateForm(data) {
         "MD_SpatialRepresentationTypeCode", "topicCategory", "hierarchyLevel",
         "LanguageCode", "characterSet", "thumbnail_url",
         "westBoundLongitude", "eastBoundLongitude", "southBoundLatitude", "northBoundLatitude",
-        "dateStamp", "spatialResolution_denominator"
+        "spatialResolution_denominator", "epsgCode", "epsgTitle",
+        "zMin", "zMax", "temporalFrom", "temporalTo", "dateStamp"
     ];
     SIMPLE_FIELDS.forEach(function (key) {
         var el = document.getElementById("f-" + key);
@@ -271,6 +280,57 @@ function toggleUpdateDate(val) {
     if (!el) return;
     el.disabled = !val;
     if (!val) el.value = "";
+}
+
+// ─── Sistema de Referência ────────────────────────────────────────────────────
+
+var EPSG_TITLES = {
+    "EPSG:4326":  "WGS 84",
+    "EPSG:4674":  "SIRGAS 2000",
+    "EPSG:4618":  "SAD69",
+    "EPSG:31978": "SIRGAS 2000 / UTM zone 18S",
+    "EPSG:31979": "SIRGAS 2000 / UTM zone 19S",
+    "EPSG:31980": "SIRGAS 2000 / UTM zone 20S",
+    "EPSG:31981": "SIRGAS 2000 / UTM zone 21S",
+    "EPSG:31982": "SIRGAS 2000 / UTM zone 22S",
+    "EPSG:31983": "SIRGAS 2000 / UTM zone 23S",
+    "EPSG:31984": "SIRGAS 2000 / UTM zone 24S",
+    "EPSG:31985": "SIRGAS 2000 / UTM zone 25S",
+    "EPSG:29191": "SAD69 / UTM zone 21S",
+    "EPSG:29192": "SAD69 / UTM zone 22S",
+    "EPSG:29193": "SAD69 / UTM zone 23S",
+    "EPSG:29194": "SAD69 / UTM zone 24S",
+    "EPSG:32722": "WGS 84 / UTM zone 22S",
+    "EPSG:32723": "WGS 84 / UTM zone 23S",
+    "EPSG:32724": "WGS 84 / UTM zone 24S"
+};
+
+function setEpsgFromCode(val) {
+    var titleEl = document.getElementById("f-epsgTitle");
+    if (!titleEl || !val) return;
+    var name = EPSG_TITLES[val];
+    titleEl.value = name ? name + " (" + val + ")" : val;
+}
+
+function captureFromLayer() {
+    if (typeof bridge === "undefined") { alert("Disponível apenas no QGIS."); return; }
+    bridge.get_layer_info(function (result) {
+        if (!result) { alert("Nenhuma camada ativa ou informações não disponíveis."); return; }
+        var codeEl  = document.getElementById("f-epsgCode");
+        var titleEl = document.getElementById("f-epsgTitle");
+        if (codeEl)  codeEl.value  = result.code  || "";
+        if (titleEl) titleEl.value = result.title || "";
+        if (result.north !== undefined) {
+            var n = document.getElementById("f-northBoundLatitude");
+            var s = document.getElementById("f-southBoundLatitude");
+            var e = document.getElementById("f-eastBoundLongitude");
+            var w = document.getElementById("f-westBoundLongitude");
+            if (n) n.value = result.north;
+            if (s) s.value = result.south;
+            if (e) e.value = result.east;
+            if (w) w.value = result.west;
+        }
+    });
 }
 
 // ─── Contatos: estado ──────────────────────────────────────────────────────────
@@ -358,7 +418,7 @@ function buildAccordion(c, idx) {
 
     return '<div class="contact-accordion">' +
         '<button class="accordion-header" onclick="toggleAccordion(' + idx + ')">' +
-        '<span class="acc-arrow" id="arr-' + idx + '">▸</span>' +
+        '<span class="acc-arrow" id="arr-' + idx + '"><img class="acc-chevron" src="../../img/chevron_down.svg"></span>' +
         label + badge +
         '</button>' +
         '<div class="accordion-body" id="acc-body-' + idx + '">' +
@@ -404,8 +464,15 @@ function toggleAccordion(idx) {
     var arr  = document.getElementById("arr-" + idx);
     if (!body) return;
     var open = body.style.display === "block";
-    body.style.display = open ? "none" : "block";
-    if (arr) arr.textContent = open ? "▸" : "▾";
+    if (open) {
+        body.style.display = "none";
+    } else {
+        body.style.display = "block";
+        body.classList.add('open-anim');
+        setTimeout(function () { body.classList.remove('open-anim'); }, 250);
+    }
+    var chevron = arr ? arr.querySelector('.acc-chevron') : null;
+    if (chevron) chevron.classList.toggle('open', !open);
 }
 
 function moveContact(idx, dir) {

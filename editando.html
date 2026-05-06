@@ -51,6 +51,7 @@
             display: none;
             overflow-y: auto;
             flex: 1;
+            position: relative;
         }
 
         .tab-content.active {
@@ -401,9 +402,20 @@
         }
 
         .acc-arrow {
-            font-size: 11px;
-            color: var(--fg-muted);
-            min-width: 12px;
+            min-width: 16px;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .acc-chevron {
+            width: 14px;
+            height: 14px;
+            transform: rotate(-90deg);
+            transition: transform 0.2s;
+        }
+
+        .acc-chevron.open {
+            transform: rotate(0deg);
         }
 
         .badge-manual {
@@ -446,6 +458,60 @@
             background: #f8fafc;
             font-family: inherit;
             cursor: default;
+        }
+
+        /* ── Accordion de campos extras (Extensão) ────────────────── */
+        .extra-accordion {
+            border: 1px dashed var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .extra-accordion summary {
+            padding: 12px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--fg-muted);
+            cursor: pointer;
+            user-select: none;
+            list-style: none;
+        }
+
+        .extra-accordion summary::-webkit-details-marker { display: none; }
+        .extra-accordion summary::before {
+            content: '';
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            vertical-align: middle;
+            margin-right: 6px;
+            background: url('img/chevron_down.svg') no-repeat center / contain;
+            transform: rotate(-90deg);
+            transition: transform 0.2s;
+        }
+        .extra-accordion[open] summary::before { transform: rotate(0deg); }
+        .extra-accordion summary:hover { background: #f1f5f9; }
+
+        @keyframes accordionSlideDown {
+            from { opacity: 0; transform: translateY(-6px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .extra-accordion[open] .extra-accordion-grid {
+            animation: accordionSlideDown 0.2s ease;
+        }
+
+        .accordion-body.open-anim {
+            animation: accordionSlideDown 0.2s ease;
+        }
+
+        .extra-accordion-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            padding: 16px;
+            border-top: 1px solid var(--border);
+            background: #fafbfc;
         }
     </style>
 </head>
@@ -633,7 +699,13 @@
 
             <!-- TAB: EXTENSÃO -->
             <div id="tab-extensao" class="tab-content">
+                <div class="tab-header-actions">
+                    <button class="btn-icon" onclick="captureFromLayer()"
+                        title="Mock: preenche SRC e extensão N/S/L/O">📍 Capturar da camada</button>
+                </div>
                 <div class="form-grid">
+
+                    <!-- Coordenadas -->
                     <div class="form-group span-2">
                         <label>Coordenadas Geográficas (WGS 84) <span class="req">*</span></label>
                         <div class="bbox-grid">
@@ -660,14 +732,69 @@
                             <div></div>
                         </div>
                     </div>
+
+                    <!-- Escala -->
                     <div class="form-group">
-                        <label for="f-dateStamp">Data do Metadado</label>
-                        <input id="f-dateStamp" type="datetime-local">
+                        <label for="f-spatialResolution_denominator">Escala (denominador)</label>
+                        <input id="f-spatialResolution_denominator" type="text" placeholder="ex: 25000">
+                    </div>
+                    <div></div>
+
+                    <!-- SRC -->
+                    <div class="form-group">
+                        <label for="f-epsgCode">Código EPSG <span class="req">*</span></label>
+                        <select id="f-epsgCode" onchange="setEpsgFromCode(this.value)">
+                            <option value="">— Selecione —</option>
+                            <option value="EPSG:4326">EPSG:4326 — WGS 84</option>
+                            <option value="EPSG:4674">EPSG:4674 — SIRGAS 2000</option>
+                            <option value="EPSG:4618">EPSG:4618 — SAD69</option>
+                            <option value="EPSG:31978">EPSG:31978 — SIRGAS 2000 / UTM 18S</option>
+                            <option value="EPSG:31979">EPSG:31979 — SIRGAS 2000 / UTM 19S</option>
+                            <option value="EPSG:31980">EPSG:31980 — SIRGAS 2000 / UTM 20S</option>
+                            <option value="EPSG:31981">EPSG:31981 — SIRGAS 2000 / UTM 21S</option>
+                            <option value="EPSG:31982">EPSG:31982 — SIRGAS 2000 / UTM 22S</option>
+                            <option value="EPSG:31983">EPSG:31983 — SIRGAS 2000 / UTM 23S</option>
+                            <option value="EPSG:31984">EPSG:31984 — SIRGAS 2000 / UTM 24S</option>
+                            <option value="EPSG:31985">EPSG:31985 — SIRGAS 2000 / UTM 25S</option>
+                            <option value="EPSG:29191">EPSG:29191 — SAD69 / UTM 21S</option>
+                            <option value="EPSG:29192">EPSG:29192 — SAD69 / UTM 22S</option>
+                            <option value="EPSG:29193">EPSG:29193 — SAD69 / UTM 23S</option>
+                            <option value="EPSG:29194">EPSG:29194 — SAD69 / UTM 24S</option>
+                            <option value="EPSG:32722">EPSG:32722 — WGS 84 / UTM 22S</option>
+                            <option value="EPSG:32723">EPSG:32723 — WGS 84 / UTM 23S</option>
+                            <option value="EPSG:32724">EPSG:32724 — WGS 84 / UTM 24S</option>
+                        </select>
                     </div>
                     <div class="form-group">
-                        <label for="f-date_creation">Data de Criação do Dado</label>
-                        <input id="f-date_creation" type="datetime-local">
+                        <label for="f-epsgTitle">Título do SRC <span class="req">*</span></label>
+                        <input id="f-epsgTitle" type="text" placeholder="ex: SIRGAS 2000 (EPSG:4674)">
                     </div>
+
+                    <!-- Altitude + Temporal (accordion) -->
+                    <div class="form-group span-2">
+                        <details class="extra-accordion">
+                            <summary>Mais informações</summary>
+                            <div class="extra-accordion-grid">
+                                <div class="form-group">
+                                    <label for="f-zMin">Altitude mínima — Z</label>
+                                    <input id="f-zMin" type="number" step="any" placeholder="ex: -10">
+                                </div>
+                                <div class="form-group">
+                                    <label for="f-zMax">Altitude máxima — Z</label>
+                                    <input id="f-zMax" type="number" step="any" placeholder="ex: 1200">
+                                </div>
+                                <div class="form-group">
+                                    <label for="f-temporalFrom">Extensão temporal — De</label>
+                                    <input id="f-temporalFrom" type="date">
+                                </div>
+                                <div class="form-group">
+                                    <label for="f-temporalTo">Extensão temporal — Para</label>
+                                    <input id="f-temporalTo" type="date">
+                                </div>
+                            </div>
+                        </details>
+                    </div>
+
                 </div>
             </div>
 
@@ -918,6 +1045,50 @@
             if (!val) el.value = "";
         }
 
+        var EPSG_TITLES = {
+            "EPSG:4326":  "WGS 84",
+            "EPSG:4674":  "SIRGAS 2000",
+            "EPSG:4618":  "SAD69",
+            "EPSG:31978": "SIRGAS 2000 / UTM zone 18S",
+            "EPSG:31979": "SIRGAS 2000 / UTM zone 19S",
+            "EPSG:31980": "SIRGAS 2000 / UTM zone 20S",
+            "EPSG:31981": "SIRGAS 2000 / UTM zone 21S",
+            "EPSG:31982": "SIRGAS 2000 / UTM zone 22S",
+            "EPSG:31983": "SIRGAS 2000 / UTM zone 23S",
+            "EPSG:31984": "SIRGAS 2000 / UTM zone 24S",
+            "EPSG:31985": "SIRGAS 2000 / UTM zone 25S",
+            "EPSG:29191": "SAD69 / UTM zone 21S",
+            "EPSG:29192": "SAD69 / UTM zone 22S",
+            "EPSG:29193": "SAD69 / UTM zone 23S",
+            "EPSG:29194": "SAD69 / UTM zone 24S",
+            "EPSG:32722": "WGS 84 / UTM zone 22S",
+            "EPSG:32723": "WGS 84 / UTM zone 23S",
+            "EPSG:32724": "WGS 84 / UTM zone 24S"
+        };
+
+        function setEpsgFromCode(val) {
+            var titleEl = document.getElementById("f-epsgTitle");
+            if (!titleEl || !val) return;
+            var name = EPSG_TITLES[val];
+            titleEl.value = name ? name + " (" + val + ")" : val;
+        }
+
+        function captureFromLayer() {
+            // Mock para preview — simula captura de camada ativa (SIRGAS 2000, SP)
+            var codeEl  = document.getElementById("f-epsgCode");
+            var titleEl = document.getElementById("f-epsgTitle");
+            if (codeEl)  codeEl.value  = "EPSG:4674";
+            if (titleEl) titleEl.value = "SIRGAS 2000 (EPSG:4674)";
+            var n = document.getElementById("f-northBoundLatitude");
+            var s = document.getElementById("f-southBoundLatitude");
+            var e = document.getElementById("f-eastBoundLongitude");
+            var w = document.getElementById("f-westBoundLongitude");
+            if (n) n.value = -23.0;
+            if (s) s.value = -24.0;
+            if (e) e.value = -46.0;
+            if (w) w.value = -47.0;
+        }
+
         // ─── Contatos: estado ──────────────────────────────────────────
         var contacts = [];
 
@@ -998,7 +1169,7 @@
 
             return '<div class="contact-accordion">' +
                 '<button class="accordion-header" onclick="toggleAccordion(' + idx + ')">' +
-                '<span class="acc-arrow" id="arr-' + idx + '">▸</span>' +
+                '<span class="acc-arrow" id="arr-' + idx + '"><img class="acc-chevron" src="img/chevron_down.svg"></span>' +
                 label + badge +
                 '</button>' +
                 '<div class="accordion-body" id="acc-body-' + idx + '">' +
@@ -1044,8 +1215,15 @@
             var arr = document.getElementById("arr-" + idx);
             if (!body) return;
             var open = body.style.display === "block";
-            body.style.display = open ? "none" : "block";
-            if (arr) arr.textContent = open ? "▸" : "▾";
+            if (open) {
+                body.style.display = "none";
+            } else {
+                body.style.display = "block";
+                body.classList.add('open-anim');
+                setTimeout(function () { body.classList.remove('open-anim'); }, 250);
+            }
+            var chevron = arr ? arr.querySelector('.acc-chevron') : null;
+            if (chevron) chevron.classList.toggle('open', !open);
         }
 
         function moveContact(idx, dir) {

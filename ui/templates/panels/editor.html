@@ -319,9 +319,15 @@
 
     <!-- ══ TAB 4: EXTENSÃO ════════════════════════════════════ -->
     <div id="tab-extensao" class="tab-content">
+        <div class="tab-header-actions">
+            <button class="btn-icon" onclick="captureFromLayer()"
+                title="Captura SRC e extensão N/S/L/O da camada ativa">Capturar da camada</button>
+        </div>
         <div class="form-grid">
+
+            <!-- Coordenadas -->
             <div class="form-group span-2">
-                <label>Coordenadas Geográficas (WGS 84) <span class="req">*</span></label>
+                <label>Coordenadas Geográficas do Bounding Box <span class="req">*</span></label>
                 <div class="bbox-grid">
                     <div></div>
                     <div class="form-group">
@@ -333,7 +339,7 @@
                         <label for="f-westBoundLongitude">Oeste</label>
                         <input id="f-westBoundLongitude" type="number" step="0.000001" placeholder="-53.0">
                     </div>
-                    <div class="bbox-center">🗺️</div>
+                    <div class="bbox-center"> </div>
                     <div class="form-group">
                         <label for="f-eastBoundLongitude">Leste</label>
                         <input id="f-eastBoundLongitude" type="number" step="0.000001" placeholder="-44.0">
@@ -346,14 +352,69 @@
                     <div></div>
                 </div>
             </div>
+
+            <!-- Sistema de Referência -->
             <div class="form-group">
-                <label for="f-dateStamp">Data do Metadado</label>
-                <input id="f-dateStamp" type="datetime-local">
+                <label for="f-epsgCode">Código EPSG <span class="req">*</span></label>
+                <select id="f-epsgCode" onchange="setEpsgFromCode(this.value)">
+                    <option value="">— Selecione —</option>
+                    <option value="EPSG:4326">EPSG:4326 — WGS 84</option>
+                    <option value="EPSG:4674">EPSG:4674 — SIRGAS 2000</option>
+                    <option value="EPSG:31982">EPSG:31982 — SIRGAS 2000 / UTM 22S</option>
+                    <option value="EPSG:31983">EPSG:31983 — SIRGAS 2000 / UTM 23S</option>
+                    <option value="EPSG:4618">EPSG:4618 — SAD69</option>
+                    <option value="EPSG:31978">EPSG:31978 — SIRGAS 2000 / UTM 18S</option>
+                    <option value="EPSG:31979">EPSG:31979 — SIRGAS 2000 / UTM 19S</option>
+                    <option value="EPSG:31980">EPSG:31980 — SIRGAS 2000 / UTM 20S</option>
+                    <option value="EPSG:31981">EPSG:31981 — SIRGAS 2000 / UTM 21S</option>
+                    <option value="EPSG:31984">EPSG:31984 — SIRGAS 2000 / UTM 24S</option>
+                    <option value="EPSG:31985">EPSG:31985 — SIRGAS 2000 / UTM 25S</option>
+                    <option value="EPSG:29191">EPSG:29191 — SAD69 / UTM 21S</option>
+                    <option value="EPSG:29192">EPSG:29192 — SAD69 / UTM 22S</option>
+                    <option value="EPSG:29193">EPSG:29193 — SAD69 / UTM 23S</option>
+                    <option value="EPSG:29194">EPSG:29194 — SAD69 / UTM 24S</option>
+                    <option value="EPSG:32722">EPSG:32722 — WGS 84 / UTM 22S</option>
+                    <option value="EPSG:32723">EPSG:32723 — WGS 84 / UTM 23S</option>
+                    <option value="EPSG:32724">EPSG:32724 — WGS 84 / UTM 24S</option>
+                </select>
             </div>
             <div class="form-group">
+                <label for="f-epsgTitle">Título do SRC <span class="req">*</span></label>
+                <input id="f-epsgTitle" type="text" placeholder="ex: SIRGAS 2000 (EPSG:4674)">
+            </div>
+
+            <!-- Escala -->
+            <div class="form-group span-2">
                 <label for="f-spatialResolution_denominator">Escala (denominador)</label>
                 <input id="f-spatialResolution_denominator" type="text" placeholder="ex: 25000">
             </div>
+
+            <!-- Altitude -->
+            <!-- Altitude + Temporal (accordion) -->
+            <div class="form-group span-2">
+                <details class="extra-accordion">
+                    <summary>Mais informações</summary>
+                    <div class="extra-accordion-grid">
+                        <div class="form-group">
+                            <label for="f-zMin">Altitude mínima — Z</label>
+                            <input id="f-zMin" type="number" step="any" placeholder="ex: -10">
+                        </div>
+                        <div class="form-group">
+                            <label for="f-zMax">Altitude máxima — Z</label>
+                            <input id="f-zMax" type="number" step="any" placeholder="ex: 1200">
+                        </div>
+                        <div class="form-group">
+                            <label for="f-temporalFrom">Extensão temporal — De</label>
+                            <input id="f-temporalFrom" type="date">
+                        </div>
+                        <div class="form-group">
+                            <label for="f-temporalTo">Extensão temporal — Para</label>
+                            <input id="f-temporalTo" type="date">
+                        </div>
+                    </div>
+                </details>
+            </div>
+
         </div>
     </div>
 

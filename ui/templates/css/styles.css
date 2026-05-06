@@ -235,6 +235,7 @@ body {
     display: none;
     overflow-y: auto;
     flex: 1;
+    position: relative;
 }
 
 .tab-content.active { display: block; }
@@ -562,9 +563,20 @@ body {
 .accordion-header:hover { background: #f8fafc; }
 
 .acc-arrow {
-    font-size: 11px;
-    color: var(--fg-muted);
-    min-width: 12px;
+    min-width: 16px;
+    display: inline-flex;
+    align-items: center;
+}
+
+.acc-chevron {
+    width: 14px;
+    height: 14px;
+    transform: rotate(-90deg);
+    transition: transform 0.2s;
+}
+
+.acc-chevron.open {
+    transform: rotate(0deg);
 }
 
 .badge-manual {
@@ -607,6 +619,71 @@ body {
     background: #f8fafc;
     font-family: inherit;
     cursor: default;
+}
+
+/* ── Barra de ações no topo de um tab ────────────────────────── */
+.tab-header-actions {
+    position: absolute;
+    top: 10px;
+    right: 16px;
+    z-index: 10;
+}
+
+/* ── Accordion de campos extras (Extensão) ────────────────────── */
+.extra-accordion {
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.extra-accordion summary {
+    padding: 12px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--fg-muted);
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+}
+
+.extra-accordion summary::-webkit-details-marker { display: none; }
+
+.extra-accordion summary::before {
+    content: '';
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    vertical-align: middle;
+    margin-right: 6px;
+    background: url('../../../img/chevron_down.svg') no-repeat center / contain;
+    transform: rotate(-90deg);
+    transition: transform 0.2s;
+}
+.extra-accordion[open] summary::before {
+    transform: rotate(0deg);
+}
+.extra-accordion summary:hover { background: #f1f5f9; }
+
+@keyframes accordionSlideDown {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.extra-accordion[open] .extra-accordion-grid {
+    animation: accordionSlideDown 0.2s ease;
+}
+
+.accordion-body.open-anim {
+    animation: accordionSlideDown 0.2s ease;
+}
+
+.extra-accordion-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    padding: 16px;
+    border-top: 1px solid var(--border);
+    background: #fafbfc;
 }
 
 /* ── Home cards ───────────────────────────────────────────────── */

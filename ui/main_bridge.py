@@ -81,6 +81,35 @@ class MainBridge(QObject):
             "is_logged": is_logged
         }
 
+    @pyqtSlot(result='QVariant')
+    def get_layer_info(self):
+        """Retorna SRC e extensão geográfica (WGS84) da camada ativa no QGIS."""
+        try:
+            from qgis.core import (QgsCoordinateTransform,
+                                   QgsCoordinateReferenceSystem,
+                                   QgsProject)
+            plugin = getattr(self._dialog, 'plugin', None)
+            iface  = getattr(plugin, 'iface', None) or getattr(self._dialog, 'iface', None)
+            layer  = iface.activeLayer() if iface else None
+            if not layer:
+                return None
+            crs     = layer.crs()
+            auth_id = crs.authid()
+            desc    = crs.description()
+            result  = {'code': auth_id, 'title': desc + ' (' + auth_id + ')'}
+            extent  = layer.extent()
+            if not extent.isEmpty():
+                wgs84     = QgsCoordinateReferenceSystem('EPSG:4326')
+                transform = QgsCoordinateTransform(crs, wgs84, QgsProject.instance())
+                wgs_ext   = transform.transformBoundingBox(extent)
+                result['north'] = round(wgs_ext.yMaximum(), 6)
+                result['south'] = round(wgs_ext.yMinimum(), 6)
+                result['east']  = round(wgs_ext.xMaximum(), 6)
+                result['west']  = round(wgs_ext.xMinimum(), 6)
+            return result
+        except Exception:
+            return None
+
     @pyqtSlot(str, result='QVariant')
     def search_contacts(self, query: str):
         """Busca contatos nos predefinidos locais que correspondem à query. Retorna lista para o JS."""
