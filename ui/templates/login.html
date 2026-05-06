@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --accent:       #e5222d;
+    --accent-hover: #c0111b;
+    --fg:           #1e293b;
+    --fg-muted:     #64748b;
+    --bg:           #ffffff;
+    --card-bg:      #f8fafc;
+    --card-border:  #e2e8f0;
+    --adm-bg:       #fff8f8;
+    --adm-border:   #fecaca;
+    --sso-btn:      #1e293b;
+    --sso-btn-hov:  #334155;
+    --field-border: #e2e8f0;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    padding: 32px 36px 24px;
+    min-height: 100vh;
+  }
+
+  .logo { text-align: center; margin-bottom: 6px; }
+  .logo img { height: 64px; object-fit: contain; }
+  .logo-fallback {
+    font-size: 24px; font-weight: 800;
+    color: var(--accent); text-align: center; margin-bottom: 6px;
+  }
+
+  .tagline {
+    text-align: center;
+    font-size: 12px;
+    color: var(--fg-muted);
+    margin-bottom: 28px;
+  }
+
+  /* ---------- Cards ---------- */
+  .card {
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-bottom: 16px;
+  }
+  .card-sso   { background: var(--card-bg); border: 1px solid var(--card-border); }
+  .card-admin { background: var(--adm-bg);  border: 1px solid var(--adm-border);  }
+
+  .card-title { font-weight: 700; font-size: 14px; color: var(--fg); }
+  .card-sub   { font-size: 11px; color: var(--fg-muted); margin-top: 2px; margin-bottom: 12px; }
+
+  /* ---------- Status / Progress ---------- */
+  .status { font-size: 12px; margin: 8px 0; display: none; line-height: 1.5; }
+  .status.show { display: block; }
+
+  .progress { height: 4px; background: var(--card-border); border-radius: 2px; margin: 6px 0; overflow: hidden; display: none; }
+  .progress.show { display: block; }
+  .progress-bar {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    width: 30%;
+    animation: slide 1.4s ease-in-out infinite;
+  }
+  @keyframes slide {
+    0%   { margin-left: -30%; }
+    100% { margin-left: 100%; }
+  }
+
+  /* ---------- Botões ---------- */
+  .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    height: 44px;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s, opacity 0.15s;
+  }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .btn-sso     { background: var(--sso-btn); color: #fff; }
+  .btn-sso:hover:not(:disabled) { background: var(--sso-btn-hov); }
+
+  .btn-install { background: #b45309; color: #fff; }
+  .btn-install:hover:not(:disabled) { background: #92400e; }
+
+  .btn-admin   { background: var(--accent); color: #fff; }
+  .btn-admin:hover:not(:disabled) { background: var(--accent-hover); }
+
+  .btn img { width: 20px; height: 20px; }
+
+  /* ---------- Campos ---------- */
+  .field {
+    display: block;
+    width: 100%;
+    height: 36px;
+    border: 1px solid var(--field-border);
+    border-radius: 6px;
+    padding: 0 10px;
+    font-size: 13px;
+    background: #fff;
+    color: var(--fg);
+    outline: none;
+    margin-bottom: 10px;
+    transition: border-color 0.15s;
+  }
+  .field:focus { border: 2px solid var(--accent); }
+  .field:disabled { background: #f1f5f9; color: var(--fg-muted); }
+
+  /* ---------- Divisor ---------- */
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 0 16px;
+  }
+  .div-line { flex: 1; height: 1px; background: var(--card-border); }
+  .div-text { font-size: 11px; color: #94a3b8; font-weight: 600; white-space: nowrap; }
+
+  /* ---------- Cancelar ---------- */
+  .cancel {
+    display: block;
+    width: 100%;
+    background: none;
+    border: none;
+    color: var(--fg-muted);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 8px;
+    cursor: pointer;
+    text-align: center;
+    margin-top: 4px;
+    transition: color 0.15s;
+  }
+  .cancel:hover { color: var(--accent); text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<!-- Logo -->
+<div class="logo">
+  <img id="logo-img" src="data:image/png;base64,{LOGO_B64}"
+       onerror="this.style.display='none'; document.getElementById('logo-txt').style.display='block'">
+</div>
+<div class="logo-fallback" id="logo-txt" style="display:none">GEOHAB</div>
+
+<p class="tagline">Autentique-se para acessar o Geohab</p>
+
+<!-- Card SSO -->
+<div class="card card-sso">
+  <div class="card-title">Conta Corporativa</div>
+  <div class="card-sub">Entre com sua conta CDHU</div>
+
+  <div class="status" id="sso-status"></div>
+  <div class="progress" id="sso-progress"><div class="progress-bar"></div></div>
+
+  <button class="btn btn-sso" id="btn-sso" onclick="handleSso()">
+    <img src="data:image/png;base64,{FAVICON_B64}"
+         onerror="this.style.display='none'" alt="">
+    Entrar com conta CDHU
+  </button>
+</div>
+
+<!-- Divisor -->
+<div class="divider">
+  <div class="div-line"></div>
+  <span class="div-text">acesso administrativo</span>
+  <div class="div-line"></div>
+</div>
+
+<!-- Card Admin -->
+<div class="card card-admin">
+  <div class="card-title">Administrador</div>
+  <div class="card-sub">Entre com usuário e senha locais</div>
+
+  <input class="field" type="text"     id="user" placeholder="Usuário">
+  <input class="field" type="password" id="pass" placeholder="Senha"
+         onkeydown="if(event.key==='Enter') handleAdmin()">
+
+  <div class="status" id="adm-status"></div>
+  <div class="progress" id="adm-progress"><div class="progress-bar"></div></div>
+
+  <button class="btn btn-admin" id="btn-admin" onclick="handleAdmin()">Entrar</button>
+</div>
+
+<button class="cancel" onclick="handleCancel()">Cancelar</button>
+
+<!-- QWebChannel -->
+<script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+<script>
+"use strict";
+
+var bridge = null;
+
+new QWebChannel(qt.webChannelTransport, function(channel) {
+  bridge = channel.objects.bridge;
+
+  // Sinais Python → JS
+  bridge.sso_status.connect(function(msg) {
+    showStatus("sso", info(msg));
+  });
+  bridge.sso_failed.connect(function(msg) {
+    progress("sso", false);
+    showStatus("sso", err(msg));
+    unlock();
+  });
+  bridge.admin_failed.connect(function(msg) {
+    progress("adm", false);
+    showStatus("adm", err(msg));
+    unlock();
+  });
+  bridge.install_status.connect(function(msg) {
+    showStatus("sso", info(msg));
+  });
+  bridge.install_done.connect(function() {
+    progress("sso", false);
+    showStatus("sso", ok("msal instalado! <b>Reinicie o QGIS</b> e clique em Entrar."));
+    document.getElementById("btn-sso").disabled = true;
+    unlock();
+  });
+  bridge.install_error.connect(function(msg) {
+    progress("sso", false);
+    showStatus("sso", err(msg));
+    unlock();
+  });
+
+  // Verifica se msal está disponível
+  bridge.get_msal_state(function(hasMsal) {
+    if (!hasMsal) enterInstallMode();
+  });
+});
+
+// ---------- Helpers de status ----------
+function info(msg)  { return "<span style='color:#1a73e8'>"  + msg + "</span>"; }
+function ok(msg)    { return "<span style='color:#16a34a'>"  + msg + "</span>"; }
+function err(msg)   { return "<span style='color:#dc2626'>"  + msg + "</span>"; }
+function warn(msg)  { return "<span style='color:#b45309'>"  + msg + "</span>"; }
+
+function showStatus(area, html) {
+  var el = document.getElementById(area + "-status");
+  el.innerHTML = html;
+  el.classList.add("show");
+}
+function clearStatus(area) {
+  var el = document.getElementById(area + "-status");
+  el.innerHTML = "";
+  el.classList.remove("show");
+}
+function progress(area, on) {
+  document.getElementById(area + "-progress").classList.toggle("show", on);
+}
+
+// ---------- Lock / Unlock ----------
+function lock() {
+  ["btn-sso","btn-admin"].forEach(function(id) {
+    document.getElementById(id).disabled = true;
+  });
+  ["user","pass"].forEach(function(id) {
+    document.getElementById(id).disabled = true;
+  });
+}
+function unlock() {
+  var ssoBtn = document.getElementById("btn-sso");
+  if (ssoBtn.dataset.installMode !== "1") ssoBtn.disabled = false;
+  document.getElementById("btn-admin").disabled = false;
+  document.getElementById("user").disabled = false;
+  document.getElementById("pass").disabled = false;
+  progress("sso", false);
+  progress("adm", false);
+}
+
+// ---------- Modo instalação ----------
+function enterInstallMode() {
+  var btn = document.getElementById("btn-sso");
+  btn.className        = "btn btn-install";
+  btn.innerHTML        = "&#11015; Instalar dependência (msal)";
+  btn.dataset.installMode = "1";
+  btn.onclick          = function() { handleInstall(); };
+  showStatus("sso", warn("&#9888; <b>msal</b> não instalado. Clique para instalar automaticamente e reinicie o QGIS."));
+}
+
+// ---------- Handlers ----------
+function handleSso() {
+  if (!bridge) return;
+  lock();
+  progress("sso", true);
+  clearStatus("sso");
+  bridge.start_sso();
+}
+
+function handleAdmin() {
+  if (!bridge) return;
+  var user = document.getElementById("user").value.trim();
+  var pass = document.getElementById("pass").value;
+  if (!user || !pass) {
+    showStatus("adm", err("Preencha usuário e senha."));
+    return;
+  }
+  lock();
+  progress("adm", true);
+  clearStatus("adm");
+  bridge.start_admin(user, pass);
+}
+
+function handleInstall() {
+  if (!bridge) return;
+  lock();
+  progress("sso", true);
+  bridge.run_install();
+}
+
+function handleCancel() {
+  if (bridge) bridge.cancel();
+}
+</script>
+</body>
+</html>

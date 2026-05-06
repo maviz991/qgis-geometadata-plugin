@@ -20,6 +20,20 @@
  This script initializes the plugin, making it known to QGIS.
 """
 
+# Força o compartilhamento de contexto OpenGL necessário pelo PyQtWebEngine
+# Deve ser definido o mais cedo possível no carregamento do plugin
+from qgis.PyQt.QtCore import Qt, QCoreApplication
+try:
+    QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
+except:
+    pass
+
+# Tenta pré-importar o WebEngine para evitar erros de inicialização posterior
+try:
+    from qgis.PyQt import QtWebEngineWidgets
+except:
+    pass
+
 
 # noinspection PyPep8Naming
 def classFactory(iface):  # pylint: disable=invalid-name

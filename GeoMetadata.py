@@ -20,7 +20,6 @@
 from qgis.PyQt.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, QTimer
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
-from qgis.core import Qgis
 
 # Initialize Qt resources from file resources.py
 from .resources import *
@@ -161,6 +160,7 @@ class GeoMetadata:
 
     def initGui(self):
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
+        self._setup_in_progress = False  # Flag para evitar diálogos duplos
 
         icon_path = os.path.join(self.plugin_dir, 'icon.png')
         self.add_action(
@@ -173,38 +173,22 @@ class GeoMetadata:
         QTimer.singleShot(3000, self._check_and_install_dependencies)
 
     def _check_and_install_dependencies(self):
-        from .core.entra_auth_provider import is_msal_available
-        if is_msal_available():
+        if self._setup_in_progress:
             return
-        from .core.dependency_installer import DependencyInstaller
-        self.iface.messageBar().pushMessage(
-            "GeoMetadata — SSO",
-            "Instalando dependência 'msal' para login corporativo. Aguarde...",
-            level=Qgis.Info,
-            duration=0
-        )
-        self._dep_installer = DependencyInstaller("msal")
-        self._dep_installer.install_success.connect(self._on_dep_installed)
-        self._dep_installer.install_failed.connect(self._on_dep_install_failed)
-        self._dep_installer.start()
+            
+        from .core.env_checker import missing_packages
+        pkgs = missing_packages()
+        
+        if not pkgs:
+            return
 
-    def _on_dep_installed(self, _pkg: str):
-        self.iface.messageBar().clearWidgets()
-        self.iface.messageBar().pushMessage(
-            "GeoMetadata — SSO",
-            "✅ 'msal' instalado com sucesso. Reinicie o QGIS para ativar o login corporativo.",
-            level=Qgis.Success,
-            duration=15
-        )
-
-    def _on_dep_install_failed(self, _pkg: str, _error: str):
-        self.iface.messageBar().clearWidgets()
-        self.iface.messageBar().pushMessage(
-            "GeoMetadata — SSO",
-            "⚠ Falha ao instalar 'msal'. Abra o OSGeo4W Shell e execute: pip install msal",
-            level=Qgis.Warning,
-            duration=15
-        )
+        self._setup_in_progress = True
+        try:
+            from .ui.setup_dialog import SetupDialog
+            dlg = SetupDialog(pkgs, parent=self.iface.mainWindow())
+            dlg.exec_()
+        finally:
+            self._setup_in_progress = False
 
 
     def unload(self):

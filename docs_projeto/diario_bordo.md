@@ -332,3 +332,36 @@ Isso torna transparentes os pixels fora do `border-radius` do QSS, eliminando o 
 - [ ] Seta `▾` visível nos botões `GeoNetwork` e `GeoServer`
 - [ ] `Importar Metadado (.xml)` funcional (ou removido se prematuro)
 - [ ] Header responsivo para janelas estreitas
+
+---
+
+## Registro 5 — Correção de Loop de Dependências e Ativação do HTML "GoLive" (06/05/2026)
+
+### Contexto
+O usuário enfrentava um loop infinito no `SetupDialog` causado por um falso positivo de dependência faltante (`PyQtWebEngine`). O diagnóstico revelou que a biblioteca estava instalada, mas falhava ao importar devido à falta da flag `AA_ShareOpenGLContexts` e conflitos de caminhos no Windows (shadowing entre site-packages do QGIS e do Usuário).
+
+### Decisões Tomadas
+
+1. **Ativação Obrigatória do HTML:** Conforme solicitação do usuário, o fallback para a interface QSS (widgets puros) foi **removido**. O plugin agora exige `PyQtWebEngine`.
+2. **Correção de Inicialização (OpenGL):** Adicionada a configuração `QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)` no `__init__.py` do plugin para garantir que o WebEngine possa ser carregado pelo Qt do QGIS.
+3. **Injeção de Path (Windows Fix):** O `env_checker.py` agora injeta automaticamente o `site.getusersitepackages()` no `sys.path` para garantir que pacotes instalados via `pip install --user` (como `msal`) sejam visíveis.
+4. **Detecção Robusta de Importação:**
+    - O `env_checker.py` agora diferencia "Módulo não encontrado" de "Erro de inicialização/DLL". Erros de OpenGL/Runtime agora são tratados como **sucesso** (indicam que a lib está presente).
+    - O `login_dialog.py` tenta importar de `qgis.PyQt` e, em caso de falha, tenta `PyQt5` diretamente (necessário para instalações via pip).
+5. **Proteção de UI:** Adicionada flag `_setup_in_progress` no `GeoMetadata.py` para evitar que o diálogo de instalação abra múltiplas vezes simultaneamente.
+
+### Arquivos Modificados
+
+| Arquivo | Mudança |
+|---|---|
+| `__init__.py` | Injeção de `AA_ShareOpenGLContexts` e pré-import do WebEngine. |
+| `core/env_checker.py` | Injeção de `sys.path`, logs detalhados e lógica de detecção de erros de inicialização. |
+| `core/dependency_installer.py` | Refinamento na detecção do executável Python do QGIS. |
+| `ui/login_dialog.py` | **Remoção do modo QSS**, importação robusta de WebEngine e restauração dos Workers de segundo plano. |
+| `ui/setup_dialog.py` | Mensagem de erro contextual sugerindo o uso do OSGeo4W Setup para conflitos de DLL. |
+| `GeoMetadata.py` | Flag de controle para evitar diálogos de setup duplicados. |
+
+### Resultados
+- Loop de instalação resolvido.
+- Interface HTML funcionando com scrollbar nativa e design premium.
+- Estabilidade garantida via workers em `QThread` para não travar a UI durante o login.

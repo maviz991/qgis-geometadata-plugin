@@ -51,7 +51,6 @@ from .core.metadata_service import MetadataService
 from .core.persistence_service import PersistenceService
 from . import resources
 from .core.plugin_config import config_loader
-from .ui.login_dialog import LoginDialog
 from .ui.styles import get_stylesheet
 from .ui.geoserver_panel import GeoServerPanel
 from .ui.home_panel import HomePanel
@@ -671,9 +670,19 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             return
 
         # --- LOGIN UNIFICADO ---
+        # Verifica deps antes de tentar importar QWebEngineView
+        from .core.env_checker import missing_packages
+        pkgs = missing_packages()
+        if pkgs:
+            from .ui.setup_dialog import SetupDialog
+            SetupDialog(pkgs, parent=self).exec_()
+            return
+
+        from .ui.login_dialog import LoginDialog
+
         entra_cfg = config_loader.get_entra_id_config()
         geoserver_url = config_loader.get_geoserver_url()
-        
+
         login_dialog = LoginDialog(
             client_id=entra_cfg.get("client_id", ""),
             tenant_id=entra_cfg.get("tenant_id", ""),
