@@ -3,44 +3,56 @@
     <!-- ABAS -->
     <div class="form-tabs">
         <button class="tab-link active" onclick="showTab('identificacao', this)">Identificação</button>
+        <button class="tab-link" onclick="showTab('contato',       this)">Contato</button>
         <button class="tab-link" onclick="showTab('classificacao', this)">Classificação</button>
         <button class="tab-link" onclick="showTab('extensao',      this)">Extensão</button>
-        <button class="tab-link" onclick="showTab('contato',       this)">Contato</button>
     </div>
 
-    <!-- TAB: IDENTIFICAÇÃO -->
+    <!-- ══ TAB 1: IDENTIFICAÇÃO ══════════════════════════════ -->
     <div id="tab-identificacao" class="tab-content active">
         <div class="form-grid">
+
             <div class="form-group span-2">
                 <label for="f-title">Título <span class="req">*</span></label>
                 <input id="f-title" type="text" placeholder="Título do conjunto de dados...">
             </div>
+
+            <div class="form-group span-2">
+                <label>Data e hora do dado <span class="req">*</span></label>
+                <div class="inline-row">
+                    <select id="f-dateType">
+                        <option value="creation">Criação</option>
+                        <option value="publication">Publicação</option>
+                        <option value="revision">Revisão</option>
+                    </select>
+                    <input id="f-date" type="datetime-local">
+                </div>
+            </div>
+
             <div class="form-group">
                 <label for="f-edition">Edição</label>
-                <input id="f-edition" type="number" value="1" min="1">
+                <input id="f-edition" type="number" value="0" min="0" oninput="toggleEditionDate(this.value)">
             </div>
             <div class="form-group">
-                <label for="f-spatialResolution_denominator">Escala (denominador)</label>
-                <input id="f-spatialResolution_denominator" type="text" placeholder="ex: 25000">
+                <label for="f-date_edition">Data da Edição</label>
+                <input id="f-date_edition" type="datetime-local" disabled>
             </div>
+
             <div class="form-group span-2">
                 <label for="f-abstract">Resumo <span class="req">*</span></label>
-                <textarea id="f-abstract" rows="5" placeholder="Descreva o conjunto de dados..."></textarea>
+                <textarea id="f-abstract" rows="4" placeholder="Descreva o conjunto de dados..."></textarea>
             </div>
-            <div class="form-group span-2">
-                <label for="f-MD_Keywords">Palavras-chave <span class="req">*</span></label>
-                <input id="f-MD_Keywords" type="text" placeholder="Separe por vírgula: habitação, CDHU, São Paulo">
-            </div>
-            <div class="form-group span-2">
-                <label for="f-thumbnail_url">URL da Miniatura</label>
-                <input id="f-thumbnail_url" type="text" placeholder="https://...">
-            </div>
-        </div>
-    </div>
 
-    <!-- TAB: CLASSIFICAÇÃO -->
-    <div id="tab-classificacao" class="tab-content">
-        <div class="form-grid">
+            <div class="form-group span-2">
+                <label for="f-purpose">Finalidade</label>
+                <textarea id="f-purpose" rows="3" placeholder="Descreva os objetivos e uso previsto..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="f-credit">Crédito <span class="req">*</span></label>
+                <input id="f-credit" type="text" placeholder="Técnico responsável">
+            </div>
+
             <div class="form-group">
                 <label for="f-status_codeListValue">Status <span class="req">*</span></label>
                 <select id="f-status_codeListValue">
@@ -54,6 +66,184 @@
                     <option value="planned">Planejado</option>
                 </select>
             </div>
+
+            <div class="form-group span-2">
+                <label for="f-MD_Keywords">Palavras-chave <span class="req">*</span></label>
+                <input id="f-MD_Keywords" type="text" placeholder="habitação, CDHU, São Paulo">
+            </div>
+
+        </div>
+    </div>
+    <!-- ══ TAB 4: CONTATO ══════════════════════════════════════ -->
+    <div id="tab-contato" class="tab-content">
+
+        <div class="contacts-toolbar">
+            <div class="search-wrap">
+                <input id="contact-search" type="text" placeholder="Buscar organização no catálogo Geohab..."
+                    oninput="suggestContacts(this.value)" onkeydown="if(event.key==='Escape') closeSuggestions()">
+                <div id="search-suggestions" class="search-suggestions"></div>
+            </div>
+            <button class="btn-icon" onclick="suggestContacts(document.getElementById('contact-search').value)">🔍
+                Buscar</button>
+            <button class="btn-icon accent" onclick="toggleManualForm()">+ Manual</button>
+        </div>
+
+        <!-- Formulário manual -->
+        <div class="manual-form-wrap" id="manual-form-wrap" style="display:none;">
+            <div class="manual-form-header" onclick="toggleManualForm()">
+                <span>➕ Novo contato manual</span>
+                <span style="font-size:18px;font-weight:300;">×</span>
+            </div>
+            <div class="manual-form-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Sigla <span class="req">*</span></label>
+                        <input id="mf-sigla" type="text" placeholder="ex: CDHU">
+                    </div>
+                    <div class="form-group">
+                        <label>Organização <span class="req">*</span></label>
+                        <input id="mf-org" type="text" placeholder="Nome completo">
+                    </div>
+                    <div class="form-group">
+                        <label>E-mail</label>
+                        <input id="mf-email" type="email" placeholder="contato@exemplo.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Regra</label>
+                        <select id="mf-role">
+                            <option value="">— Selecione —</option>
+                            <option value="owner">Dono</option>
+                            <option value="author">Autor</option>
+                            <option value="processor">Organizador</option>
+                            <option value="distributor">Distribuidor</option>
+                            <option value="custodian">Depositário</option>
+                            <option value="resourceProvider">Fornecedor de recurso</option>
+                            <option value="principalInvestigator">Investigador principal</option>
+                            <option value="originator">Originador</option>
+                            <option value="pointOfContact">Ponto de contato</option>
+                            <option value="publisher">Publicador</option>
+                            <option value="user">Utilizador</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Cargo / Departamento</label>
+                        <input id="mf-position" type="text">
+                    </div>
+                    <div class="form-group">
+                        <label>Telefone</label>
+                        <input id="mf-phone" type="text" placeholder="(11) 0000-0000">
+                    </div>
+                    <div class="form-group span-2">
+                        <label>Endereço</label>
+                        <input id="mf-address" type="text" placeholder="Rua, número">
+                    </div>
+                    <div class="form-group">
+                        <label>Cidade</label>
+                        <input id="mf-city" type="text">
+                    </div>
+                    <div class="form-group">
+                        <label>Estado</label>
+                        <select id="mf-state">
+                            <option value="">—</option>
+                            <option value="SP">São Paulo</option>
+                            <option value="AC">Acre</option>
+                            <option value="AL">Alagoas</option>
+                            <option value="AM">Amazonas</option>
+                            <option value="BA">Bahia</option>
+                            <option value="CE">Ceará</option>
+                            <option value="DF">Distrito Federal</option>
+                            <option value="ES">Espírito Santo</option>
+                            <option value="GO">Goiás</option>
+                            <option value="MA">Maranhão</option>
+                            <option value="MG">Minas Gerais</option>
+                            <option value="MT">Mato Grosso</option>
+                            <option value="MS">Mato Grosso do Sul</option>
+                            <option value="PA">Pará</option>
+                            <option value="PB">Paraíba</option>
+                            <option value="PR">Paraná</option>
+                            <option value="PE">Pernambuco</option>
+                            <option value="PI">Piauí</option>
+                            <option value="RJ">Rio de Janeiro</option>
+                            <option value="RN">Rio Grande do Norte</option>
+                            <option value="RS">Rio Grande do Sul</option>
+                            <option value="RO">Rondônia</option>
+                            <option value="RR">Roraima</option>
+                            <option value="SC">Santa Catarina</option>
+                            <option value="SE">Sergipe</option>
+                            <option value="TO">Tocantins</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>CEP</label>
+                        <input id="mf-zip" type="text" placeholder="00000-000">
+                    </div>
+                    <div class="form-group">
+                        <label>País</label>
+                        <input id="mf-country" type="text" value="Brasil">
+                    </div>
+                </div>
+            </div>
+            <div class="manual-form-footer">
+                <button class="btn-icon" onclick="toggleManualForm()">Cancelar</button>
+                <button class="btn-icon accent" onclick="submitManualContact()">Adicionar contato</button>
+            </div>
+        </div>
+
+        <!-- Tabela resumo -->
+        <div class="contacts-table-wrap">
+            <table class="contacts-table">
+                <thead>
+                    <tr>
+                        <th style="width:32px;text-align:center">#</th>
+                        <th>Nome da organização</th>
+                        <th>Sigla</th>
+                        <th>E-mail</th>
+                        <th>Regra</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="contacts-tbody">
+                    <tr>
+                        <td colspan="6" class="empty-state">
+                            Nenhum contato. Use a busca ou clique em <b>+ Manual</b>.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Accordions de detalhes -->
+        <div class="contacts-accordions" id="contacts-accordions"></div>
+
+    </div>
+    <!-- ══ TAB 3: CLASSIFICAÇÃO ═══════════════════════════════ -->
+    <div id="tab-classificacao" class="tab-content">
+        <div class="form-grid">
+
+            <div class="form-group">
+                <label for="f-maintenanceFrequency">Frequência de Atualização <span class="req">*</span></label>
+                <select id="f-maintenanceFrequency" onchange="toggleUpdateDate(this.value)">
+                    <option value="">— Selecione —</option>
+                    <option value="annual">Anual</option>
+                    <option value="biannually">Bimestral</option>
+                    <option value="quarterly">Trimestral</option>
+                    <option value="monthly">Mensal</option>
+                    <option value="fortnightly">Quinzenal</option>
+                    <option value="weekly">Semanal</option>
+                    <option value="daily">Diário</option>
+                    <option value="continual">Contínuo</option>
+                    <option value="irregular">Irregular</option>
+                    <option value="unknown">Desconhecido</option>
+                    <option value="notPlanned">Não planejado</option>
+                    <option value="asNeeded">Quando necessário</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="f-dateOfNextUpdate">Data da próxima atualização</label>
+                <input id="f-dateOfNextUpdate" type="date" disabled>
+            </div>
+
             <div class="form-group">
                 <label for="f-MD_SpatialRepresentationTypeCode">Tipo de Representação Espacial <span
                         class="req">*</span></label>
@@ -67,6 +257,7 @@
                     <option value="video">Vídeo</option>
                 </select>
             </div>
+
             <div class="form-group">
                 <label for="f-topicCategory">Categoria Temática <span class="req">*</span></label>
                 <select id="f-topicCategory">
@@ -92,12 +283,14 @@
                     <option value="farming">Agricultura, pesca ou pecuária</option>
                 </select>
             </div>
+
             <div class="form-group">
                 <label for="f-hierarchyLevel">Nível Hierárquico <span class="req">*</span></label>
                 <select id="f-hierarchyLevel">
                     <option value="dataset">Conjunto de dados</option>
                 </select>
             </div>
+
             <div class="form-group">
                 <label for="f-LanguageCode">Idioma <span class="req">*</span></label>
                 <select id="f-LanguageCode">
@@ -108,16 +301,23 @@
                     <option value="ger">🇩🇪 Alemão</option>
                 </select>
             </div>
+
             <div class="form-group">
                 <label for="f-characterSet">Codificação de Caracteres</label>
                 <select id="f-characterSet">
                     <option value="utf8">UTF-8</option>
                 </select>
             </div>
+
+            <div class="form-group">
+                <label for="f-thumbnail_url">URL da Miniatura</label>
+                <input id="f-thumbnail_url" type="text" placeholder="https://...">
+            </div>
+
         </div>
     </div>
 
-    <!-- TAB: EXTENSÃO -->
+    <!-- ══ TAB 4: EXTENSÃO ════════════════════════════════════ -->
     <div id="tab-extensao" class="tab-content">
         <div class="form-grid">
             <div class="form-group span-2">
@@ -151,235 +351,12 @@
                 <input id="f-dateStamp" type="datetime-local">
             </div>
             <div class="form-group">
-                <label for="f-date_creation">Data de Criação do Dado</label>
-                <input id="f-date_creation" type="datetime-local">
+                <label for="f-spatialResolution_denominator">Escala (denominador)</label>
+                <input id="f-spatialResolution_denominator" type="text" placeholder="ex: 25000">
             </div>
         </div>
     </div>
 
-    <!-- TAB: CONTATO -->
-    <div id="tab-contato" class="tab-content">
-        <div class="form-grid">
-            <div class="form-group">
-                <label for="f-contact_individualName">Sigla <span class="req">*</span></label>
-                <input id="f-contact_individualName" type="text" placeholder="ex: CDHU">
-            </div>
-            <div class="form-group">
-                <label for="f-contact_organisationName">Organização <span class="req">*</span></label>
-                <input id="f-contact_organisationName" type="text" placeholder="Nome completo da organização">
-            </div>
-            <div class="form-group">
-                <label for="f-contact_positionName">Cargo / Departamento</label>
-                <input id="f-contact_positionName" type="text" placeholder="ex: Gerência de Geoprocessamento">
-            </div>
-            <div class="form-group">
-                <label for="f-contact_phone">Telefone</label>
-                <input id="f-contact_phone" type="text" placeholder="(11) 0000-0000">
-            </div>
-            <div class="form-group">
-                <label for="f-contact_email">E-mail <span class="req">*</span></label>
-                <input id="f-contact_email" type="email" placeholder="contato@exemplo.com.br">
-            </div>
-            <div class="form-group">
-                <label for="f-contact_role">Responsabilidade <span class="req">*</span></label>
-                <select id="f-contact_role">
-                    <option value="">— Selecione —</option>
-                    <option value="owner">Dono</option>
-                    <option value="author">Autor</option>
-                    <option value="processor">Organizador</option>
-                    <option value="distributor">Distribuidor</option>
-                    <option value="custodian">Depositário</option>
-                    <option value="resourceProvider">Fornecedor de recurso</option>
-                    <option value="principalInvestigator">Investigador principal</option>
-                    <option value="originator">Originador</option>
-                    <option value="pointOfContact">Ponto de contato</option>
-                    <option value="publisher">Publicador</option>
-                    <option value="user">Utilizador</option>
-                </select>
-            </div>
-            <div class="form-group span-2">
-                <label for="f-contact_deliveryPoint">Endereço <span class="req">*</span></label>
-                <input id="f-contact_deliveryPoint" type="text" placeholder="Rua, número">
-            </div>
-            <div class="form-group">
-                <label for="f-contact_city">Cidade <span class="req">*</span></label>
-                <input id="f-contact_city" type="text" placeholder="São Paulo">
-            </div>
-            <div class="form-group">
-                <label for="f-contact_administrativeArea">Estado <span class="req">*</span></label>
-                <select id="f-contact_administrativeArea">
-                    <option value="">— Selecione —</option>
-                    <option value="SP">São Paulo</option>
-                    <option value="AC">Acre</option>
-                    <option value="AL">Alagoas</option>
-                    <option value="AP">Amapá</option>
-                    <option value="AM">Amazonas</option>
-                    <option value="BA">Bahia</option>
-                    <option value="CE">Ceará</option>
-                    <option value="DF">Distrito Federal</option>
-                    <option value="ES">Espírito Santo</option>
-                    <option value="GO">Goiás</option>
-                    <option value="MA">Maranhão</option>
-                    <option value="MT">Mato Grosso</option>
-                    <option value="MS">Mato Grosso do Sul</option>
-                    <option value="MG">Minas Gerais</option>
-                    <option value="PA">Pará</option>
-                    <option value="PB">Paraíba</option>
-                    <option value="PR">Paraná</option>
-                    <option value="PE">Pernambuco</option>
-                    <option value="PI">Piauí</option>
-                    <option value="RJ">Rio de Janeiro</option>
-                    <option value="RN">Rio Grande do Norte</option>
-                    <option value="RS">Rio Grande do Sul</option>
-                    <option value="RO">Rondônia</option>
-                    <option value="RR">Roraima</option>
-                    <option value="SC">Santa Catarina</option>
-                    <option value="SE">Sergipe</option>
-                    <option value="TO">Tocantins</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="f-contact_postalCode">CEP <span class="req">*</span></label>
-                <input id="f-contact_postalCode" type="text" placeholder="00000-000">
-            </div>
-            <div class="form-group">
-                <label for="f-contact_country">País <span class="req">*</span></label>
-                <input id="f-contact_country" type="text" value="Brasil">
-            </div>
-        </div>
-    </div>
+
 
 </div>
-
-<style>
-    .editor-panel {
-        display: flex;
-        flex-direction: column;
-        height: 100%;
-        width: 100%;
-    }
-
-    /* --- Abas --- */
-    .form-tabs {
-        display: flex;
-        border-bottom: 1px solid var(--border);
-        background: white;
-        padding: 0 24px;
-        flex-shrink: 0;
-    }
-
-    .tab-link {
-        background: none;
-        border: none;
-        border-bottom: 3px solid transparent;
-        padding: 14px 18px;
-        font-size: 13px;
-        font-weight: 600;
-        color: var(--fg-muted);
-        cursor: pointer;
-        transition: color 0.2s, border-color 0.2s;
-        margin-bottom: -1px;
-    }
-
-    .tab-link:hover {
-        color: var(--fg);
-    }
-
-    .tab-link.active {
-        color: var(--accent);
-        border-bottom-color: var(--accent);
-    }
-
-    /* --- Conteúdo --- */
-    .tab-content {
-        display: none;
-        overflow-y: auto;
-        flex: 1;
-    }
-
-    .tab-content.active {
-        display: block;
-    }
-
-    /* --- Grid de campos --- */
-    .form-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
-
-        padding: 28px;
-        max-width: 100%;
-    }
-
-    .form-group {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .form-group.span-2 {
-        grid-column: span 2;
-    }
-
-    .form-group label {
-        font-size: 11px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        color: var(--fg-muted);
-        margin-bottom: 6px;
-    }
-
-    .form-group input,
-    .form-group select,
-    .form-group textarea {
-        padding: 9px 12px;
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        font-size: 14px;
-        color: var(--fg);
-        background: white;
-        outline: none;
-        transition: border-color 0.15s, box-shadow 0.15s;
-        font-family: inherit;
-    }
-
-    .form-group input:focus,
-    .form-group select:focus,
-    .form-group textarea:focus {
-        border-color: var(--accent);
-        box-shadow: 0 0 0 3px rgba(229, 34, 45, 0.08);
-    }
-
-    .form-group textarea {
-        resize: vertical;
-        min-height: 100px;
-    }
-
-    .form-group input.error,
-    .form-group select.error,
-    .form-group textarea.error {
-        border-color: var(--accent);
-        background: #fff5f5;
-    }
-
-    .req {
-        color: var(--accent);
-    }
-
-    /* --- Bounding Box --- */
-    .bbox-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
-        gap: 8px;
-        align-items: end;
-        margin-top: 8px;
-    }
-
-    .bbox-center {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 38px;
-        font-size: 22px;
-    }
-</style>

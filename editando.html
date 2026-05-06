@@ -38,11 +38,24 @@
             margin-bottom: -1px;
         }
 
-        .tab-link:hover { color: var(--fg); }
-        .tab-link.active { color: var(--accent); border-bottom-color: var(--accent); }
+        .tab-link:hover {
+            color: var(--fg);
+        }
 
-        .tab-content { display: none; overflow-y: auto; flex: 1; }
-        .tab-content.active { display: block; }
+        .tab-link.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .tab-content {
+            display: none;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
 
         /* ── Grid de campos ───────────────────────────────────── */
         .form-grid {
@@ -53,8 +66,14 @@
             max-width: 100%;
         }
 
-        .form-group { display: flex; flex-direction: column; }
-        .form-group.span-2 { grid-column: span 2; }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group.span-2 {
+            grid-column: span 2;
+        }
 
         .form-group label {
             font-size: 11px;
@@ -86,7 +105,10 @@
             box-shadow: 0 0 0 3px rgba(229, 34, 45, 0.08);
         }
 
-        .form-group textarea { resize: vertical; min-height: 100px; }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
 
         .form-group input.error,
         .form-group select.error,
@@ -102,15 +124,23 @@
             background: #f8fafc;
         }
 
-        .req { color: var(--accent); }
+        .req {
+            color: var(--accent);
+        }
 
         /* ── Linha inline (dois campos lado a lado) ────────────── */
         .inline-row {
             display: flex;
             gap: 8px;
         }
-        .inline-row select { flex: 0 0 160px; }
-        .inline-row input  { flex: 1; }
+
+        .inline-row select {
+            flex: 0 0 160px;
+        }
+
+        .inline-row input {
+            flex: 1;
+        }
 
         /* ── BBox ─────────────────────────────────────────────── */
         .bbox-grid {
@@ -120,6 +150,7 @@
             align-items: end;
             margin-top: 8px;
         }
+
         .bbox-center {
             display: flex;
             justify-content: center;
@@ -135,8 +166,14 @@
             gap: 8px;
             padding: 20px 28px 0;
         }
-        .contacts-toolbar input {
+
+        .search-wrap {
             flex: 1;
+            position: relative;
+        }
+
+        .contacts-toolbar input {
+            width: 100%;
             padding: 9px 12px;
             border: 1px solid var(--border);
             border-radius: 6px;
@@ -144,10 +181,41 @@
             font-family: inherit;
             outline: none;
         }
+
         .contacts-toolbar input:focus {
             border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(229,34,45,0.08);
+            box-shadow: 0 0 0 3px rgba(229, 34, 45, 0.08);
         }
+
+        .search-suggestions {
+            display: none;
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+            z-index: 200;
+            max-height: 220px;
+            overflow-y: auto;
+        }
+
+        .suggestion-item {
+            padding: 10px 14px;
+            font-size: 13px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .suggestion-item:last-child { border-bottom: none; }
+
+        .suggestion-item:hover {
+            background: #f1f5f9;
+            color: var(--accent);
+        }
+
         .btn-icon {
             padding: 8px 14px;
             border: 1px solid var(--border);
@@ -160,17 +228,33 @@
             font-weight: 600;
             color: var(--fg);
         }
-        .btn-icon:hover { background: #f1f5f9; border-color: #cbd5e1; }
-        .btn-icon.accent { background: var(--accent); color: white; border-color: var(--accent); }
-        .btn-icon.accent:hover { background: var(--accent-hover); }
+
+        .btn-icon:hover {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+        }
+
+        .btn-icon.accent {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .btn-icon.accent:hover {
+            background: var(--accent-hover);
+        }
 
         /* ── Tabela de contatos ───────────────────────────────── */
-        .contacts-table-wrap { padding: 16px 28px 0; }
+        .contacts-table-wrap {
+            padding: 16px 28px 0;
+        }
+
         .contacts-table {
             width: 100%;
             border-collapse: collapse;
             font-size: 13px;
         }
+
         .contacts-table th {
             text-align: left;
             padding: 8px 12px;
@@ -181,31 +265,67 @@
             color: var(--fg-muted);
             border-bottom: 1px solid var(--border);
         }
+
         .contacts-table td {
             padding: 10px 12px;
             border-bottom: 1px solid var(--border);
             vertical-align: middle;
         }
-        .contacts-table tr:last-child td { border-bottom: none; }
-        .empty-state { color: var(--fg-muted); font-style: italic; text-align: center; padding: 24px !important; }
+
+        .contacts-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .empty-state {
+            color: var(--fg-muted);
+            font-style: italic;
+            text-align: center;
+            padding: 24px !important;
+        }
+
         .role-select {
-            padding: 5px 8px;
+            padding: 9px 12px;
             border: 1px solid var(--border);
-            border-radius: 4px;
-            font-size: 12px;
+            border-radius: 6px;
+            font-size: 14px;
             background: white;
             cursor: pointer;
+            font-family: inherit;
+            color: var(--fg);
+            outline: none;
+            transition: border-color 0.15s, box-shadow 0.15s;
         }
-        .btn-remove {
+
+        .role-select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(229, 34, 45, 0.08);
+        }
+
+        .btn-remove,
+        .btn-move {
             background: none;
             border: none;
             color: #94a3b8;
             font-size: 14px;
             cursor: pointer;
-            padding: 4px 8px;
+            padding: 4px 6px;
             border-radius: 4px;
         }
-        .btn-remove:hover { color: var(--accent); background: #fff0f0; }
+
+        .btn-remove:hover {
+            color: var(--accent);
+            background: #fff0f0;
+        }
+
+        .btn-move:hover {
+            color: var(--fg);
+            background: #f1f5f9;
+        }
+
+        .btn-move:disabled {
+            opacity: 0.2;
+            cursor: default;
+        }
 
         /* ── Formulário manual (colapsável) ───────────────────── */
         .manual-form-wrap {
@@ -215,6 +335,7 @@
             background: #fafbfc;
             overflow: hidden;
         }
+
         .manual-form-header {
             display: flex;
             align-items: center;
@@ -226,12 +347,20 @@
             cursor: pointer;
             user-select: none;
         }
-        .manual-form-header:hover { background: #f1f5f9; }
+
+        .manual-form-header:hover {
+            background: #f1f5f9;
+        }
+
         .manual-form-body {
-            display: none;
             padding: 16px;
         }
-        .manual-form-body .form-grid { padding: 0; gap: 12px; }
+
+        .manual-form-body .form-grid {
+            padding: 0;
+            gap: 12px;
+        }
+
         .manual-form-footer {
             display: flex;
             justify-content: flex-end;
@@ -241,13 +370,17 @@
         }
 
         /* ── Accordions de contatos ───────────────────────────── */
-        .contacts-accordions { padding: 12px 28px 28px; }
+        .contacts-accordions {
+            padding: 12px 28px 28px;
+        }
+
         .contact-accordion {
             border: 1px solid var(--border);
             border-radius: 8px;
             margin-bottom: 8px;
             overflow: hidden;
         }
+
         .accordion-header {
             width: 100%;
             text-align: left;
@@ -262,8 +395,17 @@
             align-items: center;
             gap: 8px;
         }
-        .accordion-header:hover { background: #f8fafc; }
-        .acc-arrow { font-size: 11px; color: var(--fg-muted); min-width: 12px; }
+
+        .accordion-header:hover {
+            background: #f8fafc;
+        }
+
+        .acc-arrow {
+            font-size: 11px;
+            color: var(--fg-muted);
+            min-width: 12px;
+        }
+
         .badge-manual {
             margin-left: auto;
             background: #eff6ff;
@@ -273,6 +415,7 @@
             font-size: 11px;
             font-weight: 700;
         }
+
         .badge-preset {
             margin-left: auto;
             background: #f0fdf4;
@@ -282,12 +425,18 @@
             font-size: 11px;
             font-weight: 700;
         }
+
         .accordion-body {
             display: none;
             border-top: 1px solid var(--border);
             background: #fafbfc;
         }
-        .accordion-body .form-grid { padding: 16px; gap: 12px; }
+
+        .accordion-body .form-grid {
+            padding: 16px;
+            gap: 12px;
+        }
+
         .readonly-field {
             padding: 9px 12px;
             border: 1px solid var(--border);
@@ -344,58 +493,68 @@
 
             <!-- ABAS -->
             <div class="form-tabs">
-                <button class="tab-link active"  onclick="showTab('identificacao', this)">Identificação</button>
-                <button class="tab-link"          onclick="showTab('classificacao', this)">Classificação</button>
-                <button class="tab-link"          onclick="showTab('extensao',      this)">Extensão</button>
-                <button class="tab-link"          onclick="showTab('contato',       this)">Contato</button>
+                <button class="tab-link active" onclick="showTab('identificacao', this)">Identificação</button>
+                <button class="tab-link" onclick="showTab('classificacao', this)">Classificação</button>
+                <button class="tab-link" onclick="showTab('extensao',      this)">Extensão</button>
+                <button class="tab-link" onclick="showTab('contato',       this)">Contato</button>
             </div>
 
-            <!-- ══ TAB 1: IDENTIFICAÇÃO ══════════════════════════════ -->
+            <!-- TAB: IDENTIFICAÇÃO -->
             <div id="tab-identificacao" class="tab-content active">
                 <div class="form-grid">
-
                     <div class="form-group span-2">
                         <label for="f-title">Título <span class="req">*</span></label>
                         <input id="f-title" type="text" placeholder="Título do conjunto de dados...">
                     </div>
-
-                    <div class="form-group span-2">
-                        <label>Data e hora do dado <span class="req">*</span></label>
-                        <div class="inline-row">
-                            <select id="f-dateType">
-                                <option value="creation">Criação</option>
-                                <option value="publication">Publicação</option>
-                                <option value="revision">Revisão</option>
-                            </select>
-                            <input id="f-date" type="datetime-local">
-                        </div>
-                    </div>
-
                     <div class="form-group">
                         <label for="f-edition">Edição</label>
-                        <input id="f-edition" type="number" value="0" min="0"
-                            oninput="toggleEditionDate(this.value)">
+                        <input id="f-edition" type="number" value="1" min="1">
                     </div>
                     <div class="form-group">
-                        <label for="f-date_edition">Data da Edição</label>
-                        <input id="f-date_edition" type="datetime-local" disabled>
+                        <label for="f-spatialResolution_denominator">Escala (denominador)</label>
+                        <input id="f-spatialResolution_denominator" type="text" placeholder="ex: 25000">
                     </div>
-
                     <div class="form-group span-2">
                         <label for="f-abstract">Resumo <span class="req">*</span></label>
-                        <textarea id="f-abstract" rows="4" placeholder="Descreva o conjunto de dados..."></textarea>
+                        <textarea id="f-abstract" rows="5" placeholder="Descreva o conjunto de dados..."></textarea>
                     </div>
-
                     <div class="form-group span-2">
-                        <label for="f-purpose">Finalidade</label>
-                        <textarea id="f-purpose" rows="3" placeholder="Descreva processos, objetivos e uso previsto..."></textarea>
+                        <label for="f-MD_Keywords">Palavras-chave <span class="req">*</span></label>
+                        <input id="f-MD_Keywords" type="text"
+                            placeholder="Separe por vírgula: habitação, CDHU, São Paulo">
                     </div>
-
                     <div class="form-group span-2">
-                        <label for="f-credit">Crédito <span class="req">*</span></label>
-                        <input id="f-credit" type="text" placeholder="Técnico responsável / organização creditada">
+                        <label for="f-thumbnail_url">URL da Miniatura</label>
+                        <input id="f-thumbnail_url" type="text" placeholder="https://...">
                     </div>
+                </div>
+            </div>
 
+            <!-- TAB: CLASSIFICAÇÃO -->
+            <div id="tab-classificacao" class="tab-content">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="f-maintenanceFrequency">Frequência de Atualização <span class="req">*</span></label>
+                        <select id="f-maintenanceFrequency" onchange="toggleUpdateDate(this.value)">
+                            <option value="">— Selecione —</option>
+                            <option value="annual">Anual</option>
+                            <option value="biannually">Bimestral</option>
+                            <option value="quarterly">Trimestral</option>
+                            <option value="monthly">Mensal</option>
+                            <option value="fortnightly">Quinzenal</option>
+                            <option value="weekly">Semanal</option>
+                            <option value="daily">Diário</option>
+                            <option value="continual">Contínuo</option>
+                            <option value="irregular">Irregular</option>
+                            <option value="unknown">Desconhecido</option>
+                            <option value="notPlanned">Não planejado</option>
+                            <option value="asNeeded">Quando necessário</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="f-dateOfNextUpdate">Data da próxima atualização</label>
+                        <input id="f-dateOfNextUpdate" type="date" disabled>
+                    </div>
                     <div class="form-group">
                         <label for="f-status_codeListValue">Status <span class="req">*</span></label>
                         <select id="f-status_codeListValue">
@@ -409,21 +568,9 @@
                             <option value="planned">Planejado</option>
                         </select>
                     </div>
-
                     <div class="form-group">
-                        <label for="f-MD_Keywords">Palavras-chave <span class="req">*</span></label>
-                        <input id="f-MD_Keywords" type="text" placeholder="habitação, CDHU, São Paulo">
-                    </div>
-
-                </div>
-            </div>
-
-            <!-- ══ TAB 2: CLASSIFICAÇÃO ═══════════════════════════════ -->
-            <div id="tab-classificacao" class="tab-content">
-                <div class="form-grid">
-
-                    <div class="form-group">
-                        <label for="f-MD_SpatialRepresentationTypeCode">Tipo de Representação Espacial <span class="req">*</span></label>
+                        <label for="f-MD_SpatialRepresentationTypeCode">Tipo de Representação Espacial <span
+                                class="req">*</span></label>
                         <select id="f-MD_SpatialRepresentationTypeCode">
                             <option value="">— Selecione —</option>
                             <option value="vector">Vetor</option>
@@ -434,7 +581,6 @@
                             <option value="video">Vídeo</option>
                         </select>
                     </div>
-
                     <div class="form-group">
                         <label for="f-topicCategory">Categoria Temática <span class="req">*</span></label>
                         <select id="f-topicCategory">
@@ -460,14 +606,12 @@
                             <option value="farming">Agricultura, pesca ou pecuária</option>
                         </select>
                     </div>
-
                     <div class="form-group">
                         <label for="f-hierarchyLevel">Nível Hierárquico <span class="req">*</span></label>
                         <select id="f-hierarchyLevel">
                             <option value="dataset">Conjunto de dados</option>
                         </select>
                     </div>
-
                     <div class="form-group">
                         <label for="f-LanguageCode">Idioma <span class="req">*</span></label>
                         <select id="f-LanguageCode">
@@ -478,23 +622,16 @@
                             <option value="ger">🇩🇪 Alemão</option>
                         </select>
                     </div>
-
                     <div class="form-group">
                         <label for="f-characterSet">Codificação de Caracteres</label>
                         <select id="f-characterSet">
                             <option value="utf8">UTF-8</option>
                         </select>
                     </div>
-
-                    <div class="form-group">
-                        <label for="f-thumbnail_url">URL da Miniatura</label>
-                        <input id="f-thumbnail_url" type="text" placeholder="https://...">
-                    </div>
-
                 </div>
             </div>
 
-            <!-- ══ TAB 3: EXTENSÃO ════════════════════════════════════ -->
+            <!-- TAB: EXTENSÃO -->
             <div id="tab-extensao" class="tab-content">
                 <div class="form-grid">
                     <div class="form-group span-2">
@@ -528,28 +665,32 @@
                         <input id="f-dateStamp" type="datetime-local">
                     </div>
                     <div class="form-group">
-                        <label for="f-spatialResolution_denominator">Escala (denominador)</label>
-                        <input id="f-spatialResolution_denominator" type="text" placeholder="ex: 25000">
+                        <label for="f-date_creation">Data de Criação do Dado</label>
+                        <input id="f-date_creation" type="datetime-local">
                     </div>
                 </div>
             </div>
 
-            <!-- ══ TAB 4: CONTATO ══════════════════════════════════════ -->
+            <!-- TAB: CONTATO -->
             <div id="tab-contato" class="tab-content">
 
-                <!-- Barra de busca -->
                 <div class="contacts-toolbar">
-                    <input id="contact-search" type="text" placeholder="Buscar organização no catálogo Geohab..."
-                        onkeydown="if(event.key==='Enter') searchContacts()">
-                    <button class="btn-icon" onclick="searchContacts()">🔍 Buscar</button>
+                    <div class="search-wrap">
+                        <input id="contact-search" type="text"
+                            placeholder="Buscar organização no catálogo Geohab..."
+                            oninput="suggestContacts(this.value)"
+                            onkeydown="if(event.key==='Escape') closeSuggestions()">
+                        <div id="search-suggestions" class="search-suggestions"></div>
+                    </div>
+                    <button class="btn-icon" onclick="suggestContacts(document.getElementById('contact-search').value)">🔍 Buscar</button>
                     <button class="btn-icon accent" onclick="toggleManualForm()">+ Manual</button>
                 </div>
 
-                <!-- Formulário de adição manual (colapsável) -->
+                <!-- Formulário manual -->
                 <div class="manual-form-wrap" id="manual-form-wrap" style="display:none;">
                     <div class="manual-form-header" onclick="toggleManualForm()">
                         <span>➕ Novo contato manual</span>
-                        <span style="font-size:18px; font-weight:300;">×</span>
+                        <span style="font-size:18px;font-weight:300;">×</span>
                     </div>
                     <div class="manual-form-body">
                         <div class="form-grid">
@@ -600,23 +741,7 @@
                             </div>
                             <div class="form-group">
                                 <label>Estado</label>
-                                <select id="mf-state">
-                                    <option value="">—</option>
-                                    <option value="SP">São Paulo</option>
-                                    <option value="AC">Acre</option><option value="AL">Alagoas</option>
-                                    <option value="AM">Amazonas</option><option value="BA">Bahia</option>
-                                    <option value="CE">Ceará</option><option value="DF">Distrito Federal</option>
-                                    <option value="ES">Espírito Santo</option><option value="GO">Goiás</option>
-                                    <option value="MA">Maranhão</option><option value="MG">Minas Gerais</option>
-                                    <option value="MT">Mato Grosso</option><option value="MS">Mato Grosso do Sul</option>
-                                    <option value="PA">Pará</option><option value="PB">Paraíba</option>
-                                    <option value="PR">Paraná</option><option value="PE">Pernambuco</option>
-                                    <option value="PI">Piauí</option><option value="RJ">Rio de Janeiro</option>
-                                    <option value="RN">Rio Grande do Norte</option><option value="RS">Rio Grande do Sul</option>
-                                    <option value="RO">Rondônia</option><option value="RR">Roraima</option>
-                                    <option value="SC">Santa Catarina</option><option value="SE">Sergipe</option>
-                                    <option value="TO">Tocantins</option>
-                                </select>
+                                <input id="mf-state" type="text">
                             </div>
                             <div class="form-group">
                                 <label>CEP</label>
@@ -639,6 +764,7 @@
                     <table class="contacts-table">
                         <thead>
                             <tr>
+                                <th style="width:32px;text-align:center">#</th>
                                 <th>Nome da organização</th>
                                 <th>Sigla</th>
                                 <th>E-mail</th>
@@ -648,7 +774,7 @@
                         </thead>
                         <tbody id="contacts-tbody">
                             <tr>
-                                <td colspan="5" class="empty-state">
+                                <td colspan="6" class="empty-state">
                                     Nenhum contato. Use a busca ou clique em <b>+ Manual</b>.
                                 </td>
                             </tr>
@@ -659,8 +785,95 @@
                 <!-- Accordions de detalhes -->
                 <div class="contacts-accordions" id="contacts-accordions"></div>
 
+                <div class="form-grid" style="display:none;">
+                    <div class="form-group">
+                        <label for="f-contact_individualName">Sigla <span class="req">*</span></label>
+                        <input id="f-contact_individualName" type="text" placeholder="ex: CDHU">
+                    </div>
+                    <div class="form-group">
+                        <label for="f-contact_organisationName">Organização <span class="req">*</span></label>
+                        <input id="f-contact_organisationName" type="text" placeholder="Nome completo da organização">
+                    </div>
+                    <div class="form-group">
+                        <label for="f-contact_positionName">Cargo / Departamento</label>
+                        <input id="f-contact_positionName" type="text" placeholder="ex: Gerência de Geoprocessamento">
+                    </div>
+                    <div class="form-group">
+                        <label for="f-contact_phone">Telefone</label>
+                        <input id="f-contact_phone" type="text" placeholder="(11) 0000-0000">
+                    </div>
+                    <div class="form-group">
+                        <label for="f-contact_email">E-mail <span class="req">*</span></label>
+                        <input id="f-contact_email" type="email" placeholder="contato@exemplo.com.br">
+                    </div>
+                    <div class="form-group">
+                        <label for="f-contact_role">Responsabilidade <span class="req">*</span></label>
+                        <select id="f-contact_role">
+                            <option value="">— Selecione —</option>
+                            <option value="owner">Dono</option>
+                            <option value="author">Autor</option>
+                            <option value="processor">Organizador</option>
+                            <option value="distributor">Distribuidor</option>
+                            <option value="custodian">Depositário</option>
+                            <option value="resourceProvider">Fornecedor de recurso</option>
+                            <option value="principalInvestigator">Investigador principal</option>
+                            <option value="originator">Originador</option>
+                            <option value="pointOfContact">Ponto de contato</option>
+                            <option value="publisher">Publicador</option>
+                            <option value="user">Utilizador</option>
+                        </select>
+                    </div>
+                    <div class="form-group span-2">
+                        <label for="f-contact_deliveryPoint">Endereço <span class="req">*</span></label>
+                        <input id="f-contact_deliveryPoint" type="text" placeholder="Rua, número">
+                    </div>
+                    <div class="form-group">
+                        <label for="f-contact_city">Cidade <span class="req">*</span></label>
+                        <input id="f-contact_city" type="text" placeholder="São Paulo">
+                    </div>
+                    <div class="form-group">
+                        <label for="f-contact_administrativeArea">Estado <span class="req">*</span></label>
+                        <select id="f-contact_administrativeArea">
+                            <option value="">— Selecione —</option>
+                            <option value="SP">São Paulo</option>
+                            <option value="AC">Acre</option>
+                            <option value="AL">Alagoas</option>
+                            <option value="AP">Amapá</option>
+                            <option value="AM">Amazonas</option>
+                            <option value="BA">Bahia</option>
+                            <option value="CE">Ceará</option>
+                            <option value="DF">Distrito Federal</option>
+                            <option value="ES">Espírito Santo</option>
+                            <option value="GO">Goiás</option>
+                            <option value="MA">Maranhão</option>
+                            <option value="MT">Mato Grosso</option>
+                            <option value="MS">Mato Grosso do Sul</option>
+                            <option value="MG">Minas Gerais</option>
+                            <option value="PA">Pará</option>
+                            <option value="PB">Paraíba</option>
+                            <option value="PR">Paraná</option>
+                            <option value="PE">Pernambuco</option>
+                            <option value="PI">Piauí</option>
+                            <option value="RJ">Rio de Janeiro</option>
+                            <option value="RN">Rio Grande do Norte</option>
+                            <option value="RS">Rio Grande do Sul</option>
+                            <option value="RO">Rondônia</option>
+                            <option value="RR">Roraima</option>
+                            <option value="SC">Santa Catarina</option>
+                            <option value="SE">Sergipe</option>
+                            <option value="TO">Tocantins</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="f-contact_postalCode">CEP <span class="req">*</span></label>
+                        <input id="f-contact_postalCode" type="text" placeholder="00000-000">
+                    </div>
+                    <div class="form-group">
+                        <label for="f-contact_country">País <span class="req">*</span></label>
+                        <input id="f-contact_country" type="text" value="Brasil">
+                    </div>
+                </div>
             </div>
-            <!-- ═══════════════════════════════════════════════════════ -->
 
         </div>
     </main>
@@ -671,6 +884,15 @@
     </footer>
 
     <script>
+        document.addEventListener("click", function (e) {
+            var box = document.getElementById("search-suggestions");
+            if (!box || box.style.display === "none") return;
+            var input = document.getElementById("contact-search");
+            if (input && input.contains(e.target)) return;
+            if (box.contains(e.target)) return;
+            closeSuggestions();
+        });
+
         // ─── Abas ─────────────────────────────────────────────────────
         function showTab(tabId, btn) {
             document.querySelectorAll(".tab-content").forEach(function (el) { el.classList.remove("active"); });
@@ -689,6 +911,13 @@
             if (!hasValue) el.value = "";
         }
 
+        function toggleUpdateDate(val) {
+            var el = document.getElementById("f-dateOfNextUpdate");
+            if (!el) return;
+            el.disabled = !val;
+            if (!val) el.value = "";
+        }
+
         // ─── Contatos: estado ──────────────────────────────────────────
         var contacts = [];
 
@@ -701,20 +930,26 @@
             "publisher": "Publicador", "user": "Utilizador"
         };
 
-        var ROLE_OPTIONS = Object.keys(ROLE_LABELS).map(function(v) {
+        var ROLE_OPTIONS = Object.keys(ROLE_LABELS).map(function (v) {
             return { value: v, label: ROLE_LABELS[v] };
         });
 
         function buildRoleSelect(idx, current, alwaysEditable) {
-            var opts = '<option value="">— Selecione —</option>' +
-                ROLE_OPTIONS.map(function(r) {
-                    return '<option value="' + r.value + '"' + (r.value === current ? ' selected' : '') + '>' + r.label + '</option>';
-                }).join('');
-            return '<select class="role-select" onchange="updateRole(' + idx + ', this.value)">' + opts + '</select>';
+            var selected = current || "pointOfContact";
+            if (contacts[idx]) contacts[idx].data.role = contacts[idx].data.role || selected;
+            var opts = ROLE_OPTIONS.map(function (r) {
+                return '<option value="' + r.value + '"' + (r.value === selected ? ' selected' : '') + '>' + r.label + '</option>';
+            }).join('');
+            return '<select id="role-table-' + idx + '" class="role-select" onchange="updateRole(' + idx + ', this.value)">' + opts + '</select>';
         }
 
         function updateRole(idx, val) {
-            if (contacts[idx]) contacts[idx].data.role = val;
+            if (!contacts[idx]) return;
+            contacts[idx].data.role = val;
+            var tableSelect = document.getElementById("role-table-" + idx);
+            var accSelect   = document.getElementById("role-acc-"   + idx);
+            if (tableSelect && tableSelect.value !== val) tableSelect.value = val;
+            if (accSelect   && accSelect.value   !== val) accSelect.value   = val;
         }
 
         // ─── Contatos: render ──────────────────────────────────────────
@@ -724,23 +959,29 @@
             if (!tbody) return;
 
             if (contacts.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Nenhum contato. Use a busca ou clique em <b>+ Manual</b>.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhum contato. Use a busca ou clique em <b>+ Manual</b>.</td></tr>';
                 if (accDiv) accDiv.innerHTML = "";
                 return;
             }
 
-            tbody.innerHTML = contacts.map(function(c, idx) {
+            var last = contacts.length - 1;
+            tbody.innerHTML = contacts.map(function (c, idx) {
                 return '<tr>' +
+                    '<td style="text-align:center;color:var(--fg-muted);font-weight:700;font-size:12px">' + (idx + 1) + '</td>' +
                     '<td>' + (c.data.org || '—') + '</td>' +
                     '<td>' + (c.data.sigla || '—') + '</td>' +
                     '<td>' + (c.data.email || '—') + '</td>' +
                     '<td>' + buildRoleSelect(idx, c.data.role) + '</td>' +
-                    '<td><button class="btn-remove" onclick="removeContact(' + idx + ')" title="Remover">✕</button></td>' +
+                    '<td style="white-space:nowrap">' +
+                    '<button class="btn-move" onclick="moveContact(' + idx + ',-1)" title="Mover para cima"' + (idx === 0    ? ' disabled' : '') + '>↑</button>' +
+                    '<button class="btn-move" onclick="moveContact(' + idx + ', 1)" title="Mover para baixo"' + (idx === last ? ' disabled' : '') + '>↓</button>' +
+                    '<button class="btn-remove" onclick="removeContact(' + idx + ')" title="Remover">✕</button>' +
+                    '</td>' +
                     '</tr>';
             }).join('');
 
             if (accDiv) {
-                accDiv.innerHTML = contacts.map(function(c, idx) {
+                accDiv.innerHTML = contacts.map(function (c, idx) {
                     return buildAccordion(c, idx);
                 }).join('');
             }
@@ -775,13 +1016,11 @@
 
         function buildAccordionFields(d, idx, isManual) {
             var ro = !isManual;
-            var roleOpts = '<option value="">— Selecione —</option>' +
-                ROLE_OPTIONS.map(function(r) {
-                    return '<option value="' + r.value + '"' + (r.value === d.role ? ' selected' : '') + '>' + r.label + '</option>';
-                }).join('');
+            var roleOpts = ROLE_OPTIONS.map(function (r) {
+                return '<option value="' + r.value + '"' + (r.value === (d.role || "pointOfContact") ? ' selected' : '') + '>' + r.label + '</option>';
+            }).join('');
             var roleField = '<div class="form-group"><label>Regra</label>' +
-                '<select class="role-select" style="padding:9px 12px;border-radius:6px;font-size:14px;border:1px solid var(--border)" ' +
-                'onchange="updateRole(' + idx + ', this.value)">' + roleOpts + '</select></div>';
+                '<select id="role-acc-' + idx + '" class="role-select" onchange="updateRole(' + idx + ', this.value)">' + roleOpts + '</select></div>';
 
             return field('Sigla', d.sigla, isManual, 'acc-' + idx + '-sigla') +
                 field('Organização', d.org, isManual, 'acc-' + idx + '-org') +
@@ -790,22 +1029,32 @@
                 field('Cargo', d.position, isManual, 'acc-' + idx + '-position') +
                 field('Telefone', d.phone, isManual, 'acc-' + idx + '-phone') +
                 '<div class="form-group span-2">' +
-                    '<label>Endereço</label>' +
-                    (isManual ? '<input id="acc-' + idx + '-address" type="text" value="' + (d.address || '') + '">'
-                              : '<div class="readonly-field">' + (d.address || '—') + '</div>') +
+                '<label>Endereço</label>' +
+                (isManual ? '<input id="acc-' + idx + '-address" type="text" value="' + (d.address || '') + '">'
+                    : '<div class="readonly-field">' + (d.address || '—') + '</div>') +
                 '</div>' +
-                field('Cidade', d.city, isManual, 'acc-' + idx + '-city') +
-                field('CEP', d.zip, isManual, 'acc-' + idx + '-zip') +
-                field('País', d.country, isManual, 'acc-' + idx + '-country');
+                field('Cidade', d.city,  isManual, 'acc-' + idx + '-city') +
+                field('Estado', d.state, isManual, 'acc-' + idx + '-state') +
+                field('CEP',    d.zip,   isManual, 'acc-' + idx + '-zip') +
+                field('País',   d.country, isManual, 'acc-' + idx + '-country');
         }
 
         function toggleAccordion(idx) {
             var body = document.getElementById("acc-body-" + idx);
-            var arr  = document.getElementById("arr-" + idx);
+            var arr = document.getElementById("arr-" + idx);
             if (!body) return;
             var open = body.style.display === "block";
             body.style.display = open ? "none" : "block";
             if (arr) arr.textContent = open ? "▸" : "▾";
+        }
+
+        function moveContact(idx, dir) {
+            var newIdx = idx + dir;
+            if (newIdx < 0 || newIdx >= contacts.length) return;
+            var tmp = contacts[idx];
+            contacts[idx] = contacts[newIdx];
+            contacts[newIdx] = tmp;
+            renderContacts();
         }
 
         function removeContact(idx) {
@@ -813,29 +1062,48 @@
             renderContacts();
         }
 
-        // ─── Busca (simulada no preview) ───────────────────────────────
-        function searchContacts() {
-            var q = document.getElementById("contact-search").value.trim();
-            if (!q) return;
-            // Mock de retorno do GeoNetwork para preview
-            contacts.push({
-                isManual: false,
-                data: {
-                    sigla: "CDHU",
-                    org: "Companhia de Desenvolvimento Habitacional e Urbano do Estado de São Paulo",
-                    email: "geoprocessamento@cdhu.sp.gov.br",
-                    role: "pointOfContact",
-                    position: "Gerência de Geoprocessamento",
-                    phone: "(11) 3132-5000",
-                    address: "Rua Boa Vista, 170",
-                    city: "São Paulo",
-                    state: "SP",
-                    zip: "01014-000",
-                    country: "Brasil"
-                }
+        // ─── Busca (mock para preview) ─────────────────────────────────
+        var _mockContacts = [
+            { sigla: "CDHU", org: "Companhia de Desenvolvimento Habitacional e Urbano do Estado de São Paulo", email: "geoprocessamento@cdhu.sp.gov.br", role: "pointOfContact", position: "Gerência de Geoprocessamento", phone: "(11) 3132-5000", address: "Rua Boa Vista, 170", city: "São Paulo", state: "SP", zip: "01014-000", country: "Brasil" },
+            { sigla: "IPT",  org: "Instituto de Pesquisas Tecnológicas do Estado de São Paulo", email: "contato@ipt.br", role: "", position: "", phone: "", address: "Av. Prof. Almeida Prado, 532", city: "São Paulo", state: "SP", zip: "05508-901", country: "Brasil" }
+        ];
+        var _suggestionResults = [];
+
+        function suggestContacts(q) {
+            q = (q || "").trim();
+            if (!q) { closeSuggestions(); return; }
+            var ql = q.toLowerCase();
+            _suggestionResults = _mockContacts.filter(function(r) {
+                return r.sigla.toLowerCase().includes(ql) || r.org.toLowerCase().includes(ql);
             });
-            document.getElementById("contact-search").value = "";
+            var box = document.getElementById("search-suggestions");
+            if (!box) return;
+            if (!_suggestionResults.length) {
+                box.innerHTML = '<div class="suggestion-item" style="color:var(--fg-muted);cursor:default;">Nenhum resultado para "' + q + '"</div>';
+                box.style.display = "block";
+                return;
+            }
+            box.innerHTML = _suggestionResults.map(function(r, i) {
+                var label = "<b>" + r.sigla + "</b> — " + r.org;
+                return '<div class="suggestion-item" onclick="pickSuggestion(' + i + ')">' + label + '</div>';
+            }).join("");
+            box.style.display = "block";
+        }
+
+        function pickSuggestion(idx) {
+            var r = _suggestionResults[idx];
+            if (!r) return;
+            contacts.push({ isManual: false, data: r });
+            var inp = document.getElementById("contact-search");
+            if (inp) inp.value = "";
+            closeSuggestions();
             renderContacts();
+        }
+
+        function closeSuggestions() {
+            var box = document.getElementById("search-suggestions");
+            if (box) box.style.display = "none";
+            _suggestionResults = [];
         }
 
         // ─── Formulário manual ─────────────────────────────────────────
@@ -846,7 +1114,7 @@
         }
 
         function submitManualContact() {
-            var g = function(id) { var el = document.getElementById("mf-" + id); return el ? el.value.trim() : ""; };
+            var g = function (id) { var el = document.getElementById("mf-" + id); return el ? el.value.trim() : ""; };
             var sigla = g("sigla"), org = g("org");
             if (!sigla && !org) { alert("Informe ao menos Sigla ou Organização."); return; }
             contacts.push({
@@ -860,16 +1128,17 @@
                     country: g("country") || "Brasil"
                 }
             });
-            ["sigla","org","email","role","position","phone","address","city","state","zip"].forEach(function(f) {
+            ["sigla", "org", "email", "role", "position", "phone", "address", "city", "state", "zip"].forEach(function (f) {
                 var el = document.getElementById("mf-" + f); if (el) el.value = "";
             });
             document.getElementById("mf-country").value = "Brasil";
             toggleManualForm();
             renderContacts();
             // Abre o accordion recém-criado
-            setTimeout(function() { toggleAccordion(contacts.length - 1); }, 50);
+            setTimeout(function () { toggleAccordion(contacts.length - 1); }, 50);
         }
     </script>
 
 </body>
+
 </html>

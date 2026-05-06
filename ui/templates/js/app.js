@@ -12,6 +12,15 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 });
 
+document.addEventListener("click", function (e) {
+    var box = document.getElementById("search-suggestions");
+    if (!box || box.style.display === "none") return;
+    var input = document.getElementById("contact-search");
+    if (input && input.contains(e.target)) return;
+    if (box.contains(e.target)) return;
+    closeSuggestions();
+});
+
 function initApp() {
     bridge.get_initial_data(function (data) {
         if (data) updateUserUI(data.is_logged, data.user);
@@ -53,9 +62,9 @@ function onPanelLoaded(panelId) {
         showTab("identificacao", document.querySelector(".tab-link"));
         var now = new Date().toISOString().slice(0, 16);
         var ds = document.getElementById("f-dateStamp");
-        var dc = document.getElementById("f-date_creation");
         if (ds && !ds.value) ds.value = now;
-        if (dc && !dc.value) dc.value = now;
+        contacts = [];
+        renderContacts();
     }
 }
 
@@ -97,17 +106,6 @@ function trySaveMetadata() {
 
 // ─── Formulário ───────────────────────────────────────────────────────────────
 
-var FORM_FIELDS = [
-    "title", "edition", "abstract", "MD_Keywords", "spatialResolution_denominator",
-    "thumbnail_url", "status_codeListValue", "MD_SpatialRepresentationTypeCode",
-    "LanguageCode", "characterSet", "topicCategory", "hierarchyLevel",
-    "contact_individualName", "contact_organisationName", "contact_positionName",
-    "contact_phone", "contact_deliveryPoint", "contact_city", "contact_administrativeArea",
-    "contact_postalCode", "contact_country", "contact_email", "contact_role",
-    "westBoundLongitude", "eastBoundLongitude", "southBoundLatitude", "northBoundLatitude",
-    "dateStamp", "date_creation"
-];
-
 function collectFormData() {
     if (!document.getElementById("f-title")) {
         alert('Abra "Catálogo Geohab > Editar Metadados" antes de exportar.');
@@ -123,57 +121,63 @@ function collectFormData() {
         .map(function (k) { return k.trim(); })
         .filter(Boolean);
 
+    // Map first contact to flat fields for XML generator compatibility
+    var c = contacts.length > 0 ? contacts[0].data : {};
+
     return {
-        title:                           get("title"),
-        edition:                         get("edition") || "1",
-        abstract:                        get("abstract"),
-        MD_Keywords:                     keywords,
-        spatialResolution_denominator:   get("spatialResolution_denominator"),
-        thumbnail_url:                   get("thumbnail_url"),
-        status_codeListValue:            get("status_codeListValue"),
+        title:                            get("title"),
+        dateType:                         get("dateType"),
+        date:                             get("date"),
+        edition:                          get("edition") || "1",
+        date_edition:                     get("date_edition"),
+        abstract:                         get("abstract"),
+        purpose:                          get("purpose"),
+        credit:                           get("credit"),
+        status_codeListValue:             get("status_codeListValue"),
+        MD_Keywords:                      keywords,
+        maintenanceFrequency:             get("maintenanceFrequency"),
+        dateOfNextUpdate:                 get("dateOfNextUpdate"),
         MD_SpatialRepresentationTypeCode: get("MD_SpatialRepresentationTypeCode"),
-        LanguageCode:                    get("LanguageCode") || "por",
-        characterSet:                    get("characterSet") || "utf8",
-        topicCategory:                   get("topicCategory"),
-        hierarchyLevel:                  get("hierarchyLevel") || "dataset",
-        contact_individualName:          get("contact_individualName"),
-        contact_organisationName:        get("contact_organisationName"),
-        contact_positionName:            get("contact_positionName"),
-        contact_phone:                   get("contact_phone"),
-        contact_deliveryPoint:           get("contact_deliveryPoint"),
-        contact_city:                    get("contact_city"),
-        contact_administrativeArea:      get("contact_administrativeArea"),
-        contact_postalCode:              get("contact_postalCode"),
-        contact_country:                 get("contact_country") || "Brasil",
-        contact_email:                   get("contact_email"),
-        contact_role:                    get("contact_role"),
-        westBoundLongitude:              get("westBoundLongitude"),
-        eastBoundLongitude:              get("eastBoundLongitude"),
-        southBoundLatitude:              get("southBoundLatitude"),
-        northBoundLatitude:              get("northBoundLatitude"),
-        dateStamp:                       get("dateStamp"),
-        date_creation:                   get("date_creation")
+        topicCategory:                    get("topicCategory"),
+        hierarchyLevel:                   get("hierarchyLevel") || "dataset",
+        LanguageCode:                     get("LanguageCode") || "por",
+        characterSet:                     get("characterSet") || "utf8",
+        thumbnail_url:                    get("thumbnail_url"),
+        westBoundLongitude:               get("westBoundLongitude"),
+        eastBoundLongitude:               get("eastBoundLongitude"),
+        southBoundLatitude:               get("southBoundLatitude"),
+        northBoundLatitude:               get("northBoundLatitude"),
+        dateStamp:                        get("dateStamp"),
+        spatialResolution_denominator:    get("spatialResolution_denominator"),
+        // Flat contact fields (first contact) for XML generator
+        contact_individualName:           c.sigla    || "",
+        contact_organisationName:         c.org      || "",
+        contact_positionName:             c.position || "",
+        contact_phone:                    c.phone    || "",
+        contact_deliveryPoint:            c.address  || "",
+        contact_city:                     c.city     || "",
+        contact_administrativeArea:       c.state    || "",
+        contact_postalCode:               c.zip      || "",
+        contact_country:                  c.country  || "Brasil",
+        contact_email:                    c.email    || "",
+        contact_role:                     c.role     || "",
+        // Full contacts array for future multi-contact support
+        contacts: contacts
     };
 }
 
 var REQUIRED_LABELS = {
     title:                            "Título",
+    date:                             "Data do Dado",
+    maintenanceFrequency:             "Frequência de Atualização",
     abstract:                         "Resumo",
-    MD_Keywords:                      "Palavras-chave",
+    credit:                           "Crédito",
     status_codeListValue:             "Status",
+    MD_Keywords:                      "Palavras-chave",
     MD_SpatialRepresentationTypeCode: "Tipo de Representação Espacial",
-    LanguageCode:                     "Idioma",
     topicCategory:                    "Categoria Temática",
     hierarchyLevel:                   "Nível Hierárquico",
-    contact_individualName:           "Sigla (Contato)",
-    contact_organisationName:         "Organização (Contato)",
-    contact_deliveryPoint:            "Endereço (Contato)",
-    contact_city:                     "Cidade (Contato)",
-    contact_administrativeArea:       "Estado (Contato)",
-    contact_postalCode:               "CEP (Contato)",
-    contact_email:                    "E-mail (Contato)",
-    contact_country:                  "País (Contato)",
-    contact_role:                     "Responsabilidade (Contato)",
+    LanguageCode:                     "Idioma",
     westBoundLongitude:               "Longitude Oeste",
     eastBoundLongitude:               "Longitude Leste",
     southBoundLatitude:               "Latitude Sul",
@@ -194,6 +198,11 @@ function validateForm(data) {
             if (el2) el2.classList.remove("error");
         }
     }
+    if (contacts.length === 0) {
+        missing.push("Contato (ao menos um)");
+    } else if (!contacts[0].data.role) {
+        missing.push("Responsabilidade do Contato");
+    }
     return missing;
 }
 
@@ -203,13 +212,31 @@ function showValidationError(missing) {
 
 function populateForm(data) {
     if (!data) return;
-    FORM_FIELDS.forEach(function (key) {
+    var SIMPLE_FIELDS = [
+        "title", "dateType", "date", "edition", "date_edition",
+        "abstract", "purpose", "credit", "status_codeListValue",
+        "MD_Keywords",
+        "maintenanceFrequency", "dateOfNextUpdate",
+        "MD_SpatialRepresentationTypeCode", "topicCategory", "hierarchyLevel",
+        "LanguageCode", "characterSet", "thumbnail_url",
+        "westBoundLongitude", "eastBoundLongitude", "southBoundLatitude", "northBoundLatitude",
+        "dateStamp", "spatialResolution_denominator"
+    ];
+    SIMPLE_FIELDS.forEach(function (key) {
         var el = document.getElementById("f-" + key);
         if (!el) return;
         var val = data[key];
         if (key === "MD_Keywords" && Array.isArray(val)) val = val.join(", ");
         if (val !== undefined && val !== null) el.value = val;
     });
+    var mf = document.getElementById("f-maintenanceFrequency");
+    if (mf) toggleUpdateDate(mf.value);
+    var ed = document.getElementById("f-edition");
+    if (ed) toggleEditionDate(ed.value);
+    if (Array.isArray(data.contacts) && data.contacts.length > 0) {
+        contacts = data.contacts;
+        renderContacts();
+    }
 }
 
 // ─── Badge de usuário ─────────────────────────────────────────────────────────
@@ -227,4 +254,253 @@ function updateUserUI(isLogged, username) {
         btn.style.display = "block";
         badge.style.display = "none";
     }
+}
+
+// ─── Edição condicional ────────────────────────────────────────────────────────
+
+function toggleEditionDate(val) {
+    var el = document.getElementById("f-date_edition");
+    if (!el) return;
+    var hasValue = parseInt(val, 10) > 0;
+    el.disabled = !hasValue;
+    if (!hasValue) el.value = "";
+}
+
+function toggleUpdateDate(val) {
+    var el = document.getElementById("f-dateOfNextUpdate");
+    if (!el) return;
+    el.disabled = !val;
+    if (!val) el.value = "";
+}
+
+// ─── Contatos: estado ──────────────────────────────────────────────────────────
+
+var contacts = [];
+
+var ROLE_LABELS = {
+    "owner":               "Dono",
+    "author":              "Autor",
+    "processor":           "Organizador",
+    "distributor":         "Distribuidor",
+    "custodian":           "Depositário",
+    "resourceProvider":    "Fornecedor de recurso",
+    "principalInvestigator": "Investigador principal",
+    "originator":          "Originador",
+    "pointOfContact":      "Ponto de contato",
+    "publisher":           "Publicador",
+    "user":                "Utilizador"
+};
+
+var ROLE_OPTIONS = Object.keys(ROLE_LABELS).map(function (v) {
+    return { value: v, label: ROLE_LABELS[v] };
+});
+
+function buildRoleSelect(idx, current) {
+    var selected = current || "pointOfContact";
+    if (contacts[idx]) contacts[idx].data.role = contacts[idx].data.role || selected;
+    var opts = ROLE_OPTIONS.map(function (r) {
+        return '<option value="' + r.value + '"' + (r.value === selected ? ' selected' : '') + '>' + r.label + '</option>';
+    }).join('');
+    return '<select id="role-table-' + idx + '" class="role-select" onchange="updateRole(' + idx + ', this.value)">' + opts + '</select>';
+}
+
+function updateRole(idx, val) {
+    if (!contacts[idx]) return;
+    contacts[idx].data.role = val;
+    var tableSelect = document.getElementById("role-table-" + idx);
+    var accSelect   = document.getElementById("role-acc-"   + idx);
+    if (tableSelect && tableSelect.value !== val) tableSelect.value = val;
+    if (accSelect   && accSelect.value   !== val) accSelect.value   = val;
+}
+
+// ─── Contatos: render ──────────────────────────────────────────────────────────
+
+function renderContacts() {
+    var tbody  = document.getElementById("contacts-tbody");
+    var accDiv = document.getElementById("contacts-accordions");
+    if (!tbody) return;
+
+    if (contacts.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhum contato. Use a busca ou clique em <b>+ Manual</b>.</td></tr>';
+        if (accDiv) accDiv.innerHTML = "";
+        return;
+    }
+
+    var last = contacts.length - 1;
+    tbody.innerHTML = contacts.map(function (c, idx) {
+        return '<tr>' +
+            '<td style="text-align:center;color:var(--fg-muted);font-weight:700;font-size:12px">' + (idx + 1) + '</td>' +
+            '<td>' + (c.data.org   || '—') + '</td>' +
+            '<td>' + (c.data.sigla || '—') + '</td>' +
+            '<td>' + (c.data.email || '—') + '</td>' +
+            '<td>' + buildRoleSelect(idx, c.data.role) + '</td>' +
+            '<td style="white-space:nowrap">' +
+            '<button class="btn-move" onclick="moveContact(' + idx + ',-1)" title="Mover para cima"' + (idx === 0    ? ' disabled' : '') + '>↑</button>' +
+            '<button class="btn-move" onclick="moveContact(' + idx + ', 1)" title="Mover para baixo"' + (idx === last ? ' disabled' : '') + '>↓</button>' +
+            '<button class="btn-remove" onclick="removeContact(' + idx + ')" title="Remover">✕</button>' +
+            '</td>' +
+            '</tr>';
+    }).join('');
+
+    if (accDiv) {
+        accDiv.innerHTML = contacts.map(function (c, idx) {
+            return buildAccordion(c, idx);
+        }).join('');
+    }
+}
+
+function buildAccordion(c, idx) {
+    var d     = c.data;
+    var label = 'Contato ' + (idx + 1) + (d.sigla ? ' — ' + d.sigla : '');
+    var badge = c.isManual
+        ? '<span class="badge-manual">Manual</span>'
+        : '<span class="badge-preset">Catálogo</span>';
+
+    return '<div class="contact-accordion">' +
+        '<button class="accordion-header" onclick="toggleAccordion(' + idx + ')">' +
+        '<span class="acc-arrow" id="arr-' + idx + '">▸</span>' +
+        label + badge +
+        '</button>' +
+        '<div class="accordion-body" id="acc-body-' + idx + '">' +
+        '<div class="form-grid">' + buildAccordionFields(d, idx, c.isManual) + '</div>' +
+        '</div>' +
+        '</div>';
+}
+
+function field(label, val, editable, inputId) {
+    var input = editable
+        ? '<input id="' + inputId + '" type="text" value="' + (val || '') + '">'
+        : '<div class="readonly-field">' + (val || '—') + '</div>';
+    return '<div class="form-group"><label>' + label + '</label>' + input + '</div>';
+}
+
+function buildAccordionFields(d, idx, isManual) {
+    var selectedRole = d.role || "pointOfContact";
+    var roleOpts = ROLE_OPTIONS.map(function (r) {
+        return '<option value="' + r.value + '"' + (r.value === selectedRole ? ' selected' : '') + '>' + r.label + '</option>';
+    }).join('');
+    var roleField = '<div class="form-group"><label>Regra</label>' +
+        '<select id="role-acc-' + idx + '" class="role-select" onchange="updateRole(' + idx + ', this.value)">' + roleOpts + '</select></div>';
+
+    return field('Sigla',       d.sigla,    isManual, 'acc-' + idx + '-sigla') +
+        field('Organização',    d.org,      isManual, 'acc-' + idx + '-org') +
+        roleField +
+        field('E-mail',         d.email,    isManual, 'acc-' + idx + '-email') +
+        field('Cargo',          d.position, isManual, 'acc-' + idx + '-position') +
+        field('Telefone',       d.phone,    isManual, 'acc-' + idx + '-phone') +
+        '<div class="form-group span-2"><label>Endereço</label>' +
+        (isManual
+            ? '<input id="acc-' + idx + '-address" type="text" value="' + (d.address || '') + '">'
+            : '<div class="readonly-field">' + (d.address || '—') + '</div>') +
+        '</div>' +
+        field('Cidade', d.city,    isManual, 'acc-' + idx + '-city') +
+        field('Estado', d.state,   isManual, 'acc-' + idx + '-state') +
+        field('CEP',    d.zip,     isManual, 'acc-' + idx + '-zip') +
+        field('País',   d.country, isManual, 'acc-' + idx + '-country');
+}
+
+function toggleAccordion(idx) {
+    var body = document.getElementById("acc-body-" + idx);
+    var arr  = document.getElementById("arr-" + idx);
+    if (!body) return;
+    var open = body.style.display === "block";
+    body.style.display = open ? "none" : "block";
+    if (arr) arr.textContent = open ? "▸" : "▾";
+}
+
+function moveContact(idx, dir) {
+    var newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= contacts.length) return;
+    var tmp = contacts[idx];
+    contacts[idx] = contacts[newIdx];
+    contacts[newIdx] = tmp;
+    renderContacts();
+}
+
+function removeContact(idx) {
+    contacts.splice(idx, 1);
+    renderContacts();
+}
+
+// ─── Busca de contatos (via bridge) ───────────────────────────────────────────
+
+var _suggestionResults = [];
+
+function suggestContacts(q) {
+    q = (q || "").trim();
+    if (!q) { closeSuggestions(); return; }
+    bridge.search_contacts(q, function (results) {
+        _suggestionResults = results || [];
+        var box = document.getElementById("search-suggestions");
+        if (!box) return;
+        if (!_suggestionResults.length) {
+            box.innerHTML = '<div class="suggestion-item" style="color:var(--fg-muted);cursor:default;">Nenhum resultado para "' + q + '"</div>';
+            box.style.display = "block";
+            return;
+        }
+        box.innerHTML = _suggestionResults.map(function (r, i) {
+            var label = (r.sigla ? "<b>" + r.sigla + "</b> — " : "") + r.org;
+            return '<div class="suggestion-item" onclick="pickSuggestion(' + i + ')">' + label + '</div>';
+        }).join("");
+        box.style.display = "block";
+    });
+}
+
+function pickSuggestion(idx) {
+    var r = _suggestionResults[idx];
+    if (!r) return;
+    contacts.push({ isManual: false, data: r });
+    var inp = document.getElementById("contact-search");
+    if (inp) inp.value = "";
+    closeSuggestions();
+    renderContacts();
+}
+
+function closeSuggestions() {
+    var box = document.getElementById("search-suggestions");
+    if (box) box.style.display = "none";
+    _suggestionResults = [];
+}
+
+// ─── Formulário manual ─────────────────────────────────────────────────────────
+
+function toggleManualForm() {
+    var wrap = document.getElementById("manual-form-wrap");
+    if (!wrap) return;
+    var isHidden = wrap.style.display === "none" || wrap.style.display === "";
+    wrap.style.display = isHidden ? "block" : "none";
+}
+
+function submitManualContact() {
+    var g = function (id) {
+        var el = document.getElementById("mf-" + id);
+        return el ? el.value.trim() : "";
+    };
+    var sigla = g("sigla"), org = g("org");
+    if (!sigla && !org) { alert("Informe ao menos Sigla ou Organização."); return; }
+    contacts.push({
+        isManual: true,
+        data: {
+            sigla:    sigla,
+            org:      org,
+            email:    g("email"),
+            role:     g("role"),
+            position: g("position"),
+            phone:    g("phone"),
+            address:  g("address"),
+            city:     g("city"),
+            state:    g("state"),
+            zip:      g("zip"),
+            country:  g("country") || "Brasil"
+        }
+    });
+    ["sigla", "org", "email", "role", "position", "phone", "address", "city", "state", "zip"].forEach(function (f) {
+        var el = document.getElementById("mf-" + f);
+        if (el) el.value = "";
+    });
+    var countryEl = document.getElementById("mf-country");
+    if (countryEl) countryEl.value = "Brasil";
+    toggleManualForm();
+    renderContacts();
+    setTimeout(function () { toggleAccordion(contacts.length - 1); }, 50);
 }

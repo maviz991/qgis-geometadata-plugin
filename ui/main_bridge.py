@@ -81,6 +81,34 @@ class MainBridge(QObject):
             "is_logged": is_logged
         }
 
+    @pyqtSlot(str, result='QVariant')
+    def search_contacts(self, query: str):
+        """Busca contatos nos predefinidos locais que correspondem à query. Retorna lista para o JS."""
+        predefinidos = getattr(self._dialog, 'contatos_predefinidos', {})
+        q = query.lower().strip()
+        results = []
+        for key, data in predefinidos.items():
+            if key == 'nenhum':
+                continue
+            org   = data.get('contact_organisationName', '')
+            sigla = data.get('contact_individualName', '')
+            email = data.get('contact_email', '')
+            if not q or q in org.lower() or q in sigla.lower() or q in email.lower():
+                results.append({
+                    'sigla':    sigla,
+                    'org':      org,
+                    'email':    email,
+                    'position': data.get('contact_positionName', ''),
+                    'phone':    data.get('contact_phone', ''),
+                    'address':  data.get('contact_deliveryPoint', ''),
+                    'city':     data.get('contact_city', ''),
+                    'state':    data.get('contact_administrativeArea', ''),
+                    'zip':      data.get('contact_postalCode', ''),
+                    'country':  data.get('contact_country', 'Brasil'),
+                    'role':     data.get('contact_role', '')
+                })
+        return results
+
     @pyqtSlot(str, result=str)
     def load_panel_html(self, panel_id: str) -> str:
         """Lê o HTML de um painel do disco e retorna como string para o JS."""

@@ -5,7 +5,7 @@
     --navbar-bg: #ffffff;
     --fg: #1e293b;
     --fg-muted: #64748b;
-    --border: #e2e8f0;
+    --border: #bfc3c9;
     --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     --radius: 8px;
 }
@@ -193,3 +193,449 @@ body {
     background: #22c55e;
     border-radius: 50%;
 }
+
+/* ── Editor panel ─────────────────────────────────────────────── */
+.editor-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+}
+
+/* ── Abas ─────────────────────────────────────────────────────── */
+.form-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: white;
+    padding: 0 24px;
+    flex-shrink: 0;
+}
+
+.tab-link {
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    padding: 14px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--fg-muted);
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+    margin-bottom: -1px;
+}
+
+.tab-link:hover { color: var(--fg); }
+
+.tab-link.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+.tab-content {
+    display: none;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.tab-content.active { display: block; }
+
+/* ── Grid de campos ───────────────────────────────────────────── */
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    padding: 28px;
+    max-width: 100%;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group.span-2 { grid-column: span 2; }
+
+.form-group label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--fg-muted);
+    margin-bottom: 6px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    color: var(--fg);
+    background: white;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(229, 34, 45, 0.08);
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.form-group input.error,
+.form-group select.error,
+.form-group textarea.error {
+    border-color: var(--accent);
+    background: #fff5f5;
+}
+
+.form-group input:disabled,
+.form-group select:disabled {
+    opacity: 0.38;
+    cursor: not-allowed;
+    background: #f8fafc;
+}
+
+.req { color: var(--accent); }
+
+/* ── Linha inline (dois campos lado a lado) ────────────────────── */
+.inline-row {
+    display: flex;
+    gap: 8px;
+}
+
+.inline-row select { flex: 0 0 160px; }
+.inline-row input  { flex: 1; }
+
+/* ── BBox ─────────────────────────────────────────────────────── */
+.bbox-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    align-items: end;
+    margin-top: 8px;
+}
+
+.bbox-center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 38px;
+    font-size: 22px;
+}
+
+/* ── Barra de busca de contatos ───────────────────────────────── */
+.contacts-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 20px 28px 0;
+}
+
+.search-wrap {
+    flex: 1;
+    position: relative;
+}
+
+.contacts-toolbar input {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+}
+
+.contacts-toolbar input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(229, 34, 45, 0.08);
+}
+
+.search-suggestions {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    z-index: 200;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.suggestion-item {
+    padding: 10px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+}
+
+.suggestion-item:last-child { border-bottom: none; }
+
+.suggestion-item:hover {
+    background: #f1f5f9;
+    color: var(--accent);
+}
+
+.btn-icon {
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: white;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    white-space: nowrap;
+    font-weight: 600;
+    color: var(--fg);
+}
+
+.btn-icon:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.btn-icon.accent {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+
+.btn-icon.accent:hover { background: var(--accent-hover); }
+
+/* ── Tabela de contatos ───────────────────────────────────────── */
+.contacts-table-wrap { padding: 16px 28px 0; }
+
+.contacts-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.contacts-table th {
+    text-align: left;
+    padding: 8px 12px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--fg-muted);
+    border-bottom: 1px solid var(--border);
+}
+
+.contacts-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+}
+
+.contacts-table tr:last-child td { border-bottom: none; }
+
+.empty-state {
+    color: var(--fg-muted);
+    font-style: italic;
+    text-align: center;
+    padding: 24px !important;
+}
+
+.role-select {
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+    font-family: inherit;
+    color: var(--fg);
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.role-select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(229, 34, 45, 0.08);
+}
+
+.btn-remove,
+.btn-move {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 4px;
+}
+
+.btn-remove:hover {
+    color: var(--accent);
+    background: #fff0f0;
+}
+
+.btn-move:hover {
+    color: var(--fg);
+    background: #f1f5f9;
+}
+
+.btn-move:disabled {
+    opacity: 0.2;
+    cursor: default;
+}
+
+/* ── Formulário manual (colapsável) ───────────────────────────── */
+.manual-form-wrap {
+    margin: 12px 28px 0;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    background: #fafbfc;
+    overflow: hidden;
+}
+
+.manual-form-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--fg-muted);
+    cursor: pointer;
+    user-select: none;
+}
+
+.manual-form-header:hover { background: #f1f5f9; }
+
+.manual-form-body {
+    padding: 16px;
+}
+
+.manual-form-body .form-grid {
+    padding: 0;
+    gap: 12px;
+}
+
+.manual-form-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+}
+
+/* ── Accordions de contatos ───────────────────────────────────── */
+.contacts-accordions { padding: 12px 28px 28px; }
+
+.contact-accordion {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    overflow: hidden;
+}
+
+.accordion-header {
+    width: 100%;
+    text-align: left;
+    background: white;
+    border: none;
+    padding: 12px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--fg);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.accordion-header:hover { background: #f8fafc; }
+
+.acc-arrow {
+    font-size: 11px;
+    color: var(--fg-muted);
+    min-width: 12px;
+}
+
+.badge-manual {
+    margin-left: auto;
+    background: #eff6ff;
+    color: #3b82f6;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.badge-preset {
+    margin-left: auto;
+    background: #f0fdf4;
+    color: #16a34a;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.accordion-body {
+    display: none;
+    border-top: 1px solid var(--border);
+    background: #fafbfc;
+}
+
+.accordion-body .form-grid {
+    padding: 16px;
+    gap: 12px;
+}
+
+.readonly-field {
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    color: var(--fg);
+    background: #f8fafc;
+    font-family: inherit;
+    cursor: default;
+}
+
+/* ── Home cards ───────────────────────────────────────────────── */
+.home-panel {
+    padding: 32px;
+}
+
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    margin-top: 24px;
+}
+
+.card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px 20px;
+    cursor: pointer;
+    transition: box-shadow 0.2s, transform 0.15s;
+    text-align: center;
+}
+
+.card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+
+.card-icon { font-size: 32px; margin-bottom: 12px; }
+.card-title { font-size: 14px; font-weight: 700; color: var(--fg); }
+.card-desc  { font-size: 12px; color: var(--fg-muted); margin-top: 4px; }
