@@ -670,78 +670,85 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         if hasattr(self, 'bridge'):
             self.bridge.auth_status.emit(is_logged_in, username)
 
-    def exportar_to_xml(self):
-        """Gera o XML e permite salvar no disco manual."""
-        if not hasattr(self, 'form_manager') or not self.form_manager:
-            QtWidgets.QMessageBox.information(self, 'Em desenvolvimento', 'A exportação será integrada ao formulário HTML em breve.')
-            return
-        if not self.form_manager.validate_form(): return
+    def _normalize_dates(self, metadata_dict):
+        """Converte datetime-local do HTML (YYYY-MM-DDTHH:MM) para ISO com Z."""
+        for key in ('dateStamp', 'date_creation'):
+            val = metadata_dict.get(key, '')
+            if val and 'T' in val and not val.endswith('Z'):
+                if len(val) == 16:
+                    metadata_dict[key] = val + ':00Z'
+        return metadata_dict
 
-        metadata_dict = self.form_manager.collect_data()
+    def exportar_to_xml(self, metadata_dict=None):
+        """Gera o XML e permite salvar no disco manual."""
+        if metadata_dict is None:
+            if not hasattr(self, 'form_manager') or not self.form_manager:
+                QtWidgets.QMessageBox.information(self, 'Atenção', 'Preencha o formulário em "Catálogo Geohab > Editar Metadados" antes de exportar.')
+                return
+            if not self.form_manager.validate_form(): return
+            metadata_dict = self.form_manager.collect_data()
+
+        metadata_dict = self._normalize_dates(metadata_dict)
         try:
-            import os
             from .core import xml_generator
-            from qgis.PyQt import QtWidgets
             template_path = os.path.join(os.path.dirname(__file__), 'assets', 'tamplate_mgb20.xml')
             cdhu_data = self.contatos_predefinidos.get('cdhu', {})
             xml_payload = xml_generator.generate_xml_from_template(metadata_dict, template_path, cdhu_data)
-            
+
             safe_filename = metadata_dict.get('title', 'metadados').replace(' ', '_') + '.xml'
             file_path, _ = QtWidgets.QFileDialog.getSaveFileName(self, 'Salvar Metadados XML', safe_filename, 'Arquivos XML (*.xml)')
             if file_path:
-                with open(file_path, 'w', encoding='utf-8') as file:
-                    file.write(xml_payload)
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(xml_payload)
                 self.iface.messageBar().pushMessage('Sucesso', f'Metadados salvos em: {file_path}', level=1, duration=5)
         except Exception as e:
-            from qgis.PyQt import QtWidgets
             QtWidgets.QMessageBox.critical(self, 'Erro', f'Falha ao exportar XML: {e}')
 
-    def exportar_to_geo(self):
+    def exportar_to_geo(self, metadata_dict=None):
         """Exporta para o GeoNetwork usando o MetadataService."""
-        if not hasattr(self, 'form_manager') or not self.form_manager:
-            QtWidgets.QMessageBox.information(self, 'Em desenvolvimento', 'A exportação será integrada ao formulário HTML em breve.')
-            return
-        if not self.form_manager.validate_form(): return
+        if metadata_dict is None:
+            if not hasattr(self, 'form_manager') or not self.form_manager:
+                QtWidgets.QMessageBox.information(self, 'Atenção', 'Preencha o formulário em "Catálogo Geohab > Editar Metadados" antes de publicar.')
+                return
+            if not self.form_manager.validate_form(): return
+            metadata_dict = self.form_manager.collect_data()
+
         if not self.plugin.api_session:
             QtWidgets.QMessageBox.warning(self, 'Não Autenticado', 'Conecte ao Geohab primeiro.')
             return
 
-        metadata_dict = self.form_manager.collect_data()
-        reply = QtWidgets.QMessageBox.question(self, 'Confirmar', f"Exportar {metadata_dict.get('title')}?", QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel)
+        metadata_dict = self._normalize_dates(metadata_dict)
+        reply = QtWidgets.QMessageBox.question(self, 'Confirmar', f"Exportar \"{metadata_dict.get('title')}\"?", QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel)
         if reply != QtWidgets.QMessageBox.Ok: return
-        
+
         try:
+            from .core import xml_generator
             template_path = os.path.join(os.path.dirname(__file__), 'assets', 'tamplate_mgb20.xml')
             cdhu_data = self.contatos_predefinidos.get('cdhu', {})
-            import os
-            from .core import xml_generator
             xml_payload = xml_generator.generate_xml_from_template(metadata_dict, template_path, cdhu_data)
-            
+
             from .core.plugin_config import config_loader
             uuid_criado = self.metadata_service.push_to_geonetwork(xml_payload, config_loader)
-            
+
             if uuid_criado:
-                self.form_manager.current_metadata_uuid = uuid_criado
-                self.save_metadata(is_automatic_resave=True) # Salva sidecar atualizado
-                QtWidgets.QMessageBox.information(self, 'Sucesso', f'Metadado exportado.\\nUUID: {uuid_criado}')
+                metadata_dict['metadata_uuid'] = uuid_criado
+                self.save_metadata(metadata_dict=metadata_dict, is_automatic_resave=True)
+                QtWidgets.QMessageBox.information(self, 'Sucesso', f'Metadado exportado.\nUUID: {uuid_criado}')
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, 'Erro', f'Falha no GeoNetwork: {e}')
 
-    def save_metadata(self, is_automatic_resave=False):
+    def save_metadata(self, metadata_dict=None, is_automatic_resave=False):
         """Usa o PersistenceService para salvar no DB ou XML Sidecar."""
-        if not hasattr(self, 'form_manager') or not self.form_manager:
-            return
-        if not is_automatic_resave and not self.form_manager.validate_form(): return
+        if metadata_dict is None:
+            if not hasattr(self, 'form_manager') or not self.form_manager:
+                return
+            if not is_automatic_resave and not self.form_manager.validate_form(): return
+            metadata_dict = self.form_manager.collect_data()
 
-        metadata_dict = self.form_manager.collect_data()
         layer = self.iface.activeLayer()
-        import os
         template_path = os.path.join(os.path.dirname(__file__), 'assets', 'tamplate_mgb20.xml')
         cdhu_data = self.contatos_predefinidos.get('cdhu', {})
-        
-        success = self.persistence_service.save(layer, metadata_dict, template_path, cdhu_data, is_automatic_resave, self)
-        if success:
-            self.form_manager.set_is_dirty(False)
+        self.persistence_service.save(layer, metadata_dict, template_path, cdhu_data, is_automatic_resave, self)
 
     def sanitize_title(self, value):
         """Remove caracteres especiais e normaliza espaços para uso como nome de arquivo."""

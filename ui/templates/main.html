@@ -16,15 +16,15 @@
             <div class="dropdown">
                 <button class="dropbtn">Arquivo <span class="chevron">▾</span></button>
                 <div class="dropdown-content">
-                    <a href="#" onclick="bridge.save_metadata()">Continuar depois</a>
-                    <a href="#" onclick="bridge.export_xml()">Exportar .xml</a>
+                    <a href="#" onclick="trySaveMetadata()">Continuar depois</a>
+                    <a href="#" onclick="tryExportXml()">Exportar .xml</a>
                 </div>
             </div>
             <div class="dropdown">
                 <button class="dropbtn">Catálogo Geohab <span class="chevron">▾</span></button>
                 <div class="dropdown-content">
-                    <a href="#" onclick="bridge.navigate('editor')">Editar Metadados</a>
-                    <a href="#" onclick="bridge.export_geohab()">Publicar no Catálogo</a>
+                    <a href="#" onclick="navigate('editor')">Editar Metadados</a>
+                    <a href="#" onclick="tryExportGeohab()">Publicar no Catálogo</a>
                 </div>
             </div>
             <div class="dropdown">

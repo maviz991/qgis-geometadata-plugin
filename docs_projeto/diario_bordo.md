@@ -405,3 +405,68 @@ Após a ativação da interface HTML, foram identificados pontos de atrito na ex
 - Experiência de usuário polida e profissional.
 - Processo de configuração totalmente em background (sem janelas invasivas).
 - Canal de suporte (CDA) acessível diretamente pela interface.
+
+---
+
+## Registro 7 — Estabilização Pós-Migração HTML: form_manager e Bridge (06/05/2026)
+
+### Contexto
+Após a migração da UI para HTML (`QWebEngineView`), uma série de `AttributeError: 'GeoMetadataDialog' object has no attribute 'form_manager'` surgiu em tempo de execução. A causa raiz era que o `FormManager` deixou de ser inicializado no `__init__` (conforme planejado — *"será inicializado sob demanda ou vinculado à bridge"*), mas vários métodos do diálogo ainda o referenciavam diretamente, sem guard.
+
+Além disso, a home não carregava: dois bugs no `app.js` impediam a inicialização da interface HTML.
+
+### Problemas Identificados e Corrigidos
+
+#### 1. `form_manager` ausente — 8 pontos de crash
+
+| Método | Linha | Fix |
+|---|---|---|
+| `authenticate()` | 662 | Removida chamada `populate_comboboxes()` — comboboxes agora são JS |
+| `closeEvent()` | 1191 | Guard `hasattr` → fecha sem prompt se `form_manager` ausente |
+| `exportar_to_xml()` | 675–677 | Guard no topo → exibe "Em desenvolvimento" e retorna |
+| `exportar_to_geo()` | 698–703 | Guard no topo → exibe "Em desenvolvimento" e retorna |
+| `save_metadata()` | 726–728 | Guard no topo → retorna silenciosamente |
+| `auto_fill_from_layer()` | 755–756 | Guard na condição → pula preenchimento |
+| `_update_offline_contacts()` | 1012 | `self.form_manager.contatos_predefinidos` → `self.contatos_predefinidos` |
+| `_fetch_contacts_online()` | 1070 | idem |
+| bloco contato primário | 1147 | Guard duplo: `self.ui` e `self.form_manager` ausentes → `return` |
+
+**Regra:** `contatos_predefinidos` já existe em `self` (carregado em `_load_contacts()`), não precisa de `form_manager`.
+
+#### 2. Home não carregava — dois bugs no `app.js`
+
+**Bug A — `fetch()` bloqueado por segurança do QWebEngine:**
+`fetch('panels/home.html')` falha silenciosamente em contexto `file://`. O Chromium embarcado bloqueia requisições `fetch` entre origens `file://` por padrão.
+
+**Solução:** Novo slot `bridge.load_panel_html(panelId, callback)` em `main_bridge.py`. Python lê o arquivo com `open()` e devolve a string via QWebChannel. Zero dependência de políticas do browser.
+
+**Bug B — `await bridge.get_initial_data()` retornava `undefined`:**
+QWebChannel **não retorna Promises**. `await slot()` resolve imediatamente como `undefined`, quebrando o acesso a `data.is_logged` com TypeError.
+
+**Solução:** Reescrito o padrão de chamada para callback explícito:
+```javascript
+// ERRADO (antes)
+const data = await bridge.get_initial_data();
+
+// CORRETO (depois)
+bridge.get_initial_data(function(data) { ... });
+```
+O mesmo padrão foi aplicado a `load_panel_html`.
+
+### Arquivos Modificados
+
+| Arquivo | Mudança |
+|---|---|
+| `GeoMetadata_dialog.py` | Guards `hasattr` em todos os 8 pontos de crash do `form_manager` |
+| `ui/main_bridge.py` | Novo slot `load_panel_html(panel_id) -> str` |
+| `ui/templates/js/app.js` | Substituição de `fetch` + `async/await` por callbacks QWebChannel |
+
+### Regra de Ouro para Futuros Slots com Retorno
+
+Todo slot Python que retorna valor **deve ser chamado com callback no JS**:
+```javascript
+bridge.meu_slot(arg, function(resultado) {
+    // usar resultado aqui
+});
+```
+Nunca usar `await bridge.meu_slot()` — QWebChannel não é Promise-based.

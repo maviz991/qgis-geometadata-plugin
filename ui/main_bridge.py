@@ -45,27 +45,25 @@ class MainBridge(QObject):
             print(f"GeoMetadata: Atualizando estado do form com {len(data)} campos")
             # self._form_manager.update_from_dict(data)
 
-    @pyqtSlot()
-    def save_metadata(self):
-        """Aciona o salvamento do metadado no GeoNetwork ou XML."""
-        print("GeoMetadata: Acionando salvamento via Bridge")
-        if hasattr(self._dialog, 'action_salvar'):
-            self._dialog.action_salvar()
+    @pyqtSlot('QVariant')
+    def save_metadata(self, form_data):
+        """Salva o metadado (rascunho local). Recebe o dict do formulário HTML."""
+        self._dialog.save_metadata(metadata_dict=form_data if isinstance(form_data, dict) else None)
 
     @pyqtSlot()
     def start_login(self):
         """Dispara o processo de autenticação no diálogo."""
         self._dialog.authenticate()
 
-    @pyqtSlot()
-    def export_xml(self):
-        """Exporta metadados para XML local."""
-        self._dialog.exportar_to_xml()
+    @pyqtSlot('QVariant')
+    def export_xml(self, form_data):
+        """Exporta metadados para XML local. Recebe o dict do formulário HTML."""
+        self._dialog.exportar_to_xml(metadata_dict=form_data if isinstance(form_data, dict) else None)
 
-    @pyqtSlot()
-    def export_geohab(self):
-        """Exporta metadados para o GeoNetwork (Geohab)."""
-        self._dialog.exportar_to_geo()
+    @pyqtSlot('QVariant')
+    def export_geohab(self, form_data):
+        """Publica o metadado no GeoNetwork. Recebe o dict do formulário HTML."""
+        self._dialog.exportar_to_geo(metadata_dict=form_data if isinstance(form_data, dict) else None)
 
     @pyqtSlot()
     def close_dialog(self):
