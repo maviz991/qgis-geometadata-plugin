@@ -91,6 +91,6 @@ def missing_packages() -> List[str]:
 
 # Rótulos amigáveis exibidos na SetupDialog
 PACKAGE_LABELS = {
-    "msal":          "msal — login corporativo (Entra ID)",
-    "PyQtWebEngine": "PyQtWebEngine — interface HTML nativa",
+    "msal":          "Login corporativo (Entra ID)",
+    "PyQtWebEngine": "Interface visual nativa",
 }

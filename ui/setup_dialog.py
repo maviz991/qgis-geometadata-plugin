@@ -197,19 +197,18 @@ class SetupDialog(QDialog):
         # Mensagem contextual para PyQtWebEngine
         if "PyQtWebEngine" in pkg:
             msg = (
-                f"Falha crítica ao carregar {pkg}.\n\n"
-                f"Isso ocorre por conflito entre o Qt do QGIS e a versão do pip.\n"
-                f"SOLUÇÃO: Use o 'OSGeo4W Setup' (Advanced Install) e "
-                f"instale o pacote 'python3-pyqtwebengine'."
+                f"Falha ao carregar a interface visual.\n\n"
+                f"Isso ocorre por uma incompatibilidade do ambiente QGIS.\n"
+                f"SOLUÇÃO: Abra um ticket no CDA (cda.cdhu.sp.gov.br)."
             )
         else:
             msg = (
-                f"Falha ao instalar '{pkg}'.\n"
-                f"Abra o OSGeo4W Shell e execute:  pip install {pkg}"
+                f"Falha ao configurar componente de login.\n"
+                f"Por favor, abra um ticket no CDA (cda.cdhu.sp.gov.br)."
             )
 
         short = error[:120] + "..." if len(error) > 120 else error
-        self._status_lbl.setText(f"{msg}\n\nErro: {short}")
+        self._status_lbl.setText(f"{msg}\n\nDetalhe: {short}")
         self._btn.setVisible(True)
 
     def _on_progress(self, done: int, total: int):

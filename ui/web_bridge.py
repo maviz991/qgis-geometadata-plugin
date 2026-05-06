@@ -186,5 +186,7 @@ class LoginBridge(QObject):
 
     def _on_install_fail(self, _pkg: str, err: str):
         self.install_error.emit(
-            f"Falha. Abra o OSGeo4W Shell e execute: pip install msal\n({err[:80]})"
+            f"Falha na configuração automática.<br><br>"
+            f"Por favor, abra um ticket no <b>CDA</b>: "
+            f"<a href='https://cda.cdhu.sp.gov.br'>cda.cdhu.sp.gov.br</a>"
         )

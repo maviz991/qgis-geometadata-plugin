@@ -284,10 +284,10 @@ function unlock() {
 function enterInstallMode() {
   var btn = document.getElementById("btn-sso");
   btn.className        = "btn btn-install";
-  btn.innerHTML        = "&#11015; Instalar dependência (msal)";
+  btn.innerHTML        = "&#11015; Configurar ambiente de login";
   btn.dataset.installMode = "1";
   btn.onclick          = function() { handleInstall(); };
-  showStatus("sso", warn("&#9888; <b>msal</b> não instalado. Clique para instalar automaticamente e reinicie o QGIS."));
+  showStatus("sso", warn("&#9888; <b>Ambiente incompleto.</b> Clique no botão acima para configurar.<br><br>Se o erro persistir, abra um ticket no <a href='https://cda.cdhu.sp.gov.br' style='color:#b45309'>CDA</a>."));
 }
 
 // ---------- Handlers ----------
