@@ -300,7 +300,10 @@ function populateForm(data) {
 
 // ─── Badge de usuário ─────────────────────────────────────────────────────────
 
+var _isLogged = false;
+
 function updateUserUI(isLogged, username) {
+    _isLogged = !!isLogged;
     var btn   = document.getElementById("login-btn");
     var badge = document.getElementById("user-info");
     if (!btn || !badge) return;
@@ -397,7 +400,9 @@ function addKeyword() {
     var inp = document.getElementById('kw-input');
     if (!inp) return;
     var val = inp.value.trim();
-    if (!val || keywords.indexOf(val) !== -1) { inp.value = ''; return; }
+    if (!val) { inp.value = ''; return; }
+    val = val.charAt(0).toUpperCase() + val.slice(1);
+    if (keywords.indexOf(val) !== -1) { inp.value = ''; return; }
     keywords.push(val);
     inp.value = '';
     renderKeywords();
@@ -469,12 +474,31 @@ function renderDistLayerCard() {
     var wsEl   = document.getElementById('dist-card-ws');
     if (nameEl) nameEl.textContent = l.title || l.name || '';
     if (wsEl)   wsEl.textContent   = l.workspace || '';
-    var wmsChk = document.getElementById('dist-pick-wms');
-    var wfsChk = document.getElementById('dist-pick-wfs');
-    var wcsChk = document.getElementById('dist-pick-wcs');
-    if (wmsChk) { wmsChk.checked = !!l.wms_url; wmsChk.disabled = !l.wms_url; }
-    if (wfsChk) { wfsChk.checked = !!l.wfs_url; wfsChk.disabled = !l.wfs_url; }
-    if (wcsChk) { wcsChk.checked = false;        wcsChk.disabled = !l.wcs_url; }
+
+    var wmsChk    = document.getElementById('dist-pick-wms');
+    var wfsChk    = document.getElementById('dist-pick-wfs');
+    var wcsChk    = document.getElementById('dist-pick-wcs');
+    var wfsToggle = wfsChk ? wfsChk.closest('.dist-proto-toggle') : null;
+    var wcsToggle = wcsChk ? wcsChk.closest('.dist-proto-toggle') : null;
+
+    // WMS — sempre disponível (público)
+    if (wmsChk) { wmsChk.checked = true; wmsChk.disabled = false; }
+
+    // WFS — só se autenticado (vem como wfs_available do bridge, ou _isLogged)
+    var wfsOk = !!(l.wfs_available !== undefined ? l.wfs_available : _isLogged);
+    if (wfsChk) {
+        wfsChk.checked  = false;   // opt-in: user decide se quer WFS
+        wfsChk.disabled = !wfsOk;
+    }
+    if (wfsToggle) {
+        wfsToggle.title = wfsOk ? '' : 'Requer autenticação';
+        wfsToggle.style.opacity = wfsOk ? '' : '0.45';
+    }
+
+    // WCS — nunca disponível via WMS caps (raster needs separate check)
+    if (wcsChk) { wcsChk.checked = false; wcsChk.disabled = true; }
+    if (wcsToggle) { wcsToggle.style.display = 'none'; }
+
     card.style.display = 'block';
 }
 

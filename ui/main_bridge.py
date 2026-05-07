@@ -138,6 +138,77 @@ class MainBridge(QObject):
                 })
         return results
 
+    # Cache de camadas do GeoServer (carregado uma vez por sessão)
+    _geoserver_layers_cache = None
+
+    @pyqtSlot(str, result='QVariant')
+    def search_geoserver(self, query: str):
+        """Busca camadas públicas no GeoServer via WMS GetCapabilities (sem autenticação)."""
+        try:
+            import ssl
+            import urllib.request
+            import xml.etree.ElementTree as ET
+            from core.plugin_config import config_loader
+
+            base_url = config_loader.get_geoserver_url().rstrip('/')
+            if not base_url:
+                return []
+
+            is_logged = getattr(getattr(self._dialog, 'plugin', None), 'api_session', None) is not None
+
+            if MainBridge._geoserver_layers_cache is None:
+                # WMS GetCapabilities — público, sem auth
+                caps_url = f"{base_url}/wms?service=WMS&version=1.3.0&request=GetCapabilities"
+                ctx = ssl.create_default_context()
+                ctx.check_hostname = False
+                ctx.verify_mode    = ssl.CERT_NONE
+                with urllib.request.urlopen(caps_url, context=ctx, timeout=12) as resp:
+                    content = resp.read()
+
+                root = ET.fromstring(content)
+                all_layers = []
+                # Busca <Layer> com <Name> filho direto (evita grupos)
+                for layer_el in root.iter():
+                    if not layer_el.tag.endswith('}Layer') and layer_el.tag != 'Layer':
+                        continue
+                    name_el  = None
+                    title_el = None
+                    for child in layer_el:
+                        tag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+                        if tag == 'Name'  and name_el  is None: name_el  = child
+                        if tag == 'Title' and title_el is None: title_el = child
+                    name  = (name_el.text  or '').strip() if name_el  is not None else ''
+                    title = (title_el.text or '').strip() if title_el is not None else ''
+                    if not name or ':' not in name:   # ignora layers sem workspace
+                        continue
+                    parts     = name.split(':', 1)
+                    workspace = parts[0]
+                    ws_path   = f"/{workspace}"
+                    all_layers.append({
+                        'name':      name,
+                        'workspace': workspace,
+                        'title':     title or name,
+                        'wms_url':   f"{base_url}{ws_path}/wms?service=WMS",
+                        'wfs_url':   f"{base_url}{ws_path}/wfs?service=WFS",
+                    })
+
+                MainBridge._geoserver_layers_cache = all_layers
+                print(f"GeoMetadata: {len(all_layers)} camadas carregadas do GeoServer.")
+
+            q = query.lower().strip()
+            cache = MainBridge._geoserver_layers_cache
+            results = [l for l in cache if q in l['name'].lower() or q in l['title'].lower()][:25]
+
+            # Indica ao JS se o WFS está disponível (só logado)
+            for r in results:
+                r['wfs_available'] = is_logged
+
+            return results
+
+        except Exception as e:
+            print(f"GeoMetadata [search_geoserver]: {e}")
+            return []
+
     @pyqtSlot(str, result=str)
     def load_panel_html(self, panel_id: str) -> str:
         """Lê o HTML de um painel do disco e retorna como string para o JS."""

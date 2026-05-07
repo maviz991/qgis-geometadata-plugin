@@ -1813,7 +1813,9 @@
             var inp = document.getElementById('kw-input');
             if (!inp) return;
             var val = inp.value.trim();
-            if (!val || keywords.indexOf(val) !== -1) { inp.value = ''; return; }
+            if (!val) { inp.value = ''; return; }
+            val = val.charAt(0).toUpperCase() + val.slice(1);
+            if (keywords.indexOf(val) !== -1) { inp.value = ''; return; }
             keywords.push(val);
             inp.value = '';
             renderKeywords();
@@ -1838,16 +1840,108 @@
         var _distSugg = [];
         var _distStagedLayer = null;
 
+        var _GEOSERVER_BASE = 'https://geo-d.cdhu.sp.gov.br/geoserver';
+        var _geoserverAllLayers = null;   // cache — carregado uma vez
+        var _geoserverLoading  = false;
+        var _pendingQuery      = null;
+
+        function _loadGeoServerCapabilities(onDone) {
+            if (_geoserverAllLayers !== null) { onDone(); return; }
+            if (_geoserverLoading)            { _pendingQuery = onDone; return; }
+            _geoserverLoading = true;
+            var url = _GEOSERVER_BASE + '/wfs?service=WFS&version=2.0.0&request=GetCapabilities';
+            fetch(url)
+                .then(function (r) { return r.text(); })
+                .then(function (xml) {
+                    var doc      = new DOMParser().parseFromString(xml, 'application/xml');
+                    var features = doc.getElementsByTagNameNS('http://www.opengis.net/wfs/2.0', 'FeatureType');
+                    var layers   = [];
+                    for (var i = 0; i < features.length; i++) {
+                        var ft       = features[i];
+                        var nameEl   = ft.getElementsByTagNameNS('http://www.opengis.net/wfs/2.0', 'Name')[0];
+                        var titleEl  = ft.getElementsByTagNameNS('http://www.opengis.net/wfs/2.0', 'Title')[0];
+                        var name     = nameEl  ? nameEl.textContent.trim()  : '';
+                        var title    = titleEl ? titleEl.textContent.trim() : '';
+                        if (!name) continue;
+                        var parts    = name.split(':');
+                        var ws       = parts.length > 1 ? parts[0] : '';
+                        var wsPath   = ws ? '/' + ws : '';
+                        layers.push({
+                            name:      name,
+                            workspace: ws,
+                            title:     title || name,
+                            wms_url:   _GEOSERVER_BASE + wsPath + '/wms?service=WMS',
+                            wfs_url:   _GEOSERVER_BASE + wsPath + '/wfs?service=WFS',
+                            wcs_url:   null
+                        });
+                    }
+                    _geoserverAllLayers = layers;
+                    _geoserverLoading   = false;
+                    onDone();
+                    if (_pendingQuery) { _pendingQuery(); _pendingQuery = null; }
+                })
+                .catch(function (err) {
+                    console.warn('GeoServer capabilities fetch falhou:', err);
+                    _geoserverAllLayers = [];
+                    _geoserverLoading   = false;
+                });
+        }
+
         function searchGeoServer(q) {
             var box = document.getElementById('dist-suggestions');
             if (!q || q.length < 2) { if (box) box.style.display = 'none'; return; }
-            // mock: no GeoServer in editando.html
+            _loadGeoServerCapabilities(function () {
+                var ql = q.toLowerCase();
+                _distSugg = (_geoserverAllLayers || []).filter(function (l) {
+                    return l.name.toLowerCase().indexOf(ql) !== -1 ||
+                           l.title.toLowerCase().indexOf(ql) !== -1;
+                }).slice(0, 25);
+                renderDistSugg();
+            });
         }
 
         function closeDistSugg() {
             var box = document.getElementById('dist-suggestions');
             if (box) box.style.display = 'none';
             _distSugg = [];
+        }
+
+        function renderDistSugg() {
+            var box = document.getElementById('dist-suggestions');
+            if (!box) return;
+            if (!_distSugg.length) { box.style.display = 'none'; return; }
+            box.innerHTML = _distSugg.map(function (r, i) {
+                return '<div class="suggestion-item" onclick="pickGeoServerLayer(' + i + ')">' +
+                       '<span class="sugg-sigla">' + escHtml(r.workspace || '') + '</span>' +
+                       '<span class="sugg-name">' + escHtml(r.title || r.name || '') + '</span>' +
+                       '</div>';
+            }).join('');
+            box.style.display = 'block';
+        }
+
+        function pickGeoServerLayer(idx) {
+            _distStagedLayer = _distSugg[idx];
+            closeDistSugg();
+            var inp = document.getElementById('dist-search');
+            if (inp) inp.value = '';
+            renderDistLayerCard();
+        }
+
+        function renderDistLayerCard() {
+            var card = document.getElementById('dist-layer-card');
+            if (!card || !_distStagedLayer) return;
+            var l = _distStagedLayer;
+            var nameEl = document.getElementById('dist-card-name');
+            var wsEl   = document.getElementById('dist-card-ws');
+            if (nameEl) nameEl.textContent = l.title || l.name || '';
+            if (wsEl)   wsEl.textContent   = l.workspace || '';
+            var wmsChk = document.getElementById('dist-pick-wms');
+            var wfsChk = document.getElementById('dist-pick-wfs');
+            var wcsChk = document.getElementById('dist-pick-wcs');
+            if (wmsChk) { wmsChk.checked = !!l.wms_url; wmsChk.disabled = !l.wms_url; }
+            if (wfsChk) { wfsChk.checked = !!l.wfs_url; wfsChk.disabled = !l.wfs_url; }
+            if (wcsChk) { wcsChk.checked = false;        wcsChk.disabled = !l.wcs_url; }
+            card.style.display = 'block';
         }
 
         function cancelDistLayer() {
