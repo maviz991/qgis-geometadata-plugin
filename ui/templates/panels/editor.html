@@ -588,34 +588,38 @@
                 <input id="dist-search" type="text" placeholder="Buscar camada no GeoServer..."
                     oninput="searchGeoServer(this.value)" onkeydown="if(event.key==='Escape') closeDistSugg()">
                 <div id="dist-suggestions" class="search-suggestions"></div>
+                <span class="search-spinner" id="dist-spinner" style="display:none"></span>
             </div>
             <button class="btn-icon accent" onclick="toggleDistManual()">+ Manual</button>
         </div>
 
         <!-- Staging card após busca no GeoServer -->
-        <div class="dist-layer-card" id="dist-layer-card" style="display:none">
-            <div class="dist-layer-card-header">
+        <div class="manual-form-wrap" id="dist-layer-card" style="display:none">
+            <div class="manual-form-header">
                 <div>
-                    <span class="dist-layer-name" id="dist-card-name"></span>
-                    <span class="dist-layer-ws" id="dist-card-ws"></span>
+                    <span id="dist-card-name" style="font-weight:600"></span>
+                    <span id="dist-card-ws" style="margin-left:8px;color:var(--fg-muted);font-size:12px"></span>
                 </div>
                 <button class="btn-icon" onclick="cancelDistLayer()">×</button>
             </div>
-            <div class="dist-card-protocols">
-                <label class="dist-proto-toggle">
-                    <input type="checkbox" id="dist-pick-wms" checked>
-                    <span class="proto-badge wms">WMS</span>
-                </label>
-                <label class="dist-proto-toggle">
-                    <input type="checkbox" id="dist-pick-wfs">
-                    <span class="proto-badge wfs">WFS</span>
-                </label>
-                <label class="dist-proto-toggle">
-                    <input type="checkbox" id="dist-pick-wcs">
-                    <span class="proto-badge wcs">WCS</span>
-                </label>
+            <div class="manual-form-body">
+                <div class="dist-card-protocols">
+                    <label class="dist-proto-toggle">
+                        <input type="checkbox" id="dist-pick-wms" checked>
+                        <span class="proto-badge wms">WMS</span>
+                    </label>
+                    <label class="dist-proto-toggle">
+                        <input type="checkbox" id="dist-pick-wfs">
+                        <span class="proto-badge wfs">WFS</span>
+                    </label>
+                    <label class="dist-proto-toggle">
+                        <input type="checkbox" id="dist-pick-wcs">
+                        <span class="proto-badge wcs">WCS</span>
+                    </label>
+                </div>
             </div>
-            <div class="dist-card-footer">
+            <div class="manual-form-footer">
+                <button class="btn-icon" onclick="cancelDistLayer()">Cancelar</button>
                 <button class="btn-icon accent" onclick="confirmDistLayer()">Adicionar</button>
             </div>
         </div>

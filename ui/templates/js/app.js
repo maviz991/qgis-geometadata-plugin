@@ -56,6 +56,31 @@ function initApp() {
     bridge.layer_changed.connect(function (name) {
         updateLayerBadge(name);
     });
+
+    bridge.gn_contacts_ready.connect(function (key, q, results) {
+        _gnLoading[key] = false;
+        var gnList = (results || []);
+        if (key === 'main') {
+            var inp = document.getElementById('contact-search');
+            if (!inp || inp.value.trim() !== q) return;
+            _gnResults = gnList;
+            _renderContactSuggestions(q);
+        } else {
+            var inp2 = document.getElementById(key + '-search');
+            if (!inp2 || inp2.value.trim() !== q) return;
+            _setSuggGn(key, gnList);
+            _renderForSuggestions(key, q);
+        }
+    });
+
+    bridge.gn_contact_enriched.connect(function (key, idx, data) {
+        var arr = (key === 'main') ? contacts : _sArr(key);
+        if (!arr || !arr[idx]) return;
+        var d = arr[idx].data;
+        Object.keys(data).forEach(function (k) { if (data[k]) d[k] = data[k]; });
+        if (key === 'main') renderContacts();
+        else renderFor(key);
+    });
 }
 
 function updateLayerBadge(name) {
@@ -461,10 +486,17 @@ var _distSugg = [];
 var _distStagedLayer = null;
 
 function searchGeoServer(q) {
-    var box = document.getElementById('dist-suggestions');
-    if (!q || q.length < 2) { if (box) box.style.display = 'none'; return; }
+    var box     = document.getElementById('dist-suggestions');
+    var spinner = document.getElementById('dist-spinner');
+    if (!q || q.length < 2) {
+        if (box)     box.style.display     = 'none';
+        if (spinner) spinner.style.display = 'none';
+        return;
+    }
     if (typeof bridge !== 'undefined' && bridge.search_geoserver) {
+        if (spinner) spinner.style.display = 'inline-block';
         bridge.search_geoserver(q, function (results) {
+            if (spinner) spinner.style.display = 'none';
             _distSugg = results || [];
             renderDistSugg();
         });
@@ -540,6 +572,10 @@ function cancelDistLayer() {
     if (card) card.style.display = 'none';
 }
 
+function _distDuplicate(url, proto) {
+    return distResources.some(function (r) { return r.url === url && r.protocol === proto; });
+}
+
 function confirmDistLayer() {
     if (!_distStagedLayer) return;
     var l = _distStagedLayer;
@@ -548,12 +584,15 @@ function confirmDistLayer() {
         { id: 'dist-pick-wfs', proto: 'OGC:WFS', url: l.wfs_url },
         { id: 'dist-pick-wcs', proto: 'OGC:WCS', url: l.wcs_url }
     ];
+    var skipped = 0;
     pairs.forEach(function (p) {
         var cb = document.getElementById(p.id);
         if (cb && cb.checked && p.url) {
+            if (_distDuplicate(p.url, p.proto)) { skipped++; return; }
             distResources.push({ url: p.url, protocol: p.proto, name: l.name || '', description: l.title || '' });
         }
     });
+    if (skipped) alert('Serviço(s) já adicionado(s) foram ignorados.');
     cancelDistLayer();
     renderDistResources();
 }
@@ -571,6 +610,7 @@ function submitDistManual() {
     var proto = (document.getElementById('dist-mf-protocol') || {}).value || 'OGC:WMS';
     var name = ((document.getElementById('dist-mf-name') || {}).value || '').trim();
     var desc = ((document.getElementById('dist-mf-description') || {}).value || '').trim();
+    if (_distDuplicate(url, proto)) { alert('Este recurso já foi adicionado.'); return; }
     distResources.push({ url: url, protocol: proto, name: name, description: desc });
     ['dist-mf-url', 'dist-mf-name', 'dist-mf-description'].forEach(function (id) {
         var el = document.getElementById(id); if (el) el.value = '';
@@ -592,14 +632,16 @@ function renderDistResources() {
         return;
     }
     var protoCls = { 'OGC:WMS': 'wms', 'OGC:WFS': 'wfs', 'OGC:WCS': 'wcs', 'OGC:WPS': 'wps', 'WWW:DOWNLOAD': 'download' };
+    var protoLabel = { 'OGC:WMS': 'WMS', 'OGC:WFS': 'WFS', 'OGC:WCS': 'WCS', 'OGC:WPS': 'WPS', 'WWW:DOWNLOAD': 'DOWN', 'WWW:LINK': 'LINK' };
     tbody.innerHTML = distResources.map(function (r, i) {
         var cls = protoCls[r.protocol] || 'link';
+        var lbl = protoLabel[r.protocol] || r.protocol;
         return '<tr>' +
             '<td style="text-align:center">' + (i + 1) + '</td>' +
             '<td>' + escHtml(r.name || '—') +
             (r.description ? '<br><small style="color:var(--fg-muted)">' + escHtml(r.description) + '</small>' : '') +
             '</td>' +
-            '<td><span class="proto-badge ' + cls + '">' + escHtml(r.protocol) + '</span></td>' +
+            '<td><span class="proto-badge ' + cls + '" title="' + escHtml(r.protocol) + '">' + escHtml(lbl) + '</span></td>' +
             '<td style="font-size:11px;color:var(--fg-muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + escHtml(r.url) + '">' + escHtml(r.url) + '</td>' +
             '<td><button class="btn-remove" onclick="removeDistResource(' + i + ')" title="Remover">✕</button></td>' +
             '</tr>';
@@ -710,9 +752,11 @@ function renderContacts() {
 function buildAccordion(c, idx) {
     var d = c.data;
     var label = 'Contato ' + (idx + 1) + (d.sigla ? ' — ' + d.sigla : '');
-    var badge = c.isManual
-        ? '<span class="badge-manual">Manual</span>'
-        : '<span class="badge-preset">Catálogo</span>';
+    var badge = c.isManual === 'gn'
+        ? '<span class="badge-gn">Catálogo Online (GN)</span>'
+        : c.isManual
+            ? '<span class="badge-manual">Manual</span>'
+            : '<span class="badge-preset">Catálogo Offline</span>';
 
     return '<div class="contact-accordion">' +
         '<button class="accordion-header" onclick="toggleAccordion(' + idx + ')">' +
@@ -720,7 +764,7 @@ function buildAccordion(c, idx) {
         label + badge +
         '</button>' +
         '<div class="accordion-body" id="acc-body-' + idx + '">' +
-        '<div class="form-grid">' + buildAccordionFields(d, idx, c.isManual) + '</div>' +
+        '<div class="form-grid">' + buildAccordionFields(d, idx, c.isManual === true) + '</div>' +
         '</div>' +
         '</div>';
 }
@@ -790,41 +834,75 @@ function removeContact(idx) {
 // ─── Busca de contatos (via bridge) ───────────────────────────────────────────
 
 var _suggestionResults = [];
+var _localResults      = [];
+var _gnResults         = [];
+var _gnSearchTimer     = null;
+var _gnLoading         = { 'main': false, 'proc': false, 'meta': false };
+
+var _GN_LOADING_ROW = '<div class="suggestion-loading"><span class="suggestion-spinner"></span>Buscando no Catálogo Online (GN)…</div>';
+
+function _renderContactSuggestions(q) {
+    var combined = _gnResults.concat(_localResults.filter(function (r) {
+        return !_gnResults.some(function (g) { return g.email && g.email === r.email; });
+    }));
+    _suggestionResults = combined;
+    var box = document.getElementById('search-suggestions');
+    if (!box) return;
+    var html = '';
+    if (!combined.length) {
+        if (!_gnLoading['main']) {
+            html = '<div class="suggestion-item" style="color:var(--fg-muted);cursor:default;">Nenhum resultado para "' + escHtml(q) + '"</div>';
+        }
+    } else {
+        html = combined.map(function (r, i) {
+            var src = r._source === 'gn' ? '<span style="font-size:10px;font-weight:700;color:var(--accent);margin-right:4px">GN</span>' : '';
+            var label = src + (r.sigla ? '<b>' + escHtml(r.sigla) + '</b> — ' : '') + escHtml(r.org || r._gn_name || '?');
+            return '<div class="suggestion-item" onclick="pickSuggestion(' + i + ')">' + label + '</div>';
+        }).join('');
+    }
+    if (_gnLoading['main']) html += _GN_LOADING_ROW;
+    box.innerHTML = html;
+    box.style.display = 'block';
+}
 
 function suggestContacts(q) {
-    q = (q || "").trim();
+    q = (q || '').trim();
     if (!q) { closeSuggestions(); return; }
     bridge.search_contacts(q, function (results) {
-        _suggestionResults = results || [];
-        var box = document.getElementById("search-suggestions");
-        if (!box) return;
-        if (!_suggestionResults.length) {
-            box.innerHTML = '<div class="suggestion-item" style="color:var(--fg-muted);cursor:default;">Nenhum resultado para "' + q + '"</div>';
-            box.style.display = "block";
-            return;
-        }
-        box.innerHTML = _suggestionResults.map(function (r, i) {
-            var label = (r.sigla ? "<b>" + r.sigla + "</b> — " : "") + r.org;
-            return '<div class="suggestion-item" onclick="pickSuggestion(' + i + ')">' + label + '</div>';
-        }).join("");
-        box.style.display = "block";
+        _localResults = results || [];
+        _renderContactSuggestions(q);
     });
+    clearTimeout(_gnSearchTimer);
+    if (_isLogged) {
+        _gnSearchTimer = setTimeout(function () {
+            _gnLoading['main'] = true;
+            _renderContactSuggestions(q);
+            bridge.search_contacts_gn('main', q);
+        }, 400);
+    }
 }
 
 function pickSuggestion(idx) {
     var r = _suggestionResults[idx];
     if (!r) return;
-    contacts.push({ isManual: false, data: r });
-    var inp = document.getElementById("contact-search");
-    if (inp) inp.value = "";
+    contacts.push({ isManual: r._source === 'gn' ? 'gn' : false, data: r });
+    var newIdx = contacts.length - 1;
+    var inp = document.getElementById('contact-search');
+    if (inp) inp.value = '';
     closeSuggestions();
     renderContacts();
+    if (r._source === 'gn' && r._gn_uuid) {
+        bridge.enrich_gn_contact('main', newIdx, r._gn_uuid);
+    }
 }
 
 function closeSuggestions() {
-    var box = document.getElementById("search-suggestions");
-    if (box) box.style.display = "none";
+    var box = document.getElementById('search-suggestions');
+    if (box) box.style.display = 'none';
+    _gnLoading['main'] = false;
     _suggestionResults = [];
+    _localResults = [];
+    _gnResults = [];
 }
 
 // ─── Formulário manual ─────────────────────────────────────────────────────────
@@ -840,48 +918,81 @@ function toggleManualForm() {
 
 var procContacts = [];
 var metaContacts = [];
-var _procSugg = [];
-var _metaSugg = [];
+var _procSugg    = [];
+var _metaSugg    = [];
+var _procGnSugg  = [];
+var _metaGnSugg  = [];
+var _gnTimers    = {};
 
-function _sArr(key) { return key === 'proc' ? procContacts : metaContacts; }
-function _sSugg(key) { return key === 'proc' ? _procSugg : _metaSugg; }
-function _setSArr(key, v) { if (key === 'proc') procContacts = v; else metaContacts = v; }
-function _setSugg(key, v) { if (key === 'proc') _procSugg = v; else _metaSugg = v; }
+function _sArr(key)      { return key === 'proc' ? procContacts : metaContacts; }
+function _sSugg(key)     { return key === 'proc' ? _procSugg    : _metaSugg; }
+function _getGnSugg(key) { return key === 'proc' ? _procGnSugg  : _metaGnSugg; }
+function _setSArr(key, v)   { if (key === 'proc') procContacts = v; else metaContacts = v; }
+function _setSugg(key, v)   { if (key === 'proc') _procSugg    = v; else _metaSugg    = v; }
+function _setSuggGn(key, v) { if (key === 'proc') _procGnSugg  = v; else _metaGnSugg  = v; }
+
+function _renderForSuggestions(key, q) {
+    var gnList   = _getGnSugg(key);
+    var combined = gnList.concat(_sSugg(key).filter(function (r) {
+        return !gnList.some(function (g) { return g.email && g.email === r.email; });
+    }));
+    _setSugg(key, combined);
+    var box = document.getElementById(key + '-suggestions');
+    if (!box) return;
+    var html = '';
+    if (!combined.length) {
+        if (!_gnLoading[key]) {
+            html = '<div class="suggestion-item" style="color:var(--fg-muted);cursor:default">Nenhum resultado para "' + escHtml(q) + '"</div>';
+        }
+    } else {
+        html = combined.map(function (r, i) {
+            var src   = r._source === 'gn' ? '<span style="font-size:10px;font-weight:700;color:var(--accent);margin-right:4px">GN</span>' : '';
+            var label = src + (r.sigla ? '<b>' + escHtml(r.sigla) + '</b> — ' : '') + escHtml(r.org || '?');
+            return '<div class="suggestion-item" onclick="pickFor(\'' + key + '\',' + i + ')">' + label + '</div>';
+        }).join('');
+    }
+    if (_gnLoading[key]) html += _GN_LOADING_ROW;
+    box.innerHTML = html;
+    box.style.display = 'block';
+}
 
 function suggestFor(key, q) {
     q = (q || '').trim();
     if (!q) { closeFor(key); return; }
     bridge.search_contacts(q, function (results) {
         _setSugg(key, results || []);
-        var box = document.getElementById(key + '-suggestions');
-        if (!box) return;
-        if (!_sSugg(key).length) {
-            box.innerHTML = '<div class="suggestion-item" style="color:var(--fg-muted);cursor:default">Nenhum resultado para "' + q + '"</div>';
-            box.style.display = 'block';
-            return;
-        }
-        box.innerHTML = _sSugg(key).map(function (r, i) {
-            var label = (r.sigla ? '<b>' + r.sigla + '</b> — ' : '') + r.org;
-            return '<div class="suggestion-item" onclick="pickFor(\'' + key + '\',' + i + ')">' + label + '</div>';
-        }).join('');
-        box.style.display = 'block';
+        _renderForSuggestions(key, q);
     });
+    clearTimeout(_gnTimers[key]);
+    if (_isLogged) {
+        _gnTimers[key] = setTimeout(function () {
+            _gnLoading[key] = true;
+            _renderForSuggestions(key, q);
+            bridge.search_contacts_gn(key, q);
+        }, 400);
+    }
 }
 
 function pickFor(key, idx) {
     var r = _sSugg(key)[idx];
     if (!r) return;
-    _sArr(key).push({ isManual: false, data: r });
+    _sArr(key).push({ isManual: r._source === 'gn' ? 'gn' : false, data: r });
+    var newIdx = _sArr(key).length - 1;
     var inp = document.getElementById(key + '-search');
     if (inp) inp.value = '';
     closeFor(key);
     renderFor(key);
+    if (r._source === 'gn' && r._gn_uuid) {
+        bridge.enrich_gn_contact(key, newIdx, r._gn_uuid);
+    }
 }
 
 function closeFor(key) {
     var box = document.getElementById(key + '-suggestions');
     if (box) box.style.display = 'none';
+    _gnLoading[key] = false;
     _setSugg(key, []);
+    _setSuggGn(key, []);
 }
 
 function removeFrom(key, idx) {
@@ -932,19 +1043,33 @@ function renderFor(key) {
 function buildAccordionFor(c, idx, key) {
     var d = c.data;
     var lbl = 'Contato ' + (idx + 1) + (d.sigla ? ' — ' + d.sigla : '');
-    var badge = c.isManual ? '<span class="badge-manual">Manual</span>' : '<span class="badge-preset">Catálogo</span>';
+    var badge = c.isManual === 'gn'
+        ? '<span class="badge-gn">Catálogo Online (GN)</span>'
+        : c.isManual
+            ? '<span class="badge-manual">Manual</span>'
+            : '<span class="badge-preset">Catálogo Offline</span>';
     var sel = d.role || 'pointOfContact';
     var rOpts = ROLE_OPTIONS.map(function (r) {
         return '<option value="' + r.value + '"' + (r.value === sel ? ' selected' : '') + '>' + r.label + '</option>';
     }).join('');
+    var editable = c.isManual === true;
     var flds =
-        field('Sigla', d.sigla, c.isManual, 'af-' + key + '-' + idx + '-sigla') +
-        field('Organização', d.org, c.isManual, 'af-' + key + '-' + idx + '-org') +
+        field('Sigla', d.sigla, editable, 'af-' + key + '-' + idx + '-sigla') +
+        field('Organização', d.org, editable, 'af-' + key + '-' + idx + '-org') +
         '<div class="form-group"><label>Regra</label>' +
         '<select id="role-' + key + '-a-' + idx + '" class="role-select" onchange="updateRoleFor(\'' + key + '\',' + idx + ',this.value)">' + rOpts + '</select></div>' +
-        field('E-mail', d.email, c.isManual, 'af-' + key + '-' + idx + '-email') +
-        field('Cargo', d.position, c.isManual, 'af-' + key + '-' + idx + '-position') +
-        field('Telefone', d.phone, c.isManual, 'af-' + key + '-' + idx + '-phone');
+        field('E-mail', d.email, editable, 'af-' + key + '-' + idx + '-email') +
+        field('Cargo', d.position, editable, 'af-' + key + '-' + idx + '-position') +
+        field('Telefone', d.phone, editable, 'af-' + key + '-' + idx + '-phone') +
+        '<div class="form-group span-2"><label>Endereço</label>' +
+        (editable
+            ? '<input id="af-' + key + '-' + idx + '-address" type="text" value="' + (d.address || '') + '">'
+            : '<div class="readonly-field">' + (d.address || '—') + '</div>') +
+        '</div>' +
+        field('Cidade', d.city, editable, 'af-' + key + '-' + idx + '-city') +
+        field('Estado', d.state, editable, 'af-' + key + '-' + idx + '-state') +
+        field('CEP', d.zip, editable, 'af-' + key + '-' + idx + '-zip') +
+        field('País', d.country, editable, 'af-' + key + '-' + idx + '-country');
     return '<div class="contact-accordion">' +
         '<button class="accordion-header" onclick="toggleAccordionFor(\'' + key + '\',' + idx + ')">' +
         '<span class="acc-arrow" id="arr-' + key + '-' + idx + '"><img class="acc-chevron" src="../../img/chevron_down.svg"></span>' +

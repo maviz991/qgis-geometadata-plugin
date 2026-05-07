@@ -16,19 +16,23 @@ class MainBridge(QObject):
     """
 
     # Sinais emitidos para o JS
-    nav_changed   = pyqtSignal(str)       # Notifica mudança de painel
-    auth_status   = pyqtSignal(bool, str) # (is_logged, username)
-    form_data_req = pyqtSignal('QVariant') # Envia dados para preencher o form
-    login_loading = pyqtSignal(str)       # Mensagem de carregamento durante auth
-    login_error   = pyqtSignal(str)       # Erro de autenticação
-    layer_changed = pyqtSignal(str)       # Nome da camada ativa mudou
+    nav_changed        = pyqtSignal(str)            # Notifica mudança de painel
+    auth_status        = pyqtSignal(bool, str)      # (is_logged, username)
+    form_data_req      = pyqtSignal('QVariant')     # Envia dados para preencher o form
+    login_loading      = pyqtSignal(str)            # Mensagem de carregamento durante auth
+    login_error        = pyqtSignal(str)            # Erro de autenticação
+    layer_changed      = pyqtSignal(str)            # Nome da camada ativa mudou
+    gn_contacts_ready   = pyqtSignal(str, str, 'QVariant')  # key, query, results
+    gn_contact_enriched = pyqtSignal(str, int, 'QVariant')  # key, idx, enriched_data
 
     def __init__(self, dialog, parent=None):
         super().__init__(parent)
         self._dialog = dialog
         self._form_manager = getattr(dialog, 'form_manager', None)
-        self._sso_worker = None
-        self._adm_worker = None
+        self._sso_worker     = None
+        self._adm_worker     = None
+        self._gn_workers     = {}
+        self._enrich_workers = []
         try:
             plugin = getattr(dialog, 'plugin', None)
             iface  = getattr(plugin, 'iface', None) or getattr(dialog, 'iface', None)
@@ -223,6 +227,41 @@ class MainBridge(QObject):
                     'role':     data.get('contact_role', '')
                 })
         return results
+
+    @pyqtSlot(str, str)
+    def search_contacts_gn(self, key: str, query: str):
+        """Busca contatos no GeoNetwork em background (se logado). Emite gn_contacts_ready."""
+        session = getattr(getattr(self._dialog, 'plugin', None), 'api_session', None)
+        if not session:
+            return
+        from ..core.plugin_config import config_loader
+        from .web_bridge import _GnContactsWorker
+        gn_base = config_loader.get_geonetwork_base_url()
+        if not gn_base:
+            return
+        old = self._gn_workers.get(key)
+        if old and old.isRunning():
+            old.quit()
+        worker = _GnContactsWorker(session, key, query, gn_base)
+        worker.done.connect(lambda k, q, r: self.gn_contacts_ready.emit(k, q, r))
+        self._gn_workers[key] = worker
+        worker.start()
+
+    @pyqtSlot(str, int, str)
+    def enrich_gn_contact(self, section_key: str, idx: int, uuid: str):
+        """Busca o XML do sub-template GeoNetwork e emite gn_contact_enriched com os campos completos."""
+        session = getattr(getattr(self._dialog, 'plugin', None), 'api_session', None)
+        if not session or not uuid:
+            return
+        from ..core.plugin_config import config_loader
+        from .web_bridge import _GnContactEnrichWorker
+        records_url = config_loader.get_geonetwork_url().get('records_url', '')
+        if not records_url:
+            return
+        worker = _GnContactEnrichWorker(session, uuid, records_url, section_key, idx)
+        worker.done.connect(lambda k, i, d: self.gn_contact_enriched.emit(k, i, d))
+        self._enrich_workers.append(worker)
+        worker.start()
 
     # Cache de camadas do GeoServer (carregado uma vez por sessão)
     _geoserver_layers_cache = None

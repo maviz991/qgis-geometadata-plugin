@@ -307,7 +307,14 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.setWindowIcon(QIcon(":/plugins/geometadata/icon.png"))
         self.setObjectName("GeoMetadataDialog")
         self.setWindowTitle("Geohab Plugin | GeoMetadata")
-        self.setMinimumSize(1250, 620)
+        self.setWindowFlags(
+            Qt.Window |
+            Qt.WindowMinimizeButtonHint |
+            Qt.WindowMaximizeButtonHint |
+            Qt.WindowCloseButtonHint
+        )
+        self.setMinimumSize(860, 520)
+        self.resize(1200, 720)
 
     def _build_ui_structure(self):
         """Cria o QWebEngineView que carregará toda a interface HTML."""

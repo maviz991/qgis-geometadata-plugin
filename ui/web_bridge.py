@@ -47,6 +47,109 @@ class _SsoWorker(QThread):
             self.auth_failed.emit(str(e))
 
 
+class _GnContactsWorker(QThread):
+    done = pyqtSignal(str, str, list)  # key, query, results
+
+    def __init__(self, session, key: str, query: str, gn_base_url: str):
+        super().__init__()
+        self._session  = session
+        self._key      = key
+        self._query    = query
+        self._gn_url   = gn_base_url.rstrip('/')
+
+    def run(self):
+        import re as _re
+        try:
+            # GeoNetwork armazena contatos como sub-templates (isTemplate="s")
+            # O endpoint correto é o Elasticsearch do GN4
+            es_url  = f"{self._gn_url}/srv/api/search/records/_search"
+            payload = {"size": 100, "query": {"term": {"isTemplate": "s"}}}
+            resp = self._session.post(es_url, json=payload, timeout=5, verify=False,
+                                      headers={'Accept': 'application/json'})
+            if resp.status_code != 200:
+                self.done.emit(self._key, self._query, [])
+                return
+
+            hits = resp.json().get('hits', {}).get('hits', [])
+            q    = self._query.lower().strip()
+            results = []
+            for hit in hits:
+                src   = hit.get('_source', {})
+                title = (src.get('resourceTitleObject') or {}).get('default', '') or ''
+
+                sigla_m = _re.search(r'\((.*?)\)', title)
+                sigla   = sigla_m.group(1).strip() if sigla_m else ''
+                org     = (src.get('Org') or '').strip() or (
+                    title.replace(f" ({sigla})", "").strip() if sigla else title.strip()
+                )
+                email   = (src.get('email') or '').strip()
+                uuid    = src.get('uuid', '')
+
+                if not org and not email:
+                    continue
+                if q and not (q in org.lower() or q in email.lower() or q in sigla.lower()):
+                    continue
+
+                results.append({
+                    'sigla':    sigla,
+                    'org':      org,
+                    'email':    email,
+                    'position': '',
+                    'phone':    '',
+                    'address':  '', 'city': '', 'state': '', 'zip': '', 'country': 'Brasil',
+                    'role':     'pointOfContact',
+                    '_source':  'gn',
+                    '_gn_uuid': uuid,
+                })
+            self.done.emit(self._key, self._query, results)
+        except Exception as exc:
+            print(f"GeoMetadata [GnContactsWorker]: {exc}")
+            self.done.emit(self._key, self._query, [])
+
+
+class _GnContactEnrichWorker(QThread):
+    """Busca o XML de um sub-template de contato do GeoNetwork e extrai todos os campos."""
+    done = pyqtSignal(str, int, dict)  # section_key, idx, enriched_data
+
+    def __init__(self, session, uuid: str, records_url: str, section_key: str, idx: int):
+        super().__init__()
+        self._session  = session
+        self._url      = f"{records_url}/{uuid}/formatters/xml"
+        self._key      = section_key
+        self._idx      = idx
+
+    def run(self):
+        import re as _re
+        try:
+            resp = self._session.get(self._url, timeout=5, verify=False)
+            if resp.status_code != 200:
+                self.done.emit(self._key, self._idx, {})
+                return
+            xml = resp.text
+
+            def _x(pattern):
+                m = _re.search(pattern, xml, _re.DOTALL)
+                return m.group(1).strip() if m else ''
+
+            data = {
+                'role':     _x(r'CI_RoleCode[^>]*codeListValue="([^"]+)"'),
+                'sigla':    _x(r'<gmd:individualName>.*?<gco:CharacterString>([^<]+)</gco:CharacterString>'),
+                'org':      _x(r'<gmd:organisationName>.*?<gco:CharacterString>([^<]+)</gco:CharacterString>'),
+                'position': _x(r'<gmd:positionName>.*?<gco:CharacterString>([^<]+)</gco:CharacterString>'),
+                'phone':    _x(r'<gmd:voice>.*?<gco:CharacterString>([^<]+)</gco:CharacterString>'),
+                'email':    _x(r'<gmd:electronicMailAddress>.*?<gco:CharacterString>([^<]+)</gco:CharacterString>'),
+                'address':  _x(r'<gmd:deliveryPoint>.*?<gco:CharacterString>([^<]+)</gco:CharacterString>'),
+                'city':     _x(r'<gmd:city>.*?<gco:CharacterString>([^<]+)</gco:CharacterString>'),
+                'state':    _x(r'<gmd:administrativeArea>.*?<gco:CharacterString>([^<]+)</gco:CharacterString>'),
+                'zip':      _x(r'<gmd:postalCode>.*?<gco:CharacterString>([^<]+)</gco:CharacterString>'),
+                'country':  _x(r'<gmd:country>.*?<gco:CharacterString>([^<]+)</gco:CharacterString>'),
+            }
+            self.done.emit(self._key, self._idx, {k: v for k, v in data.items() if v})
+        except Exception as exc:
+            print(f"GeoMetadata [GnContactEnrichWorker]: {exc}")
+            self.done.emit(self._key, self._idx, {})
+
+
 class _AdminWorker(QThread):
     login_success = pyqtSignal(object, str)   # session, username
     login_failed  = pyqtSignal(str)
