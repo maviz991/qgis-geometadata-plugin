@@ -185,6 +185,35 @@ body {
     border-radius: 20px;
     font-size: 12px;
     font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.user-badge:hover {
+    background: #fee2e2;
+    color: var(--accent);
+}
+
+.user-badge:hover .status-dot {
+    background: var(--accent);
+}
+
+.layer-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    color: #0369a1;
+    padding: 3px 10px 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    max-width: 200px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    flex-shrink: 1;
 }
 
 .status-dot {

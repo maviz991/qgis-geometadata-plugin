@@ -37,6 +37,10 @@ function initApp() {
         navigate("home");
     });
 
+    bridge.get_active_layer_name(function (name) {
+        updateLayerBadge(name);
+    });
+
     bridge.nav_changed.connect(function (panelId) {
         loadPanel(panelId);
     });
@@ -48,6 +52,22 @@ function initApp() {
     bridge.form_data_req.connect(function (data) {
         populateForm(data);
     });
+
+    bridge.layer_changed.connect(function (name) {
+        updateLayerBadge(name);
+    });
+}
+
+function updateLayerBadge(name) {
+    var badge  = document.getElementById('layer-badge');
+    var nameEl = document.getElementById('layer-badge-name');
+    if (!badge || !nameEl) return;
+    if (name) {
+        nameEl.textContent  = name;
+        badge.style.display = 'flex';
+    } else {
+        badge.style.display = 'none';
+    }
 }
 
 // ─── Navegação ────────────────────────────────────────────────────────────────
@@ -1007,6 +1027,15 @@ function initMetaAuthor() {
     });
 }
 
+// ─── Logout ────────────────────────────────────────────────────────────────────
+
+function doLogout() {
+    if (!confirm('Deseja sair da conta?')) return;
+    if (typeof bridge !== 'undefined' && bridge.logout) {
+        bridge.logout();
+    }
+}
+
 // ─── Login ─────────────────────────────────────────────────────────────────────
 
 function toggleLoginMode() {
@@ -1032,24 +1061,25 @@ function doAdminLogin() {
     }
 }
 
-function setLoginState(loading, message) {
-    var btns = document.querySelectorAll('.btn-login-action');
-    btns.forEach(function (btn) {
-        btn.disabled = loading;
-        if (loading) {
-            if (!btn.dataset.label) btn.dataset.label = btn.textContent;
-            btn.textContent = message || 'Aguardando...';
-        } else {
-            if (btn.dataset.label) { btn.textContent = btn.dataset.label; delete btn.dataset.label; }
-        }
-    });
-    var errEl = document.getElementById('login-error-msg');
-    if (errEl) errEl.style.display = 'none';
+function showLoginLoading() {
+    var area = document.getElementById('login-loading-area');
+    if (area) area.style.display = 'flex';
+}
+
+function hideLoginLoading() {
+    var area = document.getElementById('login-loading-area');
+    if (area) area.style.display = 'none';
+}
+
+function setLoginState(loading) {
+    if (loading) { showLoginLoading(); } else { hideLoginLoading(); }
+    var errEl = document.getElementById('login-error-msg') ||
+                document.getElementById('login-error-msg-adm');
+    if (!loading && errEl) errEl.style.display = 'none';
 }
 
 function setLoginError(msg) {
-    setLoginState(false, '');
-    // show in whichever error element is currently visible
+    hideLoginLoading();
     var errEl = document.getElementById('login-error-msg') ||
                 document.getElementById('login-error-msg-adm');
     if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }

@@ -14,7 +14,11 @@
             <h2 class="login-card-title">Geohab</h2>
             <p class="login-card-sub">Plataforma de Gestão de Dados Geográficos</p>
             <p id="login-error-msg" class="login-error" style="display:none"></p>
-            <button class="btn-login-action" onclick="setLoginState(true,'Aguardando navegador...');bridge.start_login()">
+            <div id="login-loading-area" class="login-loading-area" style="display:none">
+                <div class="login-loading-bar"><div class="login-loading-track"></div></div>
+                <span class="login-loading-msg">Aguardando autenticação no navegador</span>
+            </div>
+            <button class="btn-login-action" onclick="bridge.start_login();showLoginLoading()">
                 Entrar com conta CDHU
             </button>
             <button class="btn-login-back" onclick="navigate('home')">&lt; Voltar</button>
@@ -24,8 +28,9 @@
     <!-- Card administração (alternativo) -->
     <div class="login-center" id="login-admin-wrap" style="display:none">
         <div class="login-card">
-            <h2 class="login-card-title">Acesso Geral</h2>
-            <p class="login-card-sub">Conta local</p>
+            <img src="../../logo.png" alt="CDHU" class="login-card-logo">
+            <h2 class="login-card-title">Geohab</h2>
+            <p class="login-card-sub">Acesso com conta local</p>
             <p id="login-error-msg-adm" class="login-error" style="display:none"></p>
             <div class="login-field">
                 <input id="admin-user" type="text" placeholder="Usuário" autocomplete="username"
@@ -45,6 +50,40 @@
 </div>
 
 <style>
+    .login-loading-area {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .login-loading-bar {
+        width: 100%;
+        height: 3px;
+        background: #f1f5f9;
+        border-radius: 2px;
+        overflow: hidden;
+    }
+
+    .login-loading-track {
+        height: 100%;
+        width: 40%;
+        background: var(--accent);
+        border-radius: 2px;
+        animation: loginTrack 1.4s ease-in-out infinite;
+    }
+
+    .login-loading-msg {
+        font-size: 12px;
+        color: var(--fg-muted);
+    }
+
+    @keyframes loginTrack {
+        0%   { transform: translateX(-120%); }
+        100% { transform: translateX(320%); }
+    }
+
     .login-page {
         position: fixed;
         inset: 0;

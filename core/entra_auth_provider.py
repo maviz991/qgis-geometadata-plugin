@@ -204,8 +204,8 @@ class EntraAuthProvider:
         id_token_claims = self._token_result.get("id_token_claims", {})
 
         username = (
-            id_token_claims.get("preferred_username")
-            or id_token_claims.get("name")
+            id_token_claims.get("name")
+            or id_token_claims.get("preferred_username")
             or id_token_claims.get("upn")
             or id_token_claims.get("email")
             or "Usuário Conectado"

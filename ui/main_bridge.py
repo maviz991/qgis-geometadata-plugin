@@ -21,6 +21,7 @@ class MainBridge(QObject):
     form_data_req = pyqtSignal('QVariant') # Envia dados para preencher o form
     login_loading = pyqtSignal(str)       # Mensagem de carregamento durante auth
     login_error   = pyqtSignal(str)       # Erro de autenticação
+    layer_changed = pyqtSignal(str)       # Nome da camada ativa mudou
 
     def __init__(self, dialog, parent=None):
         super().__init__(parent)
@@ -28,6 +29,27 @@ class MainBridge(QObject):
         self._form_manager = getattr(dialog, 'form_manager', None)
         self._sso_worker = None
         self._adm_worker = None
+        try:
+            plugin = getattr(dialog, 'plugin', None)
+            iface  = getattr(plugin, 'iface', None) or getattr(dialog, 'iface', None)
+            if iface:
+                iface.currentLayerChanged.connect(self._on_layer_changed)
+        except Exception:
+            pass
+
+    def _on_layer_changed(self, layer):
+        self.layer_changed.emit(layer.name() if layer else "")
+
+    @pyqtSlot(result=str)
+    def get_active_layer_name(self) -> str:
+        """Retorna o nome da camada ativa no QGIS."""
+        try:
+            plugin = getattr(self._dialog, 'plugin', None)
+            iface  = getattr(plugin, 'iface', None) or getattr(self._dialog, 'iface', None)
+            layer  = iface.activeLayer() if iface else None
+            return layer.name() if layer else ""
+        except Exception:
+            return ""
         
     # --- Slots JS -> Python ---
 
@@ -111,6 +133,13 @@ class MainBridge(QObject):
 
     def _on_adm_failed(self, msg):
         self.login_error.emit(msg)
+
+    @pyqtSlot()
+    def logout(self):
+        """Encerra a sessão do usuário."""
+        self._dialog.plugin.api_session = None
+        self._dialog.plugin.auth_username = None
+        self._dialog.update_ui_for_login_status()
 
     @pyqtSlot('QVariant')
     def export_xml(self, form_data):
