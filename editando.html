@@ -118,6 +118,13 @@
             background: #fff5f5;
         }
 
+        .form-group input[readonly] {
+            background: #f1f5f9;
+            color: var(--fg-muted);
+            cursor: default;
+            user-select: text;
+        }
+
         .form-group input:disabled,
         .form-group select:disabled {
             opacity: 0.38;
@@ -460,6 +467,17 @@
             cursor: default;
         }
 
+        /* ── Título de seção dentro de uma aba ───────────────────── */
+        .section-heading {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--fg-muted);
+            padding: 20px 28px 4px;
+            margin: 0;
+        }
+
         /* ── Accordion de campos extras (Extensão) ────────────────── */
         .extra-accordion {
             border: 1px dashed var(--border);
@@ -563,6 +581,10 @@
                 <button class="tab-link" onclick="showTab('classificacao', this)">Classificação</button>
                 <button class="tab-link" onclick="showTab('extensao',      this)">Extensão</button>
                 <button class="tab-link" onclick="showTab('contato',       this)">Contato</button>
+                <button class="tab-link" onclick="showTab('qualidade',     this)">Qualidade</button>
+                <button class="tab-link" onclick="showTab('distribuicao',  this)">Distribuição</button>
+                <button class="tab-link" onclick="showTab('licenca',       this)">Licença</button>
+                <button class="tab-link" onclick="showTab('metadado',      this)">Metadado</button>
             </div>
 
             <!-- TAB: IDENTIFICAÇÃO -->
@@ -585,9 +607,13 @@
                         <textarea id="f-abstract" rows="5" placeholder="Descreva o conjunto de dados..."></textarea>
                     </div>
                     <div class="form-group span-2">
-                        <label for="f-MD_Keywords">Palavras-chave <span class="req">*</span></label>
-                        <input id="f-MD_Keywords" type="text"
-                            placeholder="Separe por vírgula: habitação, CDHU, São Paulo">
+                        <label>Palavras-chave <span class="req">*</span></label>
+                        <div class="keyword-input-row">
+                            <input id="kw-input" type="text" placeholder="Adicionar palavra-chave..."
+                                onkeydown="if(event.key==='Enter'){event.preventDefault();addKeyword();}">
+                            <button class="btn-icon accent" onclick="addKeyword()">+</button>
+                        </div>
+                        <div class="keyword-chips" id="keyword-chips"></div>
                     </div>
                     <div class="form-group span-2">
                         <label for="f-thumbnail_url">URL da Miniatura</label>
@@ -602,7 +628,7 @@
                     <div class="form-group">
                         <label for="f-maintenanceFrequency">Frequência de Atualização <span class="req">*</span></label>
                         <select id="f-maintenanceFrequency" onchange="toggleUpdateDate(this.value)">
-                            <option value="">— Selecione —</option>
+                            <option value="">- Selecione -</option>
                             <option value="annual">Anual</option>
                             <option value="biannually">Bimestral</option>
                             <option value="quarterly">Trimestral</option>
@@ -624,7 +650,7 @@
                     <div class="form-group">
                         <label for="f-status_codeListValue">Status <span class="req">*</span></label>
                         <select id="f-status_codeListValue">
-                            <option value="">— Selecione —</option>
+                            <option value="">- Selecione -</option>
                             <option value="historicalArchive">Arquivo Antigo</option>
                             <option value="completed">Concluído</option>
                             <option value="onGoing">Contínuo</option>
@@ -638,7 +664,7 @@
                         <label for="f-MD_SpatialRepresentationTypeCode">Tipo de Representação Espacial <span
                                 class="req">*</span></label>
                         <select id="f-MD_SpatialRepresentationTypeCode">
-                            <option value="">— Selecione —</option>
+                            <option value="">- Selecione -</option>
                             <option value="vector">Vetor</option>
                             <option value="grid">Grid | Raster</option>
                             <option value="textTable">Tabela de texto</option>
@@ -650,7 +676,7 @@
                     <div class="form-group">
                         <label for="f-topicCategory">Categoria Temática <span class="req">*</span></label>
                         <select id="f-topicCategory">
-                            <option value="">— Selecione —</option>
+                            <option value="">- Selecione -</option>
                             <option value="boundaries">Limites Administrativos</option>
                             <option value="planningCadastre">Planejamento e Cadastro</option>
                             <option value="society">Sociedade e Cultura</option>
@@ -744,25 +770,25 @@
                     <div class="form-group">
                         <label for="f-epsgCode">Código EPSG <span class="req">*</span></label>
                         <select id="f-epsgCode" onchange="setEpsgFromCode(this.value)">
-                            <option value="">— Selecione —</option>
-                            <option value="EPSG:4326">EPSG:4326 — WGS 84</option>
-                            <option value="EPSG:4674">EPSG:4674 — SIRGAS 2000</option>
-                            <option value="EPSG:4618">EPSG:4618 — SAD69</option>
-                            <option value="EPSG:31978">EPSG:31978 — SIRGAS 2000 / UTM 18S</option>
-                            <option value="EPSG:31979">EPSG:31979 — SIRGAS 2000 / UTM 19S</option>
-                            <option value="EPSG:31980">EPSG:31980 — SIRGAS 2000 / UTM 20S</option>
-                            <option value="EPSG:31981">EPSG:31981 — SIRGAS 2000 / UTM 21S</option>
-                            <option value="EPSG:31982">EPSG:31982 — SIRGAS 2000 / UTM 22S</option>
-                            <option value="EPSG:31983">EPSG:31983 — SIRGAS 2000 / UTM 23S</option>
-                            <option value="EPSG:31984">EPSG:31984 — SIRGAS 2000 / UTM 24S</option>
-                            <option value="EPSG:31985">EPSG:31985 — SIRGAS 2000 / UTM 25S</option>
-                            <option value="EPSG:29191">EPSG:29191 — SAD69 / UTM 21S</option>
-                            <option value="EPSG:29192">EPSG:29192 — SAD69 / UTM 22S</option>
-                            <option value="EPSG:29193">EPSG:29193 — SAD69 / UTM 23S</option>
-                            <option value="EPSG:29194">EPSG:29194 — SAD69 / UTM 24S</option>
-                            <option value="EPSG:32722">EPSG:32722 — WGS 84 / UTM 22S</option>
-                            <option value="EPSG:32723">EPSG:32723 — WGS 84 / UTM 23S</option>
-                            <option value="EPSG:32724">EPSG:32724 — WGS 84 / UTM 24S</option>
+                            <option value="">- Selecione -</option>
+                            <option value="EPSG:4326">EPSG:4326 - WGS 84</option>
+                            <option value="EPSG:4674">EPSG:4674 - SIRGAS 2000</option>
+                            <option value="EPSG:4618">EPSG:4618 - SAD69</option>
+                            <option value="EPSG:31978">EPSG:31978 - SIRGAS 2000 / UTM 18S</option>
+                            <option value="EPSG:31979">EPSG:31979 - SIRGAS 2000 / UTM 19S</option>
+                            <option value="EPSG:31980">EPSG:31980 - SIRGAS 2000 / UTM 20S</option>
+                            <option value="EPSG:31981">EPSG:31981 - SIRGAS 2000 / UTM 21S</option>
+                            <option value="EPSG:31982">EPSG:31982 - SIRGAS 2000 / UTM 22S</option>
+                            <option value="EPSG:31983">EPSG:31983 - SIRGAS 2000 / UTM 23S</option>
+                            <option value="EPSG:31984">EPSG:31984 - SIRGAS 2000 / UTM 24S</option>
+                            <option value="EPSG:31985">EPSG:31985 - SIRGAS 2000 / UTM 25S</option>
+                            <option value="EPSG:29191">EPSG:29191 - SAD69 / UTM 21S</option>
+                            <option value="EPSG:29192">EPSG:29192 - SAD69 / UTM 22S</option>
+                            <option value="EPSG:29193">EPSG:29193 - SAD69 / UTM 23S</option>
+                            <option value="EPSG:29194">EPSG:29194 - SAD69 / UTM 24S</option>
+                            <option value="EPSG:32722">EPSG:32722 - WGS 84 / UTM 22S</option>
+                            <option value="EPSG:32723">EPSG:32723 - WGS 84 / UTM 23S</option>
+                            <option value="EPSG:32724">EPSG:32724 - WGS 84 / UTM 24S</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -776,19 +802,19 @@
                             <summary>Mais informações</summary>
                             <div class="extra-accordion-grid">
                                 <div class="form-group">
-                                    <label for="f-zMin">Altitude mínima — Z</label>
+                                    <label for="f-zMin">Altitude mínima - Z</label>
                                     <input id="f-zMin" type="number" step="any" placeholder="ex: -10">
                                 </div>
                                 <div class="form-group">
-                                    <label for="f-zMax">Altitude máxima — Z</label>
+                                    <label for="f-zMax">Altitude máxima - Z</label>
                                     <input id="f-zMax" type="number" step="any" placeholder="ex: 1200">
                                 </div>
                                 <div class="form-group">
-                                    <label for="f-temporalFrom">Extensão temporal — De</label>
+                                    <label for="f-temporalFrom">Extensão temporal - De</label>
                                     <input id="f-temporalFrom" type="date">
                                 </div>
                                 <div class="form-group">
-                                    <label for="f-temporalTo">Extensão temporal — Para</label>
+                                    <label for="f-temporalTo">Extensão temporal - Para</label>
                                     <input id="f-temporalTo" type="date">
                                 </div>
                             </div>
@@ -809,7 +835,6 @@
                             onkeydown="if(event.key==='Escape') closeSuggestions()">
                         <div id="search-suggestions" class="search-suggestions"></div>
                     </div>
-                    <button class="btn-icon" onclick="suggestContacts(document.getElementById('contact-search').value)">🔍 Buscar</button>
                     <button class="btn-icon accent" onclick="toggleManualForm()">+ Manual</button>
                 </div>
 
@@ -836,7 +861,7 @@
                             <div class="form-group">
                                 <label>Regra</label>
                                 <select id="mf-role">
-                                    <option value="">— Selecione —</option>
+                                    <option value="">- Selecione -</option>
                                     <option value="owner">Dono</option>
                                     <option value="author">Autor</option>
                                     <option value="processor">Organizador</option>
@@ -936,7 +961,7 @@
                     <div class="form-group">
                         <label for="f-contact_role">Responsabilidade <span class="req">*</span></label>
                         <select id="f-contact_role">
-                            <option value="">— Selecione —</option>
+                            <option value="">- Selecione -</option>
                             <option value="owner">Dono</option>
                             <option value="author">Autor</option>
                             <option value="processor">Organizador</option>
@@ -961,7 +986,7 @@
                     <div class="form-group">
                         <label for="f-contact_administrativeArea">Estado <span class="req">*</span></label>
                         <select id="f-contact_administrativeArea">
-                            <option value="">— Selecione —</option>
+                            <option value="">- Selecione -</option>
                             <option value="SP">São Paulo</option>
                             <option value="AC">Acre</option>
                             <option value="AL">Alagoas</option>
@@ -1002,6 +1027,335 @@
                 </div>
             </div>
 
+            <!-- TAB: QUALIDADE -->
+            <div id="tab-qualidade" class="tab-content">
+                <div class="form-grid">
+                    <div class="form-group span-2">
+                        <label for="f-statement">Linhagem - Instrução</label>
+                        <textarea id="f-statement" rows="3" placeholder="Histórico e origem dos dados..."></textarea>
+                    </div>
+                    <div class="form-group span-2">
+                        <label for="f-processStep">Etapas do Processo - Descrição</label>
+                        <textarea id="f-processStep" rows="3" placeholder="Descreva as etapas de processamento..."></textarea>
+                    </div>
+                </div>
+                <p class="section-heading">Processador</p>
+                <div class="contacts-toolbar">
+                    <div class="search-wrap">
+                        <input id="proc-search" type="text" placeholder="Buscar processador no catálogo Geohab..."
+                            oninput="suggestFor('proc', this.value)" onkeydown="if(event.key==='Escape') closeFor('proc')">
+                        <div id="proc-suggestions" class="search-suggestions"></div>
+                    </div>
+                    <button class="btn-icon accent" onclick="toggleSectionManual('proc')">+ Manual</button>
+                </div>
+                <div class="manual-form-wrap" id="proc-manual-wrap" style="display:none">
+                    <div class="manual-form-header" onclick="toggleSectionManual('proc')">
+                        <span>➕ Novo processador manual</span>
+                        <span style="font-size:18px;font-weight:300">×</span>
+                    </div>
+                    <div class="manual-form-body">
+                        <div class="form-grid">
+                            <div class="form-group"><label>Sigla <span class="req">*</span></label><input id="proc-mf-sigla" type="text"></div>
+                            <div class="form-group"><label>Organização <span class="req">*</span></label><input id="proc-mf-org" type="text"></div>
+                            <div class="form-group"><label>E-mail</label><input id="proc-mf-email" type="email"></div>
+                            <div class="form-group"><label>Regra</label>
+                                <select id="proc-mf-role">
+                                    <option value="processor" selected>Organizador</option>
+                                    <option value="owner">Dono</option><option value="author">Autor</option>
+                                    <option value="pointOfContact">Ponto de contato</option>
+                                </select>
+                            </div>
+                            <div class="form-group"><label>Cargo</label><input id="proc-mf-position" type="text"></div>
+                            <div class="form-group"><label>Telefone</label><input id="proc-mf-phone" type="text"></div>
+                            <div class="form-group span-2"><label>Endereço</label><input id="proc-mf-address" type="text" placeholder="Rua, número"></div>
+                            <div class="form-group"><label>Cidade</label><input id="proc-mf-city" type="text"></div>
+                            <div class="form-group"><label>Estado</label>
+                                <select id="proc-mf-state">
+                                    <option value="">-</option>
+                                    <option value="SP">São Paulo</option><option value="AC">Acre</option><option value="AL">Alagoas</option>
+                                    <option value="AM">Amazonas</option><option value="BA">Bahia</option><option value="CE">Ceará</option>
+                                    <option value="DF">Distrito Federal</option><option value="ES">Espírito Santo</option><option value="GO">Goiás</option>
+                                    <option value="MA">Maranhão</option><option value="MG">Minas Gerais</option><option value="MT">Mato Grosso</option>
+                                    <option value="MS">Mato Grosso do Sul</option><option value="PA">Pará</option><option value="PB">Paraíba</option>
+                                    <option value="PR">Paraná</option><option value="PE">Pernambuco</option><option value="PI">Piauí</option>
+                                    <option value="RJ">Rio de Janeiro</option><option value="RN">Rio Grande do Norte</option><option value="RS">Rio Grande do Sul</option>
+                                    <option value="RO">Rondônia</option><option value="RR">Roraima</option><option value="SC">Santa Catarina</option>
+                                    <option value="SE">Sergipe</option><option value="TO">Tocantins</option>
+                                </select>
+                            </div>
+                            <div class="form-group"><label>CEP</label><input id="proc-mf-zip" type="text" placeholder="00000-000"></div>
+                            <div class="form-group"><label>País</label><input id="proc-mf-country" type="text" value="Brasil"></div>
+                        </div>
+                    </div>
+                    <div class="manual-form-footer">
+                        <button class="btn-icon" onclick="toggleSectionManual('proc')">Cancelar</button>
+                        <button class="btn-icon accent" onclick="submitSectionManual('proc')">Adicionar</button>
+                    </div>
+                </div>
+                <div class="contacts-table-wrap">
+                    <table class="contacts-table">
+                        <thead><tr>
+                            <th style="width:32px;text-align:center">#</th>
+                            <th>Organização</th><th>Sigla</th><th>Regra</th><th></th>
+                        </tr></thead>
+                        <tbody id="proc-tbody"><tr><td colspan="5" class="empty-state">Nenhum processador adicionado.</td></tr></tbody>
+                    </table>
+                </div>
+                <div class="contacts-accordions" id="proc-accordions"></div>
+                <div class="form-grid">
+                    <div class="form-group span-2">
+                        <label for="f-sourceDescription">Fonte - Descrição</label>
+                        <textarea id="f-sourceDescription" rows="3" placeholder="Descreva a fonte dos dados..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: DISTRIBUIÇÃO -->
+            <div id="tab-distribuicao" class="tab-content">
+
+                <p class="section-heading">Recursos Online</p>
+
+                <div class="contacts-toolbar">
+                    <div class="search-wrap">
+                        <input id="dist-search" type="text" placeholder="Buscar camada no GeoServer..."
+                            oninput="searchGeoServer(this.value)" onkeydown="if(event.key==='Escape') closeDistSugg()">
+                        <div id="dist-suggestions" class="search-suggestions"></div>
+                    </div>
+                    <button class="btn-icon accent" onclick="toggleDistManual()">+ Manual</button>
+                </div>
+
+                <div class="dist-layer-card" id="dist-layer-card" style="display:none">
+                    <div class="dist-layer-card-header">
+                        <div>
+                            <span class="dist-layer-name" id="dist-card-name"></span>
+                            <span class="dist-layer-ws" id="dist-card-ws"></span>
+                        </div>
+                        <button class="btn-icon" onclick="cancelDistLayer()">×</button>
+                    </div>
+                    <div class="dist-card-protocols">
+                        <label class="dist-proto-toggle">
+                            <input type="checkbox" id="dist-pick-wms" checked>
+                            <span class="proto-badge wms">WMS</span>
+                        </label>
+                        <label class="dist-proto-toggle">
+                            <input type="checkbox" id="dist-pick-wfs">
+                            <span class="proto-badge wfs">WFS</span>
+                        </label>
+                        <label class="dist-proto-toggle">
+                            <input type="checkbox" id="dist-pick-wcs">
+                            <span class="proto-badge wcs">WCS</span>
+                        </label>
+                    </div>
+                    <div class="dist-card-footer">
+                        <button class="btn-icon accent" onclick="confirmDistLayer()">Adicionar</button>
+                    </div>
+                </div>
+
+                <div class="manual-form-wrap" id="dist-manual-wrap" style="display:none">
+                    <div class="manual-form-header" onclick="toggleDistManual()">
+                        <span>➕ Novo recurso manual</span>
+                        <span style="font-size:18px;font-weight:300">×</span>
+                    </div>
+                    <div class="manual-form-body">
+                        <div class="form-grid">
+                            <div class="form-group span-2">
+                                <label>URL <span class="req">*</span></label>
+                                <input id="dist-mf-url" type="url" placeholder="https://...">
+                            </div>
+                            <div class="form-group">
+                                <label>Protocolo</label>
+                                <select id="dist-mf-protocol">
+                                    <option value="OGC:WMS">OGC:WMS</option>
+                                    <option value="OGC:WFS">OGC:WFS</option>
+                                    <option value="OGC:WCS">OGC:WCS</option>
+                                    <option value="OGC:WPS">OGC:WPS</option>
+                                    <option value="WWW:DOWNLOAD">WWW:DOWNLOAD</option>
+                                    <option value="WWW:LINK">WWW:LINK</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Nome da camada</label>
+                                <input id="dist-mf-name" type="text" placeholder="workspace:layer_name">
+                            </div>
+                            <div class="form-group span-2">
+                                <label>Descrição</label>
+                                <input id="dist-mf-description" type="text" placeholder="Breve descrição do recurso">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="manual-form-footer">
+                        <button class="btn-icon" onclick="toggleDistManual()">Cancelar</button>
+                        <button class="btn-icon accent" onclick="submitDistManual()">Adicionar</button>
+                    </div>
+                </div>
+
+                <div class="contacts-table-wrap">
+                    <table class="contacts-table">
+                        <thead>
+                            <tr>
+                                <th style="width:32px;text-align:center">#</th>
+                                <th>Camada / Descrição</th>
+                                <th>Protocolo</th>
+                                <th>URL</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="dist-tbody">
+                            <tr><td colspan="5" class="empty-state">Nenhum recurso adicionado.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+
+            <!-- TAB: LICENÇA -->
+            <div id="tab-licenca" class="tab-content">
+                <div class="form-grid">
+
+                    <div class="form-group span-2">
+                        <label for="f-licenseType">Tipo de Licença</label>
+                        <select id="f-licenseType" onchange="onLicenseChange(this.value)">
+                            <option value="">— Selecione —</option>
+                            <option value="CC BY 4.0">CC BY 4.0 — Atribuição</option>
+                            <option value="CC BY-SA 4.0">CC BY-SA 4.0 — Atribuição-CompartilhaIgual</option>
+                            <option value="CC BY-NC 4.0">CC BY-NC 4.0 — Atribuição-NãoComercial</option>
+                            <option value="CC BY-NC-SA 4.0">CC BY-NC-SA 4.0 — Atribuição-NãoComercial-CompartilhaIgual</option>
+                            <option value="CC0">CC0 — Domínio Público</option>
+                            <option value="proprietary">Proprietário — Todos os direitos reservados (CDHU)</option>
+                            <option value="internal">Uso interno — CDHU</option>
+                            <option value="other">Outro</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group span-2">
+                        <label for="f-useLimitation">Limitações de Uso</label>
+                        <textarea id="f-useLimitation" rows="3" placeholder="Descreva as limitações de uso aplicáveis..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="f-accessConstraints">Restrições de Acesso</label>
+                        <select id="f-accessConstraints">
+                            <option value="">— Selecione —</option>
+                            <option value="unrestricted">Sem restrições</option>
+                            <option value="copyright">Direitos autorais</option>
+                            <option value="license">Licença</option>
+                            <option value="intellectualPropertyRights">Direitos de prop. intelectual</option>
+                            <option value="restricted">Restrito</option>
+                            <option value="otherRestrictions">Outras restrições</option>
+                            <option value="patent">Patente</option>
+                            <option value="trademark">Marca registrada</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="f-useConstraints">Restrições de Uso</label>
+                        <select id="f-useConstraints">
+                            <option value="">— Selecione —</option>
+                            <option value="unrestricted">Sem restrições</option>
+                            <option value="copyright">Direitos autorais</option>
+                            <option value="license">Licença</option>
+                            <option value="intellectualPropertyRights">Direitos de prop. intelectual</option>
+                            <option value="restricted">Restrito</option>
+                            <option value="otherRestrictions">Outras restrições</option>
+                            <option value="patent">Patente</option>
+                            <option value="trademark">Marca registrada</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group span-2">
+                        <label for="f-otherConstraints">Outros Direitos / Atribuição</label>
+                        <textarea id="f-otherConstraints" rows="3"
+                            placeholder="Ex: © CDHU — Companhia de Desenvolvimento Habitacional e Urbano do Estado de São Paulo. Todos os direitos reservados."></textarea>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- TAB: METADADO -->
+            <div id="tab-metadado" class="tab-content">
+                <div class="form-grid">
+                    <div class="form-group span-2">
+                        <label for="f-metadataId">Identificador do Metadado</label>
+                        <input id="f-metadataId" type="text" readonly tabindex="-1">
+                    </div>
+                    <div class="form-group">
+                        <label for="f-metadataLanguage">Idioma do Metadado</label>
+                        <select id="f-metadataLanguage">
+                            <option value="por">🇧🇷 Português</option>
+                            <option value="eng">🇺🇸 Inglês</option>
+                            <option value="spa">🇪🇸 Espanhol</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="f-dateStamp">Data e hora de criação do metadado</label>
+                        <input id="f-dateStamp" type="datetime-local">
+                    </div>
+                </div>
+                <p class="section-heading">Autor do Metadado</p>
+                <div class="contacts-toolbar">
+                    <div class="search-wrap">
+                        <input id="meta-search" type="text" placeholder="Buscar autor no catálogo Geohab..."
+                            oninput="suggestFor('meta', this.value)" onkeydown="if(event.key==='Escape') closeFor('meta')">
+                        <div id="meta-suggestions" class="search-suggestions"></div>
+                    </div>
+                    <button class="btn-icon accent" onclick="toggleSectionManual('meta')">+ Manual</button>
+                </div>
+                <div class="manual-form-wrap" id="meta-manual-wrap" style="display:none">
+                    <div class="manual-form-header" onclick="toggleSectionManual('meta')">
+                        <span>➕ Novo autor manual</span>
+                        <span style="font-size:18px;font-weight:300">×</span>
+                    </div>
+                    <div class="manual-form-body">
+                        <div class="form-grid">
+                            <div class="form-group"><label>Sigla <span class="req">*</span></label><input id="meta-mf-sigla" type="text"></div>
+                            <div class="form-group"><label>Organização <span class="req">*</span></label><input id="meta-mf-org" type="text"></div>
+                            <div class="form-group"><label>E-mail</label><input id="meta-mf-email" type="email"></div>
+                            <div class="form-group"><label>Regra</label>
+                                <select id="meta-mf-role">
+                                    <option value="author" selected>Autor</option>
+                                    <option value="owner">Dono</option>
+                                    <option value="pointOfContact">Ponto de contato</option>
+                                </select>
+                            </div>
+                            <div class="form-group"><label>Cargo</label><input id="meta-mf-position" type="text"></div>
+                            <div class="form-group"><label>Telefone</label><input id="meta-mf-phone" type="text"></div>
+                            <div class="form-group span-2"><label>Endereço</label><input id="meta-mf-address" type="text" placeholder="Rua, número"></div>
+                            <div class="form-group"><label>Cidade</label><input id="meta-mf-city" type="text"></div>
+                            <div class="form-group"><label>Estado</label>
+                                <select id="meta-mf-state">
+                                    <option value="">-</option>
+                                    <option value="SP">São Paulo</option><option value="AC">Acre</option><option value="AL">Alagoas</option>
+                                    <option value="AM">Amazonas</option><option value="BA">Bahia</option><option value="CE">Ceará</option>
+                                    <option value="DF">Distrito Federal</option><option value="ES">Espírito Santo</option><option value="GO">Goiás</option>
+                                    <option value="MA">Maranhão</option><option value="MG">Minas Gerais</option><option value="MT">Mato Grosso</option>
+                                    <option value="MS">Mato Grosso do Sul</option><option value="PA">Pará</option><option value="PB">Paraíba</option>
+                                    <option value="PR">Paraná</option><option value="PE">Pernambuco</option><option value="PI">Piauí</option>
+                                    <option value="RJ">Rio de Janeiro</option><option value="RN">Rio Grande do Norte</option><option value="RS">Rio Grande do Sul</option>
+                                    <option value="RO">Rondônia</option><option value="RR">Roraima</option><option value="SC">Santa Catarina</option>
+                                    <option value="SE">Sergipe</option><option value="TO">Tocantins</option>
+                                </select>
+                            </div>
+                            <div class="form-group"><label>CEP</label><input id="meta-mf-zip" type="text" placeholder="00000-000"></div>
+                            <div class="form-group"><label>País</label><input id="meta-mf-country" type="text" value="Brasil"></div>
+                        </div>
+                    </div>
+                    <div class="manual-form-footer">
+                        <button class="btn-icon" onclick="toggleSectionManual('meta')">Cancelar</button>
+                        <button class="btn-icon accent" onclick="submitSectionManual('meta')">Adicionar</button>
+                    </div>
+                </div>
+                <div class="contacts-table-wrap">
+                    <table class="contacts-table">
+                        <thead><tr>
+                            <th style="width:32px;text-align:center">#</th>
+                            <th>Organização</th><th>Sigla</th><th>Regra</th><th></th>
+                        </tr></thead>
+                        <tbody id="meta-tbody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody>
+                    </table>
+                </div>
+                <div class="contacts-accordions" id="meta-accordions"></div>
+            </div>
+
         </div>
     </main>
 
@@ -1011,12 +1365,20 @@
     </footer>
 
     <script>
+        var _suggBoxMap = {
+            "search-suggestions": "contact-search",
+            "proc-suggestions":   "proc-search",
+            "meta-suggestions":   "meta-search"
+        };
         document.addEventListener("click", function (e) {
-            var box = document.getElementById("search-suggestions");
-            if (!box || box.style.display === "none") return;
-            var input = document.getElementById("contact-search");
-            if (input && input.contains(e.target)) return;
-            if (box.contains(e.target)) return;
+            Object.keys(_suggBoxMap).forEach(function (boxId) {
+                var box = document.getElementById(boxId);
+                if (!box || box.style.display === "none") return;
+                var input = document.getElementById(_suggBoxMap[boxId]);
+                if (input && input.contains(e.target)) return;
+                if (box.contains(e.target)) return;
+                box.style.display = "none";
+            });
             closeSuggestions();
         });
 
@@ -1074,7 +1436,7 @@
         }
 
         function captureFromLayer() {
-            // Mock para preview — simula captura de camada ativa (SIRGAS 2000, SP)
+            // Mock para preview - simula captura de camada ativa (SIRGAS 2000, SP)
             var codeEl  = document.getElementById("f-epsgCode");
             var titleEl = document.getElementById("f-epsgTitle");
             if (codeEl)  codeEl.value  = "EPSG:4674";
@@ -1139,9 +1501,9 @@
             tbody.innerHTML = contacts.map(function (c, idx) {
                 return '<tr>' +
                     '<td style="text-align:center;color:var(--fg-muted);font-weight:700;font-size:12px">' + (idx + 1) + '</td>' +
-                    '<td>' + (c.data.org || '—') + '</td>' +
-                    '<td>' + (c.data.sigla || '—') + '</td>' +
-                    '<td>' + (c.data.email || '—') + '</td>' +
+                    '<td>' + (c.data.org || '-') + '</td>' +
+                    '<td>' + (c.data.sigla || '-') + '</td>' +
+                    '<td>' + (c.data.email || '-') + '</td>' +
                     '<td>' + buildRoleSelect(idx, c.data.role) + '</td>' +
                     '<td style="white-space:nowrap">' +
                     '<button class="btn-move" onclick="moveContact(' + idx + ',-1)" title="Mover para cima"' + (idx === 0    ? ' disabled' : '') + '>↑</button>' +
@@ -1160,7 +1522,7 @@
 
         function buildAccordion(c, idx) {
             var d = c.data;
-            var label = 'Contato ' + (idx + 1) + (d.sigla ? ' — ' + d.sigla : '');
+            var label = 'Contato ' + (idx + 1) + (d.sigla ? ' - ' + d.sigla : '');
             var badge = c.isManual
                 ? '<span class="badge-manual">Manual</span>'
                 : '<span class="badge-preset">Catálogo</span>';
@@ -1181,7 +1543,7 @@
         function field(label, val, editable, inputId) {
             var input = editable
                 ? '<input id="' + inputId + '" type="text" value="' + (val || '') + '">'
-                : '<div class="readonly-field">' + (val || '—') + '</div>';
+                : '<div class="readonly-field">' + (val || '-') + '</div>';
             return '<div class="form-group"><label>' + label + '</label>' + input + '</div>';
         }
 
@@ -1202,7 +1564,7 @@
                 '<div class="form-group span-2">' +
                 '<label>Endereço</label>' +
                 (isManual ? '<input id="acc-' + idx + '-address" type="text" value="' + (d.address || '') + '">'
-                    : '<div class="readonly-field">' + (d.address || '—') + '</div>') +
+                    : '<div class="readonly-field">' + (d.address || '-') + '</div>') +
                 '</div>' +
                 field('Cidade', d.city,  isManual, 'acc-' + idx + '-city') +
                 field('Estado', d.state, isManual, 'acc-' + idx + '-state') +
@@ -1262,7 +1624,7 @@
                 return;
             }
             box.innerHTML = _suggestionResults.map(function(r, i) {
-                var label = "<b>" + r.sigla + "</b> — " + r.org;
+                var label = "<b>" + r.sigla + "</b> - " + r.org;
                 return '<div class="suggestion-item" onclick="pickSuggestion(' + i + ')">' + label + '</div>';
             }).join("");
             box.style.display = "block";
@@ -1312,9 +1674,330 @@
             document.getElementById("mf-country").value = "Brasil";
             toggleManualForm();
             renderContacts();
-            // Abre o accordion recém-criado
             setTimeout(function () { toggleAccordion(contacts.length - 1); }, 50);
         }
+
+        // ─── Seções de contato paramétricas (mock) ────────────────────────
+        var procContacts = [];
+        var metaContacts = [];
+        var _procSugg = [], _metaSugg = [];
+
+        function _sArr(key)       { return key === 'proc' ? procContacts : metaContacts; }
+        function _sSugg(key)      { return key === 'proc' ? _procSugg    : _metaSugg;    }
+        function _setSArr(key, v) { if (key === 'proc') procContacts = v; else metaContacts = v; }
+        function _setSugg(key, v) { if (key === 'proc') _procSugg    = v; else _metaSugg    = v; }
+
+        function suggestFor(key, q) {
+            q = (q || '').trim();
+            if (!q) { closeFor(key); return; }
+            var ql = q.toLowerCase();
+            _setSugg(key, _mockContacts.filter(function (r) {
+                return r.sigla.toLowerCase().includes(ql) || r.org.toLowerCase().includes(ql);
+            }));
+            var box = document.getElementById(key + '-suggestions');
+            if (!box) return;
+            if (!_sSugg(key).length) {
+                box.innerHTML = '<div class="suggestion-item" style="color:var(--fg-muted);cursor:default">Nenhum resultado para "' + q + '"</div>';
+                box.style.display = 'block'; return;
+            }
+            box.innerHTML = _sSugg(key).map(function (r, i) {
+                return '<div class="suggestion-item" onclick="pickFor(\'' + key + '\',' + i + ')"><b>' + r.sigla + '</b> - ' + r.org + '</div>';
+            }).join('');
+            box.style.display = 'block';
+        }
+
+        function pickFor(key, idx) {
+            var r = _sSugg(key)[idx]; if (!r) return;
+            _sArr(key).push({ isManual: false, data: r });
+            var inp = document.getElementById(key + '-search'); if (inp) inp.value = '';
+            closeFor(key); renderFor(key);
+        }
+
+        function closeFor(key) {
+            var box = document.getElementById(key + '-suggestions');
+            if (box) box.style.display = 'none';
+            _setSugg(key, []);
+        }
+
+        function removeFrom(key, idx) { _sArr(key).splice(idx, 1); renderFor(key); }
+
+        function updateRoleFor(key, idx, val) {
+            var arr = _sArr(key); if (!arr[idx]) return;
+            arr[idx].data.role = val;
+            var t = document.getElementById('role-' + key + '-t-' + idx);
+            var a = document.getElementById('role-' + key + '-a-' + idx);
+            if (t && t.value !== val) t.value = val;
+            if (a && a.value !== val) a.value = val;
+        }
+
+        var ROLE_LABELS_LOCAL = {
+            "owner":"Dono","author":"Autor","processor":"Organizador","distributor":"Distribuidor",
+            "custodian":"Depositário","resourceProvider":"Fornecedor de recurso",
+            "principalInvestigator":"Investigador principal","originator":"Originador",
+            "pointOfContact":"Ponto de contato","publisher":"Publicador","user":"Utilizador"
+        };
+        var ROLE_OPTIONS_LOCAL = Object.keys(ROLE_LABELS_LOCAL).map(function(v) {
+            return { value: v, label: ROLE_LABELS_LOCAL[v] };
+        });
+
+        function renderFor(key) {
+            var arr = _sArr(key);
+            var tbody = document.getElementById(key + '-tbody');
+            var accDiv = document.getElementById(key + '-accordions');
+            if (!tbody) return;
+            if (arr.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Nenhum contato adicionado.</td></tr>';
+                if (accDiv) accDiv.innerHTML = ''; return;
+            }
+            tbody.innerHTML = arr.map(function (c, idx) {
+                var sel = c.data.role || 'pointOfContact';
+                var opts = ROLE_OPTIONS_LOCAL.map(function (r) {
+                    return '<option value="' + r.value + '"' + (r.value === sel ? ' selected' : '') + '>' + r.label + '</option>';
+                }).join('');
+                return '<tr>' +
+                    '<td style="text-align:center;color:var(--fg-muted);font-weight:700;font-size:12px">' + (idx+1) + '</td>' +
+                    '<td>' + (c.data.org||'-') + '</td><td>' + (c.data.sigla||'-') + '</td>' +
+                    '<td><select id="role-' + key + '-t-' + idx + '" class="role-select" onchange="updateRoleFor(\'' + key + '\',' + idx + ',this.value)">' + opts + '</select></td>' +
+                    '<td><button class="btn-remove" onclick="removeFrom(\'' + key + '\',' + idx + ')" title="Remover">✕</button></td></tr>';
+            }).join('');
+            if (accDiv) {
+                accDiv.innerHTML = arr.map(function (c, idx) {
+                    var d = c.data, lbl = 'Contato ' + (idx+1) + (d.sigla ? ' - ' + d.sigla : '');
+                    var badge = c.isManual ? '<span class="badge-manual">Manual</span>' : '<span class="badge-preset">Catálogo</span>';
+                    var sel = d.role || 'pointOfContact';
+                    var rOpts = ROLE_OPTIONS_LOCAL.map(function (r) {
+                        return '<option value="' + r.value + '"' + (r.value === sel ? ' selected' : '') + '>' + r.label + '</option>';
+                    }).join('');
+                    function fld(l, v, ed, id) {
+                        return '<div class="form-group"><label>' + l + '</label>' +
+                            (ed ? '<input id="' + id + '" type="text" value="' + (v||'') + '">'
+                                : '<div class="readonly-field">' + (v||'-') + '</div>') + '</div>';
+                    }
+                    var flds = fld('Sigla',d.sigla,c.isManual,'af-'+key+'-'+idx+'-sigla') +
+                        fld('Organização',d.org,c.isManual,'af-'+key+'-'+idx+'-org') +
+                        '<div class="form-group"><label>Regra</label><select id="role-' + key + '-a-' + idx + '" class="role-select" onchange="updateRoleFor(\'' + key + '\',' + idx + ',this.value)">' + rOpts + '</select></div>' +
+                        fld('E-mail',d.email,c.isManual,'af-'+key+'-'+idx+'-email') +
+                        fld('Cargo',d.position,c.isManual,'af-'+key+'-'+idx+'-position') +
+                        fld('Telefone',d.phone,c.isManual,'af-'+key+'-'+idx+'-phone');
+                    return '<div class="contact-accordion"><button class="accordion-header" onclick="toggleAccordionFor(\'' + key + '\',' + idx + ')">' +
+                        '<span class="acc-arrow" id="arr-' + key + '-' + idx + '"><img class="acc-chevron" src="img/chevron_down.svg"></span>' +
+                        lbl + badge + '</button>' +
+                        '<div class="accordion-body" id="acc-body-' + key + '-' + idx + '"><div class="form-grid">' + flds + '</div></div></div>';
+                }).join('');
+            }
+        }
+
+        function toggleAccordionFor(key, idx) {
+            var body = document.getElementById('acc-body-' + key + '-' + idx);
+            var arr  = document.getElementById('arr-'      + key + '-' + idx);
+            if (!body) return;
+            var open = body.style.display === 'block';
+            if (open) { body.style.display = 'none'; }
+            else {
+                body.style.display = 'block';
+                body.classList.add('open-anim');
+                setTimeout(function () { body.classList.remove('open-anim'); }, 250);
+            }
+            var ch = arr ? arr.querySelector('.acc-chevron') : null;
+            if (ch) ch.classList.toggle('open', !open);
+        }
+
+        function escHtml(s) {
+            return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        // ── Keywords chips ────────────────────────────────────────
+        var keywords = [];
+
+        function addKeyword() {
+            var inp = document.getElementById('kw-input');
+            if (!inp) return;
+            var val = inp.value.trim();
+            if (!val || keywords.indexOf(val) !== -1) { inp.value = ''; return; }
+            keywords.push(val);
+            inp.value = '';
+            renderKeywords();
+        }
+
+        function removeKeyword(i) {
+            keywords.splice(i, 1);
+            renderKeywords();
+        }
+
+        function renderKeywords() {
+            var box = document.getElementById('keyword-chips');
+            if (!box) return;
+            box.innerHTML = keywords.map(function (kw, i) {
+                return '<span class="keyword-chip">' + escHtml(kw) +
+                       '<button onclick="removeKeyword(' + i + ')" title="Remover">×</button></span>';
+            }).join('');
+        }
+
+        // ── Distribuição: recursos online ─────────────────────────
+        var distResources = [];
+        var _distSugg = [];
+        var _distStagedLayer = null;
+
+        function searchGeoServer(q) {
+            var box = document.getElementById('dist-suggestions');
+            if (!q || q.length < 2) { if (box) box.style.display = 'none'; return; }
+            // mock: no GeoServer in editando.html
+        }
+
+        function closeDistSugg() {
+            var box = document.getElementById('dist-suggestions');
+            if (box) box.style.display = 'none';
+            _distSugg = [];
+        }
+
+        function cancelDistLayer() {
+            _distStagedLayer = null;
+            var card = document.getElementById('dist-layer-card');
+            if (card) card.style.display = 'none';
+        }
+
+        function confirmDistLayer() {
+            if (!_distStagedLayer) return;
+            var l = _distStagedLayer;
+            var pairs = [
+                { id: 'dist-pick-wms', proto: 'OGC:WMS', url: l.wms_url },
+                { id: 'dist-pick-wfs', proto: 'OGC:WFS', url: l.wfs_url },
+                { id: 'dist-pick-wcs', proto: 'OGC:WCS', url: l.wcs_url }
+            ];
+            pairs.forEach(function (p) {
+                var cb = document.getElementById(p.id);
+                if (cb && cb.checked && p.url) {
+                    distResources.push({ url: p.url, protocol: p.proto, name: l.name || '', description: l.title || '' });
+                }
+            });
+            cancelDistLayer();
+            renderDistResources();
+        }
+
+        function toggleDistManual() {
+            var wrap = document.getElementById('dist-manual-wrap');
+            if (!wrap) return;
+            wrap.style.display = (wrap.style.display === 'none' || !wrap.style.display) ? 'block' : 'none';
+        }
+
+        function submitDistManual() {
+            var urlEl = document.getElementById('dist-mf-url');
+            var url = urlEl ? urlEl.value.trim() : '';
+            if (!url) { alert('Informe a URL do recurso.'); return; }
+            var proto = (document.getElementById('dist-mf-protocol') || {}).value || 'OGC:WMS';
+            var name  = ((document.getElementById('dist-mf-name')        || {}).value || '').trim();
+            var desc  = ((document.getElementById('dist-mf-description') || {}).value || '').trim();
+            distResources.push({ url: url, protocol: proto, name: name, description: desc });
+            ['dist-mf-url','dist-mf-name','dist-mf-description'].forEach(function (id) {
+                var el = document.getElementById(id); if (el) el.value = '';
+            });
+            toggleDistManual();
+            renderDistResources();
+        }
+
+        function removeDistResource(i) {
+            distResources.splice(i, 1);
+            renderDistResources();
+        }
+
+        function renderDistResources() {
+            var tbody = document.getElementById('dist-tbody');
+            if (!tbody) return;
+            if (!distResources.length) {
+                tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Nenhum recurso adicionado.</td></tr>';
+                return;
+            }
+            var protoCls = { 'OGC:WMS':'wms','OGC:WFS':'wfs','OGC:WCS':'wcs','OGC:WPS':'wps','WWW:DOWNLOAD':'download' };
+            tbody.innerHTML = distResources.map(function (r, i) {
+                var cls = protoCls[r.protocol] || 'link';
+                return '<tr>' +
+                    '<td style="text-align:center">' + (i + 1) + '</td>' +
+                    '<td>' + escHtml(r.name || '—') +
+                        (r.description ? '<br><small style="color:var(--fg-muted)">' + escHtml(r.description) + '</small>' : '') +
+                    '</td>' +
+                    '<td><span class="proto-badge ' + cls + '">' + escHtml(r.protocol) + '</span></td>' +
+                    '<td style="font-size:11px;color:var(--fg-muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + escHtml(r.url) + '">' + escHtml(r.url) + '</td>' +
+                    '<td><button class="btn-remove" onclick="removeDistResource(' + i + ')" title="Remover">✕</button></td>' +
+                    '</tr>';
+            }).join('');
+        }
+
+        // ── Licença ───────────────────────────────────────────────
+        var _licensePresets = {
+            'CC BY 4.0':      { useLimitation: 'Creative Commons Atribuição 4.0 Internacional (CC BY 4.0). Permite uso, distribuição e adaptação para qualquer fim, inclusive comercial, desde que a fonte seja atribuída.', accessConstraints: 'license', useConstraints: 'license', otherConstraints: '' },
+            'CC BY-SA 4.0':   { useLimitation: 'Creative Commons Atribuição-CompartilhaIgual 4.0 Internacional (CC BY-SA 4.0).', accessConstraints: 'license', useConstraints: 'license', otherConstraints: '' },
+            'CC BY-NC 4.0':   { useLimitation: 'Creative Commons Atribuição-NãoComercial 4.0 Internacional (CC BY-NC 4.0).', accessConstraints: 'license', useConstraints: 'license', otherConstraints: '' },
+            'CC BY-NC-SA 4.0':{ useLimitation: 'Creative Commons Atribuição-NãoComercial-CompartilhaIgual 4.0 Internacional (CC BY-NC-SA 4.0).', accessConstraints: 'license', useConstraints: 'license', otherConstraints: '' },
+            'CC0':            { useLimitation: 'CC0 1.0 Dedicação ao Domínio Público. Nenhum direito reservado.', accessConstraints: 'unrestricted', useConstraints: 'unrestricted', otherConstraints: '' },
+            'proprietary':    { useLimitation: 'Todos os direitos reservados. Uso autorizado exclusivamente conforme termos estabelecidos pela CDHU.', accessConstraints: 'copyright', useConstraints: 'intellectualPropertyRights', otherConstraints: '© CDHU — Companhia de Desenvolvimento Habitacional e Urbano do Estado de São Paulo. Todos os direitos reservados.' },
+            'internal':       { useLimitation: 'Uso interno restrito à CDHU e suas unidades. Distribuição externa não autorizada.', accessConstraints: 'restricted', useConstraints: 'restricted', otherConstraints: '© CDHU — Companhia de Desenvolvimento Habitacional e Urbano do Estado de São Paulo. Documento de uso interno.' }
+        };
+
+        function onLicenseChange(val) {
+            var preset = _licensePresets[val];
+            if (!preset) return;
+            var ul = document.getElementById('f-useLimitation');
+            var ac = document.getElementById('f-accessConstraints');
+            var uc = document.getElementById('f-useConstraints');
+            var oc = document.getElementById('f-otherConstraints');
+            if (ul && !ul.value) ul.value = preset.useLimitation;
+            if (ac) ac.value = preset.accessConstraints;
+            if (uc) uc.value = preset.useConstraints;
+            if (oc && !oc.value) oc.value = preset.otherConstraints;
+        }
+
+        function toggleSectionManual(key) {
+            var wrap = document.getElementById(key + '-manual-wrap');
+            if (!wrap) return;
+            wrap.style.display = (wrap.style.display === 'none' || !wrap.style.display) ? 'block' : 'none';
+        }
+
+        function submitSectionManual(key) {
+            var g = function (id) { var el = document.getElementById(key + '-mf-' + id); return el ? el.value.trim() : ''; };
+            var sigla = g('sigla'), org = g('org');
+            if (!sigla && !org) { alert('Informe ao menos Sigla ou Organização.'); return; }
+            _sArr(key).push({ isManual: true, data: { sigla: sigla, org: org, email: g('email'),
+                role: g('role') || 'pointOfContact', position: g('position'), phone: g('phone'),
+                address: g('address'), city: g('city'), state: g('state'), zip: g('zip'),
+                country: g('country') || 'Brasil' } });
+            ['sigla','org','email','position','phone','address','city','zip'].forEach(function (f) {
+                var el = document.getElementById(key + '-mf-' + f); if (el) el.value = '';
+            });
+            var stateEl = document.getElementById(key + '-mf-state'); if (stateEl) stateEl.value = '';
+            var countryEl = document.getElementById(key + '-mf-country'); if (countryEl) countryEl.value = 'Brasil';
+            toggleSectionManual(key); renderFor(key);
+            setTimeout(function () { toggleAccordionFor(key, _sArr(key).length - 1); }, 50);
+        }
+
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                var r = Math.random() * 16 | 0;
+                return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+            });
+        }
+
+        function initMetaAuthor() {
+            if (metaContacts.length > 0) { renderFor('meta'); return; }
+            var cdhu = _mockContacts.find(function (r) { return r.sigla === 'CDHU'; });
+            var entry = cdhu ? Object.assign({}, cdhu, { role: 'owner' }) : {
+                sigla: 'CDHU', org: 'Companhia de Desenvolvimento Habitacional e Urbano',
+                role: 'owner', email: 'geohab@cdhu.sp.gov.br',
+                position: 'Gerência de Geoinformação', phone: '', address: '', city: 'São Paulo', state: 'SP', zip: '', country: 'Brasil'
+            };
+            metaContacts.push({ isManual: false, data: entry });
+            var uid = document.getElementById('f-metadataId');
+            if (uid && !uid.value) uid.value = generateUUID();
+            var ds = document.getElementById('f-dateStamp');
+            if (ds && !ds.value) ds.value = new Date().toISOString().slice(0, 16);
+            renderFor('meta');
+        }
+
+        // Auto-inicializa ao carregar
+        keywords = [];
+        distResources = [];
+        renderKeywords();
+        renderDistResources();
+        initMetaAuthor();
     </script>
 
 </body>

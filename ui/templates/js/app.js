@@ -12,12 +12,22 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 });
 
+var _suggBoxMap = {
+    "search-suggestions": "contact-search",
+    "proc-suggestions":   "proc-search",
+    "meta-suggestions":   "meta-search",
+    "dist-suggestions":   "dist-search"
+};
+
 document.addEventListener("click", function (e) {
-    var box = document.getElementById("search-suggestions");
-    if (!box || box.style.display === "none") return;
-    var input = document.getElementById("contact-search");
-    if (input && input.contains(e.target)) return;
-    if (box.contains(e.target)) return;
+    Object.keys(_suggBoxMap).forEach(function (boxId) {
+        var box = document.getElementById(boxId);
+        if (!box || box.style.display === "none") return;
+        var input = document.getElementById(_suggBoxMap[boxId]);
+        if (input && input.contains(e.target)) return;
+        if (box.contains(e.target)) return;
+        box.style.display = "none";
+    });
     closeSuggestions();
 });
 
@@ -44,7 +54,7 @@ function initApp() {
 
 function navigate(panelId) {
     bridge.navigate(panelId);
-    loadPanel(panelId);
+    // nav_changed signal already triggers loadPanel — não chamar duas vezes
 }
 
 function loadPanel(panelId) {
@@ -63,8 +73,17 @@ function onPanelLoaded(panelId) {
         var now = new Date().toISOString().slice(0, 16);
         var ds = document.getElementById("f-dateStamp");
         if (ds && !ds.value) ds.value = now;
+        var uid = document.getElementById("f-metadataId");
+        if (uid && !uid.value) uid.value = generateUUID();
         contacts = [];
+        procContacts = [];
+        metaContacts = [];
+        keywords = [];
+        distResources = [];
         renderContacts();
+        renderKeywords();
+        renderDistResources();
+        initMetaAuthor();
     }
 }
 
@@ -115,12 +134,6 @@ function collectFormData() {
         var el = document.getElementById("f-" + id);
         return el ? el.value.trim() : "";
     };
-    var keywords_raw = get("MD_Keywords");
-    var keywords = keywords_raw
-        .split(",")
-        .map(function (k) { return k.trim(); })
-        .filter(Boolean);
-
     // Map first contact to flat fields for XML generator compatibility
     var c = contacts.length > 0 ? contacts[0].data : {};
 
@@ -134,7 +147,7 @@ function collectFormData() {
         purpose:                          get("purpose"),
         credit:                           get("credit"),
         status_codeListValue:             get("status_codeListValue"),
-        MD_Keywords:                      keywords,
+        MD_Keywords:                      keywords.slice(),
         maintenanceFrequency:             get("maintenanceFrequency"),
         dateOfNextUpdate:                 get("dateOfNextUpdate"),
         MD_SpatialRepresentationTypeCode: get("MD_SpatialRepresentationTypeCode"),
@@ -155,6 +168,19 @@ function collectFormData() {
         temporalFrom:                     get("temporalFrom"),
         temporalTo:                       get("temporalTo"),
         dateStamp:                        get("dateStamp"),
+        statement:                        get("statement"),
+        processStep:                      get("processStep"),
+        sourceDescription:                get("sourceDescription"),
+        processorContacts:                procContacts,
+        metadataId:                       get("metadataId"),
+        metadataLanguage:                 get("metadataLanguage"),
+        metadataAuthorContacts:           metaContacts,
+        onlineResources:                  distResources.slice(),
+        licenseType:                      get("licenseType"),
+        useLimitation:                    get("useLimitation"),
+        accessConstraints:                get("accessConstraints"),
+        useConstraints:                   get("useConstraints"),
+        otherConstraints:                 get("otherConstraints"),
         // Flat contact fields (first contact) for XML generator
         contact_individualName:           c.sigla    || "",
         contact_organisationName:         c.org      || "",
@@ -167,8 +193,7 @@ function collectFormData() {
         contact_country:                  c.country  || "Brasil",
         contact_email:                    c.email    || "",
         contact_role:                     c.role     || "",
-        // Full contacts array for future multi-contact support
-        contacts: contacts
+        contacts:                         contacts
     };
 }
 
@@ -198,12 +223,22 @@ function validateForm(data) {
         var val = data[key];
         var empty = !val || (Array.isArray(val) && val.length === 0) || String(val).trim() === "";
         if (empty) {
-            var el = document.getElementById("f-" + key);
-            if (el) el.classList.add("error");
+            if (key === "MD_Keywords") {
+                var chipsBox = document.getElementById("keyword-chips");
+                if (chipsBox) chipsBox.style.outline = "2px solid var(--accent)";
+            } else {
+                var el = document.getElementById("f-" + key);
+                if (el) el.classList.add("error");
+            }
             missing.push(REQUIRED_LABELS[key]);
         } else {
-            var el2 = document.getElementById("f-" + key);
-            if (el2) el2.classList.remove("error");
+            if (key === "MD_Keywords") {
+                var chipsBox2 = document.getElementById("keyword-chips");
+                if (chipsBox2) chipsBox2.style.outline = "";
+            } else {
+                var el2 = document.getElementById("f-" + key);
+                if (el2) el2.classList.remove("error");
+            }
         }
     }
     if (contacts.length === 0) {
@@ -223,21 +258,24 @@ function populateForm(data) {
     var SIMPLE_FIELDS = [
         "title", "dateType", "date", "edition", "date_edition",
         "abstract", "purpose", "credit", "status_codeListValue",
-        "MD_Keywords",
         "maintenanceFrequency", "dateOfNextUpdate",
         "MD_SpatialRepresentationTypeCode", "topicCategory", "hierarchyLevel",
         "LanguageCode", "characterSet", "thumbnail_url",
         "westBoundLongitude", "eastBoundLongitude", "southBoundLatitude", "northBoundLatitude",
         "spatialResolution_denominator", "epsgCode", "epsgTitle",
-        "zMin", "zMax", "temporalFrom", "temporalTo", "dateStamp"
+        "zMin", "zMax", "temporalFrom", "temporalTo", "dateStamp",
+        "statement", "processStep", "sourceDescription",
+        "metadataId", "metadataLanguage",
+        "licenseType", "useLimitation", "accessConstraints", "useConstraints", "otherConstraints"
     ];
     SIMPLE_FIELDS.forEach(function (key) {
         var el = document.getElementById("f-" + key);
-        if (!el) return;
-        var val = data[key];
-        if (key === "MD_Keywords" && Array.isArray(val)) val = val.join(", ");
-        if (val !== undefined && val !== null) el.value = val;
+        if (el && data[key] !== undefined && data[key] !== null) el.value = data[key];
     });
+    if (Array.isArray(data.MD_Keywords) && data.MD_Keywords.length) {
+        keywords = data.MD_Keywords.slice();
+        renderKeywords();
+    }
     var mf = document.getElementById("f-maintenanceFrequency");
     if (mf) toggleUpdateDate(mf.value);
     var ed = document.getElementById("f-edition");
@@ -245,6 +283,18 @@ function populateForm(data) {
     if (Array.isArray(data.contacts) && data.contacts.length > 0) {
         contacts = data.contacts;
         renderContacts();
+    }
+    if (Array.isArray(data.processorContacts)) {
+        procContacts = data.processorContacts;
+        renderFor('proc');
+    }
+    if (Array.isArray(data.metadataAuthorContacts)) {
+        metaContacts = data.metadataAuthorContacts;
+        renderFor('meta');
+    }
+    if (Array.isArray(data.onlineResources)) {
+        distResources = data.onlineResources.slice();
+        renderDistResources();
     }
 }
 
@@ -331,6 +381,198 @@ function captureFromLayer() {
             if (w) w.value = result.west;
         }
     });
+}
+
+// ─── Utilitário ───────────────────────────────────────────────────────────────
+
+function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── Keywords chips ────────────────────────────────────────────────────────────
+
+var keywords = [];
+
+function addKeyword() {
+    var inp = document.getElementById('kw-input');
+    if (!inp) return;
+    var val = inp.value.trim();
+    if (!val || keywords.indexOf(val) !== -1) { inp.value = ''; return; }
+    keywords.push(val);
+    inp.value = '';
+    renderKeywords();
+}
+
+function removeKeyword(i) {
+    keywords.splice(i, 1);
+    renderKeywords();
+}
+
+function renderKeywords() {
+    var box = document.getElementById('keyword-chips');
+    if (!box) return;
+    box.innerHTML = keywords.map(function (kw, i) {
+        return '<span class="keyword-chip">' + escHtml(kw) +
+               '<button onclick="removeKeyword(' + i + ')" title="Remover">×</button></span>';
+    }).join('');
+}
+
+// ─── Distribuição: recursos online ────────────────────────────────────────────
+
+var distResources = [];
+var _distSugg = [];
+var _distStagedLayer = null;
+
+function searchGeoServer(q) {
+    var box = document.getElementById('dist-suggestions');
+    if (!q || q.length < 2) { if (box) box.style.display = 'none'; return; }
+    if (typeof bridge !== 'undefined' && bridge.search_geoserver) {
+        bridge.search_geoserver(q, function (results) {
+            _distSugg = results || [];
+            renderDistSugg();
+        });
+    }
+}
+
+function renderDistSugg() {
+    var box = document.getElementById('dist-suggestions');
+    if (!box) return;
+    if (!_distSugg.length) { box.style.display = 'none'; return; }
+    box.innerHTML = _distSugg.map(function (r, i) {
+        return '<div class="suggestion-item" onclick="pickGeoServerLayer(' + i + ')">' +
+               '<span class="sugg-sigla">' + escHtml(r.workspace || '') + '</span>' +
+               '<span class="sugg-name">' + escHtml(r.title || r.name || '') + '</span>' +
+               '</div>';
+    }).join('');
+    box.style.display = 'block';
+}
+
+function closeDistSugg() {
+    var box = document.getElementById('dist-suggestions');
+    if (box) box.style.display = 'none';
+    _distSugg = [];
+}
+
+function pickGeoServerLayer(idx) {
+    _distStagedLayer = _distSugg[idx];
+    closeDistSugg();
+    var inp = document.getElementById('dist-search');
+    if (inp) inp.value = '';
+    renderDistLayerCard();
+}
+
+function renderDistLayerCard() {
+    var card = document.getElementById('dist-layer-card');
+    if (!card || !_distStagedLayer) return;
+    var l = _distStagedLayer;
+    var nameEl = document.getElementById('dist-card-name');
+    var wsEl   = document.getElementById('dist-card-ws');
+    if (nameEl) nameEl.textContent = l.title || l.name || '';
+    if (wsEl)   wsEl.textContent   = l.workspace || '';
+    var wmsChk = document.getElementById('dist-pick-wms');
+    var wfsChk = document.getElementById('dist-pick-wfs');
+    var wcsChk = document.getElementById('dist-pick-wcs');
+    if (wmsChk) { wmsChk.checked = !!l.wms_url; wmsChk.disabled = !l.wms_url; }
+    if (wfsChk) { wfsChk.checked = !!l.wfs_url; wfsChk.disabled = !l.wfs_url; }
+    if (wcsChk) { wcsChk.checked = false;        wcsChk.disabled = !l.wcs_url; }
+    card.style.display = 'block';
+}
+
+function cancelDistLayer() {
+    _distStagedLayer = null;
+    var card = document.getElementById('dist-layer-card');
+    if (card) card.style.display = 'none';
+}
+
+function confirmDistLayer() {
+    if (!_distStagedLayer) return;
+    var l = _distStagedLayer;
+    var pairs = [
+        { id: 'dist-pick-wms', proto: 'OGC:WMS', url: l.wms_url },
+        { id: 'dist-pick-wfs', proto: 'OGC:WFS', url: l.wfs_url },
+        { id: 'dist-pick-wcs', proto: 'OGC:WCS', url: l.wcs_url }
+    ];
+    pairs.forEach(function (p) {
+        var cb = document.getElementById(p.id);
+        if (cb && cb.checked && p.url) {
+            distResources.push({ url: p.url, protocol: p.proto, name: l.name || '', description: l.title || '' });
+        }
+    });
+    cancelDistLayer();
+    renderDistResources();
+}
+
+function toggleDistManual() {
+    var wrap = document.getElementById('dist-manual-wrap');
+    if (!wrap) return;
+    wrap.style.display = (wrap.style.display === 'none' || !wrap.style.display) ? 'block' : 'none';
+}
+
+function submitDistManual() {
+    var urlEl = document.getElementById('dist-mf-url');
+    var url = urlEl ? urlEl.value.trim() : '';
+    if (!url) { alert('Informe a URL do recurso.'); return; }
+    var proto = (document.getElementById('dist-mf-protocol') || {}).value || 'OGC:WMS';
+    var name  = ((document.getElementById('dist-mf-name')        || {}).value || '').trim();
+    var desc  = ((document.getElementById('dist-mf-description') || {}).value || '').trim();
+    distResources.push({ url: url, protocol: proto, name: name, description: desc });
+    ['dist-mf-url', 'dist-mf-name', 'dist-mf-description'].forEach(function (id) {
+        var el = document.getElementById(id); if (el) el.value = '';
+    });
+    toggleDistManual();
+    renderDistResources();
+}
+
+function removeDistResource(i) {
+    distResources.splice(i, 1);
+    renderDistResources();
+}
+
+function renderDistResources() {
+    var tbody = document.getElementById('dist-tbody');
+    if (!tbody) return;
+    if (!distResources.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Nenhum recurso adicionado.</td></tr>';
+        return;
+    }
+    var protoCls = { 'OGC:WMS':'wms','OGC:WFS':'wfs','OGC:WCS':'wcs','OGC:WPS':'wps','WWW:DOWNLOAD':'download' };
+    tbody.innerHTML = distResources.map(function (r, i) {
+        var cls = protoCls[r.protocol] || 'link';
+        return '<tr>' +
+            '<td style="text-align:center">' + (i + 1) + '</td>' +
+            '<td>' + escHtml(r.name || '—') +
+                (r.description ? '<br><small style="color:var(--fg-muted)">' + escHtml(r.description) + '</small>' : '') +
+            '</td>' +
+            '<td><span class="proto-badge ' + cls + '">' + escHtml(r.protocol) + '</span></td>' +
+            '<td style="font-size:11px;color:var(--fg-muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + escHtml(r.url) + '">' + escHtml(r.url) + '</td>' +
+            '<td><button class="btn-remove" onclick="removeDistResource(' + i + ')" title="Remover">✕</button></td>' +
+            '</tr>';
+    }).join('');
+}
+
+// ─── Licença: preenchimento automático por tipo ────────────────────────────────
+
+var _licensePresets = {
+    'CC BY 4.0':      { useLimitation: 'Creative Commons Atribuição 4.0 Internacional (CC BY 4.0). Permite uso, distribuição e adaptação para qualquer fim, inclusive comercial, desde que a fonte seja atribuída.', accessConstraints: 'license',        useConstraints: 'license',        otherConstraints: '' },
+    'CC BY-SA 4.0':   { useLimitation: 'Creative Commons Atribuição-CompartilhaIgual 4.0 Internacional (CC BY-SA 4.0). Derivados devem ser distribuídos sob a mesma licença.',                                      accessConstraints: 'license',        useConstraints: 'license',        otherConstraints: '' },
+    'CC BY-NC 4.0':   { useLimitation: 'Creative Commons Atribuição-NãoComercial 4.0 Internacional (CC BY-NC 4.0). Uso não comercial apenas.',                                                                      accessConstraints: 'license',        useConstraints: 'license',        otherConstraints: '' },
+    'CC BY-NC-SA 4.0':{ useLimitation: 'Creative Commons Atribuição-NãoComercial-CompartilhaIgual 4.0 Internacional (CC BY-NC-SA 4.0).',                                                                           accessConstraints: 'license',        useConstraints: 'license',        otherConstraints: '' },
+    'CC0':            { useLimitation: 'CC0 1.0 Dedicação ao Domínio Público. Nenhum direito reservado.',                                                                                                           accessConstraints: 'unrestricted',   useConstraints: 'unrestricted',   otherConstraints: '' },
+    'proprietary':    { useLimitation: 'Todos os direitos reservados. Uso autorizado exclusivamente conforme termos estabelecidos pela CDHU.',                                                                      accessConstraints: 'copyright',      useConstraints: 'intellectualPropertyRights', otherConstraints: '© CDHU — Companhia de Desenvolvimento Habitacional e Urbano do Estado de São Paulo. Todos os direitos reservados.' },
+    'internal':       { useLimitation: 'Uso interno restrito à CDHU e suas unidades. Distribuição externa não autorizada.',                                                                                         accessConstraints: 'restricted',     useConstraints: 'restricted',     otherConstraints: '© CDHU — Companhia de Desenvolvimento Habitacional e Urbano do Estado de São Paulo. Documento de uso interno.' }
+};
+
+function onLicenseChange(val) {
+    var preset = _licensePresets[val];
+    if (!preset) return;
+    var ul = document.getElementById('f-useLimitation');
+    var ac = document.getElementById('f-accessConstraints');
+    var uc = document.getElementById('f-useConstraints');
+    var oc = document.getElementById('f-otherConstraints');
+    if (ul && !ul.value) ul.value = preset.useLimitation;
+    if (ac) ac.value = preset.accessConstraints;
+    if (uc) uc.value = preset.useConstraints;
+    if (oc && !oc.value) oc.value = preset.otherConstraints;
 }
 
 // ─── Contatos: estado ──────────────────────────────────────────────────────────
@@ -536,6 +778,193 @@ function toggleManualForm() {
     if (!wrap) return;
     var isHidden = wrap.style.display === "none" || wrap.style.display === "";
     wrap.style.display = isHidden ? "block" : "none";
+}
+
+// ─── Seções de contato paramétricas (Qualidade / Metadado) ───────────────────
+
+var procContacts = [];
+var metaContacts = [];
+var _procSugg    = [];
+var _metaSugg    = [];
+
+function _sArr(key)        { return key === 'proc' ? procContacts : metaContacts; }
+function _sSugg(key)       { return key === 'proc' ? _procSugg    : _metaSugg;    }
+function _setSArr(key, v)  { if (key === 'proc') procContacts = v; else metaContacts = v; }
+function _setSugg(key, v)  { if (key === 'proc') _procSugg    = v; else _metaSugg    = v; }
+
+function suggestFor(key, q) {
+    q = (q || '').trim();
+    if (!q) { closeFor(key); return; }
+    bridge.search_contacts(q, function (results) {
+        _setSugg(key, results || []);
+        var box = document.getElementById(key + '-suggestions');
+        if (!box) return;
+        if (!_sSugg(key).length) {
+            box.innerHTML = '<div class="suggestion-item" style="color:var(--fg-muted);cursor:default">Nenhum resultado para "' + q + '"</div>';
+            box.style.display = 'block';
+            return;
+        }
+        box.innerHTML = _sSugg(key).map(function (r, i) {
+            var label = (r.sigla ? '<b>' + r.sigla + '</b> — ' : '') + r.org;
+            return '<div class="suggestion-item" onclick="pickFor(\'' + key + '\',' + i + ')">' + label + '</div>';
+        }).join('');
+        box.style.display = 'block';
+    });
+}
+
+function pickFor(key, idx) {
+    var r = _sSugg(key)[idx];
+    if (!r) return;
+    _sArr(key).push({ isManual: false, data: r });
+    var inp = document.getElementById(key + '-search');
+    if (inp) inp.value = '';
+    closeFor(key);
+    renderFor(key);
+}
+
+function closeFor(key) {
+    var box = document.getElementById(key + '-suggestions');
+    if (box) box.style.display = 'none';
+    _setSugg(key, []);
+}
+
+function removeFrom(key, idx) {
+    _sArr(key).splice(idx, 1);
+    renderFor(key);
+}
+
+function updateRoleFor(key, idx, val) {
+    var arr = _sArr(key);
+    if (!arr[idx]) return;
+    arr[idx].data.role = val;
+    var t = document.getElementById('role-' + key + '-t-' + idx);
+    var a = document.getElementById('role-' + key + '-a-' + idx);
+    if (t && t.value !== val) t.value = val;
+    if (a && a.value !== val) a.value = val;
+}
+
+function renderFor(key) {
+    var arr    = _sArr(key);
+    var tbody  = document.getElementById(key + '-tbody');
+    var accDiv = document.getElementById(key + '-accordions');
+    if (!tbody) return;
+    if (arr.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Nenhum contato adicionado.</td></tr>';
+        if (accDiv) accDiv.innerHTML = '';
+        return;
+    }
+    tbody.innerHTML = arr.map(function (c, idx) {
+        var sel  = c.data.role || 'pointOfContact';
+        var opts = ROLE_OPTIONS.map(function (r) {
+            return '<option value="' + r.value + '"' + (r.value === sel ? ' selected' : '') + '>' + r.label + '</option>';
+        }).join('');
+        return '<tr>' +
+            '<td style="text-align:center;color:var(--fg-muted);font-weight:700;font-size:12px">' + (idx + 1) + '</td>' +
+            '<td>' + (c.data.org   || '—') + '</td>' +
+            '<td>' + (c.data.sigla || '—') + '</td>' +
+            '<td><select id="role-' + key + '-t-' + idx + '" class="role-select" onchange="updateRoleFor(\'' + key + '\',' + idx + ',this.value)">' + opts + '</select></td>' +
+            '<td><button class="btn-remove" onclick="removeFrom(\'' + key + '\',' + idx + ')" title="Remover">✕</button></td>' +
+            '</tr>';
+    }).join('');
+    if (accDiv) {
+        accDiv.innerHTML = arr.map(function (c, idx) {
+            return buildAccordionFor(c, idx, key);
+        }).join('');
+    }
+}
+
+function buildAccordionFor(c, idx, key) {
+    var d   = c.data;
+    var lbl = 'Contato ' + (idx + 1) + (d.sigla ? ' — ' + d.sigla : '');
+    var badge = c.isManual ? '<span class="badge-manual">Manual</span>' : '<span class="badge-preset">Catálogo</span>';
+    var sel  = d.role || 'pointOfContact';
+    var rOpts = ROLE_OPTIONS.map(function (r) {
+        return '<option value="' + r.value + '"' + (r.value === sel ? ' selected' : '') + '>' + r.label + '</option>';
+    }).join('');
+    var flds =
+        field('Sigla',       d.sigla,    c.isManual, 'af-' + key + '-' + idx + '-sigla') +
+        field('Organização', d.org,      c.isManual, 'af-' + key + '-' + idx + '-org') +
+        '<div class="form-group"><label>Regra</label>' +
+        '<select id="role-' + key + '-a-' + idx + '" class="role-select" onchange="updateRoleFor(\'' + key + '\',' + idx + ',this.value)">' + rOpts + '</select></div>' +
+        field('E-mail',   d.email,    c.isManual, 'af-' + key + '-' + idx + '-email') +
+        field('Cargo',    d.position, c.isManual, 'af-' + key + '-' + idx + '-position') +
+        field('Telefone', d.phone,    c.isManual, 'af-' + key + '-' + idx + '-phone');
+    return '<div class="contact-accordion">' +
+        '<button class="accordion-header" onclick="toggleAccordionFor(\'' + key + '\',' + idx + ')">' +
+        '<span class="acc-arrow" id="arr-' + key + '-' + idx + '"><img class="acc-chevron" src="../../img/chevron_down.svg"></span>' +
+        lbl + badge + '</button>' +
+        '<div class="accordion-body" id="acc-body-' + key + '-' + idx + '">' +
+        '<div class="form-grid">' + flds + '</div></div></div>';
+}
+
+function toggleAccordionFor(key, idx) {
+    var body = document.getElementById('acc-body-' + key + '-' + idx);
+    var arr  = document.getElementById('arr-'      + key + '-' + idx);
+    if (!body) return;
+    var open = body.style.display === 'block';
+    if (open) {
+        body.style.display = 'none';
+    } else {
+        body.style.display = 'block';
+        body.classList.add('open-anim');
+        setTimeout(function () { body.classList.remove('open-anim'); }, 250);
+    }
+    var ch = arr ? arr.querySelector('.acc-chevron') : null;
+    if (ch) ch.classList.toggle('open', !open);
+}
+
+function toggleSectionManual(key) {
+    var wrap = document.getElementById(key + '-manual-wrap');
+    if (!wrap) return;
+    wrap.style.display = (wrap.style.display === 'none' || !wrap.style.display) ? 'block' : 'none';
+}
+
+function submitSectionManual(key) {
+    var g = function (id) { var el = document.getElementById(key + '-mf-' + id); return el ? el.value.trim() : ''; };
+    var sigla = g('sigla'), org = g('org');
+    if (!sigla && !org) { alert('Informe ao menos Sigla ou Organização.'); return; }
+    _sArr(key).push({
+        isManual: true,
+        data: { sigla: sigla, org: org, email: g('email'), role: g('role') || 'pointOfContact',
+                position: g('position'), phone: g('phone'),
+                address: g('address'), city: g('city'), state: g('state'), zip: g('zip'),
+                country: g('country') || 'Brasil' }
+    });
+    ['sigla', 'org', 'email', 'position', 'phone', 'address', 'city', 'zip'].forEach(function (f) {
+        var el = document.getElementById(key + '-mf-' + f); if (el) el.value = '';
+    });
+    var stateEl = document.getElementById(key + '-mf-state'); if (stateEl) stateEl.value = '';
+    var countryEl = document.getElementById(key + '-mf-country'); if (countryEl) countryEl.value = 'Brasil';
+    toggleSectionManual(key);
+    renderFor(key);
+    setTimeout(function () { toggleAccordionFor(key, _sArr(key).length - 1); }, 50);
+}
+
+// ─── UUID e inicialização do metadado ─────────────────────────────────────────
+
+function generateUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        var r = Math.random() * 16 | 0;
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+}
+
+function initMetaAuthor() {
+    if (metaContacts.length > 0) { renderFor('meta'); return; }
+    var fallback = {
+        isManual: false,
+        data: { sigla: 'CDHU', org: 'Companhia de Desenvolvimento Habitacional e Urbano',
+                role: 'owner', email: 'geohab@cdhu.sp.gov.br',
+                position: 'Gerência de Geoinformação', phone: '',
+                address: '', city: 'São Paulo', state: 'SP', zip: '', country: 'Brasil' }
+    };
+    if (typeof bridge === 'undefined') { metaContacts.push(fallback); renderFor('meta'); return; }
+    bridge.search_contacts('CDHU', function (results) {
+        var cdhu = results && results.find(function (r) { return r.sigla === 'CDHU'; });
+        if (cdhu) { cdhu.role = 'owner'; metaContacts.push({ isManual: false, data: cdhu }); }
+        else       { metaContacts.push(fallback); }
+        renderFor('meta');
+    });
 }
 
 function submitManualContact() {
