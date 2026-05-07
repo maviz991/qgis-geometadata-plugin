@@ -16,14 +16,18 @@ class MainBridge(QObject):
     """
 
     # Sinais emitidos para o JS
-    nav_changed   = pyqtSignal(str)     # Notifica mudança de painel
+    nav_changed   = pyqtSignal(str)       # Notifica mudança de painel
     auth_status   = pyqtSignal(bool, str) # (is_logged, username)
     form_data_req = pyqtSignal('QVariant') # Envia dados para preencher o form
+    login_loading = pyqtSignal(str)       # Mensagem de carregamento durante auth
+    login_error   = pyqtSignal(str)       # Erro de autenticação
 
     def __init__(self, dialog, parent=None):
         super().__init__(parent)
         self._dialog = dialog
         self._form_manager = getattr(dialog, 'form_manager', None)
+        self._sso_worker = None
+        self._adm_worker = None
         
     # --- Slots JS -> Python ---
 
@@ -52,8 +56,61 @@ class MainBridge(QObject):
 
     @pyqtSlot()
     def start_login(self):
-        """Dispara o processo de autenticação no diálogo."""
-        self._dialog.authenticate()
+        """Inicia autenticação SSO corporativa sem abrir diálogo Qt separado."""
+        try:
+            from ..core.env_checker import check_and_run_setup
+            if not check_and_run_setup(parent=self._dialog):
+                self.login_error.emit("Dependência MSAL não encontrada. Configure o ambiente primeiro.")
+                return
+            from ..core.plugin_config import config_loader
+            from ..core.entra_auth_provider import EntraAuthProvider
+            from .web_bridge import _SsoWorker
+            entra_cfg = config_loader.get_entra_id_config()
+            provider  = EntraAuthProvider(
+                client_id=entra_cfg.get("client_id", ""),
+                tenant_id=entra_cfg.get("tenant_id", ""),
+                scopes=entra_cfg.get("scopes", ["User.Read"])
+            )
+            self.login_loading.emit("Aguardando autenticação no navegador...")
+            self._sso_worker = _SsoWorker(provider)
+            self._sso_worker.auth_success.connect(self._on_sso_success)
+            self._sso_worker.auth_failed.connect(self._on_sso_failed)
+            self._sso_worker.start()
+        except Exception as e:
+            self.login_error.emit(str(e))
+
+    def _on_sso_success(self, provider):
+        session = provider.get_session()
+        username = provider.get_username() or "Usuário CDHU"
+        self._dialog.plugin.api_session = session
+        self._dialog.plugin.auth_username = username
+        self._dialog.update_ui_for_login_status()
+
+    def _on_sso_failed(self, msg):
+        self.login_error.emit(msg)
+
+    @pyqtSlot(str, str)
+    def do_admin_login(self, user: str, password: str):
+        """Login administrativo (usuário/senha GeoServer) sem abrir diálogo Qt separado."""
+        try:
+            from ..core.plugin_config import config_loader
+            from .web_bridge import _AdminWorker
+            geoserver_url = config_loader.get_geoserver_url()
+            self.login_loading.emit("Verificando credenciais...")
+            self._adm_worker = _AdminWorker(user, password, geoserver_url)
+            self._adm_worker.login_success.connect(self._on_adm_success)
+            self._adm_worker.login_failed.connect(self._on_adm_failed)
+            self._adm_worker.start()
+        except Exception as e:
+            self.login_error.emit(str(e))
+
+    def _on_adm_success(self, session, username):
+        self._dialog.plugin.api_session = session
+        self._dialog.plugin.auth_username = username
+        self._dialog.update_ui_for_login_status()
+
+    def _on_adm_failed(self, msg):
+        self.login_error.emit(msg)
 
     @pyqtSlot('QVariant')
     def export_xml(self, form_data):
@@ -148,65 +205,70 @@ class MainBridge(QObject):
             import ssl
             import urllib.request
             import xml.etree.ElementTree as ET
-            from core.plugin_config import config_loader
+            from ..core.plugin_config import config_loader
 
             base_url = config_loader.get_geoserver_url().rstrip('/')
             if not base_url:
+                print("GeoMetadata [search_geoserver]: geoserver_url não configurado.")
                 return []
 
             is_logged = getattr(getattr(self._dialog, 'plugin', None), 'api_session', None) is not None
 
             if MainBridge._geoserver_layers_cache is None:
-                # WMS GetCapabilities — público, sem auth
                 caps_url = f"{base_url}/wms?service=WMS&version=1.3.0&request=GetCapabilities"
+                print(f"GeoMetadata [search_geoserver]: carregando capabilities de {caps_url}")
+
                 ctx = ssl.create_default_context()
                 ctx.check_hostname = False
                 ctx.verify_mode    = ssl.CERT_NONE
-                with urllib.request.urlopen(caps_url, context=ctx, timeout=12) as resp:
+
+                req = urllib.request.Request(caps_url, headers={'User-Agent': 'GeoMetadataPlugin/1.0'})
+                with urllib.request.urlopen(req, context=ctx, timeout=15) as resp:
                     content = resp.read()
+
+                print(f"GeoMetadata [search_geoserver]: {len(content)} bytes recebidos.")
 
                 root = ET.fromstring(content)
                 all_layers = []
-                # Busca <Layer> com <Name> filho direto (evita grupos)
+
                 for layer_el in root.iter():
-                    if not layer_el.tag.endswith('}Layer') and layer_el.tag != 'Layer':
+                    tag_local = layer_el.tag.split('}')[-1] if '}' in layer_el.tag else layer_el.tag
+                    if tag_local != 'Layer':
                         continue
-                    name_el  = None
-                    title_el = None
+                    name_el = title_el = None
                     for child in layer_el:
-                        tag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
-                        if tag == 'Name'  and name_el  is None: name_el  = child
-                        if tag == 'Title' and title_el is None: title_el = child
+                        ct = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+                        if ct == 'Name'  and name_el  is None: name_el  = child
+                        if ct == 'Title' and title_el is None: title_el = child
                     name  = (name_el.text  or '').strip() if name_el  is not None else ''
                     title = (title_el.text or '').strip() if title_el is not None else ''
-                    if not name or ':' not in name:   # ignora layers sem workspace
+                    if not name or ':' not in name:
                         continue
-                    parts     = name.split(':', 1)
-                    workspace = parts[0]
-                    ws_path   = f"/{workspace}"
+                    workspace = name.split(':', 1)[0]
                     all_layers.append({
                         'name':      name,
                         'workspace': workspace,
                         'title':     title or name,
-                        'wms_url':   f"{base_url}{ws_path}/wms?service=WMS",
-                        'wfs_url':   f"{base_url}{ws_path}/wfs?service=WFS",
+                        'wms_url':   f"{base_url}/{workspace}/wms?service=WMS",
+                        'wfs_url':   f"{base_url}/{workspace}/wfs?service=WFS",
                     })
 
                 MainBridge._geoserver_layers_cache = all_layers
-                print(f"GeoMetadata: {len(all_layers)} camadas carregadas do GeoServer.")
+                print(f"GeoMetadata [search_geoserver]: {len(all_layers)} camadas indexadas.")
 
             q = query.lower().strip()
             cache = MainBridge._geoserver_layers_cache
             results = [l for l in cache if q in l['name'].lower() or q in l['title'].lower()][:25]
 
-            # Indica ao JS se o WFS está disponível (só logado)
             for r in results:
                 r['wfs_available'] = is_logged
 
             return results
 
         except Exception as e:
-            print(f"GeoMetadata [search_geoserver]: {e}")
+            import traceback
+            print(f"GeoMetadata [search_geoserver] ERRO: {e}")
+            traceback.print_exc()
             return []
 
     @pyqtSlot(str, result=str)

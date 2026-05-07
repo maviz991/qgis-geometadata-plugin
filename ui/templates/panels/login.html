@@ -1,0 +1,236 @@
+<div class="login-page">
+
+    <div class="page-bg"></div>
+
+    <div class="login-topbar">
+        <img src="../../img/cdhu-logo-white.svg" alt="CDHU" class="login-logo">
+        <button class="login-toggle-btn" id="login-toggle-btn" onclick="toggleLoginMode()">ACESSO CORPORATIVO</button>
+    </div>
+
+    <!-- Card corporativo (padrão) -->
+    <div class="login-center" id="login-corp-wrap">
+        <div class="login-card">
+            <img src="../../logo.png" alt="CDHU" class="login-card-logo">
+            <h2 class="login-card-title">Geohab</h2>
+            <p class="login-card-sub">Plataforma de Gestão de Dados Geográficos</p>
+            <p id="login-error-msg" class="login-error" style="display:none"></p>
+            <button class="btn-login-action" onclick="setLoginState(true,'Aguardando navegador...');bridge.start_login()">
+                Entrar com conta CDHU
+            </button>
+            <button class="btn-login-back" onclick="navigate('home')">&lt; Voltar</button>
+        </div>
+    </div>
+
+    <!-- Card administração (alternativo) -->
+    <div class="login-center" id="login-admin-wrap" style="display:none">
+        <div class="login-card">
+            <h2 class="login-card-title">Acesso Geral</h2>
+            <p class="login-card-sub">Conta local</p>
+            <p id="login-error-msg-adm" class="login-error" style="display:none"></p>
+            <div class="login-field">
+                <input id="admin-user" type="text" placeholder="Usuário" autocomplete="username"
+                    onkeydown="if(event.key==='Enter')document.getElementById('admin-pass').focus()">
+            </div>
+            <div class="login-field">
+                <input id="admin-pass" type="password" placeholder="Senha" autocomplete="current-password"
+                    onkeydown="if(event.key==='Enter')doAdminLogin()">
+            </div>
+            <button class="btn-login-action" onclick="doAdminLogin()">Entrar</button>
+            <button class="btn-login-back" onclick="navigate('home')">&lt; Voltar</button>
+        </div>
+    </div>
+
+    <span class="login-footer-text">GOVERNO DO ESTADO DE SÃO PAULO</span>
+
+</div>
+
+<style>
+    .login-page {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: inherit;
+    }
+
+    .page-bg {
+        position: absolute;
+        inset: 0;
+        background: url('../../img/background.jpeg') center / cover no-repeat;
+        z-index: 0;
+    }
+
+    .page-bg::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg,
+                rgba(190, 10, 33, .72) 0%,
+                rgba(20, 10, 30, .60) 30%);
+    }
+
+    .login-topbar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        padding: 20px 32px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        z-index: 10;
+    }
+
+    .login-logo {
+        height: 34px;
+    }
+
+    .login-toggle-btn {
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        color: white;
+        padding: 8px 20px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        cursor: pointer;
+        transition: background 0.2s;
+        backdrop-filter: blur(6px);
+    }
+
+    .login-toggle-btn:hover {
+        background: rgba(255, 255, 255, 0.28);
+    }
+
+    .login-center {
+        position: relative;
+        z-index: 10;
+    }
+
+    .login-card {
+        background: white;
+        border-radius: 16px;
+        padding: 40px 48px;
+        min-width: 360px;
+        max-width: 420px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 14px;
+        box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
+        animation: cardIn 0.3s ease-out;
+    }
+
+    @keyframes cardIn {
+        from {
+            opacity: 0;
+            transform: translateY(18px) scale(0.97);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    .login-card-logo {
+        height: 48px;
+        margin-bottom: 4px;
+    }
+
+    .login-card-title {
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--fg);
+        margin: 0;
+    }
+
+    .login-card-sub {
+        font-size: 13px;
+        color: var(--fg-muted);
+        margin: 0;
+        text-align: center;
+        line-height: 1.5;
+    }
+
+    .login-field {
+        width: 100%;
+    }
+
+    .login-field input {
+        width: 100%;
+        padding: 10px 14px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 14px;
+        font-family: inherit;
+        outline: none;
+        box-sizing: border-box;
+        transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .login-field input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(229, 34, 45, 0.08);
+    }
+
+    .btn-login-action {
+        width: 100%;
+        padding: 12px 24px;
+        background: var(--accent);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background 0.2s;
+        margin-top: 6px;
+        font-family: inherit;
+    }
+
+    .btn-login-action:hover {
+        background: var(--accent-hover);
+    }
+
+    .btn-login-back {
+        background: none;
+        border: none;
+        color: var(--fg-muted);
+        font-size: 13px;
+        cursor: pointer;
+        padding: 4px;
+        font-family: inherit;
+        transition: color 0.15s;
+    }
+
+    .btn-login-back:hover {
+        color: var(--fg);
+    }
+
+    .login-error {
+        width: 100%;
+        background: rgba(190, 10, 33, 0.08);
+        border: 1px solid rgba(190, 10, 33, 0.3);
+        color: #be0a21;
+        border-radius: 6px;
+        padding: 8px 12px;
+        font-size: 12px;
+        margin: 0;
+        text-align: center;
+    }
+
+    .login-footer-text {
+        position: absolute;
+        bottom: 24px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        color: rgba(255, 255, 255, 0.65);
+        z-index: 10;
+        pointer-events: none;
+    }
+</style>

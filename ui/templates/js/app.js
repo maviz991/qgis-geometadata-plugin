@@ -14,9 +14,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
 var _suggBoxMap = {
     "search-suggestions": "contact-search",
-    "proc-suggestions":   "proc-search",
-    "meta-suggestions":   "meta-search",
-    "dist-suggestions":   "dist-search"
+    "proc-suggestions": "proc-search",
+    "meta-suggestions": "meta-search",
+    "dist-suggestions": "dist-search"
 };
 
 document.addEventListener("click", function (e) {
@@ -68,6 +68,13 @@ function loadPanel(panelId) {
 }
 
 function onPanelLoaded(panelId) {
+    if (panelId === "login") {
+        if (typeof bridge !== 'undefined') {
+            bridge.login_loading.connect(function (msg) { setLoginState(true, msg); });
+            bridge.login_error.connect(function (msg)   { setLoginError(msg); });
+        }
+        return;
+    }
     if (panelId === "editor") {
         showTab("identificacao", document.querySelector(".tab-link"));
         var now = new Date().toISOString().slice(0, 16);
@@ -138,83 +145,83 @@ function collectFormData() {
     var c = contacts.length > 0 ? contacts[0].data : {};
 
     return {
-        title:                            get("title"),
-        dateType:                         get("dateType"),
-        date:                             get("date"),
-        edition:                          get("edition") || "1",
-        date_edition:                     get("date_edition"),
-        abstract:                         get("abstract"),
-        purpose:                          get("purpose"),
-        credit:                           get("credit"),
-        status_codeListValue:             get("status_codeListValue"),
-        MD_Keywords:                      keywords.slice(),
-        maintenanceFrequency:             get("maintenanceFrequency"),
-        dateOfNextUpdate:                 get("dateOfNextUpdate"),
+        title: get("title"),
+        dateType: get("dateType"),
+        date: get("date"),
+        edition: get("edition") || "1",
+        date_edition: get("date_edition"),
+        abstract: get("abstract"),
+        purpose: get("purpose"),
+        credit: get("credit"),
+        status_codeListValue: get("status_codeListValue"),
+        MD_Keywords: keywords.slice(),
+        maintenanceFrequency: get("maintenanceFrequency"),
+        dateOfNextUpdate: get("dateOfNextUpdate"),
         MD_SpatialRepresentationTypeCode: get("MD_SpatialRepresentationTypeCode"),
-        topicCategory:                    get("topicCategory"),
-        hierarchyLevel:                   get("hierarchyLevel") || "dataset",
-        LanguageCode:                     get("LanguageCode") || "por",
-        characterSet:                     get("characterSet") || "utf8",
-        thumbnail_url:                    get("thumbnail_url"),
-        westBoundLongitude:               get("westBoundLongitude"),
-        eastBoundLongitude:               get("eastBoundLongitude"),
-        southBoundLatitude:               get("southBoundLatitude"),
-        northBoundLatitude:               get("northBoundLatitude"),
-        spatialResolution_denominator:    get("spatialResolution_denominator"),
-        epsgCode:                         get("epsgCode"),
-        epsgTitle:                        get("epsgTitle"),
-        zMin:                             get("zMin"),
-        zMax:                             get("zMax"),
-        temporalFrom:                     get("temporalFrom"),
-        temporalTo:                       get("temporalTo"),
-        dateStamp:                        get("dateStamp"),
-        statement:                        get("statement"),
-        processStep:                      get("processStep"),
-        sourceDescription:                get("sourceDescription"),
-        processorContacts:                procContacts,
-        metadataId:                       get("metadataId"),
-        metadataLanguage:                 get("metadataLanguage"),
-        metadataAuthorContacts:           metaContacts,
-        onlineResources:                  distResources.slice(),
-        licenseType:                      get("licenseType"),
-        useLimitation:                    get("useLimitation"),
-        accessConstraints:                get("accessConstraints"),
-        useConstraints:                   get("useConstraints"),
-        otherConstraints:                 get("otherConstraints"),
+        topicCategory: get("topicCategory"),
+        hierarchyLevel: get("hierarchyLevel") || "dataset",
+        LanguageCode: get("LanguageCode") || "por",
+        characterSet: get("characterSet") || "utf8",
+        thumbnail_url: get("thumbnail_url"),
+        westBoundLongitude: get("westBoundLongitude"),
+        eastBoundLongitude: get("eastBoundLongitude"),
+        southBoundLatitude: get("southBoundLatitude"),
+        northBoundLatitude: get("northBoundLatitude"),
+        spatialResolution_denominator: get("spatialResolution_denominator"),
+        epsgCode: get("epsgCode"),
+        epsgTitle: get("epsgTitle"),
+        zMin: get("zMin"),
+        zMax: get("zMax"),
+        temporalFrom: get("temporalFrom"),
+        temporalTo: get("temporalTo"),
+        dateStamp: get("dateStamp"),
+        statement: get("statement"),
+        processStep: get("processStep"),
+        sourceDescription: get("sourceDescription"),
+        processorContacts: procContacts,
+        metadataId: get("metadataId"),
+        metadataLanguage: get("metadataLanguage"),
+        metadataAuthorContacts: metaContacts,
+        onlineResources: distResources.slice(),
+        licenseType: get("licenseType"),
+        useLimitation: get("useLimitation"),
+        accessConstraints: get("accessConstraints"),
+        useConstraints: get("useConstraints"),
+        otherConstraints: get("otherConstraints"),
         // Flat contact fields (first contact) for XML generator
-        contact_individualName:           c.sigla    || "",
-        contact_organisationName:         c.org      || "",
-        contact_positionName:             c.position || "",
-        contact_phone:                    c.phone    || "",
-        contact_deliveryPoint:            c.address  || "",
-        contact_city:                     c.city     || "",
-        contact_administrativeArea:       c.state    || "",
-        contact_postalCode:               c.zip      || "",
-        contact_country:                  c.country  || "Brasil",
-        contact_email:                    c.email    || "",
-        contact_role:                     c.role     || "",
-        contacts:                         contacts
+        contact_individualName: c.sigla || "",
+        contact_organisationName: c.org || "",
+        contact_positionName: c.position || "",
+        contact_phone: c.phone || "",
+        contact_deliveryPoint: c.address || "",
+        contact_city: c.city || "",
+        contact_administrativeArea: c.state || "",
+        contact_postalCode: c.zip || "",
+        contact_country: c.country || "Brasil",
+        contact_email: c.email || "",
+        contact_role: c.role || "",
+        contacts: contacts
     };
 }
 
 var REQUIRED_LABELS = {
-    title:                            "Título",
-    date:                             "Data do Dado",
-    maintenanceFrequency:             "Frequência de Atualização",
-    abstract:                         "Resumo",
-    credit:                           "Crédito",
-    status_codeListValue:             "Status",
-    MD_Keywords:                      "Palavras-chave",
+    title: "Título",
+    date: "Data do Dado",
+    maintenanceFrequency: "Frequência de Atualização",
+    abstract: "Resumo",
+    credit: "Crédito",
+    status_codeListValue: "Status",
+    MD_Keywords: "Palavras-chave",
     MD_SpatialRepresentationTypeCode: "Tipo de Representação Espacial",
-    topicCategory:                    "Categoria Temática",
-    hierarchyLevel:                   "Nível Hierárquico",
-    LanguageCode:                     "Idioma",
-    westBoundLongitude:               "Longitude Oeste",
-    eastBoundLongitude:               "Longitude Leste",
-    southBoundLatitude:               "Latitude Sul",
-    northBoundLatitude:               "Latitude Norte",
-    epsgCode:                         "Código EPSG",
-    epsgTitle:                        "Título do SRC"
+    topicCategory: "Categoria Temática",
+    hierarchyLevel: "Nível Hierárquico",
+    LanguageCode: "Idioma",
+    westBoundLongitude: "Longitude Oeste",
+    eastBoundLongitude: "Longitude Leste",
+    southBoundLatitude: "Latitude Sul",
+    northBoundLatitude: "Latitude Norte",
+    epsgCode: "Código EPSG",
+    epsgTitle: "Título do SRC"
 };
 
 function validateForm(data) {
@@ -304,7 +311,7 @@ var _isLogged = false;
 
 function updateUserUI(isLogged, username) {
     _isLogged = !!isLogged;
-    var btn   = document.getElementById("login-btn");
+    var btn = document.getElementById("login-btn");
     var badge = document.getElementById("user-info");
     if (!btn || !badge) return;
 
@@ -312,6 +319,11 @@ function updateUserUI(isLogged, username) {
         btn.style.display = "none";
         badge.style.display = "flex";
         badge.querySelector(".user-name").innerText = username;
+        // Se o painel de login estiver aberto, voltar para home
+        var container = document.getElementById("app-container");
+        if (container && container.querySelector('.login-page')) {
+            navigate('home');
+        }
     } else {
         btn.style.display = "block";
         badge.style.display = "none";
@@ -338,9 +350,9 @@ function toggleUpdateDate(val) {
 // ─── Sistema de Referência ────────────────────────────────────────────────────
 
 var EPSG_TITLES = {
-    "EPSG:4326":  "WGS 84",
-    "EPSG:4674":  "SIRGAS 2000",
-    "EPSG:4618":  "SAD69",
+    "EPSG:4326": "WGS 84",
+    "EPSG:4674": "SIRGAS 2000",
+    "EPSG:4618": "SAD69",
     "EPSG:31978": "SIRGAS 2000 / UTM zone 18S",
     "EPSG:31979": "SIRGAS 2000 / UTM zone 19S",
     "EPSG:31980": "SIRGAS 2000 / UTM zone 20S",
@@ -369,9 +381,9 @@ function captureFromLayer() {
     if (typeof bridge === "undefined") { alert("Disponível apenas no QGIS."); return; }
     bridge.get_layer_info(function (result) {
         if (!result) { alert("Nenhuma camada ativa ou informações não disponíveis."); return; }
-        var codeEl  = document.getElementById("f-epsgCode");
+        var codeEl = document.getElementById("f-epsgCode");
         var titleEl = document.getElementById("f-epsgTitle");
-        if (codeEl)  codeEl.value  = result.code  || "";
+        if (codeEl) codeEl.value = result.code || "";
         if (titleEl) titleEl.value = result.title || "";
         if (result.north !== undefined) {
             var n = document.getElementById("f-northBoundLatitude");
@@ -389,7 +401,7 @@ function captureFromLayer() {
 // ─── Utilitário ───────────────────────────────────────────────────────────────
 
 function escHtml(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 // ─── Keywords chips ────────────────────────────────────────────────────────────
@@ -418,7 +430,7 @@ function renderKeywords() {
     if (!box) return;
     box.innerHTML = keywords.map(function (kw, i) {
         return '<span class="keyword-chip">' + escHtml(kw) +
-               '<button onclick="removeKeyword(' + i + ')" title="Remover">×</button></span>';
+            '<button onclick="removeKeyword(' + i + ')" title="Remover">×</button></span>';
     }).join('');
 }
 
@@ -445,9 +457,9 @@ function renderDistSugg() {
     if (!_distSugg.length) { box.style.display = 'none'; return; }
     box.innerHTML = _distSugg.map(function (r, i) {
         return '<div class="suggestion-item" onclick="pickGeoServerLayer(' + i + ')">' +
-               '<span class="sugg-sigla">' + escHtml(r.workspace || '') + '</span>' +
-               '<span class="sugg-name">' + escHtml(r.title || r.name || '') + '</span>' +
-               '</div>';
+            '<span class="sugg-sigla">' + escHtml(r.workspace || '') + '</span>' +
+            '<span class="sugg-name">' + escHtml(r.title || r.name || '') + '</span>' +
+            '</div>';
     }).join('');
     box.style.display = 'block';
 }
@@ -471,13 +483,13 @@ function renderDistLayerCard() {
     if (!card || !_distStagedLayer) return;
     var l = _distStagedLayer;
     var nameEl = document.getElementById('dist-card-name');
-    var wsEl   = document.getElementById('dist-card-ws');
+    var wsEl = document.getElementById('dist-card-ws');
     if (nameEl) nameEl.textContent = l.title || l.name || '';
-    if (wsEl)   wsEl.textContent   = l.workspace || '';
+    if (wsEl) wsEl.textContent = l.workspace || '';
 
-    var wmsChk    = document.getElementById('dist-pick-wms');
-    var wfsChk    = document.getElementById('dist-pick-wfs');
-    var wcsChk    = document.getElementById('dist-pick-wcs');
+    var wmsChk = document.getElementById('dist-pick-wms');
+    var wfsChk = document.getElementById('dist-pick-wfs');
+    var wcsChk = document.getElementById('dist-pick-wcs');
     var wfsToggle = wfsChk ? wfsChk.closest('.dist-proto-toggle') : null;
     var wcsToggle = wcsChk ? wcsChk.closest('.dist-proto-toggle') : null;
 
@@ -487,7 +499,7 @@ function renderDistLayerCard() {
     // WFS — só se autenticado (vem como wfs_available do bridge, ou _isLogged)
     var wfsOk = !!(l.wfs_available !== undefined ? l.wfs_available : _isLogged);
     if (wfsChk) {
-        wfsChk.checked  = false;   // opt-in: user decide se quer WFS
+        wfsChk.checked = false;   // opt-in: user decide se quer WFS
         wfsChk.disabled = !wfsOk;
     }
     if (wfsToggle) {
@@ -537,8 +549,8 @@ function submitDistManual() {
     var url = urlEl ? urlEl.value.trim() : '';
     if (!url) { alert('Informe a URL do recurso.'); return; }
     var proto = (document.getElementById('dist-mf-protocol') || {}).value || 'OGC:WMS';
-    var name  = ((document.getElementById('dist-mf-name')        || {}).value || '').trim();
-    var desc  = ((document.getElementById('dist-mf-description') || {}).value || '').trim();
+    var name = ((document.getElementById('dist-mf-name') || {}).value || '').trim();
+    var desc = ((document.getElementById('dist-mf-description') || {}).value || '').trim();
     distResources.push({ url: url, protocol: proto, name: name, description: desc });
     ['dist-mf-url', 'dist-mf-name', 'dist-mf-description'].forEach(function (id) {
         var el = document.getElementById(id); if (el) el.value = '';
@@ -559,13 +571,13 @@ function renderDistResources() {
         tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Nenhum recurso adicionado.</td></tr>';
         return;
     }
-    var protoCls = { 'OGC:WMS':'wms','OGC:WFS':'wfs','OGC:WCS':'wcs','OGC:WPS':'wps','WWW:DOWNLOAD':'download' };
+    var protoCls = { 'OGC:WMS': 'wms', 'OGC:WFS': 'wfs', 'OGC:WCS': 'wcs', 'OGC:WPS': 'wps', 'WWW:DOWNLOAD': 'download' };
     tbody.innerHTML = distResources.map(function (r, i) {
         var cls = protoCls[r.protocol] || 'link';
         return '<tr>' +
             '<td style="text-align:center">' + (i + 1) + '</td>' +
             '<td>' + escHtml(r.name || '—') +
-                (r.description ? '<br><small style="color:var(--fg-muted)">' + escHtml(r.description) + '</small>' : '') +
+            (r.description ? '<br><small style="color:var(--fg-muted)">' + escHtml(r.description) + '</small>' : '') +
             '</td>' +
             '<td><span class="proto-badge ' + cls + '">' + escHtml(r.protocol) + '</span></td>' +
             '<td style="font-size:11px;color:var(--fg-muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + escHtml(r.url) + '">' + escHtml(r.url) + '</td>' +
@@ -577,13 +589,13 @@ function renderDistResources() {
 // ─── Licença: preenchimento automático por tipo ────────────────────────────────
 
 var _licensePresets = {
-    'CC BY 4.0':      { useLimitation: 'Creative Commons Atribuição 4.0 Internacional (CC BY 4.0). Permite uso, distribuição e adaptação para qualquer fim, inclusive comercial, desde que a fonte seja atribuída.', accessConstraints: 'license',        useConstraints: 'license',        otherConstraints: '' },
-    'CC BY-SA 4.0':   { useLimitation: 'Creative Commons Atribuição-CompartilhaIgual 4.0 Internacional (CC BY-SA 4.0). Derivados devem ser distribuídos sob a mesma licença.',                                      accessConstraints: 'license',        useConstraints: 'license',        otherConstraints: '' },
-    'CC BY-NC 4.0':   { useLimitation: 'Creative Commons Atribuição-NãoComercial 4.0 Internacional (CC BY-NC 4.0). Uso não comercial apenas.',                                                                      accessConstraints: 'license',        useConstraints: 'license',        otherConstraints: '' },
-    'CC BY-NC-SA 4.0':{ useLimitation: 'Creative Commons Atribuição-NãoComercial-CompartilhaIgual 4.0 Internacional (CC BY-NC-SA 4.0).',                                                                           accessConstraints: 'license',        useConstraints: 'license',        otherConstraints: '' },
-    'CC0':            { useLimitation: 'CC0 1.0 Dedicação ao Domínio Público. Nenhum direito reservado.',                                                                                                           accessConstraints: 'unrestricted',   useConstraints: 'unrestricted',   otherConstraints: '' },
-    'proprietary':    { useLimitation: 'Todos os direitos reservados. Uso autorizado exclusivamente conforme termos estabelecidos pela CDHU.',                                                                      accessConstraints: 'copyright',      useConstraints: 'intellectualPropertyRights', otherConstraints: '© CDHU — Companhia de Desenvolvimento Habitacional e Urbano do Estado de São Paulo. Todos os direitos reservados.' },
-    'internal':       { useLimitation: 'Uso interno restrito à CDHU e suas unidades. Distribuição externa não autorizada.',                                                                                         accessConstraints: 'restricted',     useConstraints: 'restricted',     otherConstraints: '© CDHU — Companhia de Desenvolvimento Habitacional e Urbano do Estado de São Paulo. Documento de uso interno.' }
+    'CC BY 4.0': { useLimitation: 'Creative Commons Atribuição 4.0 Internacional (CC BY 4.0). Permite uso, distribuição e adaptação para qualquer fim, inclusive comercial, desde que a fonte seja atribuída.', accessConstraints: 'license', useConstraints: 'license', otherConstraints: '' },
+    'CC BY-SA 4.0': { useLimitation: 'Creative Commons Atribuição-CompartilhaIgual 4.0 Internacional (CC BY-SA 4.0). Derivados devem ser distribuídos sob a mesma licença.', accessConstraints: 'license', useConstraints: 'license', otherConstraints: '' },
+    'CC BY-NC 4.0': { useLimitation: 'Creative Commons Atribuição-NãoComercial 4.0 Internacional (CC BY-NC 4.0). Uso não comercial apenas.', accessConstraints: 'license', useConstraints: 'license', otherConstraints: '' },
+    'CC BY-NC-SA 4.0': { useLimitation: 'Creative Commons Atribuição-NãoComercial-CompartilhaIgual 4.0 Internacional (CC BY-NC-SA 4.0).', accessConstraints: 'license', useConstraints: 'license', otherConstraints: '' },
+    'CC0': { useLimitation: 'CC0 1.0 Dedicação ao Domínio Público. Nenhum direito reservado.', accessConstraints: 'unrestricted', useConstraints: 'unrestricted', otherConstraints: '' },
+    'proprietary': { useLimitation: 'Todos os direitos reservados. Uso autorizado exclusivamente conforme termos estabelecidos pela CDHU.', accessConstraints: 'copyright', useConstraints: 'intellectualPropertyRights', otherConstraints: '© CDHU — Companhia de Desenvolvimento Habitacional e Urbano do Estado de São Paulo. Todos os direitos reservados.' },
+    'internal': { useLimitation: 'Uso interno restrito à CDHU e suas unidades. Distribuição externa não autorizada.', accessConstraints: 'restricted', useConstraints: 'restricted', otherConstraints: '© CDHU — Companhia de Desenvolvimento Habitacional e Urbano do Estado de São Paulo. Documento de uso interno.' }
 };
 
 function onLicenseChange(val) {
@@ -604,17 +616,17 @@ function onLicenseChange(val) {
 var contacts = [];
 
 var ROLE_LABELS = {
-    "owner":               "Dono",
-    "author":              "Autor",
-    "processor":           "Organizador",
-    "distributor":         "Distribuidor",
-    "custodian":           "Depositário",
-    "resourceProvider":    "Fornecedor de recurso",
+    "owner": "Dono",
+    "author": "Autor",
+    "processor": "Organizador",
+    "distributor": "Distribuidor",
+    "custodian": "Depositário",
+    "resourceProvider": "Fornecedor de recurso",
     "principalInvestigator": "Investigador principal",
-    "originator":          "Originador",
-    "pointOfContact":      "Ponto de contato",
-    "publisher":           "Publicador",
-    "user":                "Utilizador"
+    "originator": "Originador",
+    "pointOfContact": "Ponto de contato",
+    "publisher": "Publicador",
+    "user": "Utilizador"
 };
 
 var ROLE_OPTIONS = Object.keys(ROLE_LABELS).map(function (v) {
@@ -634,15 +646,15 @@ function updateRole(idx, val) {
     if (!contacts[idx]) return;
     contacts[idx].data.role = val;
     var tableSelect = document.getElementById("role-table-" + idx);
-    var accSelect   = document.getElementById("role-acc-"   + idx);
+    var accSelect = document.getElementById("role-acc-" + idx);
     if (tableSelect && tableSelect.value !== val) tableSelect.value = val;
-    if (accSelect   && accSelect.value   !== val) accSelect.value   = val;
+    if (accSelect && accSelect.value !== val) accSelect.value = val;
 }
 
 // ─── Contatos: render ──────────────────────────────────────────────────────────
 
 function renderContacts() {
-    var tbody  = document.getElementById("contacts-tbody");
+    var tbody = document.getElementById("contacts-tbody");
     var accDiv = document.getElementById("contacts-accordions");
     if (!tbody) return;
 
@@ -656,12 +668,12 @@ function renderContacts() {
     tbody.innerHTML = contacts.map(function (c, idx) {
         return '<tr>' +
             '<td style="text-align:center;color:var(--fg-muted);font-weight:700;font-size:12px">' + (idx + 1) + '</td>' +
-            '<td>' + (c.data.org   || '—') + '</td>' +
+            '<td>' + (c.data.org || '—') + '</td>' +
             '<td>' + (c.data.sigla || '—') + '</td>' +
             '<td>' + (c.data.email || '—') + '</td>' +
             '<td>' + buildRoleSelect(idx, c.data.role) + '</td>' +
             '<td style="white-space:nowrap">' +
-            '<button class="btn-move" onclick="moveContact(' + idx + ',-1)" title="Mover para cima"' + (idx === 0    ? ' disabled' : '') + '>↑</button>' +
+            '<button class="btn-move" onclick="moveContact(' + idx + ',-1)" title="Mover para cima"' + (idx === 0 ? ' disabled' : '') + '>↑</button>' +
             '<button class="btn-move" onclick="moveContact(' + idx + ', 1)" title="Mover para baixo"' + (idx === last ? ' disabled' : '') + '>↓</button>' +
             '<button class="btn-remove" onclick="removeContact(' + idx + ')" title="Remover">✕</button>' +
             '</td>' +
@@ -676,7 +688,7 @@ function renderContacts() {
 }
 
 function buildAccordion(c, idx) {
-    var d     = c.data;
+    var d = c.data;
     var label = 'Contato ' + (idx + 1) + (d.sigla ? ' — ' + d.sigla : '');
     var badge = c.isManual
         ? '<span class="badge-manual">Manual</span>'
@@ -708,26 +720,26 @@ function buildAccordionFields(d, idx, isManual) {
     var roleField = '<div class="form-group"><label>Regra</label>' +
         '<select id="role-acc-' + idx + '" class="role-select" onchange="updateRole(' + idx + ', this.value)">' + roleOpts + '</select></div>';
 
-    return field('Sigla',       d.sigla,    isManual, 'acc-' + idx + '-sigla') +
-        field('Organização',    d.org,      isManual, 'acc-' + idx + '-org') +
+    return field('Sigla', d.sigla, isManual, 'acc-' + idx + '-sigla') +
+        field('Organização', d.org, isManual, 'acc-' + idx + '-org') +
         roleField +
-        field('E-mail',         d.email,    isManual, 'acc-' + idx + '-email') +
-        field('Cargo',          d.position, isManual, 'acc-' + idx + '-position') +
-        field('Telefone',       d.phone,    isManual, 'acc-' + idx + '-phone') +
+        field('E-mail', d.email, isManual, 'acc-' + idx + '-email') +
+        field('Cargo', d.position, isManual, 'acc-' + idx + '-position') +
+        field('Telefone', d.phone, isManual, 'acc-' + idx + '-phone') +
         '<div class="form-group span-2"><label>Endereço</label>' +
         (isManual
             ? '<input id="acc-' + idx + '-address" type="text" value="' + (d.address || '') + '">'
             : '<div class="readonly-field">' + (d.address || '—') + '</div>') +
         '</div>' +
-        field('Cidade', d.city,    isManual, 'acc-' + idx + '-city') +
-        field('Estado', d.state,   isManual, 'acc-' + idx + '-state') +
-        field('CEP',    d.zip,     isManual, 'acc-' + idx + '-zip') +
-        field('País',   d.country, isManual, 'acc-' + idx + '-country');
+        field('Cidade', d.city, isManual, 'acc-' + idx + '-city') +
+        field('Estado', d.state, isManual, 'acc-' + idx + '-state') +
+        field('CEP', d.zip, isManual, 'acc-' + idx + '-zip') +
+        field('País', d.country, isManual, 'acc-' + idx + '-country');
 }
 
 function toggleAccordion(idx) {
     var body = document.getElementById("acc-body-" + idx);
-    var arr  = document.getElementById("arr-" + idx);
+    var arr = document.getElementById("arr-" + idx);
     if (!body) return;
     var open = body.style.display === "block";
     if (open) {
@@ -808,13 +820,13 @@ function toggleManualForm() {
 
 var procContacts = [];
 var metaContacts = [];
-var _procSugg    = [];
-var _metaSugg    = [];
+var _procSugg = [];
+var _metaSugg = [];
 
-function _sArr(key)        { return key === 'proc' ? procContacts : metaContacts; }
-function _sSugg(key)       { return key === 'proc' ? _procSugg    : _metaSugg;    }
-function _setSArr(key, v)  { if (key === 'proc') procContacts = v; else metaContacts = v; }
-function _setSugg(key, v)  { if (key === 'proc') _procSugg    = v; else _metaSugg    = v; }
+function _sArr(key) { return key === 'proc' ? procContacts : metaContacts; }
+function _sSugg(key) { return key === 'proc' ? _procSugg : _metaSugg; }
+function _setSArr(key, v) { if (key === 'proc') procContacts = v; else metaContacts = v; }
+function _setSugg(key, v) { if (key === 'proc') _procSugg = v; else _metaSugg = v; }
 
 function suggestFor(key, q) {
     q = (q || '').trim();
@@ -868,8 +880,8 @@ function updateRoleFor(key, idx, val) {
 }
 
 function renderFor(key) {
-    var arr    = _sArr(key);
-    var tbody  = document.getElementById(key + '-tbody');
+    var arr = _sArr(key);
+    var tbody = document.getElementById(key + '-tbody');
     var accDiv = document.getElementById(key + '-accordions');
     if (!tbody) return;
     if (arr.length === 0) {
@@ -878,13 +890,13 @@ function renderFor(key) {
         return;
     }
     tbody.innerHTML = arr.map(function (c, idx) {
-        var sel  = c.data.role || 'pointOfContact';
+        var sel = c.data.role || 'pointOfContact';
         var opts = ROLE_OPTIONS.map(function (r) {
             return '<option value="' + r.value + '"' + (r.value === sel ? ' selected' : '') + '>' + r.label + '</option>';
         }).join('');
         return '<tr>' +
             '<td style="text-align:center;color:var(--fg-muted);font-weight:700;font-size:12px">' + (idx + 1) + '</td>' +
-            '<td>' + (c.data.org   || '—') + '</td>' +
+            '<td>' + (c.data.org || '—') + '</td>' +
             '<td>' + (c.data.sigla || '—') + '</td>' +
             '<td><select id="role-' + key + '-t-' + idx + '" class="role-select" onchange="updateRoleFor(\'' + key + '\',' + idx + ',this.value)">' + opts + '</select></td>' +
             '<td><button class="btn-remove" onclick="removeFrom(\'' + key + '\',' + idx + ')" title="Remover">✕</button></td>' +
@@ -898,21 +910,21 @@ function renderFor(key) {
 }
 
 function buildAccordionFor(c, idx, key) {
-    var d   = c.data;
+    var d = c.data;
     var lbl = 'Contato ' + (idx + 1) + (d.sigla ? ' — ' + d.sigla : '');
     var badge = c.isManual ? '<span class="badge-manual">Manual</span>' : '<span class="badge-preset">Catálogo</span>';
-    var sel  = d.role || 'pointOfContact';
+    var sel = d.role || 'pointOfContact';
     var rOpts = ROLE_OPTIONS.map(function (r) {
         return '<option value="' + r.value + '"' + (r.value === sel ? ' selected' : '') + '>' + r.label + '</option>';
     }).join('');
     var flds =
-        field('Sigla',       d.sigla,    c.isManual, 'af-' + key + '-' + idx + '-sigla') +
-        field('Organização', d.org,      c.isManual, 'af-' + key + '-' + idx + '-org') +
+        field('Sigla', d.sigla, c.isManual, 'af-' + key + '-' + idx + '-sigla') +
+        field('Organização', d.org, c.isManual, 'af-' + key + '-' + idx + '-org') +
         '<div class="form-group"><label>Regra</label>' +
         '<select id="role-' + key + '-a-' + idx + '" class="role-select" onchange="updateRoleFor(\'' + key + '\',' + idx + ',this.value)">' + rOpts + '</select></div>' +
-        field('E-mail',   d.email,    c.isManual, 'af-' + key + '-' + idx + '-email') +
-        field('Cargo',    d.position, c.isManual, 'af-' + key + '-' + idx + '-position') +
-        field('Telefone', d.phone,    c.isManual, 'af-' + key + '-' + idx + '-phone');
+        field('E-mail', d.email, c.isManual, 'af-' + key + '-' + idx + '-email') +
+        field('Cargo', d.position, c.isManual, 'af-' + key + '-' + idx + '-position') +
+        field('Telefone', d.phone, c.isManual, 'af-' + key + '-' + idx + '-phone');
     return '<div class="contact-accordion">' +
         '<button class="accordion-header" onclick="toggleAccordionFor(\'' + key + '\',' + idx + ')">' +
         '<span class="acc-arrow" id="arr-' + key + '-' + idx + '"><img class="acc-chevron" src="../../img/chevron_down.svg"></span>' +
@@ -923,7 +935,7 @@ function buildAccordionFor(c, idx, key) {
 
 function toggleAccordionFor(key, idx) {
     var body = document.getElementById('acc-body-' + key + '-' + idx);
-    var arr  = document.getElementById('arr-'      + key + '-' + idx);
+    var arr = document.getElementById('arr-' + key + '-' + idx);
     if (!body) return;
     var open = body.style.display === 'block';
     if (open) {
@@ -949,10 +961,12 @@ function submitSectionManual(key) {
     if (!sigla && !org) { alert('Informe ao menos Sigla ou Organização.'); return; }
     _sArr(key).push({
         isManual: true,
-        data: { sigla: sigla, org: org, email: g('email'), role: g('role') || 'pointOfContact',
-                position: g('position'), phone: g('phone'),
-                address: g('address'), city: g('city'), state: g('state'), zip: g('zip'),
-                country: g('country') || 'Brasil' }
+        data: {
+            sigla: sigla, org: org, email: g('email'), role: g('role') || 'pointOfContact',
+            position: g('position'), phone: g('phone'),
+            address: g('address'), city: g('city'), state: g('state'), zip: g('zip'),
+            country: g('country') || 'Brasil'
+        }
     });
     ['sigla', 'org', 'email', 'position', 'phone', 'address', 'city', 'zip'].forEach(function (f) {
         var el = document.getElementById(key + '-mf-' + f); if (el) el.value = '';
@@ -977,18 +991,69 @@ function initMetaAuthor() {
     if (metaContacts.length > 0) { renderFor('meta'); return; }
     var fallback = {
         isManual: false,
-        data: { sigla: 'CDHU', org: 'Companhia de Desenvolvimento Habitacional e Urbano',
-                role: 'owner', email: 'geohab@cdhu.sp.gov.br',
-                position: 'Gerência de Geoinformação', phone: '',
-                address: '', city: 'São Paulo', state: 'SP', zip: '', country: 'Brasil' }
+        data: {
+            sigla: 'CDHU', org: 'Companhia de Desenvolvimento Habitacional e Urbano',
+            role: 'owner', email: 'geohab@cdhu.sp.gov.br',
+            position: 'Gerência de Geoinformação', phone: '',
+            address: '', city: 'São Paulo', state: 'SP', zip: '', country: 'Brasil'
+        }
     };
     if (typeof bridge === 'undefined') { metaContacts.push(fallback); renderFor('meta'); return; }
     bridge.search_contacts('CDHU', function (results) {
         var cdhu = results && results.find(function (r) { return r.sigla === 'CDHU'; });
         if (cdhu) { cdhu.role = 'owner'; metaContacts.push({ isManual: false, data: cdhu }); }
-        else       { metaContacts.push(fallback); }
+        else { metaContacts.push(fallback); }
         renderFor('meta');
     });
+}
+
+// ─── Login ─────────────────────────────────────────────────────────────────────
+
+function toggleLoginMode() {
+    var corpWrap = document.getElementById('login-corp-wrap');
+    var adminWrap = document.getElementById('login-admin-wrap');
+    var btn = document.getElementById('login-toggle-btn');
+    if (!corpWrap || !adminWrap) return;
+    var showingCorp = corpWrap.style.display !== 'none';
+    corpWrap.style.display = showingCorp ? 'none' : '';
+    adminWrap.style.display = showingCorp ? '' : 'none';
+    if (btn) btn.textContent = showingCorp ? 'ACESSO GERAL' : 'ACESSO CORPORATIVO';
+}
+
+function doAdminLogin() {
+    var userEl = document.getElementById('admin-user');
+    var passEl = document.getElementById('admin-pass');
+    var user = userEl ? userEl.value.trim() : '';
+    var pass = passEl ? passEl.value : '';
+    if (!user || !pass) { alert('Informe usuário e senha.'); return; }
+    if (typeof bridge !== 'undefined' && bridge.do_admin_login) {
+        setLoginState(true, 'Verificando credenciais...');
+        bridge.do_admin_login(user, pass);
+    }
+}
+
+function setLoginState(loading, message) {
+    var btns = document.querySelectorAll('.btn-login-action');
+    btns.forEach(function (btn) {
+        btn.disabled = loading;
+        if (loading) {
+            if (!btn.dataset.label) btn.dataset.label = btn.textContent;
+            btn.textContent = message || 'Aguardando...';
+        } else {
+            if (btn.dataset.label) { btn.textContent = btn.dataset.label; delete btn.dataset.label; }
+        }
+    });
+    var errEl = document.getElementById('login-error-msg');
+    if (errEl) errEl.style.display = 'none';
+}
+
+function setLoginError(msg) {
+    setLoginState(false, '');
+    // show in whichever error element is currently visible
+    var errEl = document.getElementById('login-error-msg') ||
+                document.getElementById('login-error-msg-adm');
+    if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
+    else { alert(msg); }
 }
 
 function submitManualContact() {
@@ -1001,17 +1066,17 @@ function submitManualContact() {
     contacts.push({
         isManual: true,
         data: {
-            sigla:    sigla,
-            org:      org,
-            email:    g("email"),
-            role:     g("role"),
+            sigla: sigla,
+            org: org,
+            email: g("email"),
+            role: g("role"),
             position: g("position"),
-            phone:    g("phone"),
-            address:  g("address"),
-            city:     g("city"),
-            state:    g("state"),
-            zip:      g("zip"),
-            country:  g("country") || "Brasil"
+            phone: g("phone"),
+            address: g("address"),
+            city: g("city"),
+            state: g("state"),
+            zip: g("zip"),
+            country: g("country") || "Brasil"
         }
     });
     ["sigla", "org", "email", "role", "position", "phone", "address", "city", "state", "zip"].forEach(function (f) {
