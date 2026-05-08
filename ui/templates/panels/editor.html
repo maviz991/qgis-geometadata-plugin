@@ -17,62 +17,62 @@
         <div class="form-grid">
 
             <div class="form-group span-2">
-                <label for="f-title">Título <span class="req">*</span></label>
+                <label for="f-title">Título <span class="req">*</span> <button class="help-btn" data-tip="Nome completo e descritivo do conjunto de dados geoespaciais.">?</button></label>
                 <input id="f-title" type="text" placeholder="Título do conjunto de dados...">
             </div>
 
             <div class="form-group span-2">
-                <label>Data e hora do dado <span class="req">*</span></label>
+                <label>Data e hora do dado <span class="req">*</span> <button class="help-btn" data-tip="Tipo e valor da data de referência do dado: Criação = quando foi produzido; Publicação = quando foi disponibilizado; Revisão = última atualização.">?</button></label>
                 <div class="inline-row">
                     <select id="f-dateType">
-                        <option value="creation">Criação</option>
-                        <option value="publication">Publicação</option>
-                        <option value="revision">Revisão</option>
+                        <option value="creation" title="Data em que o dado foi originalmente produzido">Criação</option>
+                        <option value="publication" title="Data em que o dado foi disponibilizado ao público">Publicação</option>
+                        <option value="revision" title="Data da última revisão ou atualização do dado">Revisão</option>
                     </select>
                     <input id="f-date" type="datetime-local">
                 </div>
             </div>
 
             <div class="form-group">
-                <label for="f-edition">Edição</label>
+                <label for="f-edition">Edição <button class="help-btn" data-tip="Número da versão ou edição do dado (0 = primeira versão).">?</button></label>
                 <input id="f-edition" type="number" value="0" min="0" oninput="toggleEditionDate(this.value)">
             </div>
             <div class="form-group">
-                <label for="f-date_edition">Data da Edição</label>
+                <label for="f-date_edition">Data da Edição <button class="help-btn" data-tip="Data em que esta edição específica foi publicada ou revisada.">?</button></label>
                 <input id="f-date_edition" type="datetime-local" disabled>
             </div>
 
             <div class="form-group span-2">
-                <label for="f-abstract">Resumo <span class="req">*</span></label>
+                <label for="f-abstract">Resumo <span class="req">*</span> <button class="help-btn" data-tip="Descrição detalhada do conteúdo, cobertura geográfica e temática do dado.">?</button></label>
                 <textarea id="f-abstract" rows="4" placeholder="Descreva o conjunto de dados..."></textarea>
             </div>
 
             <div class="form-group span-2">
-                <label for="f-purpose">Finalidade</label>
+                <label for="f-purpose">Finalidade <button class="help-btn" data-tip="Objetivos para os quais o dado foi criado e uso previsto.">?</button></label>
                 <textarea id="f-purpose" rows="3" placeholder="Descreva os objetivos e uso previsto..."></textarea>
             </div>
 
             <div class="form-group">
-                <label for="f-credit">Crédito <span class="req">*</span></label>
-                <input id="f-credit" type="text" placeholder="Técnico responsável">
+                <label for="f-credit">Crédito <span class="req">*</span> <button class="help-btn" data-tip="Nome do técnico ou equipe responsável pela produção dos dados.">?</button></label>
+                <input id="f-credit" type="text" placeholder="Técnico responsável" data-validate="no-digits">
             </div>
 
             <div class="form-group">
-                <label for="f-status_codeListValue">Status <span class="req">*</span></label>
+                <label for="f-status_codeListValue">Status <span class="req">*</span> <button class="help-btn" data-tip="Situação atual do conjunto de dados.">?</button></label>
                 <select id="f-status_codeListValue">
                     <option value="">- Selecione -</option>
-                    <option value="historicalArchive">Arquivo Antigo</option>
-                    <option value="completed">Concluído</option>
-                    <option value="onGoing">Contínuo</option>
-                    <option value="underDevelopment">Em Desenvolvimento</option>
-                    <option value="required">Necessário</option>
-                    <option value="obsolete">Obsoleto</option>
-                    <option value="planned">Planejado</option>
+                    <option value="historicalArchive" title="Dado mantido para fins históricos, sem novas atualizações">Arquivo Antigo</option>
+                    <option value="completed" title="Produção concluída; nenhuma atualização está planejada">Concluído</option>
+                    <option value="onGoing" title="Dado atualizado continuamente ou com periodicidade regular">Contínuo</option>
+                    <option value="underDevelopment" title="Dado ainda em fase de produção ou desenvolvimento">Em Desenvolvimento</option>
+                    <option value="required" title="Dado necessário, mas ainda não iniciado">Necessário</option>
+                    <option value="obsolete" title="Dado descontinuado ou substituído por versão mais recente">Obsoleto</option>
+                    <option value="planned" title="Dado planejado para produção futura">Planejado</option>
                 </select>
             </div>
 
             <div class="form-group span-2">
-                <label>Palavras-chave <span class="req">*</span></label>
+                <label>Palavras-chave <span class="req">*</span> <button class="help-btn" data-tip="Termos que descrevem o conteúdo do dado, facilitando a busca e descoberta. Pressione Enter ou clique em + para adicionar.">?</button></label>
                 <div class="keyword-input-row">
                     <input id="kw-input" type="text" placeholder="Adicionar palavra-chave..."
                         onkeydown="if(event.key==='Enter'){event.preventDefault();addKeyword();}">
@@ -105,15 +105,15 @@
                 <div class="form-grid">
                     <div class="form-group">
                         <label>Sigla <span class="req">*</span></label>
-                        <input id="mf-sigla" type="text" placeholder="ex: CDHU">
+                        <input id="mf-sigla" type="text" placeholder="ex: CDHU" data-format="uppercase">
                     </div>
                     <div class="form-group">
                         <label>Organização <span class="req">*</span></label>
-                        <input id="mf-org" type="text" placeholder="Nome completo">
+                        <input id="mf-org" type="text" placeholder="Nome completo" data-format="titlecase">
                     </div>
                     <div class="form-group">
                         <label>E-mail</label>
-                        <input id="mf-email" type="email" placeholder="contato@exemplo.com">
+                        <input id="mf-email" type="email" placeholder="contato@exemplo.com" data-validate="email">
                     </div>
                     <div class="form-group">
                         <label>Regra</label>
@@ -134,19 +134,23 @@
                     </div>
                     <div class="form-group">
                         <label>Cargo / Departamento</label>
-                        <input id="mf-position" type="text">
+                        <input id="mf-position" type="text" data-validate="letters-only">
                     </div>
                     <div class="form-group">
                         <label>Telefone</label>
-                        <input id="mf-phone" type="text" placeholder="(11) 0000-0000">
+                        <input id="mf-phone" type="text" placeholder="+55 11 0000-0000" data-format="phone">
                     </div>
                     <div class="form-group span-2">
-                        <label>Endereço</label>
-                        <input id="mf-address" type="text" placeholder="Rua, número">
+                        <label>Endereço <button class="help-btn" data-tip="Preencha logradouro, número e complemento separadamente.">?</button></label>
+                        <div class="address-split">
+                            <input id="mf-address" type="text" placeholder="Logradouro (Rua, Av., ...)" class="addr-street">
+                            <input id="mf-address-num" type="text" placeholder="Nº" class="addr-num">
+                            <input id="mf-address-comp" type="text" placeholder="Complemento" class="addr-comp">
+                        </div>
                     </div>
                     <div class="form-group">
                         <label>Cidade</label>
-                        <input id="mf-city" type="text">
+                        <input id="mf-city" type="text" data-validate="letters-only">
                     </div>
                     <div class="form-group">
                         <label>Estado</label>
@@ -182,11 +186,11 @@
                     </div>
                     <div class="form-group">
                         <label>CEP</label>
-                        <input id="mf-zip" type="text" placeholder="00000-000">
+                        <input id="mf-zip" type="text" placeholder="00000-000" data-format="cep">
                     </div>
                     <div class="form-group">
                         <label>País</label>
-                        <input id="mf-country" type="text" value="Brasil">
+                        <input id="mf-country" type="text" value="Brasil" data-validate="letters-only">
                     </div>
                 </div>
             </div>
@@ -228,97 +232,96 @@
         <div class="form-grid">
 
             <div class="form-group">
-                <label for="f-maintenanceFrequency">Frequência de Atualização <span class="req">*</span></label>
+                <label for="f-maintenanceFrequency">Frequência de Atualização <span class="req">*</span> <button class="help-btn" data-tip="Com que periodicidade o dado é revisado ou atualizado.">?</button></label>
                 <select id="f-maintenanceFrequency" onchange="toggleUpdateDate(this.value)">
                     <option value="">- Selecione -</option>
-                    <option value="annual">Anual</option>
-                    <option value="biannually">Bimestral</option>
-                    <option value="quarterly">Trimestral</option>
-                    <option value="monthly">Mensal</option>
-                    <option value="fortnightly">Quinzenal</option>
-                    <option value="weekly">Semanal</option>
-                    <option value="daily">Diário</option>
-                    <option value="continual">Contínuo</option>
-                    <option value="irregular">Irregular</option>
-                    <option value="unknown">Desconhecido</option>
-                    <option value="notPlanned">Não planejado</option>
-                    <option value="asNeeded">Quando necessário</option>
+                    <option value="annual" title="Uma vez por ano">Anual</option>
+                    <option value="biannually" title="A cada dois meses">Bimestral</option>
+                    <option value="quarterly" title="A cada três meses">Trimestral</option>
+                    <option value="monthly" title="Uma vez por mês">Mensal</option>
+                    <option value="fortnightly" title="A cada quinze dias">Quinzenal</option>
+                    <option value="weekly" title="Uma vez por semana">Semanal</option>
+                    <option value="daily" title="Uma vez por dia">Diário</option>
+                    <option value="continual" title="Atualizado de forma contínua, sem intervalo fixo">Contínuo</option>
+                    <option value="irregular" title="Sem periodicidade definida">Irregular</option>
+                    <option value="unknown" title="Periodicidade desconhecida">Desconhecido</option>
+                    <option value="notPlanned" title="Sem atualizações futuras planejadas">Não planejado</option>
+                    <option value="asNeeded" title="Atualizado somente quando necessário, sem periodicidade fixa">Quando necessário</option>
                 </select>
             </div>
 
             <div class="form-group">
-                <label for="f-dateOfNextUpdate">Data da próxima atualização</label>
+                <label for="f-dateOfNextUpdate">Data da próxima atualização <button class="help-btn" data-tip="Previsão de quando o dado será revisado ou atualizado novamente.">?</button></label>
                 <input id="f-dateOfNextUpdate" type="date" disabled>
             </div>
 
             <div class="form-group">
-                <label for="f-MD_SpatialRepresentationTypeCode">Tipo de Representação Espacial <span
-                        class="req">*</span></label>
+                <label for="f-MD_SpatialRepresentationTypeCode">Tipo de Representação Espacial <span class="req">*</span> <button class="help-btn" data-tip="Formato estrutural ou geométrico do dado geoespacial.">?</button></label>
                 <select id="f-MD_SpatialRepresentationTypeCode">
                     <option value="">- Selecione -</option>
-                    <option value="vector">Vetor</option>
-                    <option value="grid">Grid | Raster</option>
-                    <option value="textTable">Tabela de texto</option>
-                    <option value="tin">Rede triangular irregular (TIN)</option>
-                    <option value="stereoscopicModel">Modelo estereofônico</option>
-                    <option value="video">Vídeo</option>
+                    <option value="vector" title="Dado em formato vetorial: pontos, linhas ou polígonos">Vetor</option>
+                    <option value="grid" title="Dado em grade regular — imagem raster (ex: satélite, MDT, ortofoto)">Grid | Raster</option>
+                    <option value="textTable" title="Tabela de texto associada a elementos espaciais">Tabela de texto</option>
+                    <option value="tin" title="Rede triangular irregular para representação de superfície do terreno">Rede triangular irregular (TIN)</option>
+                    <option value="stereoscopicModel" title="Par de imagens para percepção estereoscópica de relevo">Modelo estereofônico</option>
+                    <option value="video" title="Dado em formato de vídeo georreferenciado">Vídeo</option>
                 </select>
             </div>
 
             <div class="form-group">
-                <label for="f-topicCategory">Categoria Temática <span class="req">*</span></label>
+                <label for="f-topicCategory">Categoria Temática <span class="req">*</span> <button class="help-btn" data-tip="Categoria principal da ISO 19115 que melhor descreve o conteúdo do dado.">?</button></label>
                 <select id="f-topicCategory">
                     <option value="">- Selecione -</option>
-                    <option value="boundaries">Limites Administrativos</option>
-                    <option value="planningCadastre">Planejamento e Cadastro</option>
-                    <option value="society">Sociedade e Cultura</option>
-                    <option value="structure">Infraestrutura ou Edificação</option>
-                    <option value="transportation">Transportes</option>
-                    <option value="location">Localização</option>
-                    <option value="imageryBaseMapsEarthCover">Mapas ou imagens de Satélite</option>
-                    <option value="elevation">Altimetria, Batimetria ou Topografia</option>
-                    <option value="health">Saúde</option>
-                    <option value="inlandWaters">Águas Interiores</option>
-                    <option value="economy">Economia</option>
-                    <option value="biota">Biotipos</option>
-                    <option value="climatologyMeteorologyAtmosphere">Climatologia ou Meteorologia</option>
-                    <option value="geoscientificInformation">Informação GeoCientífica</option>
-                    <option value="intelligenceMilitary">Informação Militar</option>
-                    <option value="environment">Ambiente</option>
-                    <option value="oceans">Oceanos</option>
-                    <option value="utilitiesCommunication">Infraestruturas de Comunicação</option>
-                    <option value="farming">Agricultura, pesca ou pecuária</option>
+                    <option value="boundaries" title="Divisões político-administrativas: municípios, estados, países">Limites Administrativos</option>
+                    <option value="planningCadastre" title="Ordenamento do território, cadastro imobiliário e uso do solo">Planejamento e Cadastro</option>
+                    <option value="society" title="Dados populacionais, socioeconômicos e culturais">Sociedade e Cultura</option>
+                    <option value="structure" title="Edificações, equipamentos e infraestruturas construídas">Infraestrutura ou Edificação</option>
+                    <option value="transportation" title="Vias, ferrovias, rodovias e sistemas de transporte">Transportes</option>
+                    <option value="location" title="Endereços, toponímia e referências de localização">Localização</option>
+                    <option value="imageryBaseMapsEarthCover" title="Imagens de satélite, ortofotos e mapas de cobertura da terra">Mapas ou imagens de Satélite</option>
+                    <option value="elevation" title="Altitude, batimetria, topografia e modelos digitais de terreno">Altimetria, Batimetria ou Topografia</option>
+                    <option value="health" title="Saúde pública, serviços médicos e epidemiologia">Saúde</option>
+                    <option value="inlandWaters" title="Rios, lagos, represas e corpos d'água interiores">Águas Interiores</option>
+                    <option value="economy" title="Atividades econômicas, emprego e indústria">Economia</option>
+                    <option value="biota" title="Flora, fauna, biodiversidade e ecossistemas">Biotipos</option>
+                    <option value="climatologyMeteorologyAtmosphere" title="Clima, meteorologia e dados atmosféricos">Climatologia ou Meteorologia</option>
+                    <option value="geoscientificInformation" title="Geologia, minerais, solos e recursos do subsolo">Informação GeoCientífica</option>
+                    <option value="intelligenceMilitary" title="Dados de uso militar ou de inteligência governamental">Informação Militar</option>
+                    <option value="environment" title="Meio ambiente, poluição e proteção ambiental">Ambiente</option>
+                    <option value="oceans" title="Oceanos, mares e recursos marinhos">Oceanos</option>
+                    <option value="utilitiesCommunication" title="Redes de energia, água, saneamento e telecomunicações">Infraestruturas de Comunicação</option>
+                    <option value="farming" title="Agricultura, pecuária, silvicultura e pesca">Agricultura, pesca ou pecuária</option>
                 </select>
             </div>
 
             <div class="form-group">
-                <label for="f-hierarchyLevel">Nível Hierárquico <span class="req">*</span></label>
+                <label for="f-hierarchyLevel">Nível Hierárquico <span class="req">*</span> <button class="help-btn" data-tip="Nível da hierarquia de metadados. 'Conjunto de dados' é o mais comum.">?</button></label>
                 <select id="f-hierarchyLevel">
-                    <option value="dataset">Conjunto de dados</option>
+                    <option value="dataset" title="Conjunto de dados geoespaciais individualmente identificável">Conjunto de dados</option>
                 </select>
             </div>
 
             <div class="form-group">
-                <label for="f-LanguageCode">Idioma <span class="req">*</span></label>
+                <label for="f-LanguageCode">Idioma <span class="req">*</span> <button class="help-btn" data-tip="Idioma principal dos conteúdos e atributos do dado.">?</button></label>
                 <select id="f-LanguageCode">
-                    <option value="por">🇧🇷 Português</option>
-                    <option value="eng">🇺🇸 Inglês</option>
-                    <option value="spa">🇪🇸 Espanhol</option>
-                    <option value="fra">🇫🇷 Francês</option>
-                    <option value="ger">🇩🇪 Alemão</option>
+                    <option value="por" title="Língua portuguesa (padrão CDHU)">🇧🇷 Português</option>
+                    <option value="eng" title="Língua inglesa">🇺🇸 Inglês</option>
+                    <option value="spa" title="Língua espanhola">🇪🇸 Espanhol</option>
+                    <option value="fra" title="Língua francesa">🇫🇷 Francês</option>
+                    <option value="ger" title="Língua alemã">🇩🇪 Alemão</option>
                 </select>
             </div>
 
             <div class="form-group">
-                <label for="f-characterSet">Codificação de Caracteres</label>
+                <label for="f-characterSet">Codificação de Caracteres <button class="help-btn" data-tip="Padrão de codificação dos textos e atributos. UTF-8 é o recomendado e cobre todos os caracteres do português.">?</button></label>
                 <select id="f-characterSet">
-                    <option value="utf8">UTF-8</option>
+                    <option value="utf8" title="Unicode UTF-8 — suporta todos os caracteres latinos e especiais">UTF-8</option>
                 </select>
             </div>
 
             <div class="form-group">
-                <label for="f-thumbnail_url">URL da Miniatura</label>
-                <input id="f-thumbnail_url" type="text" placeholder="https://...">
+                <label for="f-thumbnail_url">URL da Miniatura <button class="help-btn" data-tip="Endereço de uma imagem de prévia ou mapa de localização do dado (ex: captura de tela do GeoServer).">?</button></label>
+                <input id="f-thumbnail_url" type="text" placeholder="https://..." data-validate="url">
             </div>
 
         </div>
@@ -334,7 +337,7 @@
 
             <!-- Coordenadas -->
             <div class="form-group span-2">
-                <label>Coordenadas Geográficas do Bounding Box <span class="req">*</span></label>
+                <label>Coordenadas Geográficas do Bounding Box <span class="req">*</span> <button class="help-btn" data-tip="Retângulo envolvente do dado em graus decimais (WGS 84). Use o botão 'Capturar da camada' para preencher automaticamente a partir da camada ativa no QGIS.">?</button></label>
                 <div class="bbox-grid">
                     <div></div>
                     <div class="form-group">
@@ -362,7 +365,7 @@
 
             <!-- Sistema de Referência -->
             <div class="form-group">
-                <label for="f-epsgCode">Código EPSG <span class="req">*</span></label>
+                <label for="f-epsgCode">Código EPSG <span class="req">*</span> <button class="help-btn" data-tip="Sistema de Referência de Coordenadas (SRC) do dado. Selecione para preencher o Título do SRC automaticamente.">?</button></label>
                 <select id="f-epsgCode" onchange="setEpsgFromCode(this.value)">
                     <option value="">- Selecione -</option>
                     <option value="EPSG:4674">EPSG:4674 - SIRGAS 2000</option>
@@ -386,14 +389,14 @@
                 </select>
             </div>
             <div class="form-group">
-                <label for="f-epsgTitle">Título do SRC <span class="req">*</span></label>
+                <label for="f-epsgTitle">Título do SRC <span class="req">*</span> <button class="help-btn" data-tip="Nome completo do Sistema de Referência de Coordenadas. Preenchido automaticamente ao selecionar o EPSG.">?</button></label>
                 <input id="f-epsgTitle" type="text" placeholder="ex: SIRGAS 2000 (EPSG:4674)">
             </div>
 
             <!-- Escala -->
             <div class="form-group span-2">
-                <label for="f-spatialResolution_denominator">Escala (denominador)</label>
-                <input id="f-spatialResolution_denominator" type="text" placeholder="ex: 25000">
+                <label for="f-spatialResolution_denominator">Escala (denominador) <button class="help-btn" data-tip="Denominador da escala de captura ou publicação do dado (ex: 25000 para 1:25.000).">?</button></label>
+                <input id="f-spatialResolution_denominator" type="text" placeholder="ex: 25000" data-validate="digits-only">
             </div>
 
             <!-- Altitude -->
@@ -403,19 +406,19 @@
                     <summary>Mais informações</summary>
                     <div class="extra-accordion-grid">
                         <div class="form-group">
-                            <label for="f-zMin">Altitude mínima - Z</label>
+                            <label for="f-zMin">Altitude mínima - Z <button class="help-btn" data-tip="Valor mínimo de altitude (em metros) coberto pelo dado. Deixe em branco se o dado não possui dimensão vertical.">?</button></label>
                             <input id="f-zMin" type="number" step="any" placeholder="ex: -10">
                         </div>
                         <div class="form-group">
-                            <label for="f-zMax">Altitude máxima - Z</label>
+                            <label for="f-zMax">Altitude máxima - Z <button class="help-btn" data-tip="Valor máximo de altitude (em metros) coberto pelo dado.">?</button></label>
                             <input id="f-zMax" type="number" step="any" placeholder="ex: 1200">
                         </div>
                         <div class="form-group">
-                            <label for="f-temporalFrom">Extensão temporal - De</label>
+                            <label for="f-temporalFrom">Extensão temporal - De <button class="help-btn" data-tip="Data de início do período temporal coberto pelos dados (ex: data do levantamento de campo ou início da série histórica).">?</button></label>
                             <input id="f-temporalFrom" type="date">
                         </div>
                         <div class="form-group">
-                            <label for="f-temporalTo">Extensão temporal - Para</label>
+                            <label for="f-temporalTo">Extensão temporal - Para <button class="help-btn" data-tip="Data de fim do período temporal coberto pelos dados.">?</button></label>
                             <input id="f-temporalTo" type="date">
                         </div>
                     </div>
@@ -430,12 +433,12 @@
         <div class="form-grid">
 
             <div class="form-group span-2">
-                <label for="f-statement">Linhagem - Instrução</label>
+                <label for="f-statement">Linhagem - Instrução <button class="help-btn" data-tip="Histórico de produção do dado: fontes utilizadas, metodologia, softwares e processos aplicados desde a coleta original.">?</button></label>
                 <textarea id="f-statement" rows="3" placeholder="Histórico e origem dos dados..."></textarea>
             </div>
 
             <div class="form-group span-2">
-                <label for="f-processStep">Etapas do Processo - Descrição</label>
+                <label for="f-processStep">Etapas do Processo - Descrição <button class="help-btn" data-tip="Descrição técnica das etapas de processamento realizadas (ex: reproje​ção, recorte, generalização, validação).">?</button></label>
                 <textarea id="f-processStep" rows="3" placeholder="Descreva as etapas de processamento..."></textarea>
             </div>
 
@@ -461,15 +464,15 @@
                 <div class="form-grid">
                     <div class="form-group">
                         <label>Sigla <span class="req">*</span></label>
-                        <input id="proc-mf-sigla" type="text" placeholder="ex: IPT">
+                        <input id="proc-mf-sigla" type="text" placeholder="ex: IPT" data-format="uppercase">
                     </div>
                     <div class="form-group">
                         <label>Organização <span class="req">*</span></label>
-                        <input id="proc-mf-org" type="text" placeholder="Nome completo">
+                        <input id="proc-mf-org" type="text" placeholder="Nome completo" data-format="titlecase">
                     </div>
                     <div class="form-group">
                         <label>E-mail</label>
-                        <input id="proc-mf-email" type="email" placeholder="contato@exemplo.com">
+                        <input id="proc-mf-email" type="email" placeholder="contato@exemplo.com" data-validate="email">
                     </div>
                     <div class="form-group">
                         <label>Regra</label>
@@ -489,19 +492,23 @@
                     </div>
                     <div class="form-group">
                         <label>Cargo / Departamento</label>
-                        <input id="proc-mf-position" type="text">
+                        <input id="proc-mf-position" type="text" data-validate="letters-only">
                     </div>
                     <div class="form-group">
                         <label>Telefone</label>
-                        <input id="proc-mf-phone" type="text" placeholder="(11) 0000-0000">
+                        <input id="proc-mf-phone" type="text" placeholder="+55 11 0000-0000" data-format="phone">
                     </div>
                     <div class="form-group span-2">
-                        <label>Endereço</label>
-                        <input id="proc-mf-address" type="text" placeholder="Rua, número">
+                        <label>Endereço <button class="help-btn" data-tip="Preencha logradouro, número e complemento separadamente.">?</button></label>
+                        <div class="address-split">
+                            <input id="proc-mf-address" type="text" placeholder="Logradouro (Rua, Av., ...)" class="addr-street">
+                            <input id="proc-mf-address-num" type="text" placeholder="Nº" class="addr-num">
+                            <input id="proc-mf-address-comp" type="text" placeholder="Complemento" class="addr-comp">
+                        </div>
                     </div>
                     <div class="form-group">
                         <label>Cidade</label>
-                        <input id="proc-mf-city" type="text">
+                        <input id="proc-mf-city" type="text" data-validate="letters-only">
                     </div>
                     <div class="form-group">
                         <label>Estado</label>
@@ -537,11 +544,11 @@
                     </div>
                     <div class="form-group">
                         <label>CEP</label>
-                        <input id="proc-mf-zip" type="text" placeholder="00000-000">
+                        <input id="proc-mf-zip" type="text" placeholder="00000-000" data-format="cep">
                     </div>
                     <div class="form-group">
                         <label>País</label>
-                        <input id="proc-mf-country" type="text" value="Brasil">
+                        <input id="proc-mf-country" type="text" value="Brasil" data-validate="letters-only">
                     </div>
                 </div>
             </div>
@@ -572,7 +579,7 @@
 
         <div class="form-grid">
             <div class="form-group span-2">
-                <label for="f-sourceDescription">Fonte - Descrição</label>
+                <label for="f-sourceDescription">Fonte - Descrição <button class="help-btn" data-tip="Identificação e descrição das fontes primárias utilizadas na produção do dado (ex: levantamento de campo, imagens, bases cartográficas).">?</button></label>
                 <textarea id="f-sourceDescription" rows="3" placeholder="Descreva a fonte dos dados..."></textarea>
             </div>
         </div>
@@ -634,17 +641,17 @@
                 <div class="form-grid">
                     <div class="form-group span-2">
                         <label>URL <span class="req">*</span></label>
-                        <input id="dist-mf-url" type="url" placeholder="https://...">
+                        <input id="dist-mf-url" type="url" placeholder="https://..." data-validate="url">
                     </div>
                     <div class="form-group">
-                        <label>Protocolo</label>
+                        <label>Protocolo <button class="help-btn" data-tip="Padrão de acesso ao recurso online.">?</button></label>
                         <select id="dist-mf-protocol">
-                            <option value="OGC:WMS">OGC:WMS</option>
-                            <option value="OGC:WFS">OGC:WFS</option>
-                            <option value="OGC:WCS">OGC:WCS</option>
-                            <option value="OGC:WPS">OGC:WPS</option>
-                            <option value="WWW:DOWNLOAD">WWW:DOWNLOAD</option>
-                            <option value="WWW:LINK">WWW:LINK</option>
+                            <option value="OGC:WMS" title="Web Map Service — serviço de mapas em imagem (visualização)">OGC:WMS</option>
+                            <option value="OGC:WFS" title="Web Feature Service — serviço de feições vetoriais (download/consulta)">OGC:WFS</option>
+                            <option value="OGC:WCS" title="Web Coverage Service — serviço de coberturas raster (grade ou imagem)">OGC:WCS</option>
+                            <option value="OGC:WPS" title="Web Processing Service — serviço de processamento remoto">OGC:WPS</option>
+                            <option value="WWW:DOWNLOAD" title="Link direto para download de arquivo">WWW:DOWNLOAD</option>
+                            <option value="WWW:LINK" title="Link para página web ou portal com informações do dado">WWW:LINK</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -687,57 +694,57 @@
         <div class="form-grid">
 
             <div class="form-group span-2">
-                <label for="f-licenseType">Tipo de Licença</label>
+                <label for="f-licenseType">Tipo de Licença <button class="help-btn" data-tip="Licença que rege o uso, reprodução e redistribuição do dado.">?</button></label>
                 <select id="f-licenseType" onchange="onLicenseChange(this.value)">
                     <option value="">- Selecione -</option>
-                    <option value="CC BY 4.0">CC BY 4.0 - Atribuição</option>
-                    <option value="CC BY-SA 4.0">CC BY-SA 4.0 - Atribuição-CompartilhaIgual</option>
-                    <option value="CC BY-NC 4.0">CC BY-NC 4.0 - Atribuição-NãoComercial</option>
-                    <option value="CC BY-NC-SA 4.0">CC BY-NC-SA 4.0 - Atribuição-NãoComercial-CompartilhaIgual</option>
-                    <option value="CC0">CC0 - Domínio Público</option>
-                    <option value="proprietary">Proprietário - Todos os direitos reservados (CDHU)</option>
-                    <option value="internal">Uso interno - CDHU</option>
-                    <option value="other">Outro</option>
+                    <option value="CC BY 4.0" title="Uso e redistribuição livres; obrigatório atribuir crédito ao autor">CC BY 4.0 - Atribuição</option>
+                    <option value="CC BY-SA 4.0" title="Como CC BY, mas derivações devem manter a mesma licença">CC BY-SA 4.0 - Atribuição-CompartilhaIgual</option>
+                    <option value="CC BY-NC 4.0" title="Uso livre somente para fins não comerciais">CC BY-NC 4.0 - Atribuição-NãoComercial</option>
+                    <option value="CC BY-NC-SA 4.0" title="Não comercial e derivações com a mesma licença">CC BY-NC-SA 4.0 - Atribuição-NãoComercial-CompartilhaIgual</option>
+                    <option value="CC0" title="Domínio público — sem nenhuma restrição de uso ou atribuição">CC0 - Domínio Público</option>
+                    <option value="proprietary" title="Todos os direitos reservados à CDHU; uso somente com autorização expressa">Proprietário - Todos os direitos reservados (CDHU)</option>
+                    <option value="internal" title="Uso restrito a colaboradores e sistemas internos da CDHU">Uso interno - CDHU</option>
+                    <option value="other" title="Outra licença — descreva as condições nas limitações de uso abaixo">Outro</option>
                 </select>
             </div>
 
             <div class="form-group span-2">
-                <label for="f-useLimitation">Limitações de Uso</label>
+                <label for="f-useLimitation">Limitações de Uso <button class="help-btn" data-tip="Restrições ou condições específicas para uso do dado (ex: proibição de uso comercial, necessidade de autorização prévia).">?</button></label>
                 <textarea id="f-useLimitation" rows="3" placeholder="Descreva as limitações de uso aplicáveis..."></textarea>
             </div>
 
             <div class="form-group">
-                <label for="f-accessConstraints">Restrições de Acesso</label>
+                <label for="f-accessConstraints">Restrições de Acesso <button class="help-btn" data-tip="Tipo de restrição que controla quem pode acessar o dado.">?</button></label>
                 <select id="f-accessConstraints">
                     <option value="">- Selecione -</option>
-                    <option value="unrestricted">Sem restrições</option>
-                    <option value="copyright">Direitos autorais</option>
-                    <option value="license">Licença</option>
-                    <option value="intellectualPropertyRights">Direitos de prop. intelectual</option>
-                    <option value="restricted">Restrito</option>
-                    <option value="otherRestrictions">Outras restrições</option>
-                    <option value="patent">Patente</option>
-                    <option value="trademark">Marca registrada</option>
+                    <option value="unrestricted" title="Qualquer pessoa pode acessar sem restrições">Sem restrições</option>
+                    <option value="copyright" title="Acesso vinculado a direitos autorais do produtor">Direitos autorais</option>
+                    <option value="license" title="Acesso sujeito a aceite de termos de licença">Licença</option>
+                    <option value="intellectualPropertyRights" title="Acesso vinculado a direitos de propriedade intelectual">Direitos de prop. intelectual</option>
+                    <option value="restricted" title="Acesso restrito a usuários ou grupos específicos">Restrito</option>
+                    <option value="otherRestrictions" title="Outras restrições de acesso não listadas acima">Outras restrições</option>
+                    <option value="patent" title="Dado protegido por patente registrada">Patente</option>
+                    <option value="trademark" title="Dado protegido por marca registrada">Marca registrada</option>
                 </select>
             </div>
 
             <div class="form-group">
-                <label for="f-useConstraints">Restrições de Uso</label>
+                <label for="f-useConstraints">Restrições de Uso <button class="help-btn" data-tip="Tipo de restrição que controla como o dado pode ser utilizado após o acesso.">?</button></label>
                 <select id="f-useConstraints">
                     <option value="">- Selecione -</option>
-                    <option value="unrestricted">Sem restrições</option>
-                    <option value="copyright">Direitos autorais</option>
-                    <option value="license">Licença</option>
-                    <option value="intellectualPropertyRights">Direitos de prop. intelectual</option>
-                    <option value="restricted">Restrito</option>
-                    <option value="otherRestrictions">Outras restrições</option>
-                    <option value="patent">Patente</option>
-                    <option value="trademark">Marca registrada</option>
+                    <option value="unrestricted" title="Sem restrições de uso após acesso">Sem restrições</option>
+                    <option value="copyright" title="Uso vinculado a direitos autorais">Direitos autorais</option>
+                    <option value="license" title="Uso sujeito a termos de licença">Licença</option>
+                    <option value="intellectualPropertyRights" title="Uso vinculado a direitos de propriedade intelectual">Direitos de prop. intelectual</option>
+                    <option value="restricted" title="Uso restrito conforme condições específicas">Restrito</option>
+                    <option value="otherRestrictions" title="Outras restrições de uso não listadas acima">Outras restrições</option>
+                    <option value="patent" title="Uso restrito por patente">Patente</option>
+                    <option value="trademark" title="Uso restrito por marca registrada">Marca registrada</option>
                 </select>
             </div>
 
             <div class="form-group span-2">
-                <label for="f-otherConstraints">Outros Direitos / Atribuição</label>
+                <label for="f-otherConstraints">Outros Direitos / Atribuição <button class="help-btn" data-tip="Texto de atribuição ou condições complementares de direitos autorais (ex: © CDHU — Todos os direitos reservados).">?</button></label>
                 <textarea id="f-otherConstraints" rows="3"
                     placeholder="Ex: © CDHU - Companhia de Desenvolvimento Habitacional e Urbano do Estado de São Paulo. Todos os direitos reservados."></textarea>
             </div>
@@ -750,23 +757,23 @@
         <div class="form-grid">
 
             <div class="form-group span-2">
-                <label for="f-metadataId">Identificador do Metadado</label>
+                <label for="f-metadataId">Identificador do Metadado <button class="help-btn" data-tip="UUID gerado automaticamente para identificar unicamente este registro de metadado. Não deve ser alterado manualmente.">?</button></label>
                 <input id="f-metadataId" type="text" readonly tabindex="-1">
             </div>
 
             <div class="form-group">
-                <label for="f-metadataLanguage">Idioma do Metadado</label>
+                <label for="f-metadataLanguage">Idioma do Metadado <button class="help-btn" data-tip="Idioma em que os campos textuais deste metadado estão escritos (geralmente o mesmo do dado).">?</button></label>
                 <select id="f-metadataLanguage">
-                    <option value="por">🇧🇷 Português</option>
-                    <option value="eng">🇺🇸 Inglês</option>
-                    <option value="spa">🇪🇸 Espanhol</option>
-                    <option value="fra">🇫🇷 Francês</option>
-                    <option value="ger">🇩🇪 Alemão</option>
+                    <option value="por" title="Língua portuguesa">🇧🇷 Português</option>
+                    <option value="eng" title="Língua inglesa">🇺🇸 Inglês</option>
+                    <option value="spa" title="Língua espanhola">🇪🇸 Espanhol</option>
+                    <option value="fra" title="Língua francesa">🇫🇷 Francês</option>
+                    <option value="ger" title="Língua alemã">🇩🇪 Alemão</option>
                 </select>
             </div>
 
             <div class="form-group">
-                <label for="f-dateStamp">Data e hora de criação do metadado</label>
+                <label for="f-dateStamp">Data e hora de criação do metadado <button class="help-btn" data-tip="Data em que este registro de metadado foi criado ou atualizado pela última vez.">?</button></label>
                 <input id="f-dateStamp" type="datetime-local">
             </div>
 
@@ -792,15 +799,15 @@
                 <div class="form-grid">
                     <div class="form-group">
                         <label>Sigla <span class="req">*</span></label>
-                        <input id="meta-mf-sigla" type="text" placeholder="ex: CDHU">
+                        <input id="meta-mf-sigla" type="text" placeholder="ex: CDHU" data-format="uppercase">
                     </div>
                     <div class="form-group">
                         <label>Organização <span class="req">*</span></label>
-                        <input id="meta-mf-org" type="text" placeholder="Nome completo">
+                        <input id="meta-mf-org" type="text" placeholder="Nome completo" data-format="titlecase">
                     </div>
                     <div class="form-group">
                         <label>E-mail</label>
-                        <input id="meta-mf-email" type="email" placeholder="contato@exemplo.com">
+                        <input id="meta-mf-email" type="email" placeholder="contato@exemplo.com" data-validate="email">
                     </div>
                     <div class="form-group">
                         <label>Regra</label>
@@ -820,19 +827,23 @@
                     </div>
                     <div class="form-group">
                         <label>Cargo / Departamento</label>
-                        <input id="meta-mf-position" type="text">
+                        <input id="meta-mf-position" type="text" data-validate="letters-only">
                     </div>
                     <div class="form-group">
                         <label>Telefone</label>
-                        <input id="meta-mf-phone" type="text" placeholder="(11) 0000-0000">
+                        <input id="meta-mf-phone" type="text" placeholder="+55 11 0000-0000" data-format="phone">
                     </div>
                     <div class="form-group span-2">
-                        <label>Endereço</label>
-                        <input id="meta-mf-address" type="text" placeholder="Rua, número">
+                        <label>Endereço <button class="help-btn" data-tip="Preencha logradouro, número e complemento separadamente.">?</button></label>
+                        <div class="address-split">
+                            <input id="meta-mf-address" type="text" placeholder="Logradouro (Rua, Av., ...)" class="addr-street">
+                            <input id="meta-mf-address-num" type="text" placeholder="Nº" class="addr-num">
+                            <input id="meta-mf-address-comp" type="text" placeholder="Complemento" class="addr-comp">
+                        </div>
                     </div>
                     <div class="form-group">
                         <label>Cidade</label>
-                        <input id="meta-mf-city" type="text">
+                        <input id="meta-mf-city" type="text" data-validate="letters-only">
                     </div>
                     <div class="form-group">
                         <label>Estado</label>
@@ -868,11 +879,11 @@
                     </div>
                     <div class="form-group">
                         <label>CEP</label>
-                        <input id="meta-mf-zip" type="text" placeholder="00000-000">
+                        <input id="meta-mf-zip" type="text" placeholder="00000-000" data-format="cep">
                     </div>
                     <div class="form-group">
                         <label>País</label>
-                        <input id="meta-mf-country" type="text" value="Brasil">
+                        <input id="meta-mf-country" type="text" value="Brasil" data-validate="letters-only">
                     </div>
                 </div>
             </div>

@@ -2,6 +2,8 @@
 var bridge;
 
 document.addEventListener("DOMContentLoaded", function () {
+    _initHelpTooltip();
+    _initFieldValidation();
     if (typeof qt !== "undefined") {
         new QWebChannel(qt.webChannelTransport, function (channel) {
             window.bridge = channel.objects.bridge;
@@ -11,6 +13,241 @@ document.addEventListener("DOMContentLoaded", function () {
         console.warn("QWebChannel não detectado. Modo desenvolvimento local?");
     }
 });
+
+function _initHelpTooltip() {
+    var tip = document.createElement('div');
+    tip.id = 'help-tooltip';
+    var arrow = document.createElement('div');
+    arrow.id = 'help-tooltip-arrow';
+    tip.appendChild(arrow);
+    document.body.appendChild(tip);
+
+    document.addEventListener('mouseover', function (e) {
+        var btn = e.target.closest ? e.target.closest('.help-btn') : null;
+        if (!btn) return;
+        var text = btn.getAttribute('data-tip');
+        if (!text) return;
+        // set text without overwriting the arrow child
+        tip.childNodes[0] && tip.childNodes[0].nodeType === 3
+            ? (tip.childNodes[0].nodeValue = text)
+            : tip.insertBefore(document.createTextNode(text), arrow);
+        tip.style.display = 'block';
+        _positionHelpTip(tip, btn);
+    });
+
+    document.addEventListener('mouseout', function (e) {
+        var btn = e.target.closest ? e.target.closest('.help-btn') : null;
+        if (!btn) return;
+        tip.style.display = 'none';
+    });
+}
+
+function _positionHelpTip(tip, btn) {
+    var r = btn.getBoundingClientRect();
+    var vw = window.innerWidth || document.documentElement.clientWidth;
+    var tw = tip.offsetWidth;
+    var th = tip.offsetHeight;
+    var gap = 8;
+
+    var below = false;
+    var top = r.top - th - gap;
+    var left = r.left + r.width / 2 - tw / 2;
+
+    if (left < 8) left = 8;
+    if (left + tw > vw - 8) left = vw - tw - 8;
+
+    if (top < 8) {
+        top = r.bottom + gap;
+        below = true;
+    }
+
+    tip.style.top = top + 'px';
+    tip.style.left = left + 'px';
+    tip.className = below ? 'tip-below' : 'tip-above';
+
+    var arrow = document.getElementById('help-tooltip-arrow');
+    if (arrow) {
+        var btnCx = r.left + r.width / 2;
+        var arrowLeft = btnCx - left - 6;
+        if (arrowLeft < 6) arrowLeft = 6;
+        if (arrowLeft > tw - 18) arrowLeft = tw - 18;
+        arrow.style.left = arrowLeft + 'px';
+    }
+}
+
+// ─── Field validation & formatting ───────────────────────────────────────────
+
+function _initFieldValidation() {
+    document.addEventListener('input', function (e) {
+        var el = e.target;
+        var tag = el.tagName;
+        var f = el.getAttribute('data-format');
+        var v = el.getAttribute('data-validate');
+
+        // Phone: only digits and leading + allowed while typing; max 13 digits
+        if (f === 'phone') {
+            var phoneClean = el.value.replace(/[^\d+]/g, '');
+            var phoneDigits = phoneClean.replace(/\D/g, '');
+            if (phoneDigits.length > 13) {
+                phoneClean = phoneClean.slice(0, phoneClean.length - (phoneDigits.length - 13));
+            }
+            if (phoneClean !== el.value) el.value = phoneClean;
+            return;
+        }
+        // CEP: only digits allowed while typing; max 8 digits
+        if (f === 'cep') {
+            var cepClean = el.value.replace(/\D/g, '').slice(0, 8);
+            if (cepClean !== el.value) el.value = cepClean;
+            return;
+        }
+        // Sigla: uppercase + no spaces in real time
+        if (f === 'uppercase') {
+            var up = el.value.replace(/\s/g, '').toUpperCase();
+            if (up !== el.value) el.value = up;
+            return;
+        }
+
+        // Strip < > from all other text inputs and textareas (breaks XML)
+        if (tag === 'TEXTAREA' || (tag === 'INPUT' && el.type !== 'date' && el.type !== 'datetime-local' && el.type !== 'number')) {
+            var stripped = el.value.replace(/[<>]/g, '');
+            if (stripped !== el.value) el.value = stripped;
+        }
+
+        if (v === 'no-digits')    _warnNoDigits(el);
+        if (v === 'digits-only')  _enforceDigitsOnly(el);
+        if (v === 'letters-only') _enforceLettersOnly(el);
+        if (v === 'email')        _clearFieldError(el);
+    });
+
+    document.addEventListener('focusout', function (e) {
+        var el = e.target;
+        var f = el.getAttribute('data-format');
+        var v = el.getAttribute('data-validate');
+        if (f === 'phone')     _validatePhone(el);
+        if (f === 'cep')       _validateCep(el);
+        if (f === 'titlecase') { el.value = _toTitleCase(el.value); }
+        if (v === 'email')     _checkEmail(el);
+        if (v === 'url')       _checkUrl(el);
+        if (v === 'no-digits') _warnNoDigits(el);
+    });
+}
+
+var _PT_PREP = /^(de|da|do|das|dos|e|em|a|o|as|os|para|por|com|sem|sob|sobre|até|desde|entre|ante|após|perante|segundo|conforme|mediante|via|ao|à|às|aos|no|na|nos|nas|num|nuns|numa|numas)$/i;
+
+function _toTitleCase(str) {
+    if (!str) return str;
+    return str.trim().replace(/\S+/g, function (word, offset) {
+        if (offset > 0 && _PT_PREP.test(word)) return word.toLowerCase();
+        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    });
+}
+
+function _setFieldError(el, msg) {
+    el.classList.add('error');
+    var sib = el.nextElementSibling;
+    if (sib && sib.classList.contains('field-err')) { sib.textContent = msg; return; }
+    var span = document.createElement('span');
+    span.className = 'field-err';
+    span.textContent = msg;
+    el.parentNode.insertBefore(span, el.nextSibling);
+}
+
+function _clearFieldError(el) {
+    el.classList.remove('error');
+    var sib = el.nextElementSibling;
+    if (sib && sib.classList.contains('field-err')) sib.remove();
+}
+
+function _warnNoDigits(el) {
+    if (!el.value) { _clearFieldError(el); return; }
+    if (/\d/.test(el.value)) _setFieldError(el, 'Nome não deve conter números.');
+    else _clearFieldError(el);
+}
+
+function _enforceDigitsOnly(el) {
+    var clean = el.value.replace(/\D/g, '');
+    if (clean !== el.value) el.value = clean;
+}
+
+function _enforceLettersOnly(el) {
+    // Allow letters (incl. accented), spaces, hyphens, dots, apostrophes, commas
+    var clean = el.value.replace(/[^a-zA-ZÀ-ÿ\s\-\.',]/g, '');
+    if (clean !== el.value) el.value = clean;
+}
+
+function _checkEmail(el) {
+    var v = (el.value || '').trim();
+    if (!v) { _clearFieldError(el); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v))
+        _setFieldError(el, 'E-mail inválido (ex: nome@dominio.com.br).');
+    else _clearFieldError(el);
+}
+
+function _checkUrl(el) {
+    var v = (el.value || '').trim();
+    if (!v) { _clearFieldError(el); return; }
+    if (!/^https?:\/\/.+/.test(v))
+        _setFieldError(el, 'URL deve começar com http:// ou https://');
+    else _clearFieldError(el);
+}
+
+function _validatePhone(el) {
+    var digits = (el.value || '').replace(/\D/g, '');
+    if (!digits) { el.value = ''; _clearFieldError(el); return; }
+    if (digits.length < 8) {
+        _setFieldError(el, 'Telefone incompleto (mínimo 8 dígitos).');
+        return;
+    }
+    if (digits.length === 8) {
+        _setFieldError(el, 'DDD não informado. Ex: +55 11 ' + digits.slice(0, 4) + '-' + digits.slice(4));
+        return;
+    }
+    if (digits.length === 9) {
+        _setFieldError(el, 'DDD não informado. Ex: +55 11 ' + digits.slice(0, 5) + '-' + digits.slice(5));
+        return;
+    }
+    var formatted = _fmtPhone(digits);
+    if (!formatted) {
+        _setFieldError(el, 'Telefone inválido. Use: +55 11 XXXX-XXXX');
+        return;
+    }
+    el.value = formatted;
+    _clearFieldError(el);
+}
+
+// Receives only digit string; returns formatted string or null if unrecognised.
+function _fmtPhone(digits) {
+    var ddd, num;
+    if (digits.length === 10) {
+        ddd = digits.slice(0, 2); num = digits.slice(2);
+        return '+55 ' + ddd + ' ' + num.slice(0, 4) + '-' + num.slice(4);
+    }
+    if (digits.length === 11) {
+        ddd = digits.slice(0, 2); num = digits.slice(2);
+        return '+55 ' + ddd + ' ' + num.slice(0, 5) + '-' + num.slice(5);
+    }
+    if (digits.length === 12 && digits.startsWith('55')) {
+        ddd = digits.slice(2, 4); num = digits.slice(4);
+        return '+55 ' + ddd + ' ' + num.slice(0, 4) + '-' + num.slice(4);
+    }
+    if (digits.length === 13 && digits.startsWith('55')) {
+        ddd = digits.slice(2, 4); num = digits.slice(4);
+        return '+55 ' + ddd + ' ' + num.slice(0, 5) + '-' + num.slice(5);
+    }
+    return null;
+}
+
+function _validateCep(el) {
+    var val = (el.value || '').trim();
+    if (!val) { _clearFieldError(el); return; }
+    var digits = val.replace(/\D/g, '');
+    if (digits.length !== 8) {
+        _setFieldError(el, 'CEP inválido. Informe 8 dígitos (ex: 01310-100).');
+        return;
+    }
+    el.value = digits.slice(0, 5) + '-' + digits.slice(5);
+    _clearFieldError(el);
+}
 
 var _suggBoxMap = {
     "search-suggestions": "contact-search",
@@ -84,11 +321,11 @@ function initApp() {
 }
 
 function updateLayerBadge(name) {
-    var badge  = document.getElementById('layer-badge');
+    var badge = document.getElementById('layer-badge');
     var nameEl = document.getElementById('layer-badge-name');
     if (!badge || !nameEl) return;
     if (name) {
-        nameEl.textContent  = name;
+        nameEl.textContent = name;
         badge.style.display = 'flex';
     } else {
         badge.style.display = 'none';
@@ -116,7 +353,7 @@ function onPanelLoaded(panelId) {
     if (panelId === "login") {
         if (typeof bridge !== 'undefined') {
             bridge.login_loading.connect(function (msg) { setLoginState(true, msg); });
-            bridge.login_error.connect(function (msg)   { setLoginError(msg); });
+            bridge.login_error.connect(function (msg) { setLoginError(msg); });
         }
         return;
     }
@@ -486,10 +723,10 @@ var _distSugg = [];
 var _distStagedLayer = null;
 
 function searchGeoServer(q) {
-    var box     = document.getElementById('dist-suggestions');
+    var box = document.getElementById('dist-suggestions');
     var spinner = document.getElementById('dist-spinner');
     if (!q || q.length < 2) {
-        if (box)     box.style.display     = 'none';
+        if (box) box.style.display = 'none';
         if (spinner) spinner.style.display = 'none';
         return;
     }
@@ -751,9 +988,9 @@ function renderContacts() {
 
 function buildAccordion(c, idx) {
     var d = c.data;
-    var label = 'Contato ' + (idx + 1) + (d.sigla ? ' — ' + d.sigla : '');
+    var label = 'Contato ' + (idx + 1) + (d.sigla ? ' - ' + d.sigla : '');
     var badge = c.isManual === 'gn'
-        ? '<span class="badge-gn">Catálogo Online (GN)</span>'
+        ? '<span class="badge-gn">Catálogo Online</span>'
         : c.isManual
             ? '<span class="badge-manual">Manual</span>'
             : '<span class="badge-preset">Catálogo Offline</span>';
@@ -769,11 +1006,13 @@ function buildAccordion(c, idx) {
         '</div>';
 }
 
-function field(label, val, editable, inputId) {
+function field(label, val, editable, inputId, tip, attrs) {
+    var helpBtn = tip ? ' <button class="help-btn" data-tip="' + tip + '">?</button>' : '';
+    var extra = attrs ? ' ' + attrs : '';
     var input = editable
-        ? '<input id="' + inputId + '" type="text" value="' + (val || '') + '">'
+        ? '<input id="' + inputId + '" type="text" value="' + (val || '') + '"' + extra + '>'
         : '<div class="readonly-field">' + (val || '—') + '</div>';
-    return '<div class="form-group"><label>' + label + '</label>' + input + '</div>';
+    return '<div class="form-group"><label>' + label + helpBtn + '</label>' + input + '</div>';
 }
 
 function buildAccordionFields(d, idx, isManual) {
@@ -781,24 +1020,24 @@ function buildAccordionFields(d, idx, isManual) {
     var roleOpts = ROLE_OPTIONS.map(function (r) {
         return '<option value="' + r.value + '"' + (r.value === selectedRole ? ' selected' : '') + '>' + r.label + '</option>';
     }).join('');
-    var roleField = '<div class="form-group"><label>Regra</label>' +
+    var roleField = '<div class="form-group"><label>Regra <button class="help-btn" data-tip="Papel desta organização ou pessoa em relação ao dado (ex: Dono = responsável; Ponto de contato = para dúvidas).">?</button></label>' +
         '<select id="role-acc-' + idx + '" class="role-select" onchange="updateRole(' + idx + ', this.value)">' + roleOpts + '</select></div>';
 
-    return field('Sigla', d.sigla, isManual, 'acc-' + idx + '-sigla') +
-        field('Organização', d.org, isManual, 'acc-' + idx + '-org') +
+    return field('Sigla', d.sigla, isManual, 'acc-' + idx + '-sigla', 'Abreviação ou acrônimo da organização (ex: CDHU, IPT, IBGE).', 'data-format="uppercase"') +
+        field('Organização', d.org, isManual, 'acc-' + idx + '-org', 'Nome completo da organização responsável.', 'data-format="titlecase"') +
         roleField +
-        field('E-mail', d.email, isManual, 'acc-' + idx + '-email') +
-        field('Cargo', d.position, isManual, 'acc-' + idx + '-position') +
-        field('Telefone', d.phone, isManual, 'acc-' + idx + '-phone') +
-        '<div class="form-group span-2"><label>Endereço</label>' +
+        field('E-mail', d.email, isManual, 'acc-' + idx + '-email', 'Endereço de e-mail para contato.', 'data-validate="email"') +
+        field('Cargo', d.position, isManual, 'acc-' + idx + '-position', 'Cargo ou departamento do responsável na organização.', 'data-validate="letters-only"') +
+        field('Telefone', d.phone, isManual, 'acc-' + idx + '-phone', 'Telefone de contato com DDD (ex: (11) 3111-0000).', 'data-format="phone"') +
+        '<div class="form-group span-2"><label>Endereço <button class="help-btn" data-tip="Logradouro completo da organização.">?</button></label>' +
         (isManual
             ? '<input id="acc-' + idx + '-address" type="text" value="' + (d.address || '') + '">'
             : '<div class="readonly-field">' + (d.address || '—') + '</div>') +
         '</div>' +
-        field('Cidade', d.city, isManual, 'acc-' + idx + '-city') +
+        field('Cidade', d.city, isManual, 'acc-' + idx + '-city', null, 'data-validate="letters-only"') +
         field('Estado', d.state, isManual, 'acc-' + idx + '-state') +
-        field('CEP', d.zip, isManual, 'acc-' + idx + '-zip') +
-        field('País', d.country, isManual, 'acc-' + idx + '-country');
+        field('CEP', d.zip, isManual, 'acc-' + idx + '-zip', 'Código de Endereçamento Postal no formato 00000-000.', 'data-format="cep"') +
+        field('País', d.country, isManual, 'acc-' + idx + '-country', null, 'data-validate="letters-only"');
 }
 
 function toggleAccordion(idx) {
@@ -834,12 +1073,12 @@ function removeContact(idx) {
 // ─── Busca de contatos (via bridge) ───────────────────────────────────────────
 
 var _suggestionResults = [];
-var _localResults      = [];
-var _gnResults         = [];
-var _gnSearchTimer     = null;
-var _gnLoading         = { 'main': false, 'proc': false, 'meta': false };
+var _localResults = [];
+var _gnResults = [];
+var _gnSearchTimer = null;
+var _gnLoading = { 'main': false, 'proc': false, 'meta': false };
 
-var _GN_LOADING_ROW = '<div class="suggestion-loading"><span class="suggestion-spinner"></span>Buscando no Catálogo Online (GN)…</div>';
+var _GN_LOADING_ROW = '<div class="suggestion-loading"><span class="suggestion-spinner"></span>Buscando no Catálogo Online…</div>';
 
 function _renderContactSuggestions(q) {
     var combined = _gnResults.concat(_localResults.filter(function (r) {
@@ -918,21 +1157,21 @@ function toggleManualForm() {
 
 var procContacts = [];
 var metaContacts = [];
-var _procSugg    = [];
-var _metaSugg    = [];
-var _procGnSugg  = [];
-var _metaGnSugg  = [];
-var _gnTimers    = {};
+var _procSugg = [];
+var _metaSugg = [];
+var _procGnSugg = [];
+var _metaGnSugg = [];
+var _gnTimers = {};
 
-function _sArr(key)      { return key === 'proc' ? procContacts : metaContacts; }
-function _sSugg(key)     { return key === 'proc' ? _procSugg    : _metaSugg; }
-function _getGnSugg(key) { return key === 'proc' ? _procGnSugg  : _metaGnSugg; }
-function _setSArr(key, v)   { if (key === 'proc') procContacts = v; else metaContacts = v; }
-function _setSugg(key, v)   { if (key === 'proc') _procSugg    = v; else _metaSugg    = v; }
-function _setSuggGn(key, v) { if (key === 'proc') _procGnSugg  = v; else _metaGnSugg  = v; }
+function _sArr(key) { return key === 'proc' ? procContacts : metaContacts; }
+function _sSugg(key) { return key === 'proc' ? _procSugg : _metaSugg; }
+function _getGnSugg(key) { return key === 'proc' ? _procGnSugg : _metaGnSugg; }
+function _setSArr(key, v) { if (key === 'proc') procContacts = v; else metaContacts = v; }
+function _setSugg(key, v) { if (key === 'proc') _procSugg = v; else _metaSugg = v; }
+function _setSuggGn(key, v) { if (key === 'proc') _procGnSugg = v; else _metaGnSugg = v; }
 
 function _renderForSuggestions(key, q) {
-    var gnList   = _getGnSugg(key);
+    var gnList = _getGnSugg(key);
     var combined = gnList.concat(_sSugg(key).filter(function (r) {
         return !gnList.some(function (g) { return g.email && g.email === r.email; });
     }));
@@ -946,7 +1185,7 @@ function _renderForSuggestions(key, q) {
         }
     } else {
         html = combined.map(function (r, i) {
-            var src   = r._source === 'gn' ? '<span style="font-size:10px;font-weight:700;color:var(--accent);margin-right:4px">GN</span>' : '';
+            var src = r._source === 'gn' ? '<span style="font-size:10px;font-weight:700;color:var(--accent);margin-right:4px">GN</span>' : '';
             var label = src + (r.sigla ? '<b>' + escHtml(r.sigla) + '</b> — ' : '') + escHtml(r.org || '?');
             return '<div class="suggestion-item" onclick="pickFor(\'' + key + '\',' + i + ')">' + label + '</div>';
         }).join('');
@@ -1044,7 +1283,7 @@ function buildAccordionFor(c, idx, key) {
     var d = c.data;
     var lbl = 'Contato ' + (idx + 1) + (d.sigla ? ' — ' + d.sigla : '');
     var badge = c.isManual === 'gn'
-        ? '<span class="badge-gn">Catálogo Online (GN)</span>'
+        ? '<span class="badge-gn">Catálogo Online</span>'
         : c.isManual
             ? '<span class="badge-manual">Manual</span>'
             : '<span class="badge-preset">Catálogo Offline</span>';
@@ -1054,22 +1293,22 @@ function buildAccordionFor(c, idx, key) {
     }).join('');
     var editable = c.isManual === true;
     var flds =
-        field('Sigla', d.sigla, editable, 'af-' + key + '-' + idx + '-sigla') +
-        field('Organização', d.org, editable, 'af-' + key + '-' + idx + '-org') +
-        '<div class="form-group"><label>Regra</label>' +
+        field('Sigla', d.sigla, editable, 'af-' + key + '-' + idx + '-sigla', 'Abreviação ou acrônimo da organização (ex: CDHU, IPT, IBGE).', 'data-format="uppercase"') +
+        field('Organização', d.org, editable, 'af-' + key + '-' + idx + '-org', 'Nome completo da organização responsável.', 'data-format="titlecase"') +
+        '<div class="form-group"><label>Regra <button class="help-btn" data-tip="Papel desta organização ou pessoa em relação ao dado (ex: Dono = responsável; Ponto de contato = para dúvidas).">?</button></label>' +
         '<select id="role-' + key + '-a-' + idx + '" class="role-select" onchange="updateRoleFor(\'' + key + '\',' + idx + ',this.value)">' + rOpts + '</select></div>' +
-        field('E-mail', d.email, editable, 'af-' + key + '-' + idx + '-email') +
-        field('Cargo', d.position, editable, 'af-' + key + '-' + idx + '-position') +
-        field('Telefone', d.phone, editable, 'af-' + key + '-' + idx + '-phone') +
-        '<div class="form-group span-2"><label>Endereço</label>' +
+        field('E-mail', d.email, editable, 'af-' + key + '-' + idx + '-email', 'Endereço de e-mail para contato.', 'data-validate="email"') +
+        field('Cargo', d.position, editable, 'af-' + key + '-' + idx + '-position', 'Cargo ou departamento do responsável na organização.', 'data-validate="letters-only"') +
+        field('Telefone', d.phone, editable, 'af-' + key + '-' + idx + '-phone', 'Telefone de contato com DDD (ex: (11) 3111-0000).', 'data-format="phone"') +
+        '<div class="form-group span-2"><label>Endereço <button class="help-btn" data-tip="Logradouro completo da organização.">?</button></label>' +
         (editable
             ? '<input id="af-' + key + '-' + idx + '-address" type="text" value="' + (d.address || '') + '">'
             : '<div class="readonly-field">' + (d.address || '—') + '</div>') +
         '</div>' +
-        field('Cidade', d.city, editable, 'af-' + key + '-' + idx + '-city') +
+        field('Cidade', d.city, editable, 'af-' + key + '-' + idx + '-city', null, 'data-validate="letters-only"') +
         field('Estado', d.state, editable, 'af-' + key + '-' + idx + '-state') +
-        field('CEP', d.zip, editable, 'af-' + key + '-' + idx + '-zip') +
-        field('País', d.country, editable, 'af-' + key + '-' + idx + '-country');
+        field('CEP', d.zip, editable, 'af-' + key + '-' + idx + '-zip', 'Código de Endereçamento Postal no formato 00000-000.', 'data-format="cep"') +
+        field('País', d.country, editable, 'af-' + key + '-' + idx + '-country', null, 'data-validate="letters-only"');
     return '<div class="contact-accordion">' +
         '<button class="accordion-header" onclick="toggleAccordionFor(\'' + key + '\',' + idx + ')">' +
         '<span class="acc-arrow" id="arr-' + key + '-' + idx + '"><img class="acc-chevron" src="../../img/chevron_down.svg"></span>' +
@@ -1104,16 +1343,17 @@ function submitSectionManual(key) {
     var g = function (id) { var el = document.getElementById(key + '-mf-' + id); return el ? el.value.trim() : ''; };
     var sigla = g('sigla'), org = g('org');
     if (!sigla && !org) { alert('Informe ao menos Sigla ou Organização.'); return; }
+    var addrParts = [g('address'), g('address-num'), g('address-comp')].filter(Boolean);
     _sArr(key).push({
         isManual: true,
         data: {
             sigla: sigla, org: org, email: g('email'), role: g('role') || 'pointOfContact',
             position: g('position'), phone: g('phone'),
-            address: g('address'), city: g('city'), state: g('state'), zip: g('zip'),
+            address: addrParts.join(', '), city: g('city'), state: g('state'), zip: g('zip'),
             country: g('country') || 'Brasil'
         }
     });
-    ['sigla', 'org', 'email', 'position', 'phone', 'address', 'city', 'zip'].forEach(function (f) {
+    ['sigla', 'org', 'email', 'position', 'phone', 'address', 'address-num', 'address-comp', 'city', 'zip'].forEach(function (f) {
         var el = document.getElementById(key + '-mf-' + f); if (el) el.value = '';
     });
     var stateEl = document.getElementById(key + '-mf-state'); if (stateEl) stateEl.value = '';
@@ -1199,14 +1439,14 @@ function hideLoginLoading() {
 function setLoginState(loading) {
     if (loading) { showLoginLoading(); } else { hideLoginLoading(); }
     var errEl = document.getElementById('login-error-msg') ||
-                document.getElementById('login-error-msg-adm');
+        document.getElementById('login-error-msg-adm');
     if (!loading && errEl) errEl.style.display = 'none';
 }
 
 function setLoginError(msg) {
     hideLoginLoading();
     var errEl = document.getElementById('login-error-msg') ||
-                document.getElementById('login-error-msg-adm');
+        document.getElementById('login-error-msg-adm');
     if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
     else { alert(msg); }
 }
@@ -1218,6 +1458,7 @@ function submitManualContact() {
     };
     var sigla = g("sigla"), org = g("org");
     if (!sigla && !org) { alert("Informe ao menos Sigla ou Organização."); return; }
+    var addrParts = [g("address"), g("address-num"), g("address-comp")].filter(Boolean);
     contacts.push({
         isManual: true,
         data: {
@@ -1227,14 +1468,14 @@ function submitManualContact() {
             role: g("role"),
             position: g("position"),
             phone: g("phone"),
-            address: g("address"),
+            address: addrParts.join(', '),
             city: g("city"),
             state: g("state"),
             zip: g("zip"),
             country: g("country") || "Brasil"
         }
     });
-    ["sigla", "org", "email", "role", "position", "phone", "address", "city", "state", "zip"].forEach(function (f) {
+    ["sigla", "org", "email", "role", "position", "phone", "address", "address-num", "address-comp", "city", "state", "zip"].forEach(function (f) {
         var el = document.getElementById("mf-" + f);
         if (el) el.value = "";
     });
