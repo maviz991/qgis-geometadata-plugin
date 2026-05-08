@@ -84,13 +84,13 @@ function _initFieldValidation() {
         var f = el.getAttribute('data-format');
         var v = el.getAttribute('data-validate');
 
-        // Phone: only digits and leading + allowed while typing; max 13 digits
+        // Phone: + only at position 0; digits only after; max 15 with DDI, 13 without
         if (f === 'phone') {
-            var phoneClean = el.value.replace(/[^\d+]/g, '');
-            var phoneDigits = phoneClean.replace(/\D/g, '');
-            if (phoneDigits.length > 13) {
-                phoneClean = phoneClean.slice(0, phoneClean.length - (phoneDigits.length - 13));
-            }
+            var hasPlus = el.value.charAt(0) === '+';
+            var phoneDigits = el.value.replace(/\D/g, '');
+            var maxD = hasPlus ? 15 : 13;
+            if (phoneDigits.length > maxD) phoneDigits = phoneDigits.slice(0, maxD);
+            var phoneClean = hasPlus ? '+' + phoneDigits : phoneDigits;
             if (phoneClean !== el.value) el.value = phoneClean;
             return;
         }
@@ -192,7 +192,23 @@ function _checkUrl(el) {
 }
 
 function _validatePhone(el) {
-    var digits = (el.value || '').replace(/\D/g, '');
+    var raw = (el.value || '').trim();
+    if (!raw) { el.value = ''; _clearFieldError(el); return; }
+
+    // Explicit DDI: user typed + at start — accept any international format
+    if (raw.charAt(0) === '+') {
+        var intlDigits = raw.slice(1).replace(/\D/g, '');
+        if (intlDigits.length < 7) {
+            _setFieldError(el, 'Número internacional incompleto (mín. 7 dígitos após o +).');
+            return;
+        }
+        el.value = '+' + intlDigits;
+        _clearFieldError(el);
+        return;
+    }
+
+    // No DDI typed: default to Brazil (+55)
+    var digits = raw.replace(/\D/g, '');
     if (!digits) { el.value = ''; _clearFieldError(el); return; }
     if (digits.length < 8) {
         _setFieldError(el, 'Telefone incompleto (mínimo 8 dígitos).');
