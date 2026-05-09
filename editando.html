@@ -592,7 +592,7 @@
                 <div class="form-grid">
                     <div class="form-group span-2">
                         <label for="f-title">Título <span class="req">*</span></label>
-                        <input id="f-title" type="text" placeholder="Título do conjunto de dados...">
+                        <input id="f-title" type="text" placeholder="Título do conjunto de dados..." title="Nome descritivo. Recomendação: Tema, local e ano.">
                     </div>
                     <div class="form-group">
                         <label for="f-edition">Edição</label>
@@ -600,7 +600,7 @@
                     </div>
                     <div class="form-group">
                         <label for="f-spatialResolution_denominator">Escala (denominador)</label>
-                        <input id="f-spatialResolution_denominator" type="text" placeholder="ex: 25000">
+                        <input id="f-spatialResolution_denominator" type="text" placeholder="ex: 25000" title="Exemplo: Digite apenas 25000 para uma escala de 1:25.000.">
                     </div>
                     <div class="form-group span-2">
                         <label for="f-abstract">Resumo <span class="req">*</span></label>
@@ -609,7 +609,7 @@
                     <div class="form-group span-2">
                         <label>Palavras-chave <span class="req">*</span></label>
                         <div class="keyword-input-row">
-                            <input id="kw-input" type="text" placeholder="Adicionar palavra-chave..."
+                            <input id="kw-input" type="text" title="Pressione Enter após digitar cada palavra-chave." placeholder="Adicionar palavra-chave..."
                                 onkeydown="if(event.key==='Enter'){event.preventDefault();addKeyword();}">
                             <button class="btn-icon accent" onclick="addKeyword()">+</button>
                         </div>
@@ -617,7 +617,7 @@
                     </div>
                     <div class="form-group span-2">
                         <label for="f-thumbnail_url">URL da Miniatura</label>
-                        <input id="f-thumbnail_url" type="text" placeholder="https://...">
+                        <input id="f-thumbnail_url" type="text" placeholder="https://..." title="Cole o link de uma imagem hospedada na web que represente bem estes dados.">
                     </div>
                 </div>
             </div>
@@ -738,22 +738,22 @@
                             <div></div>
                             <div class="form-group">
                                 <label for="f-northBoundLatitude">Norte</label>
-                                <input id="f-northBoundLatitude" type="number" step="0.000001" placeholder="-19.0">
+                                <input id="f-northBoundLatitude" type="number" title="Coordenada Y máxima (Latitude) em graus decimais." step="0.000001" placeholder="-19.0">
                             </div>
                             <div></div>
                             <div class="form-group">
                                 <label for="f-westBoundLongitude">Oeste</label>
-                                <input id="f-westBoundLongitude" type="number" step="0.000001" placeholder="-53.0">
+                                <input id="f-westBoundLongitude" type="number" title="Coordenada X mínima (Longitude) em graus decimais." step="0.000001" placeholder="-53.0">
                             </div>
                             <div class="bbox-center">🗺️</div>
                             <div class="form-group">
                                 <label for="f-eastBoundLongitude">Leste</label>
-                                <input id="f-eastBoundLongitude" type="number" step="0.000001" placeholder="-44.0">
+                                <input id="f-eastBoundLongitude" type="number" title="Coordenada X máxima (Longitude) em graus decimais." step="0.000001" placeholder="-44.0">
                             </div>
                             <div></div>
                             <div class="form-group">
                                 <label for="f-southBoundLatitude">Sul</label>
-                                <input id="f-southBoundLatitude" type="number" step="0.000001" placeholder="-26.0">
+                                <input id="f-southBoundLatitude" type="number" title="Coordenada Y mínima (Latitude) em graus decimais." step="0.000001" placeholder="-26.0">
                             </div>
                             <div></div>
                         </div>
@@ -762,7 +762,7 @@
                     <!-- Escala -->
                     <div class="form-group">
                         <label for="f-spatialResolution_denominator">Escala (denominador)</label>
-                        <input id="f-spatialResolution_denominator" type="text" placeholder="ex: 25000">
+                        <input id="f-spatialResolution_denominator" type="text" placeholder="ex: 25000" title="Exemplo: Digite apenas 25000 para uma escala de 1:25.000.">
                     </div>
                     <div></div>
 
@@ -771,15 +771,15 @@
                         <label for="f-epsgCode">Código EPSG <span class="req">*</span></label>
                         <select id="f-epsgCode" onchange="setEpsgFromCode(this.value)">
                             <option value="">- Selecione -</option>
-                            <option value="EPSG:4326">EPSG:4326 - WGS 84</option>
-                            <option value="EPSG:4674">EPSG:4674 - SIRGAS 2000</option>
-                            <option value="EPSG:4618">EPSG:4618 - SAD69</option>
+                            <option value="EPSG:4326" title="WGS 84 - Sistema de Coordenadas Geográficas Global (Padrão GPS/Web)">EPSG:4326 - WGS 84</option>
+                            <option value="EPSG:4674" title="SIRGAS 2000 - Sistema de Referência Geocêntrico Oficial do Brasil">EPSG:4674 - SIRGAS 2000</option>
+                            <option value="EPSG:4618" title="SAD69 - Sistema de Referência Antigo">EPSG:4618 - SAD69</option>
                             <option value="EPSG:31978">EPSG:31978 - SIRGAS 2000 / UTM 18S</option>
                             <option value="EPSG:31979">EPSG:31979 - SIRGAS 2000 / UTM 19S</option>
                             <option value="EPSG:31980">EPSG:31980 - SIRGAS 2000 / UTM 20S</option>
                             <option value="EPSG:31981">EPSG:31981 - SIRGAS 2000 / UTM 21S</option>
-                            <option value="EPSG:31982">EPSG:31982 - SIRGAS 2000 / UTM 22S</option>
-                            <option value="EPSG:31983">EPSG:31983 - SIRGAS 2000 / UTM 23S</option>
+                            <option value="EPSG:31982" title="SIRGAS 2000 Projetado / UTM Zona 22S - Abrange o Oeste de SP">EPSG:31982 - SIRGAS 2000 / UTM 22S</option>
+                            <option value="EPSG:31983" title="SIRGAS 2000 Projetado / UTM Zona 23S - Abrange o Leste de SP">EPSG:31983 - SIRGAS 2000 / UTM 23S</option>
                             <option value="EPSG:31984">EPSG:31984 - SIRGAS 2000 / UTM 24S</option>
                             <option value="EPSG:31985">EPSG:31985 - SIRGAS 2000 / UTM 25S</option>
                             <option value="EPSG:29191">EPSG:29191 - SAD69 / UTM 21S</option>
@@ -793,7 +793,7 @@
                     </div>
                     <div class="form-group">
                         <label for="f-epsgTitle">Título do SRC <span class="req">*</span></label>
-                        <input id="f-epsgTitle" type="text" placeholder="ex: SIRGAS 2000 (EPSG:4674)">
+                        <input id="f-epsgTitle" type="text" placeholder="ex: SIRGAS 2000 (EPSG:4674)" title="Nome formatado do SRC. Será preenchido automaticamente ao selecionar o EPSG acima.">
                     </div>
 
                     <!-- Altitude + Temporal (accordion) -->
@@ -848,11 +848,11 @@
                         <div class="form-grid">
                             <div class="form-group">
                                 <label>Sigla <span class="req">*</span></label>
-                                <input id="mf-sigla" type="text" placeholder="ex: CDHU">
+                                <input id="mf-sigla" type="text" title="Sigla do órgão. Ex: SMA, INPE, IBGE." placeholder="ex: CDHU">
                             </div>
                             <div class="form-group">
                                 <label>Organização <span class="req">*</span></label>
-                                <input id="mf-org" type="text" placeholder="Nome completo">
+                                <input id="mf-org" type="text" title="Nome corporativo extenso do órgão." placeholder="Nome completo">
                             </div>
                             <div class="form-group">
                                 <label>E-mail</label>
@@ -862,17 +862,17 @@
                                 <label>Regra</label>
                                 <select id="mf-role">
                                     <option value="">- Selecione -</option>
-                                    <option value="owner">Dono</option>
-                                    <option value="author">Autor</option>
-                                    <option value="processor">Organizador</option>
-                                    <option value="distributor">Distribuidor</option>
-                                    <option value="custodian">Depositário</option>
-                                    <option value="resourceProvider">Fornecedor de recurso</option>
-                                    <option value="principalInvestigator">Investigador principal</option>
-                                    <option value="originator">Originador</option>
-                                    <option value="pointOfContact">Ponto de contato</option>
-                                    <option value="publisher">Publicador</option>
-                                    <option value="user">Utilizador</option>
+                                    <option value="owner" title="Proprietário legal ou institucional do dado">Dono</option>
+                                    <option value="author" title="Autor principal ou criador técnico do dado">Autor</option>
+                                    <option value="processor" title="Responsável pelo processamento ou organização do dado">Organizador</option>
+                                    <option value="distributor" title="Responsável por distribuir ou publicar o dado">Distribuidor</option>
+                                    <option value="custodian" title="Guardião ou mantenedor responsável pelo armazenamento">Depositário</option>
+                                    <option value="resourceProvider" title="Fornecedor da infraestrutura ou recurso">Fornecedor de recurso</option>
+                                    <option value="principalInvestigator" title="Pesquisador ou líder do projeto">Investigador principal</option>
+                                    <option value="originator" title="Origem ou fonte primária da informação">Originador</option>
+                                    <option value="pointOfContact" title="Contato principal para tirar dúvidas sobre o dado">Ponto de contato</option>
+                                    <option value="publisher" title="Entidade que realizou a publicação oficial">Publicador</option>
+                                    <option value="user" title="Usuário ou consumidor final do dado">Utilizador</option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -962,17 +962,17 @@
                         <label for="f-contact_role">Responsabilidade <span class="req">*</span></label>
                         <select id="f-contact_role">
                             <option value="">- Selecione -</option>
-                            <option value="owner">Dono</option>
-                            <option value="author">Autor</option>
-                            <option value="processor">Organizador</option>
-                            <option value="distributor">Distribuidor</option>
-                            <option value="custodian">Depositário</option>
-                            <option value="resourceProvider">Fornecedor de recurso</option>
-                            <option value="principalInvestigator">Investigador principal</option>
-                            <option value="originator">Originador</option>
-                            <option value="pointOfContact">Ponto de contato</option>
-                            <option value="publisher">Publicador</option>
-                            <option value="user">Utilizador</option>
+                            <option value="owner" title="Proprietário legal ou institucional do dado">Dono</option>
+                            <option value="author" title="Autor principal ou criador técnico do dado">Autor</option>
+                            <option value="processor" title="Responsável pelo processamento ou organização do dado">Organizador</option>
+                            <option value="distributor" title="Responsável por distribuir ou publicar o dado">Distribuidor</option>
+                            <option value="custodian" title="Guardião ou mantenedor responsável pelo armazenamento">Depositário</option>
+                            <option value="resourceProvider" title="Fornecedor da infraestrutura ou recurso">Fornecedor de recurso</option>
+                            <option value="principalInvestigator" title="Pesquisador ou líder do projeto">Investigador principal</option>
+                            <option value="originator" title="Origem ou fonte primária da informação">Originador</option>
+                            <option value="pointOfContact" title="Contato principal para tirar dúvidas sobre o dado">Ponto de contato</option>
+                            <option value="publisher" title="Entidade que realizou a publicação oficial">Publicador</option>
+                            <option value="user" title="Usuário ou consumidor final do dado">Utilizador</option>
                         </select>
                     </div>
                     <div class="form-group span-2">
@@ -1055,14 +1055,14 @@
                     </div>
                     <div class="manual-form-body">
                         <div class="form-grid">
-                            <div class="form-group"><label>Sigla <span class="req">*</span></label><input id="proc-mf-sigla" type="text"></div>
-                            <div class="form-group"><label>Organização <span class="req">*</span></label><input id="proc-mf-org" type="text"></div>
+                            <div class="form-group"><label>Sigla <span class="req">*</span></label><input id="proc-mf-sigla" type="text" title="Sigla do órgão. Ex: SMA, INPE, IBGE."></div>
+                            <div class="form-group"><label>Organização <span class="req">*</span></label><input id="proc-mf-org" type="text" title="Nome corporativo extenso do órgão."></div>
                             <div class="form-group"><label>E-mail</label><input id="proc-mf-email" type="email"></div>
                             <div class="form-group"><label>Regra</label>
                                 <select id="proc-mf-role">
-                                    <option value="processor" selected>Organizador</option>
-                                    <option value="owner">Dono</option><option value="author">Autor</option>
-                                    <option value="pointOfContact">Ponto de contato</option>
+                                    <option value="processor" title="Responsável pelo processamento ou organização do dado" selected>Organizador</option>
+                                    <option value="owner" title="Proprietário legal ou institucional do dado">Dono</option><option value="author" title="Autor principal ou criador técnico do dado">Autor</option>
+                                    <option value="pointOfContact" title="Contato principal para tirar dúvidas sobre o dado">Ponto de contato</option>
                                 </select>
                             </div>
                             <div class="form-group"><label>Cargo</label><input id="proc-mf-position" type="text"></div>
@@ -1117,7 +1117,7 @@
 
                 <div class="contacts-toolbar">
                     <div class="search-wrap">
-                        <input id="dist-search" type="text" placeholder="Buscar camada no GeoServer..."
+                        <input id="dist-search" type="text" title="Pesquisa as camadas disponíveis diretamente no GeoServer configurado." placeholder="Buscar camada no GeoServer..."
                             oninput="searchGeoServer(this.value)" onkeydown="if(event.key==='Escape') closeDistSugg()">
                         <div id="dist-suggestions" class="search-suggestions"></div>
                     </div>
@@ -1307,14 +1307,14 @@
                     </div>
                     <div class="manual-form-body">
                         <div class="form-grid">
-                            <div class="form-group"><label>Sigla <span class="req">*</span></label><input id="meta-mf-sigla" type="text"></div>
-                            <div class="form-group"><label>Organização <span class="req">*</span></label><input id="meta-mf-org" type="text"></div>
+                            <div class="form-group"><label>Sigla <span class="req">*</span></label><input id="meta-mf-sigla" type="text" title="Sigla do órgão. Ex: SMA, INPE, IBGE."></div>
+                            <div class="form-group"><label>Organização <span class="req">*</span></label><input id="meta-mf-org" type="text" title="Nome corporativo extenso do órgão."></div>
                             <div class="form-group"><label>E-mail</label><input id="meta-mf-email" type="email"></div>
                             <div class="form-group"><label>Regra</label>
                                 <select id="meta-mf-role">
-                                    <option value="author" selected>Autor</option>
-                                    <option value="owner">Dono</option>
-                                    <option value="pointOfContact">Ponto de contato</option>
+                                    <option value="author" title="Autor principal ou criador técnico do dado" selected>Autor</option>
+                                    <option value="owner" title="Proprietário legal ou institucional do dado">Dono</option>
+                                    <option value="pointOfContact" title="Contato principal para tirar dúvidas sobre o dado">Ponto de contato</option>
                                 </select>
                             </div>
                             <div class="form-group"><label>Cargo</label><input id="meta-mf-position" type="text"></div>
