@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Geohab Plugin</title>
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/styles.css?v=2">
 </head>
 
 <body>
@@ -13,24 +13,45 @@
     <header class="navbar">
         <div class="nav-left">
             <button id="logo-btn" class="logo-link" onclick="bridge.navigate('home')">
-                <img src="../../logo.png" alt="CDHU" class="logo-img">
+                <img src="../../img/cdhu-logo-white.svg" alt="CDHU" class="logo-img">
             </button>
+
             <div class="dropdown">
-                <button class="dropbtn">Arquivo <span class="chevron">▾</span></button>
+                <button class="dropbtn">
+                    <span>Arquivo</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="4"
+                        stroke="currentColor" class="chevron-icon">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"></path>
+                    </svg>
+                </button>
                 <div class="dropdown-content">
                     <a href="#" onclick="trySaveMetadata()">Continuar depois</a>
                     <a href="#" onclick="tryExportXml()">Exportar .xml</a>
                 </div>
             </div>
+
             <div class="dropdown">
-                <button class="dropbtn">Catálogo Geohab <span class="chevron">▾</span></button>
+                <button class="dropbtn">
+                    <span>Catálogo Geohab</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="4"
+                        stroke="currentColor" class="chevron-icon">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"></path>
+                    </svg>
+                </button>
                 <div class="dropdown-content">
                     <a href="#" onclick="navigate('editor')">Editar Metadados</a>
                     <a href="#" onclick="tryExportGeohab()">Publicar no Catálogo</a>
                 </div>
             </div>
+
             <div class="dropdown">
-                <button class="dropbtn">GeoServer <span class="chevron">▾</span></button>
+                <button class="dropbtn">
+                    <span>GeoServer</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="4"
+                        stroke="currentColor" class="chevron-icon">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"></path>
+                    </svg>
+                </button>
                 <div class="dropdown-content">
                     <a href="#" onclick="bridge.navigate('geoserver')">Publicar Camada</a>
                 </div>
@@ -38,11 +59,12 @@
         </div>
 
         <div class="nav-right">
-            <div id="layer-badge" class="layer-badge" style="display:none" title="Camada ativa no QGIS">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <polygon points="12 2 2 7 12 12 22 7 12 2"/>
-                    <polyline points="2 17 12 22 22 17"/>
-                    <polyline points="2 12 12 17 22 12"/>
+            <div id="layer-badge" class="layer-badge" style="display:none" data-title="Camada ativa no QGIS">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                    <polyline points="2 17 12 22 22 17" />
+                    <polyline points="2 12 12 17 22 12" />
                 </svg>
                 <span id="layer-badge-name"></span>
             </div>
