@@ -1213,3 +1213,144 @@ body {
     border-top-color: #1e293b;
     border-bottom-width: 0;
 }
+
+
+/* ==================================================
+   CUSTOM SELECT & GLOBAL TOOLTIP
+================================================== */
+.custom-select {
+    position: relative;
+    outline: none;
+    cursor: pointer;
+}
+
+.custom-select-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 9px 12px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--fg);
+    user-select: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    cursor: pointer;
+}
+
+.custom-select:focus .custom-select-trigger,
+.custom-select.open .custom-select-trigger {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(229, 34, 45, 0.08);
+}
+
+.custom-select-value {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+}
+
+.custom-select-arrow {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    margin-left: 8px;
+    background: url('../../../img/chevron_down.svg') no-repeat center / contain;
+    opacity: 0.5;
+    transition: transform 0.2s;
+}
+
+.custom-select.open .custom-select-arrow {
+    transform: rotate(180deg);
+}
+
+.custom-select-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    width: 100%;
+    z-index: 1000;
+    display: none;
+    max-height: 250px;
+    overflow-y: auto;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Dropdown items — override shared suggestion-item colors */
+.custom-select-dropdown .suggestion-item {
+    justify-content: flex-start;
+    color: var(--fg);
+}
+
+.custom-select-dropdown .suggestion-item:hover {
+    background: #f1f5f9;
+    color: var(--fg);
+}
+
+.custom-select-dropdown .suggestion-item.active {
+    background: #f1f5f9;
+    color: var(--fg);
+    font-weight: 600;
+}
+
+/* Global Tooltip */
+.global-tooltip {
+    position: fixed;
+    z-index: 9999;
+    pointer-events: none;
+    background: #1e293b;
+    color: #f8fafc;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1.4;
+    max-width: 250px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    opacity: 0;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    transform: translateY(4px);
+    text-transform: none;
+    font-weight: 500;
+}
+
+.global-tooltip.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.global-tooltip::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-style: solid;
+}
+
+.global-tooltip[data-arrow="arrow-up"]::after {
+    top: -6px;
+    left: var(--arrow-pos, 50%);
+    margin-left: -6px;
+    border-width: 0 6px 6px 6px;
+    border-color: transparent transparent #1e293b transparent;
+}
+
+.global-tooltip[data-arrow="arrow-down"]::after {
+    bottom: -6px;
+    left: var(--arrow-pos, 50%);
+    margin-left: -6px;
+    border-width: 6px 6px 0 6px;
+    border-color: #1e293b transparent transparent transparent;
+}
+
+/* Fix option highlight when navigating by keyboard */
+.suggestion-item.active {
+    background-color: var(--bg-hover);
+    color: var(--accent);
+}

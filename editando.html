@@ -532,6 +532,123 @@
             background: #fafbfc;
         }
     </style>
+<style>
+
+/* ==================================================
+   CUSTOM SELECT & GLOBAL TOOLTIP
+================================================== */
+.custom-select {
+    position: relative;
+    outline: none;
+    cursor: pointer;
+}
+
+.custom-select-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    height: 32px;
+    padding: 0 10px;
+    background-color: var(--bg-input, #fff);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--fg);
+    user-select: none;
+}
+
+.custom-select:focus .custom-select-trigger,
+.custom-select.open .custom-select-trigger {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.2);
+}
+
+.custom-select-value {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.custom-select-arrow {
+    font-size: 10px;
+    color: var(--fg-muted);
+    margin-left: 8px;
+}
+
+.custom-select-dropdown {
+    /* Uses .search-suggestions styling but we force some defaults */
+    position: absolute;
+    top: calc(100% - 1px); /* Overlap border */
+    margin-top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
+    display: none;
+    max-height: 250px;
+    overflow-y: auto;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Global Tooltip */
+.global-tooltip {
+    position: fixed;
+    z-index: 9999;
+    pointer-events: none;
+    background: #1e293b;
+    color: #f8fafc;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1.4;
+    max-width: 250px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    opacity: 0;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    transform: translateY(4px);
+    text-transform: none;
+    font-weight: 500;
+}
+
+.global-tooltip.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.global-tooltip::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-style: solid;
+}
+
+.global-tooltip[data-arrow="arrow-up"]::after {
+    top: -6px;
+    left: var(--arrow-pos, 50%);
+    margin-left: -6px;
+    border-width: 0 6px 6px 6px;
+    border-color: transparent transparent #1e293b transparent;
+}
+
+.global-tooltip[data-arrow="arrow-down"]::after {
+    bottom: -6px;
+    left: var(--arrow-pos, 50%);
+    margin-left: -6px;
+    border-width: 6px 6px 0 6px;
+    border-color: #1e293b transparent transparent transparent;
+}
+
+/* Fix option highlight when navigating by keyboard */
+.suggestion-item.active {
+    background-color: var(--bg-hover);
+    color: var(--accent);
+}
+
+</style>
 </head>
 
 <body>
@@ -592,7 +709,7 @@
                 <div class="form-grid">
                     <div class="form-group span-2">
                         <label for="f-title">Título <span class="req">*</span></label>
-                        <input id="f-title" type="text" placeholder="Título do conjunto de dados..." title="Nome descritivo. Recomendação: Tema, local e ano.">
+                        <input id="f-title" type="text" placeholder="Título do conjunto de dados..." data-title="Nome descritivo. Recomendação: Tema, local e ano.">
                     </div>
                     <div class="form-group">
                         <label for="f-edition">Edição</label>
@@ -600,7 +717,7 @@
                     </div>
                     <div class="form-group">
                         <label for="f-spatialResolution_denominator">Escala (denominador)</label>
-                        <input id="f-spatialResolution_denominator" type="text" placeholder="ex: 25000" title="Exemplo: Digite apenas 25000 para uma escala de 1:25.000.">
+                        <input id="f-spatialResolution_denominator" type="text" placeholder="ex: 25000" data-title="Exemplo: Digite apenas 25000 para uma escala de 1:25.000.">
                     </div>
                     <div class="form-group span-2">
                         <label for="f-abstract">Resumo <span class="req">*</span></label>
@@ -609,7 +726,7 @@
                     <div class="form-group span-2">
                         <label>Palavras-chave <span class="req">*</span></label>
                         <div class="keyword-input-row">
-                            <input id="kw-input" type="text" title="Pressione Enter após digitar cada palavra-chave." placeholder="Adicionar palavra-chave..."
+                            <input id="kw-input" type="text" data-title="Pressione Enter após digitar cada palavra-chave." placeholder="Adicionar palavra-chave..."
                                 onkeydown="if(event.key==='Enter'){event.preventDefault();addKeyword();}">
                             <button class="btn-icon accent" onclick="addKeyword()">+</button>
                         </div>
@@ -617,7 +734,7 @@
                     </div>
                     <div class="form-group span-2">
                         <label for="f-thumbnail_url">URL da Miniatura</label>
-                        <input id="f-thumbnail_url" type="text" placeholder="https://..." title="Cole o link de uma imagem hospedada na web que represente bem estes dados.">
+                        <input id="f-thumbnail_url" type="text" placeholder="https://..." data-title="Cole o link de uma imagem hospedada na web que represente bem estes dados.">
                     </div>
                 </div>
             </div>
@@ -727,7 +844,7 @@
             <div id="tab-extensao" class="tab-content">
                 <div class="tab-header-actions">
                     <button class="btn-icon" onclick="captureFromLayer()"
-                        title="Mock: preenche SRC e extensão N/S/L/O">📍 Capturar da camada</button>
+                        data-title="Mock: preenche SRC e extensão N/S/L/O">📍 Capturar da camada</button>
                 </div>
                 <div class="form-grid">
 
@@ -738,22 +855,22 @@
                             <div></div>
                             <div class="form-group">
                                 <label for="f-northBoundLatitude">Norte</label>
-                                <input id="f-northBoundLatitude" type="number" title="Coordenada Y máxima (Latitude) em graus decimais." step="0.000001" placeholder="-19.0">
+                                <input id="f-northBoundLatitude" type="number" data-title="Coordenada Y máxima (Latitude) em graus decimais." step="0.000001" placeholder="-19.0">
                             </div>
                             <div></div>
                             <div class="form-group">
                                 <label for="f-westBoundLongitude">Oeste</label>
-                                <input id="f-westBoundLongitude" type="number" title="Coordenada X mínima (Longitude) em graus decimais." step="0.000001" placeholder="-53.0">
+                                <input id="f-westBoundLongitude" type="number" data-title="Coordenada X mínima (Longitude) em graus decimais." step="0.000001" placeholder="-53.0">
                             </div>
                             <div class="bbox-center">🗺️</div>
                             <div class="form-group">
                                 <label for="f-eastBoundLongitude">Leste</label>
-                                <input id="f-eastBoundLongitude" type="number" title="Coordenada X máxima (Longitude) em graus decimais." step="0.000001" placeholder="-44.0">
+                                <input id="f-eastBoundLongitude" type="number" data-title="Coordenada X máxima (Longitude) em graus decimais." step="0.000001" placeholder="-44.0">
                             </div>
                             <div></div>
                             <div class="form-group">
                                 <label for="f-southBoundLatitude">Sul</label>
-                                <input id="f-southBoundLatitude" type="number" title="Coordenada Y mínima (Latitude) em graus decimais." step="0.000001" placeholder="-26.0">
+                                <input id="f-southBoundLatitude" type="number" data-title="Coordenada Y mínima (Latitude) em graus decimais." step="0.000001" placeholder="-26.0">
                             </div>
                             <div></div>
                         </div>
@@ -762,7 +879,7 @@
                     <!-- Escala -->
                     <div class="form-group">
                         <label for="f-spatialResolution_denominator">Escala (denominador)</label>
-                        <input id="f-spatialResolution_denominator" type="text" placeholder="ex: 25000" title="Exemplo: Digite apenas 25000 para uma escala de 1:25.000.">
+                        <input id="f-spatialResolution_denominator" type="text" placeholder="ex: 25000" data-title="Exemplo: Digite apenas 25000 para uma escala de 1:25.000.">
                     </div>
                     <div></div>
 
@@ -771,15 +888,15 @@
                         <label for="f-epsgCode">Código EPSG <span class="req">*</span></label>
                         <select id="f-epsgCode" onchange="setEpsgFromCode(this.value)">
                             <option value="">- Selecione -</option>
-                            <option value="EPSG:4326" title="WGS 84 - Sistema de Coordenadas Geográficas Global (Padrão GPS/Web)">EPSG:4326 - WGS 84</option>
-                            <option value="EPSG:4674" title="SIRGAS 2000 - Sistema de Referência Geocêntrico Oficial do Brasil">EPSG:4674 - SIRGAS 2000</option>
-                            <option value="EPSG:4618" title="SAD69 - Sistema de Referência Antigo">EPSG:4618 - SAD69</option>
+                            <option value="EPSG:4326" data-title="WGS 84 - Sistema de Coordenadas Geográficas Global (Padrão GPS/Web)">EPSG:4326 - WGS 84</option>
+                            <option value="EPSG:4674" data-title="SIRGAS 2000 - Sistema de Referência Geocêntrico Oficial do Brasil">EPSG:4674 - SIRGAS 2000</option>
+                            <option value="EPSG:4618" data-title="SAD69 - Sistema de Referência Antigo">EPSG:4618 - SAD69</option>
                             <option value="EPSG:31978">EPSG:31978 - SIRGAS 2000 / UTM 18S</option>
                             <option value="EPSG:31979">EPSG:31979 - SIRGAS 2000 / UTM 19S</option>
                             <option value="EPSG:31980">EPSG:31980 - SIRGAS 2000 / UTM 20S</option>
                             <option value="EPSG:31981">EPSG:31981 - SIRGAS 2000 / UTM 21S</option>
-                            <option value="EPSG:31982" title="SIRGAS 2000 Projetado / UTM Zona 22S - Abrange o Oeste de SP">EPSG:31982 - SIRGAS 2000 / UTM 22S</option>
-                            <option value="EPSG:31983" title="SIRGAS 2000 Projetado / UTM Zona 23S - Abrange o Leste de SP">EPSG:31983 - SIRGAS 2000 / UTM 23S</option>
+                            <option value="EPSG:31982" data-title="SIRGAS 2000 Projetado / UTM Zona 22S - Abrange o Oeste de SP">EPSG:31982 - SIRGAS 2000 / UTM 22S</option>
+                            <option value="EPSG:31983" data-title="SIRGAS 2000 Projetado / UTM Zona 23S - Abrange o Leste de SP">EPSG:31983 - SIRGAS 2000 / UTM 23S</option>
                             <option value="EPSG:31984">EPSG:31984 - SIRGAS 2000 / UTM 24S</option>
                             <option value="EPSG:31985">EPSG:31985 - SIRGAS 2000 / UTM 25S</option>
                             <option value="EPSG:29191">EPSG:29191 - SAD69 / UTM 21S</option>
@@ -793,7 +910,7 @@
                     </div>
                     <div class="form-group">
                         <label for="f-epsgTitle">Título do SRC <span class="req">*</span></label>
-                        <input id="f-epsgTitle" type="text" placeholder="ex: SIRGAS 2000 (EPSG:4674)" title="Nome formatado do SRC. Será preenchido automaticamente ao selecionar o EPSG acima.">
+                        <input id="f-epsgTitle" type="text" placeholder="ex: SIRGAS 2000 (EPSG:4674)" data-title="Nome formatado do SRC. Será preenchido automaticamente ao selecionar o EPSG acima.">
                     </div>
 
                     <!-- Altitude + Temporal (accordion) -->
@@ -848,11 +965,11 @@
                         <div class="form-grid">
                             <div class="form-group">
                                 <label>Sigla <span class="req">*</span></label>
-                                <input id="mf-sigla" type="text" title="Sigla do órgão. Ex: SMA, INPE, IBGE." placeholder="ex: CDHU">
+                                <input id="mf-sigla" type="text" data-title="Sigla do órgão. Ex: SMA, INPE, IBGE." placeholder="ex: CDHU">
                             </div>
                             <div class="form-group">
                                 <label>Organização <span class="req">*</span></label>
-                                <input id="mf-org" type="text" title="Nome corporativo extenso do órgão." placeholder="Nome completo">
+                                <input id="mf-org" type="text" data-title="Nome corporativo extenso do órgão." placeholder="Nome completo">
                             </div>
                             <div class="form-group">
                                 <label>E-mail</label>
@@ -862,17 +979,17 @@
                                 <label>Regra</label>
                                 <select id="mf-role">
                                     <option value="">- Selecione -</option>
-                                    <option value="owner" title="Proprietário legal ou institucional do dado">Dono</option>
-                                    <option value="author" title="Autor principal ou criador técnico do dado">Autor</option>
-                                    <option value="processor" title="Responsável pelo processamento ou organização do dado">Organizador</option>
-                                    <option value="distributor" title="Responsável por distribuir ou publicar o dado">Distribuidor</option>
-                                    <option value="custodian" title="Guardião ou mantenedor responsável pelo armazenamento">Depositário</option>
-                                    <option value="resourceProvider" title="Fornecedor da infraestrutura ou recurso">Fornecedor de recurso</option>
-                                    <option value="principalInvestigator" title="Pesquisador ou líder do projeto">Investigador principal</option>
-                                    <option value="originator" title="Origem ou fonte primária da informação">Originador</option>
-                                    <option value="pointOfContact" title="Contato principal para tirar dúvidas sobre o dado">Ponto de contato</option>
-                                    <option value="publisher" title="Entidade que realizou a publicação oficial">Publicador</option>
-                                    <option value="user" title="Usuário ou consumidor final do dado">Utilizador</option>
+                                    <option value="owner" data-title="Proprietário legal ou institucional do dado">Dono</option>
+                                    <option value="author" data-title="Autor principal ou criador técnico do dado">Autor</option>
+                                    <option value="processor" data-title="Responsável pelo processamento ou organização do dado">Organizador</option>
+                                    <option value="distributor" data-title="Responsável por distribuir ou publicar o dado">Distribuidor</option>
+                                    <option value="custodian" data-title="Guardião ou mantenedor responsável pelo armazenamento">Depositário</option>
+                                    <option value="resourceProvider" data-title="Fornecedor da infraestrutura ou recurso">Fornecedor de recurso</option>
+                                    <option value="principalInvestigator" data-title="Pesquisador ou líder do projeto">Investigador principal</option>
+                                    <option value="originator" data-title="Origem ou fonte primária da informação">Originador</option>
+                                    <option value="pointOfContact" data-title="Contato principal para tirar dúvidas sobre o dado">Ponto de contato</option>
+                                    <option value="publisher" data-title="Entidade que realizou a publicação oficial">Publicador</option>
+                                    <option value="user" data-title="Usuário ou consumidor final do dado">Utilizador</option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -962,17 +1079,17 @@
                         <label for="f-contact_role">Responsabilidade <span class="req">*</span></label>
                         <select id="f-contact_role">
                             <option value="">- Selecione -</option>
-                            <option value="owner" title="Proprietário legal ou institucional do dado">Dono</option>
-                            <option value="author" title="Autor principal ou criador técnico do dado">Autor</option>
-                            <option value="processor" title="Responsável pelo processamento ou organização do dado">Organizador</option>
-                            <option value="distributor" title="Responsável por distribuir ou publicar o dado">Distribuidor</option>
-                            <option value="custodian" title="Guardião ou mantenedor responsável pelo armazenamento">Depositário</option>
-                            <option value="resourceProvider" title="Fornecedor da infraestrutura ou recurso">Fornecedor de recurso</option>
-                            <option value="principalInvestigator" title="Pesquisador ou líder do projeto">Investigador principal</option>
-                            <option value="originator" title="Origem ou fonte primária da informação">Originador</option>
-                            <option value="pointOfContact" title="Contato principal para tirar dúvidas sobre o dado">Ponto de contato</option>
-                            <option value="publisher" title="Entidade que realizou a publicação oficial">Publicador</option>
-                            <option value="user" title="Usuário ou consumidor final do dado">Utilizador</option>
+                            <option value="owner" data-title="Proprietário legal ou institucional do dado">Dono</option>
+                            <option value="author" data-title="Autor principal ou criador técnico do dado">Autor</option>
+                            <option value="processor" data-title="Responsável pelo processamento ou organização do dado">Organizador</option>
+                            <option value="distributor" data-title="Responsável por distribuir ou publicar o dado">Distribuidor</option>
+                            <option value="custodian" data-title="Guardião ou mantenedor responsável pelo armazenamento">Depositário</option>
+                            <option value="resourceProvider" data-title="Fornecedor da infraestrutura ou recurso">Fornecedor de recurso</option>
+                            <option value="principalInvestigator" data-title="Pesquisador ou líder do projeto">Investigador principal</option>
+                            <option value="originator" data-title="Origem ou fonte primária da informação">Originador</option>
+                            <option value="pointOfContact" data-title="Contato principal para tirar dúvidas sobre o dado">Ponto de contato</option>
+                            <option value="publisher" data-title="Entidade que realizou a publicação oficial">Publicador</option>
+                            <option value="user" data-title="Usuário ou consumidor final do dado">Utilizador</option>
                         </select>
                     </div>
                     <div class="form-group span-2">
@@ -1055,14 +1172,14 @@
                     </div>
                     <div class="manual-form-body">
                         <div class="form-grid">
-                            <div class="form-group"><label>Sigla <span class="req">*</span></label><input id="proc-mf-sigla" type="text" title="Sigla do órgão. Ex: SMA, INPE, IBGE."></div>
-                            <div class="form-group"><label>Organização <span class="req">*</span></label><input id="proc-mf-org" type="text" title="Nome corporativo extenso do órgão."></div>
+                            <div class="form-group"><label>Sigla <span class="req">*</span></label><input id="proc-mf-sigla" type="text" data-title="Sigla do órgão. Ex: SMA, INPE, IBGE."></div>
+                            <div class="form-group"><label>Organização <span class="req">*</span></label><input id="proc-mf-org" type="text" data-title="Nome corporativo extenso do órgão."></div>
                             <div class="form-group"><label>E-mail</label><input id="proc-mf-email" type="email"></div>
                             <div class="form-group"><label>Regra</label>
                                 <select id="proc-mf-role">
-                                    <option value="processor" title="Responsável pelo processamento ou organização do dado" selected>Organizador</option>
-                                    <option value="owner" title="Proprietário legal ou institucional do dado">Dono</option><option value="author" title="Autor principal ou criador técnico do dado">Autor</option>
-                                    <option value="pointOfContact" title="Contato principal para tirar dúvidas sobre o dado">Ponto de contato</option>
+                                    <option value="processor" data-title="Responsável pelo processamento ou organização do dado" selected>Organizador</option>
+                                    <option value="owner" data-title="Proprietário legal ou institucional do dado">Dono</option><option value="author" data-title="Autor principal ou criador técnico do dado">Autor</option>
+                                    <option value="pointOfContact" data-title="Contato principal para tirar dúvidas sobre o dado">Ponto de contato</option>
                                 </select>
                             </div>
                             <div class="form-group"><label>Cargo</label><input id="proc-mf-position" type="text"></div>
@@ -1117,7 +1234,7 @@
 
                 <div class="contacts-toolbar">
                     <div class="search-wrap">
-                        <input id="dist-search" type="text" title="Pesquisa as camadas disponíveis diretamente no GeoServer configurado." placeholder="Buscar camada no GeoServer..."
+                        <input id="dist-search" type="text" data-title="Pesquisa as camadas disponíveis diretamente no GeoServer configurado." placeholder="Buscar camada no GeoServer..."
                             oninput="searchGeoServer(this.value)" onkeydown="if(event.key==='Escape') closeDistSugg()">
                         <div id="dist-suggestions" class="search-suggestions"></div>
                     </div>
@@ -1307,14 +1424,14 @@
                     </div>
                     <div class="manual-form-body">
                         <div class="form-grid">
-                            <div class="form-group"><label>Sigla <span class="req">*</span></label><input id="meta-mf-sigla" type="text" title="Sigla do órgão. Ex: SMA, INPE, IBGE."></div>
-                            <div class="form-group"><label>Organização <span class="req">*</span></label><input id="meta-mf-org" type="text" title="Nome corporativo extenso do órgão."></div>
+                            <div class="form-group"><label>Sigla <span class="req">*</span></label><input id="meta-mf-sigla" type="text" data-title="Sigla do órgão. Ex: SMA, INPE, IBGE."></div>
+                            <div class="form-group"><label>Organização <span class="req">*</span></label><input id="meta-mf-org" type="text" data-title="Nome corporativo extenso do órgão."></div>
                             <div class="form-group"><label>E-mail</label><input id="meta-mf-email" type="email"></div>
                             <div class="form-group"><label>Regra</label>
                                 <select id="meta-mf-role">
-                                    <option value="author" title="Autor principal ou criador técnico do dado" selected>Autor</option>
-                                    <option value="owner" title="Proprietário legal ou institucional do dado">Dono</option>
-                                    <option value="pointOfContact" title="Contato principal para tirar dúvidas sobre o dado">Ponto de contato</option>
+                                    <option value="author" data-title="Autor principal ou criador técnico do dado" selected>Autor</option>
+                                    <option value="owner" data-title="Proprietário legal ou institucional do dado">Dono</option>
+                                    <option value="pointOfContact" data-title="Contato principal para tirar dúvidas sobre o dado">Ponto de contato</option>
                                 </select>
                             </div>
                             <div class="form-group"><label>Cargo</label><input id="meta-mf-position" type="text"></div>
@@ -1506,9 +1623,9 @@
                     '<td>' + (c.data.email || '-') + '</td>' +
                     '<td>' + buildRoleSelect(idx, c.data.role) + '</td>' +
                     '<td style="white-space:nowrap">' +
-                    '<button class="btn-move" onclick="moveContact(' + idx + ',-1)" title="Mover para cima"' + (idx === 0    ? ' disabled' : '') + '>↑</button>' +
-                    '<button class="btn-move" onclick="moveContact(' + idx + ', 1)" title="Mover para baixo"' + (idx === last ? ' disabled' : '') + '>↓</button>' +
-                    '<button class="btn-remove" onclick="removeContact(' + idx + ')" title="Remover">✕</button>' +
+                    '<button class="btn-move" onclick="moveContact(' + idx + ',-1)" data-title="Mover para cima"' + (idx === 0    ? ' disabled' : '') + '>↑</button>' +
+                    '<button class="btn-move" onclick="moveContact(' + idx + ', 1)" data-title="Mover para baixo"' + (idx === last ? ' disabled' : '') + '>↓</button>' +
+                    '<button class="btn-remove" onclick="removeContact(' + idx + ')" data-title="Remover">✕</button>' +
                     '</td>' +
                     '</tr>';
             }).join('');
@@ -1758,7 +1875,7 @@
                     '<td style="text-align:center;color:var(--fg-muted);font-weight:700;font-size:12px">' + (idx+1) + '</td>' +
                     '<td>' + (c.data.org||'-') + '</td><td>' + (c.data.sigla||'-') + '</td>' +
                     '<td><select id="role-' + key + '-t-' + idx + '" class="role-select" onchange="updateRoleFor(\'' + key + '\',' + idx + ',this.value)">' + opts + '</select></td>' +
-                    '<td><button class="btn-remove" onclick="removeFrom(\'' + key + '\',' + idx + ')" title="Remover">✕</button></td></tr>';
+                    '<td><button class="btn-remove" onclick="removeFrom(\'' + key + '\',' + idx + ')" data-title="Remover">✕</button></td></tr>';
             }).join('');
             if (accDiv) {
                 accDiv.innerHTML = arr.map(function (c, idx) {
@@ -1831,7 +1948,7 @@
             if (!box) return;
             box.innerHTML = keywords.map(function (kw, i) {
                 return '<span class="keyword-chip">' + escHtml(kw) +
-                       '<button onclick="removeKeyword(' + i + ')" title="Remover">×</button></span>';
+                       '<button onclick="removeKeyword(' + i + ')" data-title="Remover">×</button></span>';
             }).join('');
         }
 
@@ -2010,8 +2127,8 @@
                         (r.description ? '<br><small style="color:var(--fg-muted)">' + escHtml(r.description) + '</small>' : '') +
                     '</td>' +
                     '<td><span class="proto-badge ' + cls + '">' + escHtml(r.protocol) + '</span></td>' +
-                    '<td style="font-size:11px;color:var(--fg-muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + escHtml(r.url) + '">' + escHtml(r.url) + '</td>' +
-                    '<td><button class="btn-remove" onclick="removeDistResource(' + i + ')" title="Remover">✕</button></td>' +
+                    '<td style="font-size:11px;color:var(--fg-muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" data-title="' + escHtml(r.url) + '">' + escHtml(r.url) + '</td>' +
+                    '<td><button class="btn-remove" onclick="removeDistResource(' + i + ')" data-title="Remover">✕</button></td>' +
                     '</tr>';
             }).join('');
         }
@@ -2094,6 +2211,274 @@
         initMetaAuthor();
     </script>
 
+<script>
+/* Custom Selects and Global Tooltips */
+
+
+// --- Global Tooltip Logic ---
+var _globalTooltip = null;
+var _tooltipTimeout = null;
+
+function initGlobalTooltips() {
+    if (!_globalTooltip) {
+        _globalTooltip = document.createElement('div');
+        _globalTooltip.className = 'global-tooltip';
+        document.body.appendChild(_globalTooltip);
+    }
+
+    document.addEventListener('mouseover', function(e) {
+        var target = e.target.closest('[data-title]');
+        if (!target) return;
+
+        var tipText = target.getAttribute('data-title');
+        if (!tipText) return;
+
+        clearTimeout(_tooltipTimeout);
+        
+        _tooltipTimeout = setTimeout(function() {
+            _globalTooltip.textContent = tipText;
+            _globalTooltip.classList.add('visible');
+
+            // Force reflow to get correct dimensions
+            void _globalTooltip.offsetWidth;
+
+            var rect = target.getBoundingClientRect();
+            var tooltipRect = _globalTooltip.getBoundingClientRect();
+            
+            var top = rect.bottom + 8;
+            var left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+            var arrowClass = 'arrow-up';
+
+            if (left < 10) left = 10;
+            if (left + tooltipRect.width > window.innerWidth - 10) {
+                left = window.innerWidth - tooltipRect.width - 10;
+            }
+            
+            if (top + tooltipRect.height > window.innerHeight - 10) {
+                top = rect.top - tooltipRect.height - 8;
+                arrowClass = 'arrow-down';
+            }
+
+            _globalTooltip.style.top = top + 'px';
+            _globalTooltip.style.left = left + 'px';
+            _globalTooltip.setAttribute('data-arrow', arrowClass);
+            
+            var arrowLeft = (rect.left + rect.width / 2) - left;
+            if (arrowLeft < 10) arrowLeft = 10;
+            if (arrowLeft > tooltipRect.width - 10) arrowLeft = tooltipRect.width - 10;
+            _globalTooltip.style.setProperty('--arrow-pos', arrowLeft + 'px');
+
+        }, 600); // 600ms delay before showing
+    });
+
+    document.addEventListener('mouseout', function(e) {
+        var target = e.target.closest('[data-title]');
+        if (target) {
+            clearTimeout(_tooltipTimeout);
+            _globalTooltip.classList.remove('visible');
+        }
+    });
+    
+    document.addEventListener('mousedown', function() {
+        clearTimeout(_tooltipTimeout);
+        if (_globalTooltip) _globalTooltip.classList.remove('visible');
+    });
+}
+// --- Custom Select Logic ---
+function initCustomSelects() {
+    var selects = document.querySelectorAll('select:not(.custom-select-initialized)');
+    
+    selects.forEach(function(select) {
+        // Only convert selects that are inside the main form panels (skip any hidden system ones if they exist)
+        if (select.style.display === 'none') return;
+        
+        select.classList.add('custom-select-initialized');
+        select.style.display = 'none'; // Hide native select
+
+        var wrapper = document.createElement('div');
+        wrapper.className = 'custom-select search-wrap';
+        wrapper.tabIndex = 0; // Make focusable for keyboard
+
+        var trigger = document.createElement('div');
+        trigger.className = 'custom-select-trigger';
+        
+        var valueSpan = document.createElement('span');
+        valueSpan.className = 'custom-select-value';
+        
+        var arrowSpan = document.createElement('span');
+        arrowSpan.className = 'custom-select-arrow';
+        arrowSpan.innerHTML = '&#9662;'; // Down arrow
+
+        trigger.appendChild(valueSpan);
+        trigger.appendChild(arrowSpan);
+        wrapper.appendChild(trigger);
+
+        var dropdown = document.createElement('div');
+        dropdown.className = 'search-suggestions custom-select-dropdown';
+        
+        // Populate options
+        var optionsHtml = '';
+        var selectedText = '- Selecione -';
+        
+        Array.from(select.options).forEach(function(opt, idx) {
+            var title = opt.getAttribute('data-title') || '';
+            var titleAttr = title ? ' data-title="' + title.replace(/"/g, '&quot;') + '"' : '';
+            var activeClass = opt.selected ? ' active' : '';
+            if (opt.selected) selectedText = opt.text;
+            
+            optionsHtml += '<div class="suggestion-item' + activeClass + '" data-index="' + idx + '" data-value="' + opt.value + '"' + titleAttr + '>' + opt.text + '</div>';
+        });
+        
+        valueSpan.textContent = selectedText;
+        dropdown.innerHTML = optionsHtml;
+        wrapper.appendChild(dropdown);
+        
+        select.parentNode.insertBefore(wrapper, select.nextSibling);
+
+        // --- Interaction Logic ---
+        var isOpen = false;
+
+        function closeDropdown() {
+            dropdown.style.display = 'none';
+            wrapper.classList.remove('open');
+            isOpen = false;
+        }
+
+        function openDropdown() {
+            // Close others
+            document.querySelectorAll('.custom-select.open').forEach(function(el) {
+                if (el !== wrapper) {
+                    el.querySelector('.custom-select-dropdown').style.display = 'none';
+                    el.classList.remove('open');
+                }
+            });
+            dropdown.style.display = 'block';
+            wrapper.classList.add('open');
+            isOpen = true;
+            
+            // Scroll to active item
+            var activeItem = dropdown.querySelector('.suggestion-item.active');
+            if (activeItem) {
+                activeItem.scrollIntoView({ block: 'nearest' });
+            }
+        }
+
+        trigger.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (isOpen) closeDropdown();
+            else openDropdown();
+        });
+
+        // Click on items
+        dropdown.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var item = e.target.closest('.suggestion-item');
+            if (!item) return;
+
+            var idx = item.getAttribute('data-index');
+            select.selectedIndex = idx;
+            valueSpan.textContent = item.textContent;
+            
+            // Update active class
+            dropdown.querySelectorAll('.suggestion-item').forEach(function(el) { el.classList.remove('active'); });
+            item.classList.add('active');
+            
+            closeDropdown();
+            
+            // Trigger native change event so other scripts know
+            var event = new Event('change', { bubbles: true });
+            select.dispatchEvent(event);
+        });
+
+        // Click outside closes
+        document.addEventListener('click', function(e) {
+            if (isOpen && !wrapper.contains(e.target)) {
+                closeDropdown();
+            }
+        });
+
+        // Keyboard navigation
+        var searchString = '';
+        var searchTimeout = null;
+
+        wrapper.addEventListener('keydown', function(e) {
+            if (e.key === 'Tab') {
+                closeDropdown();
+                return;
+            }
+            
+            e.preventDefault(); // Prevent page scroll for arrows
+
+            var items = Array.from(dropdown.querySelectorAll('.suggestion-item'));
+            var activeIdx = items.findIndex(function(item) { return item.classList.contains('active'); });
+
+            if (e.key === 'ArrowDown') {
+                if (!isOpen) openDropdown();
+                else {
+                    var nextIdx = activeIdx + 1 < items.length ? activeIdx + 1 : items.length - 1;
+                    items[activeIdx]?.classList.remove('active');
+                    items[nextIdx].classList.add('active');
+                    items[nextIdx].scrollIntoView({ block: 'nearest' });
+                }
+            } else if (e.key === 'ArrowUp') {
+                if (!isOpen) openDropdown();
+                else {
+                    var prevIdx = activeIdx - 1 >= 0 ? activeIdx - 1 : 0;
+                    items[activeIdx]?.classList.remove('active');
+                    items[prevIdx].classList.add('active');
+                    items[prevIdx].scrollIntoView({ block: 'nearest' });
+                }
+            } else if (e.key === 'Enter' || e.key === ' ') {
+                if (!isOpen) {
+                    openDropdown();
+                } else {
+                    if (activeIdx >= 0) {
+                        items[activeIdx].click();
+                    }
+                }
+            } else if (e.key === 'Escape') {
+                closeDropdown();
+            } else if (e.key.length === 1) {
+                // Type to search
+                if (!isOpen) openDropdown();
+                searchString += e.key.toLowerCase();
+                clearTimeout(searchTimeout);
+                
+                searchTimeout = setTimeout(function() {
+                    searchString = '';
+                }, 1000);
+
+                var matchIdx = items.findIndex(function(item) {
+                    return item.textContent.trim().toLowerCase().startsWith(searchString);
+                });
+
+                if (matchIdx >= 0) {
+                    if (activeIdx >= 0) items[activeIdx].classList.remove('active');
+                    items[matchIdx].classList.add('active');
+                    items[matchIdx].scrollIntoView({ block: 'nearest' });
+                }
+            }
+        });
+
+        // Listen for programmatic value changes on the original select
+        select.addEventListener('change', function() {
+            var selectedOpt = select.options[select.selectedIndex];
+            if (selectedOpt) {
+                valueSpan.textContent = selectedOpt.text;
+                dropdown.querySelectorAll('.suggestion-item').forEach(function(el) {
+                    el.classList.toggle('active', el.getAttribute('data-value') === selectedOpt.value);
+                });
+            }
+        });
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    initGlobalTooltips();
+    initCustomSelects();
+});
+
+</script>
 </body>
 
 </html>
