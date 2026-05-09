@@ -200,9 +200,68 @@ class MainBridge(QObject):
         except Exception:
             return None
 
+    # ── Contatos do usuário (persistidos localmente) ──────────────────────────
+
+    def _user_contacts_path(self) -> str:
+        import os
+        try:
+            from qgis.core import QgsApplication
+            base = QgsApplication.qgisSettingsDirPath()
+        except Exception:
+            base = os.path.expanduser('~')
+        return os.path.join(base, 'geometadata_user_contacts.json')
+
+    def _load_user_contacts(self) -> list:
+        import json, os
+        path = self._user_contacts_path()
+        if not os.path.exists(path):
+            return []
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception:
+            return []
+
+    def _save_user_contacts(self, contacts: list):
+        import json
+        with open(self._user_contacts_path(), 'w', encoding='utf-8') as f:
+            json.dump(contacts, f, ensure_ascii=False, indent=2)
+
+    @pyqtSlot(str)
+    def save_user_contact(self, contact_json: str):
+        """Salva um contato manual no arquivo local do usuário."""
+        import json
+        try:
+            contact = json.loads(contact_json)
+            if not contact.get('_key'):
+                import uuid
+                contact['_key'] = str(uuid.uuid4())
+            contacts = self._load_user_contacts()
+            for i, c in enumerate(contacts):
+                if c.get('_key') == contact['_key']:
+                    contacts[i] = contact
+                    break
+            else:
+                contacts.append(contact)
+            self._save_user_contacts(contacts)
+            print(f"GeoMetadata: contato '{contact.get('sigla','')}' salvo localmente.")
+        except Exception as e:
+            print(f"GeoMetadata [save_user_contact]: {e}")
+
+    @pyqtSlot(str)
+    def delete_user_contact(self, key: str):
+        """Remove um contato salvo localmente pelo seu _key."""
+        try:
+            contacts = self._load_user_contacts()
+            contacts = [c for c in contacts if c.get('_key') != key]
+            self._save_user_contacts(contacts)
+            print(f"GeoMetadata: contato '{key}' removido.")
+        except Exception as e:
+            print(f"GeoMetadata [delete_user_contact]: {e}")
+
     @pyqtSlot(str, result='QVariant')
     def search_contacts(self, query: str):
-        """Busca contatos nos predefinidos locais que correspondem à query. Retorna lista para o JS."""
+        """Busca contatos nos predefinidos locais e nos contatos salvos pelo usuário."""
         predefinidos = getattr(self._dialog, 'contatos_predefinidos', {})
         q = query.lower().strip()
         results = []
@@ -226,6 +285,15 @@ class MainBridge(QObject):
                     'country':  data.get('contact_country', 'Brasil'),
                     'role':     data.get('contact_role', '')
                 })
+        # Contatos salvos pelo usuário
+        for c in self._load_user_contacts():
+            sigla = c.get('sigla', '')
+            org   = c.get('org', '')
+            email = c.get('email', '')
+            if not q or q in org.lower() or q in sigla.lower() or q in email.lower():
+                entry = dict(c)
+                entry['_source'] = 'user'
+                results.append(entry)
         return results
 
     @pyqtSlot(str, str)
@@ -338,6 +406,26 @@ class MainBridge(QObject):
             print(f"GeoMetadata [search_geoserver] ERRO: {e}")
             traceback.print_exc()
             return []
+
+    @pyqtSlot(str, str)
+    def export_contact_xml(self, xml_string: str, filename: str):
+        """Salva o XML de sub-template de contato (ISO 19139) em arquivo escolhido pelo usuário."""
+        import os
+        from qgis.PyQt.QtWidgets import QFileDialog
+        save_path, _ = QFileDialog.getSaveFileName(
+            self._dialog,
+            "Salvar contato XML",
+            os.path.join(os.path.expanduser("~"), filename),
+            "XML (*.xml)"
+        )
+        if not save_path:
+            return
+        try:
+            with open(save_path, 'w', encoding='utf-8') as f:
+                f.write(xml_string)
+            print(f"GeoMetadata: contato exportado → {save_path}")
+        except Exception as e:
+            print(f"GeoMetadata [export_contact_xml]: {e}")
 
     @pyqtSlot(str, result=str)
     def load_panel_html(self, panel_id: str) -> str:

@@ -413,9 +413,11 @@ body {
 }
 
 @keyframes spin {
-    to {
-        transform: translateY(-50%) rotate(360deg);
-    }
+    to { transform: translateY(-50%) rotate(360deg); }
+}
+
+@keyframes spin-simple {
+    to { transform: rotate(360deg); }
 }
 
 .contacts-toolbar input {
@@ -449,6 +451,10 @@ body {
 }
 
 .suggestion-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
     padding: 10px 14px;
     font-size: 13px;
     cursor: pointer;
@@ -463,6 +469,67 @@ body {
     background: #f1f5f9;
     color: var(--accent);
 }
+
+.sugg-badge-gn,
+.sugg-badge-local,
+.sugg-badge-user {
+    flex-shrink: 0;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    letter-spacing: 0.02em;
+}
+
+.sugg-badge-gn    { background: #dcfce7; color: #16a34a; }
+.sugg-badge-local { background: #f0f0f0; color: #9333ea; }
+.sugg-badge-user  { background: #fff7ed; color: #c2410c; }
+
+.sugg-right {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.sugg-delete-btn {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0 2px;
+    cursor: pointer;
+    border-radius: 3px;
+}
+.sugg-delete-btn:hover { color: var(--accent); background: #fff0f0; }
+
+.btn-save-local {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 14px;
+    border-radius: 6px;
+    border: 1.5px solid #f97316;
+    color: #c2410c;
+    background: transparent;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.btn-save-local:hover { background: #fff7ed; }
+.btn-save-local:disabled { opacity: 0.5; cursor: default; }
+
+.btn-delete-user {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 14px;
+    border-radius: 6px;
+    border: 1.5px solid #fca5a5;
+    color: var(--accent);
+    background: transparent;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.btn-delete-user:hover { background: #fff0f0; border-color: var(--accent); }
 
 .btn-icon {
     padding: 8px 14px;
@@ -695,6 +762,63 @@ body {
     font-weight: 700;
 }
 
+.badge-user {
+    margin-left: auto;
+    background: #fff7ed;
+    color: #c2410c;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.acc-actions {
+    display: flex;
+    gap: 8px;
+    padding: 10px 16px 14px;
+    border-top: 1px solid var(--border);
+    margin-top: 8px;
+}
+
+.btn-edit, .btn-save, .btn-cancel, .btn-export-contact {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 14px;
+    border-radius: 6px;
+    border: 1.5px solid;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.btn-edit {
+    background: transparent;
+    border-color: #94a3b8;
+    color: #475569;
+}
+.btn-edit:hover { background: #f1f5f9; border-color: #64748b; }
+
+.btn-save {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+}
+.btn-save:hover { opacity: 0.88; }
+
+.btn-cancel {
+    background: transparent;
+    border-color: #94a3b8;
+    color: #64748b;
+}
+.btn-cancel:hover { background: #f1f5f9; }
+
+.btn-export-contact {
+    margin-left: auto;
+    background: transparent;
+    border-color: #94a3b8;
+    color: #475569;
+}
+.btn-export-contact:hover { background: #f1f5f9; border-color: #64748b; }
+
 .suggestion-loading {
     display: flex;
     align-items: center;
@@ -714,8 +838,9 @@ body {
     border: 2px solid var(--border);
     border-top-color: var(--accent);
     border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+    animation: spin-simple 0.8s linear infinite;
     flex-shrink: 0;
+    transform-origin: center;
 }
 
 .accordion-body {
@@ -1042,10 +1167,14 @@ body {
 .address-split {
     display: flex;
     gap: 8px;
+    align-items: flex-start;
 }
-.address-split .addr-street { flex: 2 1 0; min-width: 0; }
-.address-split .addr-num    { flex: 0 0 72px; }
-.address-split .addr-comp   { flex: 1 1 0; min-width: 0; }
+.addr-field-wrap { display: flex; flex-direction: column; min-width: 0; }
+.addr-field-wrap input { width: 100%; box-sizing: border-box; }
+.addr-street-wrap { flex: 2 1 0; }
+.addr-num-wrap    { flex: 0 0 72px; }
+.addr-comp-wrap   { flex: 1 1 0; }
+.addr-bairro-wrap { flex: 1 1 0; }
 
 #help-tooltip {
     position: fixed;

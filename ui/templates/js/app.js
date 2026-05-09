@@ -84,6 +84,9 @@ function _initFieldValidation() {
         var f = el.getAttribute('data-format');
         var v = el.getAttribute('data-validate');
 
+        // Clear error as soon as the field has a value
+        if (el.classList.contains('error') && el.value.trim()) _clearFieldError(el);
+
         // Phone: + only at position 0; digits only after; max 15 with DDI, 13 without
         if (f === 'phone') {
             var hasPlus = el.value.charAt(0) === '+';
@@ -129,6 +132,11 @@ function _initFieldValidation() {
         if (v === 'email')     _checkEmail(el);
         if (v === 'url')       _checkUrl(el);
         if (v === 'no-digits') _warnNoDigits(el);
+    });
+
+    document.addEventListener('change', function (e) {
+        var el = e.target;
+        if (el.tagName === 'SELECT' && el.classList.contains('error') && el.value.trim()) _clearFieldError(el);
     });
 }
 
@@ -375,7 +383,8 @@ function onPanelLoaded(panelId) {
     }
     if (panelId === "editor") {
         showTab("identificacao", document.querySelector(".tab-link"));
-        var now = new Date().toISOString().slice(0, 16);
+        var _d = new Date(); _d.setHours(_d.getHours() - 3);
+        var now = _d.toISOString().slice(0, 16);
         var ds = document.getElementById("f-dateStamp");
         if (ds && !ds.value) ds.value = now;
         var uid = document.getElementById("f-metadataId");
@@ -491,7 +500,7 @@ function collectFormData() {
         contact_organisationName: c.org || "",
         contact_positionName: c.position || "",
         contact_phone: c.phone || "",
-        contact_deliveryPoint: c.address || "",
+        contact_deliveryPoint: _combineAddr(c),
         contact_city: c.city || "",
         contact_administrativeArea: c.state || "",
         contact_postalCode: c.zip || "",
@@ -968,6 +977,186 @@ function updateRole(idx, val) {
 
 // ─── Contatos: render ──────────────────────────────────────────────────────────
 
+var _accEditing = {};
+
+function _getContactArr(source) { return source === 'main' ? contacts : _sArr(source); }
+function _getAccBodyId(source, idx) { return source === 'main' ? 'acc-body-' + idx : 'acc-body-' + source + '-' + idx; }
+function _getIdPfx(source, idx) { return source === 'main' ? 'acc-' + idx + '-' : 'af-' + source + '-' + idx + '-'; }
+
+function _combineAddr(d) {
+    return [d.addr_street || d.address, d.addr_num, d.addr_comp, d.addr_bairro].filter(Boolean).join(', ');
+}
+
+function _buildRoleSelectHtml(source, idx, role) {
+    var sel = role || 'pointOfContact';
+    var opts = ROLE_OPTIONS.map(function (r) {
+        return '<option value="' + r.value + '"' + (r.value === sel ? ' selected' : '') + '>' + r.label + '</option>';
+    }).join('');
+    var selectId = source === 'main' ? 'role-acc-' + idx : 'role-' + source + '-a-' + idx;
+    var onchange = source === 'main'
+        ? 'updateRole(' + idx + ', this.value)'
+        : 'updateRoleFor(\'' + source + '\',' + idx + ',this.value)';
+    return '<div class="form-group"><label>Regra <button class="help-btn" data-tip="Papel desta organização ou pessoa em relação ao dado (ex: Dono = responsável; Ponto de contato = para dúvidas).">?</button></label>' +
+        '<select id="' + selectId + '" class="role-select" onchange="' + onchange + '">' + opts + '</select></div>';
+}
+
+function _buildContactFields(d, pfx, isEditing, roleSelectHtml) {
+    var e = isEditing;
+    var addr = _combineAddr(d);
+    var addrHtml = isEditing
+        ? '<div class="form-group span-2"><label>Endereço <button class="help-btn" data-tip="Logradouro completo da organização.">?</button></label>' +
+          '<div class="address-split">' +
+          '<div class="addr-field-wrap addr-street-wrap"><input id="' + pfx + 'addr-street" class="addr-street" type="text" placeholder="Logradouro" value="' + escHtml(d.addr_street || d.address || '') + '"></div>' +
+          '<div class="addr-field-wrap addr-num-wrap"><input id="' + pfx + 'addr-num" class="addr-num" type="text" placeholder="Nº" value="' + escHtml(d.addr_num || '') + '"></div>' +
+          '<div class="addr-field-wrap addr-comp-wrap"><input id="' + pfx + 'addr-comp" class="addr-comp" type="text" placeholder="Compl." value="' + escHtml(d.addr_comp || '') + '"></div>' +
+          '<div class="addr-field-wrap addr-bairro-wrap"><input id="' + pfx + 'addr-bairro" class="addr-bairro" type="text" placeholder="Bairro" value="' + escHtml(d.addr_bairro || '') + '"></div>' +
+          '</div></div>'
+        : '<div class="form-group span-2"><label>Endereço <button class="help-btn" data-tip="Logradouro completo da organização.">?</button></label>' +
+          '<div class="readonly-field">' + escHtml(addr || '—') + '</div></div>';
+    return field('Sigla', d.sigla, e, pfx + 'sigla', 'Abreviação ou acrônimo da organização (ex: CDHU, IPT, IBGE).', 'data-format="uppercase"') +
+        field('Organização', d.org, e, pfx + 'org', 'Nome completo da organização responsável.', 'data-format="titlecase"') +
+        roleSelectHtml +
+        field('E-mail', d.email, e, pfx + 'email', 'Endereço de e-mail para contato.', 'data-validate="email"') +
+        field('Cargo', d.position, e, pfx + 'position', 'Cargo ou departamento do responsável na organização.', 'data-validate="letters-only"') +
+        field('Telefone', d.phone, e, pfx + 'phone', 'Telefone de contato com DDD (ex: (11) 3111-0000).', 'data-format="phone"') +
+        addrHtml +
+        field('Cidade', d.city, e, pfx + 'city', null, 'data-validate="letters-only"') +
+        field('Estado', d.state, e, pfx + 'state') +
+        field('CEP', d.zip, e, pfx + 'zip', 'Código de Endereçamento Postal no formato 00000-000.', 'data-format="cep"') +
+        field('País', d.country, e, pfx + 'country', null, 'data-validate="letters-only"');
+}
+
+function _sourceBadge(c) {
+    if (c.isManual === 'gn')   return '<span class="badge-gn">Catálogo Online</span>';
+    if (c.isManual === true)   return '<span class="badge-manual">Manual</span>';
+    if (c.isManual === 'user') return '<span class="badge-user">Meus Contatos</span>';
+    return '<span class="badge-preset">Catálogo Offline</span>';
+}
+
+// Required fields for manual contacts (all except Cargo/position)
+var _MANUAL_REQ = [
+    { id: 'sigla',       label: 'Sigla' },
+    { id: 'org',         label: 'Organização' },
+    { id: 'role',        label: 'Regra' },
+    { id: 'email',       label: 'E-mail' },
+    { id: 'phone',       label: 'Telefone' },
+    { id: '__addr',      label: 'Logradouro' },   // mapped to addrFieldId
+    { id: '__addr-num',  label: 'Número' },        // derived from addrFieldId
+    { id: '__addr-comp', label: 'Complemento' },   // derived from addrFieldId
+    { id: 'addr-bairro', label: 'Bairro' },
+    { id: 'city',        label: 'Cidade' },
+    { id: 'state',       label: 'Estado' },
+    { id: 'zip',         label: 'CEP' },
+    { id: 'country',     label: 'País' },
+];
+
+// pfx: element ID prefix; addrId: the street field suffix for this form
+// Returns true if any required field is empty (also marks fields inline).
+function _validateManualForm(pfx, addrId) {
+    // accordion uses 'addr-street'; manual forms use 'address'
+    var addrBase = addrId === 'addr-street' ? 'addr' : addrId;
+    var hasError = false;
+    _MANUAL_REQ.forEach(function (f) {
+        var fieldId = f.id === '__addr'      ? addrId
+                    : f.id === '__addr-num'  ? addrBase + '-num'
+                    : f.id === '__addr-comp' ? addrBase + '-comp'
+                    : f.id;
+        var el = document.getElementById(pfx + fieldId);
+        if (!el) return;
+        if (!el.value.trim()) {
+            _setFieldError(el, 'Campo obrigatório.');
+            hasError = true;
+        } else {
+            _clearFieldError(el);
+        }
+    });
+    return hasError;
+}
+
+function _isDuplicate(arr, r) {
+    return arr.some(function (c) {
+        var d = c.data;
+        if (r._key && d._key) return r._key === d._key;
+        return (r.sigla || '') === (d.sigla || '') &&
+               (r.org   || '') === (d.org   || '') &&
+               (r.email || '') === (d.email || '');
+    });
+}
+
+function _srcToIsManual(src) {
+    if (src === 'gn')   return 'gn';
+    if (src === 'user') return 'user';
+    return false;
+}
+
+function _buildAccActions(isManual, source, idx, isEditing) {
+    var editable = isManual === true || isManual === 'user';
+    var btns = '';
+    if (editable) {
+        if (isEditing) {
+            btns += '<button class="btn-save" onclick="saveAccordion(\'' + source + '\',' + idx + ')">Salvar</button>' +
+                    '<button class="btn-cancel" onclick="cancelAccordion(\'' + source + '\',' + idx + ')">Cancelar</button>';
+        } else {
+            btns += '<button class="btn-edit" onclick="enterAccordionEdit(\'' + source + '\',' + idx + ')">Editar</button>';
+            if (isManual === true) {
+                btns += '<button class="btn-save-local" onclick="saveContactLocally(\'' + source + '\',' + idx + ')" title="Salvar na máquina para reutilizar em outras sessões">Salvar localmente</button>';
+            }
+            if (isManual === 'user') {
+                btns += '<button class="btn-delete-user" onclick="deleteUserContactFromList(\'' + source + '\',' + idx + ')" title="Excluir dos Meus Contatos">Excluir</button>';
+            }
+        }
+    }
+    btns += '<button class="btn-export-contact" onclick="exportContactXml(\'' + source + '\',' + idx + ')">Exportar XML</button>';
+    return '<div class="acc-actions">' + btns + '</div>';
+}
+
+function deleteUserContactFromList(source, idx) {
+    var arr = _getContactArr(source);
+    var c = arr[idx];
+    if (!c) return;
+    var name = c.data.sigla || c.data.org || 'este contato';
+    if (!confirm('Excluir "' + name + '" dos Meus Contatos?\n\nEsta ação remove o contato salvo permanentemente.')) return;
+    if (c.data._key) bridge.delete_user_contact(c.data._key);
+    arr.splice(idx, 1);
+    if (source === 'main') renderContacts();
+    else renderFor(source);
+}
+
+function saveContactLocally(source, idx) {
+    var arr = _getContactArr(source);
+    var c = arr[idx];
+    if (!c) return;
+    var d = {};
+    for (var k in c.data) d[k] = c.data[k];
+    if (!d._key) d._key = generateUUID();
+    c.data._key = d._key;
+    bridge.save_user_contact(JSON.stringify(d));
+    // Visual feedback: flash the button
+    var body = document.getElementById(_getAccBodyId(source, idx));
+    if (body) {
+        var btn = body.querySelector('.btn-save-local');
+        if (btn) {
+            var orig = btn.textContent;
+            btn.textContent = 'Salvo!';
+            btn.disabled = true;
+            setTimeout(function () { btn.textContent = orig; btn.disabled = false; }, 1800);
+        }
+    }
+}
+
+function deleteUserContact(key) {
+    if (!confirm('Excluir este contato dos Meus Contatos?\n\nEsta ação não pode ser desfeita.')) return;
+    bridge.delete_user_contact(key);
+    var boxes = ['search-suggestions', 'proc-suggestions', 'meta-suggestions'];
+    boxes.forEach(function (id) {
+        var box = document.getElementById(id);
+        if (!box) return;
+        box.querySelectorAll('[data-user-key="' + key + '"]').forEach(function (el) {
+            el.remove();
+        });
+    });
+}
+
 function renderContacts() {
     var tbody = document.getElementById("contacts-tbody");
     var accDiv = document.getElementById("contacts-accordions");
@@ -1004,21 +1193,17 @@ function renderContacts() {
 
 function buildAccordion(c, idx) {
     var d = c.data;
-    var label = 'Contato ' + (idx + 1) + (d.sigla ? ' - ' + d.sigla : '');
-    var badge = c.isManual === 'gn'
-        ? '<span class="badge-gn">Catálogo Online</span>'
-        : c.isManual
-            ? '<span class="badge-manual">Manual</span>'
-            : '<span class="badge-preset">Catálogo Offline</span>';
-
+    var label = 'Contato ' + (idx + 1) + (d.sigla ? ' — ' + d.sigla : '');
+    var isEditing = !!_accEditing['main:' + idx];
+    var pfx = 'acc-' + idx + '-';
+    var roleSelectHtml = _buildRoleSelectHtml('main', idx, d.role);
+    var bodyHtml = '<div class="form-grid">' + _buildContactFields(d, pfx, isEditing, roleSelectHtml) + '</div>' +
+        _buildAccActions(c.isManual, 'main', idx, isEditing);
     return '<div class="contact-accordion">' +
         '<button class="accordion-header" onclick="toggleAccordion(' + idx + ')">' +
         '<span class="acc-arrow" id="arr-' + idx + '"><img class="acc-chevron" src="../../img/chevron_down.svg"></span>' +
-        label + badge +
-        '</button>' +
-        '<div class="accordion-body" id="acc-body-' + idx + '">' +
-        '<div class="form-grid">' + buildAccordionFields(d, idx, c.isManual === true) + '</div>' +
-        '</div>' +
+        label + _sourceBadge(c) + '</button>' +
+        '<div class="accordion-body" id="acc-body-' + idx + '">' + bodyHtml + '</div>' +
         '</div>';
 }
 
@@ -1026,34 +1211,142 @@ function field(label, val, editable, inputId, tip, attrs) {
     var helpBtn = tip ? ' <button class="help-btn" data-tip="' + tip + '">?</button>' : '';
     var extra = attrs ? ' ' + attrs : '';
     var input = editable
-        ? '<input id="' + inputId + '" type="text" value="' + (val || '') + '"' + extra + '>'
-        : '<div class="readonly-field">' + (val || '—') + '</div>';
+        ? '<input id="' + inputId + '" type="text" value="' + escHtml(val || '') + '"' + extra + '>'
+        : '<div class="readonly-field">' + escHtml(val || '—') + '</div>';
     return '<div class="form-group"><label>' + label + helpBtn + '</label>' + input + '</div>';
 }
 
-function buildAccordionFields(d, idx, isManual) {
-    var selectedRole = d.role || "pointOfContact";
-    var roleOpts = ROLE_OPTIONS.map(function (r) {
-        return '<option value="' + r.value + '"' + (r.value === selectedRole ? ' selected' : '') + '>' + r.label + '</option>';
-    }).join('');
-    var roleField = '<div class="form-group"><label>Regra <button class="help-btn" data-tip="Papel desta organização ou pessoa em relação ao dado (ex: Dono = responsável; Ponto de contato = para dúvidas).">?</button></label>' +
-        '<select id="role-acc-' + idx + '" class="role-select" onchange="updateRole(' + idx + ', this.value)">' + roleOpts + '</select></div>';
+function enterAccordionEdit(source, idx) {
+    var arr = _getContactArr(source);
+    var c = arr[idx];
+    if (!c || (c.isManual !== true && c.isManual !== 'user')) return;
+    var body = document.getElementById(_getAccBodyId(source, idx));
+    if (!body) return;
+    var pfx = _getIdPfx(source, idx);
+    var roleSelectHtml = _buildRoleSelectHtml(source, idx, c.data.role);
+    body.innerHTML = '<div class="form-grid">' + _buildContactFields(c.data, pfx, true, roleSelectHtml) + '</div>' +
+        _buildAccActions(c.isManual, source, idx, true);
+    if (body.style.display !== 'block') body.style.display = 'block';
+}
 
-    return field('Sigla', d.sigla, isManual, 'acc-' + idx + '-sigla', 'Abreviação ou acrônimo da organização (ex: CDHU, IPT, IBGE).', 'data-format="uppercase"') +
-        field('Organização', d.org, isManual, 'acc-' + idx + '-org', 'Nome completo da organização responsável.', 'data-format="titlecase"') +
-        roleField +
-        field('E-mail', d.email, isManual, 'acc-' + idx + '-email', 'Endereço de e-mail para contato.', 'data-validate="email"') +
-        field('Cargo', d.position, isManual, 'acc-' + idx + '-position', 'Cargo ou departamento do responsável na organização.', 'data-validate="letters-only"') +
-        field('Telefone', d.phone, isManual, 'acc-' + idx + '-phone', 'Telefone de contato com DDD (ex: (11) 3111-0000).', 'data-format="phone"') +
-        '<div class="form-group span-2"><label>Endereço <button class="help-btn" data-tip="Logradouro completo da organização.">?</button></label>' +
-        (isManual
-            ? '<input id="acc-' + idx + '-address" type="text" value="' + (d.address || '') + '">'
-            : '<div class="readonly-field">' + (d.address || '—') + '</div>') +
-        '</div>' +
-        field('Cidade', d.city, isManual, 'acc-' + idx + '-city', null, 'data-validate="letters-only"') +
-        field('Estado', d.state, isManual, 'acc-' + idx + '-state') +
-        field('CEP', d.zip, isManual, 'acc-' + idx + '-zip', 'Código de Endereçamento Postal no formato 00000-000.', 'data-format="cep"') +
-        field('País', d.country, isManual, 'acc-' + idx + '-country', null, 'data-validate="letters-only"');
+function saveAccordion(source, idx) {
+    var arr = _getContactArr(source);
+    var c = arr[idx];
+    if (!c) return;
+    var pfx = _getIdPfx(source, idx);
+    var g = function (suf) {
+        var el = document.getElementById(pfx + suf);
+        return el ? el.value.trim() : '';
+    };
+    if (c.isManual === true || c.isManual === 'user') {
+        if (_validateManualForm(pfx, 'addr-street')) return;
+    }
+
+    var roleId = source === 'main' ? 'role-acc-' + idx : 'role-' + source + '-a-' + idx;
+    var roleEl = document.getElementById(roleId);
+
+    c.data.sigla    = g('sigla') || c.data.sigla;
+    c.data.org      = g('org')   || c.data.org;
+    c.data.email    = g('email');
+    c.data.position = g('position');
+    c.data.phone    = g('phone');
+    c.data.addr_street = g('addr-street');
+    c.data.addr_num    = g('addr-num');
+    c.data.addr_comp   = g('addr-comp');
+    c.data.addr_bairro = g('addr-bairro');
+    c.data.address  = _combineAddr(c.data);
+    c.data.city     = g('city');
+    c.data.state    = g('state');
+    c.data.zip      = g('zip');
+    c.data.country  = g('country') || 'Brasil';
+    if (roleEl) c.data.role = roleEl.value;
+
+    // Auto-persist if it's a user contact
+    if (c.isManual === 'user' && c.data._key) {
+        var snap = {}; for (var k in c.data) snap[k] = c.data[k];
+        bridge.save_user_contact(JSON.stringify(snap));
+    }
+
+    var body = document.getElementById(_getAccBodyId(source, idx));
+    if (!body) return;
+    var roleSelectHtml = _buildRoleSelectHtml(source, idx, c.data.role);
+    body.innerHTML = '<div class="form-grid">' + _buildContactFields(c.data, pfx, false, roleSelectHtml) + '</div>' +
+        _buildAccActions(c.isManual, source, idx, false);
+
+    // Update accordion header label
+    var header = body.previousElementSibling;
+    if (header) {
+        for (var i = header.childNodes.length - 1; i >= 0; i--) {
+            var n = header.childNodes[i];
+            if (n.nodeType === 3 && n.textContent.trim()) {
+                n.textContent = 'Contato ' + (idx + 1) + (c.data.sigla ? ' — ' + c.data.sigla : '');
+                break;
+            }
+        }
+    }
+
+    // Update summary table cells
+    var tbodyId = source === 'main' ? 'contacts-tbody' : source + '-tbody';
+    var tbody = document.getElementById(tbodyId);
+    if (tbody) {
+        var rows = tbody.querySelectorAll('tr');
+        var row = rows[idx];
+        if (row) {
+            var cells = row.querySelectorAll('td');
+            if (cells[1]) cells[1].textContent = c.data.org   || '—';
+            if (cells[2]) cells[2].textContent = c.data.sigla || '—';
+            if (cells[3] && source === 'main') cells[3].textContent = c.data.email || '—';
+        }
+    }
+}
+
+function cancelAccordion(source, idx) {
+    var arr = _getContactArr(source);
+    var c = arr[idx];
+    if (!c) return;
+    var body = document.getElementById(_getAccBodyId(source, idx));
+    if (!body) return;
+    var pfx = _getIdPfx(source, idx);
+    var roleSelectHtml = _buildRoleSelectHtml(source, idx, c.data.role);
+    body.innerHTML = '<div class="form-grid">' + _buildContactFields(c.data, pfx, false, roleSelectHtml) + '</div>' +
+        _buildAccActions(c.isManual, source, idx, false);
+}
+
+function exportContactXml(source, idx) {
+    var arr = _getContactArr(source);
+    var c = arr[idx];
+    if (!c) return;
+    var d = c.data;
+    var addr = _combineAddr(d);
+    var role = d.role || 'pointOfContact';
+    var roleLabel = ROLE_LABELS[role] || role;
+    var x = function (v) { return escHtml(v || ''); };
+    var xml = '<?xml version="1.0" encoding="UTF-8"?>\n' +
+        '<gmd:CI_ResponsibleParty\n' +
+        '    xmlns:gmd="http://www.isotc211.org/2005/gmd"\n' +
+        '    xmlns:gco="http://www.isotc211.org/2005/gco">\n' +
+        (d.sigla    ? '  <gmd:individualName><gco:CharacterString>' + x(d.sigla) + '</gco:CharacterString></gmd:individualName>\n' : '') +
+        (d.org      ? '  <gmd:organisationName><gco:CharacterString>' + x(d.org) + '</gco:CharacterString></gmd:organisationName>\n' : '') +
+        (d.position ? '  <gmd:positionName><gco:CharacterString>' + x(d.position) + '</gco:CharacterString></gmd:positionName>\n' : '') +
+        '  <gmd:contactInfo><gmd:CI_Contact>\n' +
+        (d.phone ? '    <gmd:phone><gmd:CI_Telephone>\n      <gmd:voice><gco:CharacterString>' + x(d.phone) + '</gco:CharacterString></gmd:voice>\n    </gmd:CI_Telephone></gmd:phone>\n' : '') +
+        '    <gmd:address><gmd:CI_Address>\n' +
+        (addr      ? '      <gmd:deliveryPoint><gco:CharacterString>' + x(addr) + '</gco:CharacterString></gmd:deliveryPoint>\n' : '') +
+        (d.city    ? '      <gmd:city><gco:CharacterString>' + x(d.city) + '</gco:CharacterString></gmd:city>\n' : '') +
+        (d.state   ? '      <gmd:administrativeArea><gco:CharacterString>' + x(d.state) + '</gco:CharacterString></gmd:administrativeArea>\n' : '') +
+        (d.zip     ? '      <gmd:postalCode><gco:CharacterString>' + x(d.zip) + '</gco:CharacterString></gmd:postalCode>\n' : '') +
+        (d.country ? '      <gmd:country><gco:CharacterString>' + x(d.country) + '</gco:CharacterString></gmd:country>\n' : '') +
+        (d.email   ? '      <gmd:electronicMailAddress><gco:CharacterString>' + x(d.email) + '</gco:CharacterString></gmd:electronicMailAddress>\n' : '') +
+        '    </gmd:CI_Address></gmd:address>\n' +
+        '  </gmd:CI_Contact></gmd:contactInfo>\n' +
+        '  <gmd:role>\n' +
+        '    <gmd:CI_RoleCode\n' +
+        '        codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/codelist/gmxCodelists.xml#CI_RoleCode"\n' +
+        '        codeListValue="' + x(role) + '">' + x(roleLabel) + '</gmd:CI_RoleCode>\n' +
+        '  </gmd:role>\n' +
+        '</gmd:CI_ResponsibleParty>';
+    var filename = (d.sigla || d.org || 'contato').replace(/[^a-zA-Z0-9_\-]/g, '_') + '.xml';
+    bridge.export_contact_xml(xml, filename);
 }
 
 function toggleAccordion(idx) {
@@ -1110,9 +1403,18 @@ function _renderContactSuggestions(q) {
         }
     } else {
         html = combined.map(function (r, i) {
-            var src = r._source === 'gn' ? '<span style="font-size:10px;font-weight:700;color:var(--accent);margin-right:4px">GN</span>' : '';
-            var label = src + (r.sigla ? '<b>' + escHtml(r.sigla) + '</b> — ' : '') + escHtml(r.org || r._gn_name || '?');
-            return '<div class="suggestion-item" onclick="pickSuggestion(' + i + ')">' + label + '</div>';
+            var label = '<span>' + (r.sigla ? '<b>' + escHtml(r.sigla) + '</b> - ' : '') + escHtml(r.org || r._gn_name || '?') + '</span>';
+            var right;
+            if (r._source === 'gn') {
+                right = '<span class="sugg-badge-gn">Catálogo Online</span>';
+            } else if (r._source === 'user') {
+                right = '<span class="sugg-badge-user">Meus Contatos</span>' +
+                        '<button class="sugg-delete-btn" title="Excluir contato salvo" onclick="event.stopPropagation();deleteUserContact(\'' + escHtml(r._key) + '\')">×</button>';
+            } else {
+                right = '<span class="sugg-badge-local">Catálogo Offline</span>';
+            }
+            var dataKey = r._key ? ' data-user-key="' + escHtml(r._key) + '"' : '';
+            return '<div class="suggestion-item" onclick="pickSuggestion(' + i + ')"' + dataKey + '>' + label + '<span class="sugg-right">' + right + '</span></div>';
         }).join('');
     }
     if (_gnLoading['main']) html += _GN_LOADING_ROW;
@@ -1140,7 +1442,13 @@ function suggestContacts(q) {
 function pickSuggestion(idx) {
     var r = _suggestionResults[idx];
     if (!r) return;
-    contacts.push({ isManual: r._source === 'gn' ? 'gn' : false, data: r });
+    if (_isDuplicate(contacts, r)) {
+        var inp = document.getElementById('contact-search');
+        if (inp) inp.value = '';
+        closeSuggestions();
+        return;
+    }
+    contacts.push({ isManual: _srcToIsManual(r._source), data: r });
     var newIdx = contacts.length - 1;
     var inp = document.getElementById('contact-search');
     if (inp) inp.value = '';
@@ -1201,9 +1509,18 @@ function _renderForSuggestions(key, q) {
         }
     } else {
         html = combined.map(function (r, i) {
-            var src = r._source === 'gn' ? '<span style="font-size:10px;font-weight:700;color:var(--accent);margin-right:4px">GN</span>' : '';
-            var label = src + (r.sigla ? '<b>' + escHtml(r.sigla) + '</b> — ' : '') + escHtml(r.org || '?');
-            return '<div class="suggestion-item" onclick="pickFor(\'' + key + '\',' + i + ')">' + label + '</div>';
+            var label = '<span>' + (r.sigla ? '<b>' + escHtml(r.sigla) + '</b> - ' : '') + escHtml(r.org || '?') + '</span>';
+            var right;
+            if (r._source === 'gn') {
+                right = '<span class="sugg-badge-gn">Catálogo Online</span>';
+            } else if (r._source === 'user') {
+                right = '<span class="sugg-badge-user">Meus Contatos</span>' +
+                        '<button class="sugg-delete-btn" title="Excluir contato salvo" onclick="event.stopPropagation();deleteUserContact(\'' + escHtml(r._key) + '\')">×</button>';
+            } else {
+                right = '<span class="sugg-badge-local">Catálogo Offline</span>';
+            }
+            var dataKey = r._key ? ' data-user-key="' + escHtml(r._key) + '"' : '';
+            return '<div class="suggestion-item" onclick="pickFor(\'' + key + '\',' + i + ')"' + dataKey + '>' + label + '<span class="sugg-right">' + right + '</span></div>';
         }).join('');
     }
     if (_gnLoading[key]) html += _GN_LOADING_ROW;
@@ -1231,7 +1548,13 @@ function suggestFor(key, q) {
 function pickFor(key, idx) {
     var r = _sSugg(key)[idx];
     if (!r) return;
-    _sArr(key).push({ isManual: r._source === 'gn' ? 'gn' : false, data: r });
+    if (_isDuplicate(_sArr(key), r)) {
+        var inp = document.getElementById(key + '-search');
+        if (inp) inp.value = '';
+        closeFor(key);
+        return;
+    }
+    _sArr(key).push({ isManual: _srcToIsManual(r._source), data: r });
     var newIdx = _sArr(key).length - 1;
     var inp = document.getElementById(key + '-search');
     if (inp) inp.value = '';
@@ -1298,39 +1621,17 @@ function renderFor(key) {
 function buildAccordionFor(c, idx, key) {
     var d = c.data;
     var lbl = 'Contato ' + (idx + 1) + (d.sigla ? ' — ' + d.sigla : '');
-    var badge = c.isManual === 'gn'
-        ? '<span class="badge-gn">Catálogo Online</span>'
-        : c.isManual
-            ? '<span class="badge-manual">Manual</span>'
-            : '<span class="badge-preset">Catálogo Offline</span>';
-    var sel = d.role || 'pointOfContact';
-    var rOpts = ROLE_OPTIONS.map(function (r) {
-        return '<option value="' + r.value + '"' + (r.value === sel ? ' selected' : '') + '>' + r.label + '</option>';
-    }).join('');
-    var editable = c.isManual === true;
-    var flds =
-        field('Sigla', d.sigla, editable, 'af-' + key + '-' + idx + '-sigla', 'Abreviação ou acrônimo da organização (ex: CDHU, IPT, IBGE).', 'data-format="uppercase"') +
-        field('Organização', d.org, editable, 'af-' + key + '-' + idx + '-org', 'Nome completo da organização responsável.', 'data-format="titlecase"') +
-        '<div class="form-group"><label>Regra <button class="help-btn" data-tip="Papel desta organização ou pessoa em relação ao dado (ex: Dono = responsável; Ponto de contato = para dúvidas).">?</button></label>' +
-        '<select id="role-' + key + '-a-' + idx + '" class="role-select" onchange="updateRoleFor(\'' + key + '\',' + idx + ',this.value)">' + rOpts + '</select></div>' +
-        field('E-mail', d.email, editable, 'af-' + key + '-' + idx + '-email', 'Endereço de e-mail para contato.', 'data-validate="email"') +
-        field('Cargo', d.position, editable, 'af-' + key + '-' + idx + '-position', 'Cargo ou departamento do responsável na organização.', 'data-validate="letters-only"') +
-        field('Telefone', d.phone, editable, 'af-' + key + '-' + idx + '-phone', 'Telefone de contato com DDD (ex: (11) 3111-0000).', 'data-format="phone"') +
-        '<div class="form-group span-2"><label>Endereço <button class="help-btn" data-tip="Logradouro completo da organização.">?</button></label>' +
-        (editable
-            ? '<input id="af-' + key + '-' + idx + '-address" type="text" value="' + (d.address || '') + '">'
-            : '<div class="readonly-field">' + (d.address || '—') + '</div>') +
-        '</div>' +
-        field('Cidade', d.city, editable, 'af-' + key + '-' + idx + '-city', null, 'data-validate="letters-only"') +
-        field('Estado', d.state, editable, 'af-' + key + '-' + idx + '-state') +
-        field('CEP', d.zip, editable, 'af-' + key + '-' + idx + '-zip', 'Código de Endereçamento Postal no formato 00000-000.', 'data-format="cep"') +
-        field('País', d.country, editable, 'af-' + key + '-' + idx + '-country', null, 'data-validate="letters-only"');
+    var isEditing = !!_accEditing[key + ':' + idx];
+    var pfx = 'af-' + key + '-' + idx + '-';
+    var roleSelectHtml = _buildRoleSelectHtml(key, idx, d.role);
+    var bodyHtml = '<div class="form-grid">' + _buildContactFields(d, pfx, isEditing, roleSelectHtml) + '</div>' +
+        _buildAccActions(c.isManual, key, idx, isEditing);
     return '<div class="contact-accordion">' +
         '<button class="accordion-header" onclick="toggleAccordionFor(\'' + key + '\',' + idx + ')">' +
         '<span class="acc-arrow" id="arr-' + key + '-' + idx + '"><img class="acc-chevron" src="../../img/chevron_down.svg"></span>' +
-        lbl + badge + '</button>' +
-        '<div class="accordion-body" id="acc-body-' + key + '-' + idx + '">' +
-        '<div class="form-grid">' + flds + '</div></div></div>';
+        lbl + _sourceBadge(c) + '</button>' +
+        '<div class="accordion-body" id="acc-body-' + key + '-' + idx + '">' + bodyHtml + '</div>' +
+        '</div>';
 }
 
 function toggleAccordionFor(key, idx) {
@@ -1357,19 +1658,21 @@ function toggleSectionManual(key) {
 
 function submitSectionManual(key) {
     var g = function (id) { var el = document.getElementById(key + '-mf-' + id); return el ? el.value.trim() : ''; };
+    if (_validateManualForm(key + '-mf-', 'address')) return;
     var sigla = g('sigla'), org = g('org');
-    if (!sigla && !org) { alert('Informe ao menos Sigla ou Organização.'); return; }
-    var addrParts = [g('address'), g('address-num'), g('address-comp')].filter(Boolean);
     _sArr(key).push({
         isManual: true,
         data: {
             sigla: sigla, org: org, email: g('email'), role: g('role') || 'pointOfContact',
             position: g('position'), phone: g('phone'),
-            address: addrParts.join(', '), city: g('city'), state: g('state'), zip: g('zip'),
+            addr_street: g('address'), addr_num: g('address-num'), addr_comp: g('address-comp'),
+            addr_bairro: g('addr-bairro'),
+            address: [g('address'), g('address-num'), g('address-comp'), g('addr-bairro')].filter(Boolean).join(', '),
+            city: g('city'), state: g('state'), zip: g('zip'),
             country: g('country') || 'Brasil'
         }
     });
-    ['sigla', 'org', 'email', 'position', 'phone', 'address', 'address-num', 'address-comp', 'city', 'zip'].forEach(function (f) {
+    ['sigla', 'org', 'email', 'position', 'phone', 'address', 'address-num', 'address-comp', 'addr-bairro', 'city', 'zip'].forEach(function (f) {
         var el = document.getElementById(key + '-mf-' + f); if (el) el.value = '';
     });
     var stateEl = document.getElementById(key + '-mf-state'); if (stateEl) stateEl.value = '';
@@ -1472,26 +1775,21 @@ function submitManualContact() {
         var el = document.getElementById("mf-" + id);
         return el ? el.value.trim() : "";
     };
+    if (_validateManualForm('mf-', 'address')) return;
     var sigla = g("sigla"), org = g("org");
-    if (!sigla && !org) { alert("Informe ao menos Sigla ou Organização."); return; }
-    var addrParts = [g("address"), g("address-num"), g("address-comp")].filter(Boolean);
     contacts.push({
         isManual: true,
         data: {
-            sigla: sigla,
-            org: org,
-            email: g("email"),
-            role: g("role"),
-            position: g("position"),
-            phone: g("phone"),
-            address: addrParts.join(', '),
-            city: g("city"),
-            state: g("state"),
-            zip: g("zip"),
+            sigla: sigla, org: org, email: g("email"), role: g("role"),
+            position: g("position"), phone: g("phone"),
+            addr_street: g("address"), addr_num: g("address-num"), addr_comp: g("address-comp"),
+            addr_bairro: g("addr-bairro"),
+            address: [g("address"), g("address-num"), g("address-comp"), g("addr-bairro")].filter(Boolean).join(', '),
+            city: g("city"), state: g("state"), zip: g("zip"),
             country: g("country") || "Brasil"
         }
     });
-    ["sigla", "org", "email", "role", "position", "phone", "address", "address-num", "address-comp", "city", "state", "zip"].forEach(function (f) {
+    ["sigla", "org", "email", "role", "position", "phone", "address", "address-num", "address-comp", "addr-bairro", "city", "state", "zip"].forEach(function (f) {
         var el = document.getElementById("mf-" + f);
         if (el) el.value = "";
     });
