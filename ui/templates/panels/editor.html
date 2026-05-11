@@ -30,8 +30,8 @@
             </div>
 
             <div class="form-group span-2">
-                <label>Data e hora do dado <span class="req">*</span> <button class="help-btn"
-                        data-tip="Selecione o tipo: Criação (quando gerado), Publicação (quando divulgado) ou Revisão (última atualização relevante).">?</button></label>
+                <label>Data e hora do dado <span class="req">*</span> <button class="help-btn" data-tip="Selecione o tipo: Criação (quando gerado), Publicação (quando divulgado) 
+                        ou Revisão (última atualização relevante).">?</button></label>
                 <div class="inline-row">
                     <select id="f-dateType">
                         <option value="creation" data-title="Data em que o dado foi originalmente produzido">Criação
@@ -119,6 +119,11 @@
     </div>
     <!-- ══ TAB 4: CONTATO ══════════════════════════════════════ -->
     <div id="tab-contato" class="tab-content">
+        <p class="section-heading">Contato do recurso <span class="req">*</span> <button class="help-btn" data-tip="Setor responsável pelo dado. Para dados da CDHU, obrigatório incluir o contato 'CDHU' e a regra 'Dono' na posição 2.">?</button>
+        </p>
+        <div id="cdhu-warning-main" class="cdhu-warning" style="display:none;">
+            ⚠️ Para dados da CDHU, adicione também o contato <strong>CDHU</strong> com a regra <strong>Dono</strong>.
+        </div>
 
         <div class="contacts-toolbar">
             <div class="search-wrap">
@@ -1017,14 +1022,19 @@
             </div>
 
             <div class="form-group">
-                <label for="f-dateStamp">Data e hora de criação do metadado <button class="help-btn"
+                <label for="f-dateStamp">Data e hora de criação do metadado <span class="req">*</span> <button
+                        class="help-btn"
                         data-tip="A data da última alteração feita neste registro de metadado.">?</button></label>
                 <input id="f-dateStamp" type="datetime-local">
             </div>
 
         </div>
 
-        <p class="section-heading">Autor do Metadado</p>
+        <p class="section-heading">Contato do Metadado <span class="req">*</span> <button class="help-btn" data-tip="Setor responsável pelo registro no catálogo. Para dados da CDHU, obrigatório incluir o contato 'CDHU' e a regra 'Dono' na posição 1, em seguida o setor.">?</button>
+        </p>
+        <div id="cdhu-warning-meta" class="cdhu-warning" style="display:none;">
+            ⚠️ Para dados da CDHU, adicione também o contato <strong>CDHU</strong> com a regra <strong>Dono</strong>.
+        </div>
 
         <div class="contacts-toolbar">
             <div class="search-wrap">

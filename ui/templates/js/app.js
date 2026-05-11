@@ -553,7 +553,12 @@ function validateForm(data, silent) {
                     if (chipsBox) chipsBox.style.outline = "2px solid var(--accent)";
                 } else {
                     var el = document.getElementById("f-" + key);
-                    if (el) el.classList.add("error");
+                    if (el) {
+                        el.classList.add("error");
+                        if (el.nextElementSibling && el.nextElementSibling.classList.contains("custom-select")) {
+                            el.nextElementSibling.classList.add("error");
+                        }
+                    }
                 }
             }
             missing.push(REQUIRED_LABELS[key]);
@@ -564,7 +569,12 @@ function validateForm(data, silent) {
                     if (chipsBox2) chipsBox2.style.outline = "";
                 } else {
                     var el2 = document.getElementById("f-" + key);
-                    if (el2) el2.classList.remove("error");
+                    if (el2) {
+                        el2.classList.remove("error");
+                        if (el2.nextElementSibling && el2.nextElementSibling.classList.contains("custom-select")) {
+                            el2.nextElementSibling.classList.remove("error");
+                        }
+                    }
                 }
             }
         }
@@ -1241,9 +1251,9 @@ function renderContacts() {
             '<td>' + (c.data.email || '-') + '</td>' +
             '<td>' + buildRoleSelect(idx, c.data.role) + '</td>' +
             '<td style="white-space:nowrap">' +
-            '<button class="btn-move" onclick="moveContact(' + idx + ',-1)" title="Mover para cima"' + (idx === 0 ? ' disabled' : '') + '>↑</button>' +
-            '<button class="btn-move" onclick="moveContact(' + idx + ', 1)" title="Mover para baixo"' + (idx === last ? ' disabled' : '') + '>↓</button>' +
-            '<button class="btn-remove" onclick="removeContact(' + idx + ')" title="Remover">✕</button>' +
+            '<button class="btn-move" onclick="moveContact(' + idx + ',-1)" data-title="Mover para cima"' + (idx === 0 ? ' disabled' : '') + '>↑</button>' +
+            '<button class="btn-move" onclick="moveContact(' + idx + ', 1)" data-title="Mover para baixo"' + (idx === last ? ' disabled' : '') + '>↓</button>' +
+            '<button class="btn-remove" onclick="removeContact(' + idx + ')" data-title="Remover">✕</button>' +
             '</td>' +
             '</tr>';
     }).join('');
@@ -1444,6 +1454,7 @@ function moveContact(idx, dir) {
 function removeContact(idx) {
     contacts.splice(idx, 1);
     renderContacts();
+    _checkCdhuWarning(contacts, 'cdhu-warning-main');
 }
 
 // ─── Busca de contatos (via bridge) ───────────────────────────────────────────
@@ -1455,6 +1466,28 @@ var _gnSearchTimer = null;
 var _gnLoading = { 'main': false, 'proc': false, 'meta': false };
 
 var _GN_LOADING_ROW = '<div class="suggestion-loading"><span class="suggestion-spinner"></span>Buscando no Catálogo Online…</div>';
+
+// ─── Verificação de aviso CDHU ────────────────────────────────────────────────
+function _hasCdhu(arr) {
+    return arr.some(function (c) {
+        var sig = (c.data.sigla || '').toUpperCase();
+        var org = (c.data.org || '').toUpperCase();
+        return sig === 'CDHU' || org.indexOf('CDHU') !== -1;
+    });
+}
+
+function _checkCdhuWarning(arr, bannerId) {
+    var banner = document.getElementById(bannerId);
+    if (!banner) return;
+    // Only show if any contact is from a catalog (not fully manual)
+    var hasCatalogContact = arr.some(function (c) { return c.isManual !== true; });
+    var hasCdhu = _hasCdhu(arr);
+    if (hasCatalogContact && !hasCdhu) {
+        banner.style.display = 'block';
+    } else {
+        banner.style.display = 'none';
+    }
+}
 
 function _renderContactSuggestions(q) {
     var combined = _gnResults.concat(_localResults.filter(function (r) {
@@ -1521,6 +1554,8 @@ function pickSuggestion(idx) {
     if (inp) inp.value = '';
     closeSuggestions();
     renderContacts();
+    // Warn if catalog contact added without CDHU in the list
+    if (r._source !== true) _checkCdhuWarning(contacts, 'cdhu-warning-main');
     if (r._source === 'gn' && r._gn_uuid) {
         bridge.enrich_gn_contact('main', newIdx, r._gn_uuid);
     }
@@ -1627,6 +1662,8 @@ function pickFor(key, idx) {
     if (inp) inp.value = '';
     closeFor(key);
     renderFor(key);
+    // Warn if catalog contact added without CDHU in the list (only for meta section)
+    if (key === 'meta' && r._source !== true) _checkCdhuWarning(_sArr(key), 'cdhu-warning-meta');
     if (r._source === 'gn' && r._gn_uuid) {
         bridge.enrich_gn_contact(key, newIdx, r._gn_uuid);
     }
@@ -1643,6 +1680,7 @@ function closeFor(key) {
 function removeFrom(key, idx) {
     _sArr(key).splice(idx, 1);
     renderFor(key);
+    if (key === 'meta') _checkCdhuWarning(_sArr(key), 'cdhu-warning-meta');
 }
 
 function updateRoleFor(key, idx, val) {
