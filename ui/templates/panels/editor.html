@@ -66,12 +66,6 @@
                     placeholder="Descreva o conjunto de dados..."></textarea>
             </div>
 
-            <div class="form-group span-2">
-                <label for="f-purpose">Finalidade <button class="help-btn"
-                        data-tip="Explique a finalidade da criação do dado: qual problema visa resolver ou para qual projeto foi demandado?">?</button></label>
-                <textarea id="f-purpose" rows="3" placeholder="Descreva os objetivos e uso previsto..."></textarea>
-            </div>
-
             <div class="form-group">
                 <label for="f-credit">Crédito <span class="req">*</span> <button class="help-btn"
                         data-tip="Mencione a equipe, departamento ou técnico diretamente responsável pela elaboração técnica deste dado.">?</button></label>
@@ -115,14 +109,22 @@
                 <div class="keyword-chips" id="keyword-chips"></div>
             </div>
 
+            <div class="form-group span-2">
+                <label for="f-purpose">Finalidade <button class="help-btn"
+                        data-tip="Explique a finalidade da criação do dado: qual problema visa resolver ou para qual projeto foi demandado?">?</button></label>
+                <textarea id="f-purpose" rows="3" placeholder="Descreva os objetivos e uso previsto..."></textarea>
+            </div>
+
         </div>
     </div>
     <!-- ══ TAB 4: CONTATO ══════════════════════════════════════ -->
     <div id="tab-contato" class="tab-content">
-        <p class="section-heading">Contato do recurso <span class="req">*</span> <button class="help-btn" data-tip="Setor responsável pelo dado. Para dados da CDHU, obrigatório incluir o contato 'CDHU' e a regra 'Dono' na posição 2.">?</button>
+        <p class="section-heading">Contato do recurso <span class="req">*</span> <button class="help-btn"
+                data-tip="Setor responsável pelo dado. Para dados da CDHU, obrigatório incluir o contato 'CDHU' e a regra 'Dono' na posição 2.">?</button>
         </p>
         <div id="cdhu-warning-main" class="cdhu-warning" style="display:none;">
-            ⚠️ Para dados da CDHU, adicione também o contato <strong>CDHU</strong> com a regra <strong>Dono</strong>.
+            ⚠️ Para dados da CDHU, adicione também o contato <strong>CDHU</strong> com a regra <strong>Dono</strong> na
+            <strong>Posição 2</strong>.
         </div>
 
         <div class="contacts-toolbar">
@@ -1030,10 +1032,12 @@
 
         </div>
 
-        <p class="section-heading">Contato do Metadado <span class="req">*</span> <button class="help-btn" data-tip="Setor responsável pelo registro no catálogo. Para dados da CDHU, obrigatório incluir o contato 'CDHU' e a regra 'Dono' na posição 1, em seguida o setor.">?</button>
+        <p class="section-heading">Contato do Metadado <span class="req">*</span> <button class="help-btn"
+                data-tip="Setor responsável pelo registro no catálogo. Para dados da CDHU, obrigatório incluir o contato 'CDHU' e a regra 'Dono' na posição 1, em seguida o setor.">?</button>
         </p>
         <div id="cdhu-warning-meta" class="cdhu-warning" style="display:none;">
-            ⚠️ Para dados da CDHU, adicione também o contato <strong>CDHU</strong> com a regra <strong>Dono</strong>.
+            ⚠️ Para dados da CDHU, adicione também o contato <strong>CDHU</strong> com a regra <strong>Dono</strong> na
+            <strong>Posição 1</strong>.
         </div>
 
         <div class="contacts-toolbar">

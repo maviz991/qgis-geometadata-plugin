@@ -1263,6 +1263,7 @@ function renderContacts() {
             return buildAccordion(c, idx);
         }).join('');
     }
+    _checkCdhuWarning(contacts, 'cdhu-warning-main');
 }
 
 function buildAccordion(c, idx) {
@@ -1451,10 +1452,19 @@ function moveContact(idx, dir) {
     renderContacts();
 }
 
+function moveFor(key, idx, dir) {
+    var arr = _sArr(key);
+    var newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= arr.length) return;
+    var tmp = arr[idx];
+    arr[idx] = arr[newIdx];
+    arr[newIdx] = tmp;
+    renderFor(key);
+}
+
 function removeContact(idx) {
     contacts.splice(idx, 1);
     renderContacts();
-    _checkCdhuWarning(contacts, 'cdhu-warning-main');
 }
 
 // ─── Busca de contatos (via bridge) ───────────────────────────────────────────
@@ -1554,8 +1564,6 @@ function pickSuggestion(idx) {
     if (inp) inp.value = '';
     closeSuggestions();
     renderContacts();
-    // Warn if catalog contact added without CDHU in the list
-    if (r._source !== true) _checkCdhuWarning(contacts, 'cdhu-warning-main');
     if (r._source === 'gn' && r._gn_uuid) {
         bridge.enrich_gn_contact('main', newIdx, r._gn_uuid);
     }
@@ -1662,8 +1670,6 @@ function pickFor(key, idx) {
     if (inp) inp.value = '';
     closeFor(key);
     renderFor(key);
-    // Warn if catalog contact added without CDHU in the list (only for meta section)
-    if (key === 'meta' && r._source !== true) _checkCdhuWarning(_sArr(key), 'cdhu-warning-meta');
     if (r._source === 'gn' && r._gn_uuid) {
         bridge.enrich_gn_contact(key, newIdx, r._gn_uuid);
     }
@@ -1680,7 +1686,6 @@ function closeFor(key) {
 function removeFrom(key, idx) {
     _sArr(key).splice(idx, 1);
     renderFor(key);
-    if (key === 'meta') _checkCdhuWarning(_sArr(key), 'cdhu-warning-meta');
 }
 
 function updateRoleFor(key, idx, val) {
@@ -1703,6 +1708,7 @@ function renderFor(key) {
         if (accDiv) accDiv.innerHTML = '';
         return;
     }
+    var last = arr.length - 1;
     tbody.innerHTML = arr.map(function (c, idx) {
         var sel = c.data.role || 'pointOfContact';
         var opts = ROLE_OPTIONS.map(function (r) {
@@ -1713,7 +1719,11 @@ function renderFor(key) {
             '<td>' + (c.data.org || '-') + '</td>' +
             '<td>' + (c.data.sigla || '-') + '</td>' +
             '<td><select id="role-' + key + '-t-' + idx + '" class="role-select" onchange="updateRoleFor(\'' + key + '\',' + idx + ',this.value)">' + opts + '</select></td>' +
-            '<td><button class="btn-remove" onclick="removeFrom(\'' + key + '\',' + idx + ')" title="Remover">✕</button></td>' +
+            '<td style="white-space:nowrap">' +
+            '<button class="btn-move" onclick="moveFor(\'' + key + '\',' + idx + ',-1)" title="Mover para cima"' + (idx === 0 ? ' disabled' : '') + '>↑</button>' +
+            '<button class="btn-move" onclick="moveFor(\'' + key + '\',' + idx + ', 1)" title="Mover para baixo"' + (idx === last ? ' disabled' : '') + '>↓</button>' +
+            '<button class="btn-remove" onclick="removeFrom(\'' + key + '\',' + idx + ')" title="Remover">✕</button>' +
+            '</td>' +
             '</tr>';
     }).join('');
     if (accDiv) {
@@ -1721,6 +1731,7 @@ function renderFor(key) {
             return buildAccordionFor(c, idx, key);
         }).join('');
     }
+    if (key === 'meta') _checkCdhuWarning(arr, 'cdhu-warning-meta');
 }
 
 function buildAccordionFor(c, idx, key) {
