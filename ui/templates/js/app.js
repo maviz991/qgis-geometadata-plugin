@@ -563,29 +563,38 @@ function validateForm(data, silent) {
             }
             missing.push(REQUIRED_LABELS[key]);
         } else {
-            if (!silent) {
-                if (key === "MD_Keywords") {
-                    var chipsBox2 = document.getElementById("keyword-chips");
-                    if (chipsBox2) chipsBox2.style.outline = "";
-                } else {
-                    var el2 = document.getElementById("f-" + key);
-                    if (el2) {
-                        el2.classList.remove("error");
-                        if (el2.nextElementSibling && el2.nextElementSibling.classList.contains("custom-select")) {
-                            el2.nextElementSibling.classList.remove("error");
-                        }
+            // SEMPRE remove o erro se o campo for preenchido, mesmo em modo silencioso
+            if (key === "MD_Keywords") {
+                var chipsBox2 = document.getElementById("keyword-chips");
+                if (chipsBox2) chipsBox2.style.outline = "";
+            } else {
+                var el2 = document.getElementById("f-" + key);
+                if (el2) {
+                    el2.classList.remove("error");
+                    if (el2.nextElementSibling && el2.nextElementSibling.classList.contains("custom-select")) {
+                        el2.nextElementSibling.classList.remove("error");
                     }
                 }
             }
         }
     }
+    var cTable = document.getElementById("contacts-tbody");
     if (contacts.length === 0) {
+        if (!silent && cTable) cTable.closest('table').style.outline = "2px solid var(--accent)";
         missing.push("Contato (ao menos um)");
-    } else if (!contacts[0].data.role) {
-        missing.push("Responsabilidade do Contato");
+    } else {
+        if (cTable) cTable.closest('table').style.outline = "";
+        if (!contacts[0].data.role) {
+            missing.push("Responsabilidade do Contato");
+        }
     }
+
+    var mTable = document.getElementById("meta-tbody");
     if (metaContacts.length === 0) {
+        if (!silent && mTable) mTable.closest('table').style.outline = "2px solid var(--accent)";
         missing.push("Autor do Metadado (ao menos um)");
+    } else {
+        if (mTable) mTable.closest('table').style.outline = "";
     }
     return missing;
 }
@@ -1856,23 +1865,12 @@ function generateUUID() {
 }
 
 function initMetaAuthor() {
-    if (metaContacts.length > 0) { renderFor('meta'); return; }
-    var fallback = {
-        isManual: false,
-        data: {
-            sigla: 'CDHU', org: 'Companhia de Desenvolvimento Habitacional e Urbano',
-            role: 'owner', email: 'geohab@cdhu.sp.gov.br',
-            position: 'Gerência de Geoinformação', phone: '',
-            address: '', city: 'São Paulo', state: 'SP', zip: '', country: 'Brasil'
-        }
-    };
-    if (typeof bridge === 'undefined') { metaContacts.push(fallback); renderFor('meta'); return; }
-    bridge.search_contacts('CDHU', function (results) {
-        var cdhu = results && results.find(function (r) { return r.sigla === 'CDHU'; });
-        if (cdhu) { cdhu.role = 'owner'; metaContacts.push({ isManual: false, data: cdhu }); }
-        else { metaContacts.push(fallback); }
+    // Começar vazio para que o progresso reflita o trabalho do usuário do zero
+    if (metaContacts.length > 0) {
         renderFor('meta');
-    });
+    } else {
+        renderFor('meta');
+    }
 }
 
 // ─── Logout ────────────────────────────────────────────────────────────────────

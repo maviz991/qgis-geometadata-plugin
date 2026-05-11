@@ -25,34 +25,35 @@
                     </svg>
                 </button>
                 <div class="dropdown-content">
-                    <a href="#" onclick="trySaveMetadata()">Continuar depois</a>
-                    <a href="#" onclick="tryExportXml()">Exportar .xml</a>
+                    <a href="#" onclick="trySaveMetadata()">Continuar Depois</a>
+                    <a href="#" onclick="tryExportXml()">Exportar Metadado</a>
                 </div>
             </div>
 
             <div class="dropdown">
                 <button class="dropbtn">
-                    <span>Catálogo Geohab</span>
+                    <span>Catálogo</span>
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="4"
                         stroke="currentColor" class="chevron-icon">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"></path>
                     </svg>
                 </button>
                 <div class="dropdown-content">
-                    <a href="#" onclick="navigate('editor')">Editar Metadados</a>
-                    <a href="#" onclick="tryExportGeohab()">Publicar no Catálogo</a>
+                    <a href="#" onclick="navigate('editor')">Editor de Metadado</a>
+                    <a href="#" onclick="tryExportGeohab()">Publicar Metadado</a>
                 </div>
             </div>
 
             <div class="dropdown">
                 <button class="dropbtn">
-                    <span>GeoServer</span>
+                    <span>Serviços</span>
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="4"
                         stroke="currentColor" class="chevron-icon">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"></path>
                     </svg>
                 </button>
                 <div class="dropdown-content">
+                    <a href="#" onclick="bridge.navigate('geoserver')">Configurar Camada</a>
                     <a href="#" onclick="bridge.navigate('geoserver')">Publicar Camada</a>
                 </div>
             </div>
