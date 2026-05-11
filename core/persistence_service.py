@@ -129,17 +129,8 @@ class PersistenceService:
             self._show_message("Erro", "Não foi possível identificar a tabela da camada.", parent_widget, icon=QtWidgets.QMessageBox.Warning)
             return False
             
-        if not is_automatic_resave and parent_widget:
-            question_text = (f"<p style='font-size:14px; font-weight: bold;'>Você deseja realmente salvar?</p>"
-                             f"<p><b>⚠ As informações serão atualizadas na Tabela:</b><br>"
-                             f"public.qgis_geometadata_plugin</p>"
-                             f"<p><b>Associado à camada:</b><br>"
-                             f"{conn_details['f_table_schema']}.{conn_details['f_table_name']}</p>"
-                             f"<p>No banco de dados: <b>{conn_details['f_table_catalog']}</b>.</p>")
-            reply = QtWidgets.QMessageBox.question(parent_widget, 'Confirmar Salvamento no DB', question_text, QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel)
-            if reply != QtWidgets.QMessageBox.Ok:
-                self.iface.messageBar().pushMessage("Info", "Operação cancelada.", level=Qgis.Info)
-                return False
+        # A confirmação agora é feita pela interface HTML/JS antes de chamar este método.
+        pass
 
         try:
             db_user = conn_details.get('user')

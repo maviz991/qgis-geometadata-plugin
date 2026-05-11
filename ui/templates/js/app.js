@@ -444,14 +444,16 @@ function tryExportGeohab() {
 function trySaveMetadata() {
     var data = collectFormData();
     if (!data) return;
-    bridge.save_metadata(data);
+    Modal.confirm('Deseja realmente salvar as alterações no banco de dados?', function() {
+        bridge.save_metadata(data);
+    }, 'Confirmar Salvamento');
 }
 
 // ─── Formulário ───────────────────────────────────────────────────────────────
 
 function collectFormData() {
     if (!document.getElementById("f-title")) {
-        alert('Abra "Catálogo Geohab > Editar Metadados" antes de exportar.');
+        Modal.alert('Abra "Catálogo Geohab > Editar Metadados" antes de exportar.', 'Ação Necessária', 'warning');
         return null;
     }
     var get = function (id) {
@@ -523,6 +525,7 @@ function collectFormData() {
 
 var REQUIRED_LABELS = {
     title: "Título",
+    dateType: "Tipo de Data",
     date: "Data do Dado",
     maintenanceFrequency: "Frequência de Atualização",
     abstract: "Resumo",
@@ -628,7 +631,7 @@ function updateFormProgress(e) {
 }
 
 function showValidationError(missing) {
-    alert("Preencha os campos obrigatórios:\n• " + missing.join("\n• "));
+    Modal.alert("Preencha os campos obrigatórios:<br>• " + missing.join("<br>• "), "Campos Pendentes", "error");
 }
 
 function populateForm(data) {
@@ -753,9 +756,9 @@ function setEpsgFromCode(val) {
 }
 
 function captureFromLayer() {
-    if (typeof bridge === "undefined") { alert("Disponível apenas no QGIS."); return; }
+    if (typeof bridge === "undefined") { Modal.alert("Disponível apenas no QGIS.", "Aviso", "info"); return; }
     bridge.get_layer_info(function (result) {
-        if (!result) { alert("Nenhuma camada ativa ou informações não disponíveis."); return; }
+        if (!result) { Modal.alert("Nenhuma camada ativa ou informações não disponíveis.", "Erro", "error"); return; }
         var codeEl = document.getElementById("f-epsgCode");
         var titleEl = document.getElementById("f-epsgTitle");
         if (codeEl) {
@@ -957,11 +960,11 @@ function toggleDistManual() {
 function submitDistManual() {
     var urlEl = document.getElementById('dist-mf-url');
     var url = urlEl ? urlEl.value.trim() : '';
-    if (!url) { alert('Informe a URL do recurso.'); return; }
+    if (!url) { Modal.alert('Informe a URL do recurso.', 'Aviso', 'warning'); return; }
     var proto = (document.getElementById('dist-mf-protocol') || {}).value || 'OGC:WMS';
     var name = ((document.getElementById('dist-mf-name') || {}).value || '').trim();
     var desc = ((document.getElementById('dist-mf-description') || {}).value || '').trim();
-    if (_distDuplicate(url, proto)) { alert('Este recurso já foi adicionado.'); return; }
+    if (_distDuplicate(url, proto)) { Modal.alert('Este recurso já foi adicionado.', 'Duplicado', 'warning'); return; }
     distResources.push({ url: url, protocol: proto, name: name, description: desc });
     ['dist-mf-url', 'dist-mf-name', 'dist-mf-description'].forEach(function (id) {
         var el = document.getElementById(id); if (el) el.value = '';
@@ -1227,11 +1230,12 @@ function deleteUserContactFromList(source, idx) {
     var c = arr[idx];
     if (!c) return;
     var name = c.data.sigla || c.data.org || 'este contato';
-    if (!confirm('Excluir "' + name + '" dos Meus Contatos?\n\nEsta ação remove o contato salvo permanentemente.')) return;
-    if (c.data._key) bridge.delete_user_contact(c.data._key);
-    arr.splice(idx, 1);
-    if (source === 'main') renderContacts();
-    else renderFor(source);
+    Modal.confirm('Excluir "' + name + '" dos Meus Contatos?<br><br>Esta ação remove o contato salvo permanentemente.', function() {
+        if (c.data._key) bridge.delete_user_contact(c.data._key);
+        arr.splice(idx, 1);
+        if (source === 'main') renderContacts();
+        else renderFor(source);
+    }, 'Excluir Contato');
 }
 
 function saveContactLocally(source, idx) {
@@ -1257,16 +1261,17 @@ function saveContactLocally(source, idx) {
 }
 
 function deleteUserContact(key) {
-    if (!confirm('Excluir este contato dos Meus Contatos?\n\nEsta ação não pode ser desfeita.')) return;
-    bridge.delete_user_contact(key);
-    var boxes = ['search-suggestions', 'proc-suggestions', 'meta-suggestions'];
-    boxes.forEach(function (id) {
-        var box = document.getElementById(id);
-        if (!box) return;
-        box.querySelectorAll('[data-user-key="' + key + '"]').forEach(function (el) {
-            el.remove();
+    Modal.confirm('Excluir este contato dos Meus Contatos?<br><br>Esta ação não pode ser desfeita.', function() {
+        bridge.delete_user_contact(key);
+        var boxes = ['search-suggestions', 'proc-suggestions', 'meta-suggestions'];
+        boxes.forEach(function (id) {
+            var box = document.getElementById(id);
+            if (!box) return;
+            box.querySelectorAll('[data-user-key="' + key + '"]').forEach(function (el) {
+                el.remove();
+            });
         });
-    });
+    }, 'Confirmar Exclusão');
 }
 
 function renderContacts() {
@@ -1876,10 +1881,11 @@ function initMetaAuthor() {
 // ─── Logout ────────────────────────────────────────────────────────────────────
 
 function doLogout() {
-    if (!confirm('Deseja sair da conta?')) return;
-    if (typeof bridge !== 'undefined' && bridge.logout) {
-        bridge.logout();
-    }
+    Modal.confirm('Deseja realmente sair da conta?', function() {
+        if (typeof bridge !== 'undefined' && bridge.logout) {
+            bridge.logout();
+        }
+    }, 'Sair');
 }
 
 // ─── Login ─────────────────────────────────────────────────────────────────────
@@ -1900,7 +1906,7 @@ function doAdminLogin() {
     var passEl = document.getElementById('admin-pass');
     var user = userEl ? userEl.value.trim() : '';
     var pass = passEl ? passEl.value : '';
-    if (!user || !pass) { alert('Informe usuário e senha.'); return; }
+    if (!user || !pass) { Modal.alert('Informe usuário e senha.', 'Login', 'warning'); return; }
     if (typeof bridge !== 'undefined' && bridge.do_admin_login) {
         setLoginState(true, 'Verificando credenciais...');
         bridge.do_admin_login(user, pass);
@@ -1929,7 +1935,7 @@ function setLoginError(msg) {
     var errEl = document.getElementById('login-error-msg') ||
         document.getElementById('login-error-msg-adm');
     if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
-    else { alert(msg); }
+    else { Modal.alert(msg, 'Erro de Login', 'error'); }
 }
 
 function submitManualContact() {
