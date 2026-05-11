@@ -29,21 +29,21 @@
                     data-title="Nome descritivo. Recomendação: Tema, local e ano.">
             </div>
 
-            <div class="form-group span-2">
-                <label>Data e hora do dado <span class="req">*</span> <button class="help-btn" data-tip="Selecione o tipo: Criação (quando gerado), Publicação (quando divulgado) 
-                        ou Revisão (última atualização relevante).">?</button></label>
-                <div class="inline-row">
-                    <select id="f-dateType">
-                        <option value="creation" data-title="Data em que o dado foi originalmente produzido">Criação
-                        </option>
-                        <option value="publication" data-title="Data em que o dado foi disponibilizado ao público">
-                            Publicação
-                        </option>
-                        <option value="revision" data-title="Data da última revisão ou atualização do dado">Revisão
-                        </option>
-                    </select>
-                    <input id="f-date" type="datetime-local">
-                </div>
+            <div class="form-group">
+                <label>Tipo de Data <span class="req">*</span> <button class="help-btn"
+                        data-tip="Selecione o tipo: Criação (quando gerado), Publicação (quando divulgado) ou Revisão (última atualização relevante).">?</button></label>
+                <select id="f-dateType">
+                    <option value="creation" data-title="Data em que o dado foi originalmente produzido">Criação
+                    </option>
+                    <option value="publication" data-title="Data em que o dado foi disponibilizado ao público">
+                        Publicação</option>
+                    <option value="revision" data-title="Data da última revisão ou atualização do dado">Revisão</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Data e hora <span class="req">*</span> <button class="help-btn"
+                        data-tip="Data e hora correspondentes ao tipo selecionado ao lado.">?</button></label>
+                <input id="f-date" type="datetime-local">
             </div>
 
             <div class="form-group">

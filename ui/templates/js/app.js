@@ -1263,7 +1263,7 @@ function renderContacts() {
             return buildAccordion(c, idx);
         }).join('');
     }
-    _checkCdhuWarning(contacts, 'cdhu-warning-main');
+    _checkCdhuWarning(contacts, 'cdhu-warning-main', 2);
 }
 
 function buildAccordion(c, idx) {
@@ -1478,21 +1478,21 @@ var _gnLoading = { 'main': false, 'proc': false, 'meta': false };
 var _GN_LOADING_ROW = '<div class="suggestion-loading"><span class="suggestion-spinner"></span>Buscando no Catálogo Online…</div>';
 
 // ─── Verificação de aviso CDHU ────────────────────────────────────────────────
-function _hasCdhu(arr) {
-    return arr.some(function (c) {
-        var sig = (c.data.sigla || '').toUpperCase();
-        var org = (c.data.org || '').toUpperCase();
-        return sig === 'CDHU' || org.indexOf('CDHU') !== -1;
-    });
+function _isCdhu(c) {
+    if (!c || !c.data) return false;
+    var sig = (c.data.sigla || '').toUpperCase();
+    var org = (c.data.org || '').toUpperCase();
+    return sig === 'CDHU' || org.indexOf('CDHU') !== -1;
 }
 
-function _checkCdhuWarning(arr, bannerId) {
+function _checkCdhuWarning(arr, bannerId, reqPos) {
     var banner = document.getElementById(bannerId);
     if (!banner) return;
     // Only show if any contact is from a catalog (not fully manual)
     var hasCatalogContact = arr.some(function (c) { return c.isManual !== true; });
-    var hasCdhu = _hasCdhu(arr);
-    if (hasCatalogContact && !hasCdhu) {
+    var cdhuInPos = (arr.length >= reqPos) && _isCdhu(arr[reqPos - 1]);
+    
+    if (hasCatalogContact && !cdhuInPos) {
         banner.style.display = 'block';
     } else {
         banner.style.display = 'none';
@@ -1731,7 +1731,7 @@ function renderFor(key) {
             return buildAccordionFor(c, idx, key);
         }).join('');
     }
-    if (key === 'meta') _checkCdhuWarning(arr, 'cdhu-warning-meta');
+    if (key === 'meta') _checkCdhuWarning(arr, 'cdhu-warning-meta', 1);
 }
 
 function buildAccordionFor(c, idx, key) {
