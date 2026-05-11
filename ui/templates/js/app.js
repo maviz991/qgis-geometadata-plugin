@@ -1027,15 +1027,30 @@ var ROLE_LABELS = {
     "user": "Utilizador"
 };
 
+var ROLE_TITLES = {
+    "owner": "Setor proprietário ou responsável legal pelo dado",
+    "author": "Quem elaborou o conteúdo técnico ou intelectual do dado",
+    "processor": "Quem realizou o tratamento, organização ou limpeza dos dados",
+    "distributor": "Responsável por disponibilizar e entregar o dado ao público",
+    "custodian": "Responsável pela guarda, armazenamento e manutenção do dado",
+    "resourceProvider": "Entidade que fornece a fonte original ou infraestrutura",
+    "principalInvestigator": "Responsável técnico ou científico principal pelo projeto",
+    "originator": "Fonte primária de onde a informação foi gerada",
+    "pointOfContact": "Setor responsável por tirar dúvidas e dar suporte sobre o dado",
+    "publisher": "Responsável pela publicação oficial do dado no catálogo",
+    "user": "Usuário ou consumidor final da informação"
+};
+
 var ROLE_OPTIONS = Object.keys(ROLE_LABELS).map(function (v) {
-    return { value: v, label: ROLE_LABELS[v] };
+    return { value: v, label: ROLE_LABELS[v], title: ROLE_TITLES[v] || "" };
 });
 
 function buildRoleSelect(idx, current) {
     var selected = current || "pointOfContact";
     if (contacts[idx]) contacts[idx].data.role = contacts[idx].data.role || selected;
     var opts = ROLE_OPTIONS.map(function (r) {
-        return '<option value="' + r.value + '"' + (r.value === selected ? ' selected' : '') + '>' + r.label + '</option>';
+        var t = r.title ? ' data-title="' + r.title + '"' : '';
+        return '<option value="' + r.value + '"' + (r.value === selected ? ' selected' : '') + t + '>' + r.label + '</option>';
     }).join('');
     return '<select id="role-table-' + idx + '" class="role-select" onchange="updateRole(' + idx + ', this.value)">' + opts + '</select>';
 }
@@ -1064,7 +1079,8 @@ function _combineAddr(d) {
 function _buildRoleSelectHtml(source, idx, role) {
     var sel = role || 'pointOfContact';
     var opts = ROLE_OPTIONS.map(function (r) {
-        return '<option value="' + r.value + '"' + (r.value === sel ? ' selected' : '') + '>' + r.label + '</option>';
+        var t = r.title ? ' data-title="' + r.title + '"' : '';
+        return '<option value="' + r.value + '"' + (r.value === sel ? ' selected' : '') + t + '>' + r.label + '</option>';
     }).join('');
     var selectId = source === 'main' ? 'role-acc-' + idx : 'role-' + source + '-a-' + idx;
     var onchange = source === 'main'
@@ -1491,7 +1507,7 @@ function _checkCdhuWarning(arr, bannerId, reqPos) {
     if (!banner) return;
     // Only show if any contact is from a catalog (not fully manual)
     var hasCatalogContact = arr.some(function (c) { return c.isManual !== true; });
-    
+
     var ok = false;
     if (bannerId === 'cdhu-warning-main') {
         // For Recurso: allowed in Pos 1 OR Pos 2
@@ -1500,7 +1516,7 @@ function _checkCdhuWarning(arr, bannerId, reqPos) {
         // For Meta: strictly the reqPos (usually 1)
         ok = (arr.length >= reqPos) && _isCdhu(arr[reqPos - 1]);
     }
-    
+
     if (hasCatalogContact && !ok) {
         banner.style.display = 'block';
     } else {
@@ -1721,7 +1737,8 @@ function renderFor(key) {
     tbody.innerHTML = arr.map(function (c, idx) {
         var sel = c.data.role || 'pointOfContact';
         var opts = ROLE_OPTIONS.map(function (r) {
-            return '<option value="' + r.value + '"' + (r.value === sel ? ' selected' : '') + '>' + r.label + '</option>';
+            var t = r.title ? ' data-title="' + r.title + '"' : '';
+            return '<option value="' + r.value + '"' + (r.value === sel ? ' selected' : '') + t + '>' + r.label + '</option>';
         }).join('');
         return '<tr>' +
             '<td style="text-align:center;color:var(--fg-muted);font-weight:700;font-size:12px">' + (idx + 1) + '</td>' +
