@@ -399,6 +399,15 @@ function onPanelLoaded(panelId) {
         renderDistResources();
         initMetaAuthor();
         setTimeout(initCustomSelects, 50);
+        
+        // Iniciar rastreio de progresso global
+        setTimeout(updateFormProgress, 100);
+        var containerPanel = document.getElementById("tab-identificacao").parentNode;
+        if (containerPanel && !containerPanel.hasAttribute('data-progress-listener')) {
+            containerPanel.addEventListener('input', updateFormProgress);
+            containerPanel.addEventListener('change', updateFormProgress);
+            containerPanel.setAttribute('data-progress-listener', 'true');
+        }
     }
 }
 
@@ -532,27 +541,31 @@ var REQUIRED_LABELS = {
     epsgTitle: "Título do SRC"
 };
 
-function validateForm(data) {
+function validateForm(data, silent) {
     var missing = [];
     for (var key in REQUIRED_LABELS) {
         var val = data[key];
         var empty = !val || (Array.isArray(val) && val.length === 0) || String(val).trim() === "";
         if (empty) {
-            if (key === "MD_Keywords") {
-                var chipsBox = document.getElementById("keyword-chips");
-                if (chipsBox) chipsBox.style.outline = "2px solid var(--accent)";
-            } else {
-                var el = document.getElementById("f-" + key);
-                if (el) el.classList.add("error");
+            if (!silent) {
+                if (key === "MD_Keywords") {
+                    var chipsBox = document.getElementById("keyword-chips");
+                    if (chipsBox) chipsBox.style.outline = "2px solid var(--accent)";
+                } else {
+                    var el = document.getElementById("f-" + key);
+                    if (el) el.classList.add("error");
+                }
             }
             missing.push(REQUIRED_LABELS[key]);
         } else {
-            if (key === "MD_Keywords") {
-                var chipsBox2 = document.getElementById("keyword-chips");
-                if (chipsBox2) chipsBox2.style.outline = "";
-            } else {
-                var el2 = document.getElementById("f-" + key);
-                if (el2) el2.classList.remove("error");
+            if (!silent) {
+                if (key === "MD_Keywords") {
+                    var chipsBox2 = document.getElementById("keyword-chips");
+                    if (chipsBox2) chipsBox2.style.outline = "";
+                } else {
+                    var el2 = document.getElementById("f-" + key);
+                    if (el2) el2.classList.remove("error");
+                }
             }
         }
     }
@@ -562,6 +575,31 @@ function validateForm(data) {
         missing.push("Responsabilidade do Contato");
     }
     return missing;
+}
+
+// ─── Atualização de Progresso ────────────────────────────────────────────────
+function updateFormProgress() {
+    var data = collectFormData();
+    if (!data) return;
+    
+    var missing = validateForm(data, true); // true = silent, don't show red borders
+    var totalRequired = Object.keys(REQUIRED_LABELS).length + 2; // +1 for Contact, +1 for Role
+    var missingCount = missing.length;
+    var filledCount = totalRequired - missingCount;
+    var pct = Math.round((filledCount / totalRequired) * 100);
+    
+    var spinner = document.getElementById('form-progress-spinner');
+    var text = document.getElementById('form-progress-text');
+    
+    if (spinner && text) {
+        spinner.style.setProperty('--progress', pct);
+        text.textContent = pct + '%';
+        if (pct >= 100) {
+            spinner.classList.add('completed');
+        } else {
+            spinner.classList.remove('completed');
+        }
+    }
 }
 
 function showValidationError(missing) {
@@ -614,6 +652,7 @@ function populateForm(data) {
         distResources = data.onlineResources.slice();
         renderDistResources();
     }
+    updateFormProgress();
 }
 
 // ─── Badge de usuário ─────────────────────────────────────────────────────────
@@ -709,6 +748,7 @@ function captureFromLayer() {
             if (e) e.value = result.east;
             if (w) w.value = result.west;
         }
+        updateFormProgress();
     });
 }
 
@@ -762,6 +802,7 @@ function renderKeywords() {
         return '<span class="keyword-chip">' + escHtml(kw) +
             '<button onclick="removeKeyword(' + i + ')" title="Remover">×</button></span>';
     }).join('');
+    updateFormProgress();
 }
 
 // ─── Distribuição: recursos online ────────────────────────────────────────────

@@ -10,6 +10,12 @@
         <button class="tab-link" onclick="showTab('distribuicao',  this)">Distribuição</button>
         <button class="tab-link" onclick="showTab('licenca',       this)">Licença</button>
         <button class="tab-link" onclick="showTab('metadado',      this)">Metadado</button>
+
+        <div class="progress-wrapper" data-title="Progresso de preenchimento">
+            <div class="circular-progress" id="form-progress-spinner" style="--progress: 0;">
+                <span class="progress-value" id="form-progress-text">0%</span>
+            </div>
+        </div>
     </div>
 
     <!-- ══ TAB 1: IDENTIFICAÇÃO ══════════════════════════════ -->
@@ -405,6 +411,7 @@
                 <label for="f-hierarchyLevel">Nível Hierárquico <span class="req">*</span> <button class="help-btn"
                         data-tip="Define o escopo da descrição. Em geral, utiliza-se Conjunto de dados (dataset).">?</button></label>
                 <select id="f-hierarchyLevel">
+                    <option value="">- Selecione -</option>
                     <option value="dataset" data-title="Conjunto de dados geoespaciais individualmente identificável">
                         Conjunto de dados</option>
                 </select>
@@ -414,6 +421,7 @@
                 <label for="f-LanguageCode">Idioma <span class="req">*</span> <button class="help-btn"
                         data-tip="Selecione o idioma em que a tabela de atributos e as descrições estão preenchidas.">?</button></label>
                 <select id="f-LanguageCode">
+                    <option value="">- Selecione -</option>
                     <option value="por" data-title="Língua portuguesa (padrão CDHU)">🇧🇷 Português</option>
                     <option value="eng" data-title="Língua inglesa">🇺🇸 Inglês</option>
                     <option value="spa" data-title="Língua espanhola">🇪🇸 Espanhol</option>
@@ -426,6 +434,7 @@
                 <label for="f-characterSet">Codificação de Caracteres <button class="help-btn"
                         data-tip="Codificação dos caracteres da tabela. UTF-8 é o padrão para evitar problemas com acentuação.">?</button></label>
                 <select id="f-characterSet">
+                    <option value="">- Selecione -</option>
                     <option value="utf8" data-title="Unicode UTF-8 — suporta todos os caracteres latinos e especiais">
                         UTF-8
                     </option>

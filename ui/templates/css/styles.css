@@ -316,6 +316,50 @@ body {
     display: block;
 }
 
+/* ── Progresso Circular ───────────────────────────────────────── */
+.progress-wrapper {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    padding-right: 12px;
+}
+
+.circular-progress {
+    position: relative;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: conic-gradient(#3b82f6 calc(var(--progress) * 1%), #e2e8f0 0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.3s ease;
+}
+
+.circular-progress::before {
+    content: "";
+    position: absolute;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background-color: white;
+}
+
+.progress-value {
+    position: relative;
+    font-size: 10px;
+    font-weight: 700;
+    color: #475569;
+}
+
+.circular-progress.completed {
+    background: conic-gradient(#22c55e calc(var(--progress) * 1%), #e2e8f0 0);
+}
+
+.circular-progress.completed .progress-value {
+    color: #16a34a;
+}
+
 /* ── Grid de campos ───────────────────────────────────────────── */
 .form-grid {
     display: grid;

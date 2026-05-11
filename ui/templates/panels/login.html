@@ -12,10 +12,12 @@
         <div class="login-card">
             <img src="../../logo.png" alt="CDHU" class="login-card-logo">
             <h2 class="login-card-title">Geohab</h2>
-            <p class="login-card-sub">Plataforma de Gestão de Dados Geográficos</p>
+            <p class="login-card-sub">Acesso com conta corporativa</p>
             <p id="login-error-msg" class="login-error" style="display:none"></p>
             <div id="login-loading-area" class="login-loading-area" style="display:none">
-                <div class="login-loading-bar"><div class="login-loading-track"></div></div>
+                <div class="login-loading-bar">
+                    <div class="login-loading-track"></div>
+                </div>
                 <span class="login-loading-msg">Aguardando autenticação no navegador</span>
             </div>
             <button class="btn-login-action" onclick="bridge.start_login();showLoginLoading()">
@@ -80,8 +82,13 @@
     }
 
     @keyframes loginTrack {
-        0%   { transform: translateX(-120%); }
-        100% { transform: translateX(320%); }
+        0% {
+            transform: translateX(-120%);
+        }
+
+        100% {
+            transform: translateX(320%);
+        }
     }
 
     .login-page {
