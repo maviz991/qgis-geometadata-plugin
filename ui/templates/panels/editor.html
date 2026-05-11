@@ -338,7 +338,7 @@
                     <option value="vector" data-title="Dado em formato vetorial: pontos, linhas ou polígonos">Vetor
                     </option>
                     <option value="grid"
-                        data-title="Dado em grade regular — imagem raster (ex: satélite, MDT, ortofoto)">
+                        data-title="Dado em grade regular - imagem raster (ex: satélite, MDT, ortofoto)">
                         Grid | Raster</option>
                     <option value="textTable" data-title="Tabela de texto associada a elementos espaciais">Tabela de
                         texto
@@ -435,7 +435,8 @@
                         data-tip="Codificação dos caracteres da tabela. UTF-8 é o padrão para evitar problemas com acentuação.">?</button></label>
                 <select id="f-characterSet">
                     <option value="">- Selecione -</option>
-                    <option value="utf8" data-title="Unicode UTF-8 — suporta todos os caracteres latinos e especiais">
+                    <option value="utf8"
+                        data-title="Unicode UTF-8 - suporta todos os caracteres latinos e especiais. Se o seu dado não estiver nesse encode, exporte a camada nesse encode.">
                         UTF-8
                     </option>
                 </select>
@@ -842,18 +843,18 @@
                                 data-tip="Selecione o protocolo do serviço. OGC:WMS para visualização, OGC:WFS para download/vetor, ou WWW:LINK para site.">?</button></label>
                         <select id="dist-mf-protocol">
                             <option value="OGC:WMS"
-                                data-title="Web Map Service — serviço de mapas em imagem (visualização)">
+                                data-title="Web Map Service - serviço de mapas em imagem (visualização)">
                                 OGC:WMS</option>
                             <option value="OGC:WFS"
-                                data-title="Web Feature Service — serviço de feições vetoriais (download/consulta)">
+                                data-title="Web Feature Service - serviço de feições vetoriais (download/consulta)">
                                 OGC:WFS
                             </option>
                             <option value="OGC:WCS"
-                                data-title="Web Coverage Service — serviço de coberturas raster (grade ou imagem)">
+                                data-title="Web Coverage Service - serviço de coberturas raster (grade ou imagem)">
                                 OGC:WCS
                             </option>
                             <option value="OGC:WPS"
-                                data-title="Web Processing Service — serviço de processamento remoto">
+                                data-title="Web Processing Service - serviço de processamento remoto">
                                 OGC:WPS</option>
                             <option value="WWW:DOWNLOAD" data-title="Link direto para download de arquivo">WWW:DOWNLOAD
                             </option>
@@ -918,7 +919,7 @@
                     <option value="CC BY-NC-SA 4.0" data-title="Não comercial e derivações com a mesma licença">CC
                         BY-NC-SA
                         4.0 - Atribuição-NãoComercial-CompartilhaIgual</option>
-                    <option value="CC0" data-title="Domínio público — sem nenhuma restrição de uso ou atribuição">CC0 -
+                    <option value="CC0" data-title="Domínio público - sem nenhuma restrição de uso ou atribuição">CC0 -
                         Domínio Público</option>
                     <option value="proprietary"
                         data-title="Todos os direitos reservados à CDHU; uso somente com autorização expressa">
@@ -927,7 +928,7 @@
                     <option value="internal" data-title="Uso restrito a colaboradores e sistemas internos da CDHU">Uso
                         interno - CDHU</option>
                     <option value="other"
-                        data-title="Outra licença — descreva as condições nas limitações de uso abaixo">
+                        data-title="Outra licença - descreva as condições nas limitações de uso abaixo">
                         Outro</option>
                 </select>
             </div>
@@ -1004,7 +1005,7 @@
             </div>
 
             <div class="form-group">
-                <label for="f-metadataLanguage">Idioma do Metadado <button class="help-btn"
+                <label for="f-metadataLanguage">Idioma do Metadado <span class="req">*</span> <button class="help-btn"
                         data-tip="O idioma no qual você está escrevendo estes metadados (normalmente Português).">?</button></label>
                 <select id="f-metadataLanguage">
                     <option value="por" data-title="Língua portuguesa">🇧🇷 Português</option>

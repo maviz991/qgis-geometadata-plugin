@@ -1,4 +1,4 @@
-// app.js — Lógica principal do GeoMetadata HTML
+// app.js - Lógica principal do GeoMetadata HTML
 var bridge;
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -116,21 +116,21 @@ function _initFieldValidation() {
             if (stripped !== el.value) el.value = stripped;
         }
 
-        if (v === 'no-digits')    _warnNoDigits(el);
-        if (v === 'digits-only')  _enforceDigitsOnly(el);
+        if (v === 'no-digits') _warnNoDigits(el);
+        if (v === 'digits-only') _enforceDigitsOnly(el);
         if (v === 'letters-only') _enforceLettersOnly(el);
-        if (v === 'email')        _clearFieldError(el);
+        if (v === 'email') _clearFieldError(el);
     });
 
     document.addEventListener('focusout', function (e) {
         var el = e.target;
         var f = el.getAttribute('data-format');
         var v = el.getAttribute('data-validate');
-        if (f === 'phone')     _validatePhone(el);
-        if (f === 'cep')       _validateCep(el);
+        if (f === 'phone') _validatePhone(el);
+        if (f === 'cep') _validateCep(el);
         if (f === 'titlecase') { el.value = _toTitleCase(el.value); }
-        if (v === 'email')     _checkEmail(el);
-        if (v === 'url')       _checkUrl(el);
+        if (v === 'email') _checkEmail(el);
+        if (v === 'url') _checkUrl(el);
         if (v === 'no-digits') _warnNoDigits(el);
     });
 
@@ -203,7 +203,7 @@ function _validatePhone(el) {
     var raw = (el.value || '').trim();
     if (!raw) { el.value = ''; _clearFieldError(el); return; }
 
-    // Explicit DDI: user typed + at start — accept any international format
+    // Explicit DDI: user typed + at start - accept any international format
     if (raw.charAt(0) === '+') {
         var intlDigits = raw.slice(1).replace(/\D/g, '');
         if (intlDigits.length < 7) {
@@ -360,7 +360,7 @@ function updateLayerBadge(name) {
 
 function navigate(panelId) {
     bridge.navigate(panelId);
-    // nav_changed signal already triggers loadPanel — não chamar duas vezes
+    // nav_changed signal already triggers loadPanel - não chamar duas vezes
 }
 
 function loadPanel(panelId) {
@@ -399,7 +399,7 @@ function onPanelLoaded(panelId) {
         renderDistResources();
         initMetaAuthor();
         setTimeout(initCustomSelects, 50);
-        
+
         // Iniciar rastreio de progresso global
         setTimeout(updateFormProgress, 100);
         var containerPanel = document.getElementById("tab-identificacao").parentNode;
@@ -476,9 +476,9 @@ function collectFormData() {
         dateOfNextUpdate: get("dateOfNextUpdate"),
         MD_SpatialRepresentationTypeCode: get("MD_SpatialRepresentationTypeCode"),
         topicCategory: get("topicCategory"),
-        hierarchyLevel: get("hierarchyLevel") || "dataset",
-        LanguageCode: get("LanguageCode") || "por",
-        characterSet: get("characterSet") || "utf8",
+        hierarchyLevel: get("hierarchyLevel"),
+        LanguageCode: get("LanguageCode"),
+        characterSet: get("characterSet"),
         thumbnail_url: get("thumbnail_url"),
         westBoundLongitude: get("westBoundLongitude"),
         eastBoundLongitude: get("eastBoundLongitude"),
@@ -581,16 +581,16 @@ function validateForm(data, silent) {
 function updateFormProgress() {
     var data = collectFormData();
     if (!data) return;
-    
+
     var missing = validateForm(data, true); // true = silent, don't show red borders
-    var totalRequired = Object.keys(REQUIRED_LABELS).length + 2; // +1 for Contact, +1 for Role
+    var totalRequired = Object.keys(REQUIRED_LABELS).length + 1; // +1 for Contact (either missing contact or missing role counts as 1 error)
     var missingCount = missing.length;
     var filledCount = totalRequired - missingCount;
     var pct = Math.round((filledCount / totalRequired) * 100);
-    
+
     var spinner = document.getElementById('form-progress-spinner');
     var text = document.getElementById('form-progress-text');
-    
+
     if (spinner && text) {
         spinner.style.setProperty('--progress', pct);
         text.textContent = pct + '%';
@@ -763,7 +763,7 @@ function updateCustomSelect(select) {
             var valueSpan = wrapper.querySelector('.custom-select-value');
             if (valueSpan) valueSpan.textContent = opt.text;
             var items = wrapper.querySelectorAll('.suggestion-item');
-            items.forEach(function(i) { i.classList.remove('active'); });
+            items.forEach(function (i) { i.classList.remove('active'); });
             var activeItem = wrapper.querySelector('.suggestion-item[data-value="' + opt.value.replace(/"/g, '\\"') + '"]');
             if (activeItem) activeItem.classList.add('active');
         }
@@ -871,10 +871,10 @@ function renderDistLayerCard() {
     var wfsToggle = wfsChk ? wfsChk.closest('.dist-proto-toggle') : null;
     var wcsToggle = wcsChk ? wcsChk.closest('.dist-proto-toggle') : null;
 
-    // WMS — sempre disponível (público)
+    // WMS - sempre disponível (público)
     if (wmsChk) { wmsChk.checked = true; wmsChk.disabled = false; }
 
-    // WFS — só se autenticado (vem como wfs_available do bridge, ou _isLogged)
+    // WFS - só se autenticado (vem como wfs_available do bridge, ou _isLogged)
     var wfsOk = !!(l.wfs_available !== undefined ? l.wfs_available : _isLogged);
     if (wfsChk) {
         wfsChk.checked = false;   // opt-in: user decide se quer WFS
@@ -885,7 +885,7 @@ function renderDistLayerCard() {
         wfsToggle.style.opacity = wfsOk ? '' : '0.45';
     }
 
-    // WCS — nunca disponível via WMS caps (raster needs separate check)
+    // WCS - nunca disponível via WMS caps (raster needs separate check)
     if (wcsChk) { wcsChk.checked = false; wcsChk.disabled = true; }
     if (wcsToggle) { wcsToggle.style.display = 'none'; }
 
@@ -964,7 +964,7 @@ function renderDistResources() {
         var lbl = protoLabel[r.protocol] || r.protocol;
         return '<tr>' +
             '<td style="text-align:center">' + (i + 1) + '</td>' +
-            '<td>' + escHtml(r.name || '—') +
+            '<td>' + escHtml(r.name || '-') +
             (r.description ? '<br><small style="color:var(--fg-muted)">' + escHtml(r.description) + '</small>' : '') +
             '</td>' +
             '<td><span class="proto-badge ' + cls + '" title="' + escHtml(r.protocol) + '">' + escHtml(lbl) + '</span></td>' +
@@ -982,8 +982,8 @@ var _licensePresets = {
     'CC BY-NC 4.0': { useLimitation: 'Creative Commons Atribuição-NãoComercial 4.0 Internacional (CC BY-NC 4.0). Uso não comercial apenas.', accessConstraints: 'license', useConstraints: 'license', otherConstraints: '' },
     'CC BY-NC-SA 4.0': { useLimitation: 'Creative Commons Atribuição-NãoComercial-CompartilhaIgual 4.0 Internacional (CC BY-NC-SA 4.0).', accessConstraints: 'license', useConstraints: 'license', otherConstraints: '' },
     'CC0': { useLimitation: 'CC0 1.0 Dedicação ao Domínio Público. Nenhum direito reservado.', accessConstraints: 'unrestricted', useConstraints: 'unrestricted', otherConstraints: '' },
-    'proprietary': { useLimitation: 'Todos os direitos reservados. Uso autorizado exclusivamente conforme termos estabelecidos pela CDHU.', accessConstraints: 'copyright', useConstraints: 'intellectualPropertyRights', otherConstraints: '© CDHU — Companhia de Desenvolvimento Habitacional e Urbano do Estado de São Paulo. Todos os direitos reservados.' },
-    'internal': { useLimitation: 'Uso interno restrito à CDHU e suas unidades. Distribuição externa não autorizada.', accessConstraints: 'restricted', useConstraints: 'restricted', otherConstraints: '© CDHU — Companhia de Desenvolvimento Habitacional e Urbano do Estado de São Paulo. Documento de uso interno.' }
+    'proprietary': { useLimitation: 'Todos os direitos reservados. Uso autorizado exclusivamente conforme termos estabelecidos pela CDHU.', accessConstraints: 'copyright', useConstraints: 'intellectualPropertyRights', otherConstraints: '© CDHU - Companhia de Desenvolvimento Habitacional e Urbano do Estado de São Paulo. Todos os direitos reservados.' },
+    'internal': { useLimitation: 'Uso interno restrito à CDHU e suas unidades. Distribuição externa não autorizada.', accessConstraints: 'restricted', useConstraints: 'restricted', otherConstraints: '© CDHU - Companhia de Desenvolvimento Habitacional e Urbano do Estado de São Paulo. Documento de uso interno.' }
 };
 
 function onLicenseChange(val) {
@@ -1069,14 +1069,14 @@ function _buildContactFields(d, pfx, isEditing, roleSelectHtml) {
     var addr = _combineAddr(d);
     var addrHtml = isEditing
         ? '<div class="form-group span-2"><label>Endereço <button class="help-btn" data-tip="Logradouro completo da organização.">?</button></label>' +
-          '<div class="address-split">' +
-          '<div class="addr-field-wrap addr-street-wrap"><input id="' + pfx + 'addr-street" class="addr-street" type="text" placeholder="Logradouro" value="' + escHtml(d.addr_street || d.address || '') + '"></div>' +
-          '<div class="addr-field-wrap addr-num-wrap"><input id="' + pfx + 'addr-num" class="addr-num" type="text" placeholder="Nº" value="' + escHtml(d.addr_num || '') + '"></div>' +
-          '<div class="addr-field-wrap addr-comp-wrap"><input id="' + pfx + 'addr-comp" class="addr-comp" type="text" placeholder="Compl." value="' + escHtml(d.addr_comp || '') + '"></div>' +
-          '<div class="addr-field-wrap addr-bairro-wrap"><input id="' + pfx + 'addr-bairro" class="addr-bairro" type="text" placeholder="Bairro" value="' + escHtml(d.addr_bairro || '') + '"></div>' +
-          '</div></div>'
+        '<div class="address-split">' +
+        '<div class="addr-field-wrap addr-street-wrap"><input id="' + pfx + 'addr-street" class="addr-street" type="text" placeholder="Logradouro" value="' + escHtml(d.addr_street || d.address || '') + '"></div>' +
+        '<div class="addr-field-wrap addr-num-wrap"><input id="' + pfx + 'addr-num" class="addr-num" type="text" placeholder="Nº" value="' + escHtml(d.addr_num || '') + '"></div>' +
+        '<div class="addr-field-wrap addr-comp-wrap"><input id="' + pfx + 'addr-comp" class="addr-comp" type="text" placeholder="Compl." value="' + escHtml(d.addr_comp || '') + '"></div>' +
+        '<div class="addr-field-wrap addr-bairro-wrap"><input id="' + pfx + 'addr-bairro" class="addr-bairro" type="text" placeholder="Bairro" value="' + escHtml(d.addr_bairro || '') + '"></div>' +
+        '</div></div>'
         : '<div class="form-group span-2"><label>Endereço <button class="help-btn" data-tip="Logradouro completo da organização.">?</button></label>' +
-          '<div class="readonly-field">' + escHtml(addr || '—') + '</div></div>';
+        '<div class="readonly-field">' + escHtml(addr || '-') + '</div></div>';
     return field('Sigla', d.sigla, e, pfx + 'sigla', 'Abreviação ou acrônimo da organização (ex: CDHU, IPT, IBGE).', 'data-format="uppercase"') +
         field('Organização', d.org, e, pfx + 'org', 'Nome completo da organização responsável.', 'data-format="titlecase"') +
         roleSelectHtml +
@@ -1091,27 +1091,27 @@ function _buildContactFields(d, pfx, isEditing, roleSelectHtml) {
 }
 
 function _sourceBadge(c) {
-    if (c.isManual === 'gn')   return '<span class="badge-gn">Catálogo Online</span>';
-    if (c.isManual === true)   return '<span class="badge-manual">Manual</span>';
+    if (c.isManual === 'gn') return '<span class="badge-gn">Catálogo Online</span>';
+    if (c.isManual === true) return '<span class="badge-manual">Manual</span>';
     if (c.isManual === 'user') return '<span class="badge-user">Meus Contatos</span>';
     return '<span class="badge-preset">Catálogo Offline</span>';
 }
 
 // Required fields for manual contacts (all except Cargo/position)
 var _MANUAL_REQ = [
-    { id: 'sigla',       label: 'Sigla' },
-    { id: 'org',         label: 'Organização' },
-    { id: 'role',        label: 'Regra' },
-    { id: 'email',       label: 'E-mail' },
-    { id: 'phone',       label: 'Telefone' },
-    { id: '__addr',      label: 'Logradouro' },   // mapped to addrFieldId
-    { id: '__addr-num',  label: 'Número' },        // derived from addrFieldId
+    { id: 'sigla', label: 'Sigla' },
+    { id: 'org', label: 'Organização' },
+    { id: 'role', label: 'Regra' },
+    { id: 'email', label: 'E-mail' },
+    { id: 'phone', label: 'Telefone' },
+    { id: '__addr', label: 'Logradouro' },   // mapped to addrFieldId
+    { id: '__addr-num', label: 'Número' },        // derived from addrFieldId
     { id: '__addr-comp', label: 'Complemento' },   // derived from addrFieldId
     { id: 'addr-bairro', label: 'Bairro' },
-    { id: 'city',        label: 'Cidade' },
-    { id: 'state',       label: 'Estado' },
-    { id: 'zip',         label: 'CEP' },
-    { id: 'country',     label: 'País' },
+    { id: 'city', label: 'Cidade' },
+    { id: 'state', label: 'Estado' },
+    { id: 'zip', label: 'CEP' },
+    { id: 'country', label: 'País' },
 ];
 
 // pfx: element ID prefix; addrId: the street field suffix for this form
@@ -1121,9 +1121,9 @@ function _validateManualForm(pfx, addrId) {
     var addrBase = addrId === 'addr-street' ? 'addr' : addrId;
     var hasError = false;
     _MANUAL_REQ.forEach(function (f) {
-        var fieldId = f.id === '__addr'      ? addrId
-                    : f.id === '__addr-num'  ? addrBase + '-num'
-                    : f.id === '__addr-comp' ? addrBase + '-comp'
+        var fieldId = f.id === '__addr' ? addrId
+            : f.id === '__addr-num' ? addrBase + '-num'
+                : f.id === '__addr-comp' ? addrBase + '-comp'
                     : f.id;
         var el = document.getElementById(pfx + fieldId);
         if (!el) return;
@@ -1142,13 +1142,13 @@ function _isDuplicate(arr, r) {
         var d = c.data;
         if (r._key && d._key) return r._key === d._key;
         return (r.sigla || '') === (d.sigla || '') &&
-               (r.org   || '') === (d.org   || '') &&
-               (r.email || '') === (d.email || '');
+            (r.org || '') === (d.org || '') &&
+            (r.email || '') === (d.email || '');
     });
 }
 
 function _srcToIsManual(src) {
-    if (src === 'gn')   return 'gn';
+    if (src === 'gn') return 'gn';
     if (src === 'user') return 'user';
     return false;
 }
@@ -1159,7 +1159,7 @@ function _buildAccActions(isManual, source, idx, isEditing) {
     if (editable) {
         if (isEditing) {
             btns += '<button class="btn-save" onclick="saveAccordion(\'' + source + '\',' + idx + ')">Salvar</button>' +
-                    '<button class="btn-cancel" onclick="cancelAccordion(\'' + source + '\',' + idx + ')">Cancelar</button>';
+                '<button class="btn-cancel" onclick="cancelAccordion(\'' + source + '\',' + idx + ')">Cancelar</button>';
         } else {
             btns += '<button class="btn-edit" onclick="enterAccordionEdit(\'' + source + '\',' + idx + ')">Editar</button>';
             if (isManual === true) {
@@ -1236,9 +1236,9 @@ function renderContacts() {
     tbody.innerHTML = contacts.map(function (c, idx) {
         return '<tr>' +
             '<td style="text-align:center;color:var(--fg-muted);font-weight:700;font-size:12px">' + (idx + 1) + '</td>' +
-            '<td>' + (c.data.org || '—') + '</td>' +
-            '<td>' + (c.data.sigla || '—') + '</td>' +
-            '<td>' + (c.data.email || '—') + '</td>' +
+            '<td>' + (c.data.org || '-') + '</td>' +
+            '<td>' + (c.data.sigla || '-') + '</td>' +
+            '<td>' + (c.data.email || '-') + '</td>' +
             '<td>' + buildRoleSelect(idx, c.data.role) + '</td>' +
             '<td style="white-space:nowrap">' +
             '<button class="btn-move" onclick="moveContact(' + idx + ',-1)" title="Mover para cima"' + (idx === 0 ? ' disabled' : '') + '>↑</button>' +
@@ -1257,7 +1257,7 @@ function renderContacts() {
 
 function buildAccordion(c, idx) {
     var d = c.data;
-    var label = 'Contato ' + (idx + 1) + (d.sigla ? ' — ' + d.sigla : '');
+    var label = 'Contato ' + (idx + 1) + (d.sigla ? ' - ' + d.sigla : '');
     var isEditing = !!_accEditing['main:' + idx];
     var pfx = 'acc-' + idx + '-';
     var roleSelectHtml = _buildRoleSelectHtml('main', idx, d.role);
@@ -1276,7 +1276,7 @@ function field(label, val, editable, inputId, tip, attrs) {
     var extra = attrs ? ' ' + attrs : '';
     var input = editable
         ? '<input id="' + inputId + '" type="text" value="' + escHtml(val || '') + '"' + extra + '>'
-        : '<div class="readonly-field">' + escHtml(val || '—') + '</div>';
+        : '<div class="readonly-field">' + escHtml(val || '-') + '</div>';
     return '<div class="form-group"><label>' + label + helpBtn + '</label>' + input + '</div>';
 }
 
@@ -1310,20 +1310,20 @@ function saveAccordion(source, idx) {
     var roleId = source === 'main' ? 'role-acc-' + idx : 'role-' + source + '-a-' + idx;
     var roleEl = document.getElementById(roleId);
 
-    c.data.sigla    = g('sigla') || c.data.sigla;
-    c.data.org      = g('org')   || c.data.org;
-    c.data.email    = g('email');
+    c.data.sigla = g('sigla') || c.data.sigla;
+    c.data.org = g('org') || c.data.org;
+    c.data.email = g('email');
     c.data.position = g('position');
-    c.data.phone    = g('phone');
+    c.data.phone = g('phone');
     c.data.addr_street = g('addr-street');
-    c.data.addr_num    = g('addr-num');
-    c.data.addr_comp   = g('addr-comp');
+    c.data.addr_num = g('addr-num');
+    c.data.addr_comp = g('addr-comp');
     c.data.addr_bairro = g('addr-bairro');
-    c.data.address  = _combineAddr(c.data);
-    c.data.city     = g('city');
-    c.data.state    = g('state');
-    c.data.zip      = g('zip');
-    c.data.country  = g('country') || 'Brasil';
+    c.data.address = _combineAddr(c.data);
+    c.data.city = g('city');
+    c.data.state = g('state');
+    c.data.zip = g('zip');
+    c.data.country = g('country') || 'Brasil';
     if (roleEl) c.data.role = roleEl.value;
 
     // Auto-persist if it's a user contact
@@ -1345,7 +1345,7 @@ function saveAccordion(source, idx) {
         for (var i = header.childNodes.length - 1; i >= 0; i--) {
             var n = header.childNodes[i];
             if (n.nodeType === 3 && n.textContent.trim()) {
-                n.textContent = 'Contato ' + (idx + 1) + (c.data.sigla ? ' — ' + c.data.sigla : '');
+                n.textContent = 'Contato ' + (idx + 1) + (c.data.sigla ? ' - ' + c.data.sigla : '');
                 break;
             }
         }
@@ -1359,9 +1359,9 @@ function saveAccordion(source, idx) {
         var row = rows[idx];
         if (row) {
             var cells = row.querySelectorAll('td');
-            if (cells[1]) cells[1].textContent = c.data.org   || '—';
-            if (cells[2]) cells[2].textContent = c.data.sigla || '—';
-            if (cells[3] && source === 'main') cells[3].textContent = c.data.email || '—';
+            if (cells[1]) cells[1].textContent = c.data.org || '-';
+            if (cells[2]) cells[2].textContent = c.data.sigla || '-';
+            if (cells[3] && source === 'main') cells[3].textContent = c.data.email || '-';
         }
     }
 }
@@ -1392,18 +1392,18 @@ function exportContactXml(source, idx) {
         '<gmd:CI_ResponsibleParty\n' +
         '    xmlns:gmd="http://www.isotc211.org/2005/gmd"\n' +
         '    xmlns:gco="http://www.isotc211.org/2005/gco">\n' +
-        (d.sigla    ? '  <gmd:individualName><gco:CharacterString>' + x(d.sigla) + '</gco:CharacterString></gmd:individualName>\n' : '') +
-        (d.org      ? '  <gmd:organisationName><gco:CharacterString>' + x(d.org) + '</gco:CharacterString></gmd:organisationName>\n' : '') +
+        (d.sigla ? '  <gmd:individualName><gco:CharacterString>' + x(d.sigla) + '</gco:CharacterString></gmd:individualName>\n' : '') +
+        (d.org ? '  <gmd:organisationName><gco:CharacterString>' + x(d.org) + '</gco:CharacterString></gmd:organisationName>\n' : '') +
         (d.position ? '  <gmd:positionName><gco:CharacterString>' + x(d.position) + '</gco:CharacterString></gmd:positionName>\n' : '') +
         '  <gmd:contactInfo><gmd:CI_Contact>\n' +
         (d.phone ? '    <gmd:phone><gmd:CI_Telephone>\n      <gmd:voice><gco:CharacterString>' + x(d.phone) + '</gco:CharacterString></gmd:voice>\n    </gmd:CI_Telephone></gmd:phone>\n' : '') +
         '    <gmd:address><gmd:CI_Address>\n' +
-        (addr      ? '      <gmd:deliveryPoint><gco:CharacterString>' + x(addr) + '</gco:CharacterString></gmd:deliveryPoint>\n' : '') +
-        (d.city    ? '      <gmd:city><gco:CharacterString>' + x(d.city) + '</gco:CharacterString></gmd:city>\n' : '') +
-        (d.state   ? '      <gmd:administrativeArea><gco:CharacterString>' + x(d.state) + '</gco:CharacterString></gmd:administrativeArea>\n' : '') +
-        (d.zip     ? '      <gmd:postalCode><gco:CharacterString>' + x(d.zip) + '</gco:CharacterString></gmd:postalCode>\n' : '') +
+        (addr ? '      <gmd:deliveryPoint><gco:CharacterString>' + x(addr) + '</gco:CharacterString></gmd:deliveryPoint>\n' : '') +
+        (d.city ? '      <gmd:city><gco:CharacterString>' + x(d.city) + '</gco:CharacterString></gmd:city>\n' : '') +
+        (d.state ? '      <gmd:administrativeArea><gco:CharacterString>' + x(d.state) + '</gco:CharacterString></gmd:administrativeArea>\n' : '') +
+        (d.zip ? '      <gmd:postalCode><gco:CharacterString>' + x(d.zip) + '</gco:CharacterString></gmd:postalCode>\n' : '') +
         (d.country ? '      <gmd:country><gco:CharacterString>' + x(d.country) + '</gco:CharacterString></gmd:country>\n' : '') +
-        (d.email   ? '      <gmd:electronicMailAddress><gco:CharacterString>' + x(d.email) + '</gco:CharacterString></gmd:electronicMailAddress>\n' : '') +
+        (d.email ? '      <gmd:electronicMailAddress><gco:CharacterString>' + x(d.email) + '</gco:CharacterString></gmd:electronicMailAddress>\n' : '') +
         '    </gmd:CI_Address></gmd:address>\n' +
         '  </gmd:CI_Contact></gmd:contactInfo>\n' +
         '  <gmd:role>\n' +
@@ -1476,7 +1476,7 @@ function _renderContactSuggestions(q) {
                 right = '<span class="sugg-badge-gn">Catálogo Online</span>';
             } else if (r._source === 'user') {
                 right = '<span class="sugg-badge-user">Meus Contatos</span>' +
-                        '<button class="sugg-delete-btn" title="Excluir contato salvo" onclick="event.stopPropagation();deleteUserContact(\'' + escHtml(r._key) + '\')">×</button>';
+                    '<button class="sugg-delete-btn" title="Excluir contato salvo" onclick="event.stopPropagation();deleteUserContact(\'' + escHtml(r._key) + '\')">×</button>';
             } else {
                 right = '<span class="sugg-badge-local">Catálogo Offline</span>';
             }
@@ -1582,7 +1582,7 @@ function _renderForSuggestions(key, q) {
                 right = '<span class="sugg-badge-gn">Catálogo Online</span>';
             } else if (r._source === 'user') {
                 right = '<span class="sugg-badge-user">Meus Contatos</span>' +
-                        '<button class="sugg-delete-btn" title="Excluir contato salvo" onclick="event.stopPropagation();deleteUserContact(\'' + escHtml(r._key) + '\')">×</button>';
+                    '<button class="sugg-delete-btn" title="Excluir contato salvo" onclick="event.stopPropagation();deleteUserContact(\'' + escHtml(r._key) + '\')">×</button>';
             } else {
                 right = '<span class="sugg-badge-local">Catálogo Offline</span>';
             }
@@ -1672,8 +1672,8 @@ function renderFor(key) {
         }).join('');
         return '<tr>' +
             '<td style="text-align:center;color:var(--fg-muted);font-weight:700;font-size:12px">' + (idx + 1) + '</td>' +
-            '<td>' + (c.data.org || '—') + '</td>' +
-            '<td>' + (c.data.sigla || '—') + '</td>' +
+            '<td>' + (c.data.org || '-') + '</td>' +
+            '<td>' + (c.data.sigla || '-') + '</td>' +
             '<td><select id="role-' + key + '-t-' + idx + '" class="role-select" onchange="updateRoleFor(\'' + key + '\',' + idx + ',this.value)">' + opts + '</select></td>' +
             '<td><button class="btn-remove" onclick="removeFrom(\'' + key + '\',' + idx + ')" title="Remover">✕</button></td>' +
             '</tr>';
@@ -1687,7 +1687,7 @@ function renderFor(key) {
 
 function buildAccordionFor(c, idx, key) {
     var d = c.data;
-    var lbl = 'Contato ' + (idx + 1) + (d.sigla ? ' — ' + d.sigla : '');
+    var lbl = 'Contato ' + (idx + 1) + (d.sigla ? ' - ' + d.sigla : '');
     var isEditing = !!_accEditing[key + ':' + idx];
     var pfx = 'af-' + key + '-' + idx + '-';
     var roleSelectHtml = _buildRoleSelectHtml(key, idx, d.role);
@@ -1882,7 +1882,7 @@ function initGlobalTooltips() {
         document.body.appendChild(_globalTooltip);
     }
 
-    document.addEventListener('mouseover', function(e) {
+    document.addEventListener('mouseover', function (e) {
         var target = e.target.closest('[data-title]');
         if (!target) return;
 
@@ -1899,7 +1899,7 @@ function initGlobalTooltips() {
 
         clearTimeout(_tooltipTimeout);
 
-        _tooltipTimeout = setTimeout(function() {
+        _tooltipTimeout = setTimeout(function () {
             _globalTooltip.textContent = tipText;
             _globalTooltip.classList.add('visible');
 
@@ -1924,7 +1924,7 @@ function initGlobalTooltips() {
                     top = rect.bottom + 8;
                     arrowCls = 'arrow-up';
                 }
-                _globalTooltip.style.top  = top  + 'px';
+                _globalTooltip.style.top = top + 'px';
                 _globalTooltip.style.left = left + 'px';
                 _globalTooltip.setAttribute('data-arrow', arrowCls);
                 _globalTooltip.style.setProperty('--arrow-pos', arrowPos + 'px');
@@ -1932,7 +1932,7 @@ function initGlobalTooltips() {
             }
 
             // Default: below the element (auto-flip to above if needed)
-            top  = rect.bottom + 8;
+            top = rect.bottom + 8;
             left = rect.left + rect.width / 2 - tooltipRect.width / 2;
             var arrowClass = 'arrow-up';
 
@@ -1945,7 +1945,7 @@ function initGlobalTooltips() {
                 arrowClass = 'arrow-down';
             }
 
-            _globalTooltip.style.top  = top  + 'px';
+            _globalTooltip.style.top = top + 'px';
             _globalTooltip.style.left = left + 'px';
             _globalTooltip.setAttribute('data-arrow', arrowClass);
 
@@ -1957,15 +1957,15 @@ function initGlobalTooltips() {
         }, 600);
     });
 
-    document.addEventListener('mouseout', function(e) {
+    document.addEventListener('mouseout', function (e) {
         var target = e.target.closest('[data-title]');
         if (target) {
             clearTimeout(_tooltipTimeout);
             _globalTooltip.classList.remove('visible');
         }
     });
-    
-    document.addEventListener('mousedown', function() {
+
+    document.addEventListener('mousedown', function () {
         clearTimeout(_tooltipTimeout);
         if (_globalTooltip) _globalTooltip.classList.remove('visible');
     });
@@ -1973,11 +1973,11 @@ function initGlobalTooltips() {
 // --- Custom Select Logic ---
 function initCustomSelects() {
     var selects = document.querySelectorAll('select:not(.custom-select-initialized)');
-    
-    selects.forEach(function(select) {
+
+    selects.forEach(function (select) {
         // Only convert selects that are inside the main form panels (skip any hidden system ones if they exist)
         if (select.style.display === 'none') return;
-        
+
         select.classList.add('custom-select-initialized');
         select.style.display = 'none'; // Hide native select
 
@@ -1987,10 +1987,10 @@ function initCustomSelects() {
 
         var trigger = document.createElement('div');
         trigger.className = 'custom-select-trigger';
-        
+
         var valueSpan = document.createElement('span');
         valueSpan.className = 'custom-select-value';
-        
+
         var arrowSpan = document.createElement('span');
         arrowSpan.className = 'custom-select-arrow';
 
@@ -2000,24 +2000,24 @@ function initCustomSelects() {
 
         var dropdown = document.createElement('div');
         dropdown.className = 'search-suggestions custom-select-dropdown';
-        
+
         // Populate options
         var optionsHtml = '';
         var selectedText = '- Selecione -';
-        
-        Array.from(select.options).forEach(function(opt, idx) {
+
+        Array.from(select.options).forEach(function (opt, idx) {
             var title = opt.getAttribute('data-title') || '';
             var titleAttr = title ? ' data-title="' + title.replace(/"/g, '&quot;') + '"' : '';
             var activeClass = opt.selected ? ' active' : '';
             if (opt.selected) selectedText = opt.text;
-            
+
             optionsHtml += '<div class="suggestion-item' + activeClass + '" data-index="' + idx + '" data-value="' + opt.value + '"' + titleAttr + '>' + opt.text + '</div>';
         });
-        
+
         valueSpan.textContent = selectedText;
         dropdown.innerHTML = optionsHtml;
         wrapper.appendChild(dropdown);
-        
+
         select.parentNode.insertBefore(wrapper, select.nextSibling);
 
         // --- Interaction Logic ---
@@ -2031,7 +2031,7 @@ function initCustomSelects() {
 
         function openDropdown() {
             // Close others
-            document.querySelectorAll('.custom-select.open').forEach(function(el) {
+            document.querySelectorAll('.custom-select.open').forEach(function (el) {
                 if (el !== wrapper) {
                     el.querySelector('.custom-select-dropdown').style.display = 'none';
                     el.classList.remove('open');
@@ -2040,7 +2040,7 @@ function initCustomSelects() {
             dropdown.style.display = 'block';
             wrapper.classList.add('open');
             isOpen = true;
-            
+
             // Scroll to active item
             var activeItem = dropdown.querySelector('.suggestion-item.active');
             if (activeItem) {
@@ -2048,14 +2048,14 @@ function initCustomSelects() {
             }
         }
 
-        trigger.addEventListener('click', function(e) {
+        trigger.addEventListener('click', function (e) {
             e.stopPropagation();
             if (isOpen) closeDropdown();
             else openDropdown();
         });
 
         // Click on items
-        dropdown.addEventListener('click', function(e) {
+        dropdown.addEventListener('click', function (e) {
             e.stopPropagation();
             var item = e.target.closest('.suggestion-item');
             if (!item) return;
@@ -2063,20 +2063,20 @@ function initCustomSelects() {
             var idx = item.getAttribute('data-index');
             select.selectedIndex = idx;
             valueSpan.textContent = item.textContent;
-            
+
             // Update active class
-            dropdown.querySelectorAll('.suggestion-item').forEach(function(el) { el.classList.remove('active'); });
+            dropdown.querySelectorAll('.suggestion-item').forEach(function (el) { el.classList.remove('active'); });
             item.classList.add('active');
-            
+
             closeDropdown();
-            
+
             // Trigger native change event so other scripts know
             var event = new Event('change', { bubbles: true });
             select.dispatchEvent(event);
         });
 
         // Click outside closes
-        document.addEventListener('click', function(e) {
+        document.addEventListener('click', function (e) {
             if (isOpen && !wrapper.contains(e.target)) {
                 closeDropdown();
             }
@@ -2086,16 +2086,16 @@ function initCustomSelects() {
         var searchString = '';
         var searchTimeout = null;
 
-        wrapper.addEventListener('keydown', function(e) {
+        wrapper.addEventListener('keydown', function (e) {
             if (e.key === 'Tab') {
                 closeDropdown();
                 return;
             }
-            
+
             e.preventDefault(); // Prevent page scroll for arrows
 
             var items = Array.from(dropdown.querySelectorAll('.suggestion-item'));
-            var activeIdx = items.findIndex(function(item) { return item.classList.contains('active'); });
+            var activeIdx = items.findIndex(function (item) { return item.classList.contains('active'); });
 
             if (e.key === 'ArrowDown') {
                 if (!isOpen) openDropdown();
@@ -2128,12 +2128,12 @@ function initCustomSelects() {
                 if (!isOpen) openDropdown();
                 searchString += e.key.toLowerCase();
                 clearTimeout(searchTimeout);
-                
-                searchTimeout = setTimeout(function() {
+
+                searchTimeout = setTimeout(function () {
                     searchString = '';
                 }, 1000);
 
-                var matchIdx = items.findIndex(function(item) {
+                var matchIdx = items.findIndex(function (item) {
                     return item.textContent.trim().toLowerCase().startsWith(searchString);
                 });
 
@@ -2146,11 +2146,11 @@ function initCustomSelects() {
         });
 
         // Listen for programmatic value changes on the original select
-        select.addEventListener('change', function() {
+        select.addEventListener('change', function () {
             var selectedOpt = select.options[select.selectedIndex];
             if (selectedOpt) {
                 valueSpan.textContent = selectedOpt.text;
-                dropdown.querySelectorAll('.suggestion-item').forEach(function(el) {
+                dropdown.querySelectorAll('.suggestion-item').forEach(function (el) {
                     el.classList.toggle('active', el.getAttribute('data-value') === selectedOpt.value);
                 });
             }
@@ -2158,6 +2158,6 @@ function initCustomSelects() {
     });
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     initGlobalTooltips();
 });
