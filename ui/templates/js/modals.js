@@ -82,11 +82,9 @@ var Modal = (function() {
         
         overlay.classList.add('active');
         
-        // Focus first primary button
-        setTimeout(function() {
-            var primary = footerEl.querySelector('.btn-modal-primary');
-            if (primary) primary.focus();
-        }, 100);
+        // Focus first primary button immediately
+        var primary = footerEl.querySelector('.btn-modal-primary');
+        if (primary) primary.focus();
     }
 
     function close() {

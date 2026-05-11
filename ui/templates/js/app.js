@@ -428,23 +428,31 @@ function showTab(tabId, btn) {
 function tryExportXml() {
     var data = collectFormData();
     if (!data) return;
-    var missing = validateForm(data);
-    if (missing.length > 0) { showValidationError(missing); return; }
+    var missing = validateForm(data, true); // silent: não toca o DOM agora
+    if (missing.length > 0) {
+        showValidationError(missing);
+        requestAnimationFrame(function () { validateForm(data, false); }); // bordas vermelhas após modal abrir
+        return;
+    }
     bridge.export_xml(data);
 }
 
 function tryExportGeohab() {
     var data = collectFormData();
     if (!data) return;
-    var missing = validateForm(data);
-    if (missing.length > 0) { showValidationError(missing); return; }
+    var missing = validateForm(data, true);
+    if (missing.length > 0) {
+        showValidationError(missing);
+        requestAnimationFrame(function () { validateForm(data, false); });
+        return;
+    }
     bridge.export_geohab(data);
 }
 
 function trySaveMetadata() {
     var data = collectFormData();
     if (!data) return;
-    Modal.confirm('Deseja realmente salvar as alterações no banco de dados?', function() {
+    Modal.confirm('Deseja realmente salvar as alterações no banco de dados?', function () {
         bridge.save_metadata(data);
     }, 'Confirmar Salvamento');
 }
@@ -541,7 +549,8 @@ var REQUIRED_LABELS = {
     southBoundLatitude: "Latitude Sul",
     northBoundLatitude: "Latitude Norte",
     epsgCode: "Código EPSG",
-    epsgTitle: "Título do SRC"
+    epsgTitle: "Título do SRC",
+    metadataLanguage: "Idioma do Metadado"
 };
 
 function validateForm(data, silent) {
@@ -558,15 +567,13 @@ function validateForm(data, silent) {
                     var el = document.getElementById("f-" + key);
                     if (el) {
                         el.classList.add("error");
-                        if (el.nextElementSibling && el.nextElementSibling.classList.contains("custom-select")) {
-                            el.nextElementSibling.classList.add("error");
-                        }
+                        var cs = el.nextElementSibling;
+                        if (cs && cs.classList.contains("custom-select")) cs.classList.add("error");
                     }
                 }
             }
             missing.push(REQUIRED_LABELS[key]);
         } else {
-            // SEMPRE remove o erro se o campo for preenchido, mesmo em modo silencioso
             if (key === "MD_Keywords") {
                 var chipsBox2 = document.getElementById("keyword-chips");
                 if (chipsBox2) chipsBox2.style.outline = "";
@@ -574,31 +581,32 @@ function validateForm(data, silent) {
                 var el2 = document.getElementById("f-" + key);
                 if (el2) {
                     el2.classList.remove("error");
-                    if (el2.nextElementSibling && el2.nextElementSibling.classList.contains("custom-select")) {
-                        el2.nextElementSibling.classList.remove("error");
-                    }
+                    var cs2 = el2.nextElementSibling;
+                    if (cs2 && cs2.classList.contains("custom-select")) cs2.classList.remove("error");
                 }
             }
         }
     }
+
+    // Contato do Recurso
     var cTable = document.getElementById("contacts-tbody");
     if (contacts.length === 0) {
         if (!silent && cTable) cTable.closest('table').style.outline = "2px solid var(--accent)";
-        missing.push("Contato (ao menos um)");
+        missing.push("Contato do Recurso");
     } else {
         if (cTable) cTable.closest('table').style.outline = "";
-        if (!contacts[0].data.role) {
-            missing.push("Responsabilidade do Contato");
-        }
+        if (!contacts[0].data.role) missing.push("Responsabilidade do Contato");
     }
 
+    // Contato de Metadado
     var mTable = document.getElementById("meta-tbody");
     if (metaContacts.length === 0) {
         if (!silent && mTable) mTable.closest('table').style.outline = "2px solid var(--accent)";
-        missing.push("Autor do Metadado (ao menos um)");
+        missing.push("Contato de Metadado");
     } else {
         if (mTable) mTable.closest('table').style.outline = "";
     }
+
     return missing;
 }
 
@@ -611,7 +619,9 @@ function updateFormProgress(e) {
     if (!data) return;
 
     var missing = validateForm(data, true); // true = silent, don't show red borders
-    var totalRequired = Object.keys(REQUIRED_LABELS).length + 2; // +1 for Resource Contact, +1 for Metadata Contact
+    // +1 Contato do Recurso, +1 Contato de Metadado, +1 Responsabilidade (só conta se já há contato)
+    var extraFields = 2 + (contacts.length > 0 ? 1 : 0);
+    var totalRequired = Object.keys(REQUIRED_LABELS).length + extraFields;
     var missingCount = missing.length;
     var filledCount = totalRequired - missingCount;
     var pct = Math.round((filledCount / totalRequired) * 100);
@@ -630,8 +640,64 @@ function updateFormProgress(e) {
     }
 }
 
+var FIELD_GROUPS = {
+    "Identificação": ["Título", "Tipo de Data", "Data do Dado", "Frequência de Atualização", "Status", "Resumo", "Crédito", "Palavras-chave"],
+    "Contato": ["Contato do Recurso", "Responsabilidade do Contato"],
+    "Classificação": ["Tipo de Representação Espacial", "Categoria Temática", "Nível Hierárquico", "Idioma"],
+    "Extensão": ["Longitude Oeste", "Longitude Leste", "Latitude Sul", "Latitude Norte", "Código EPSG", "Título do SRC"],
+    "Metadado": ["Idioma do Metadado", "Contato de Metadado"]
+};
+
 function showValidationError(missing) {
-    Modal.alert("Preencha os campos obrigatórios:<br>• " + missing.join("<br>• "), "Campos Pendentes", "error");
+    // Agrupar campos por seção
+    var grouped = {};
+    missing.forEach(function (field) {
+        var found = false;
+        for (var group in FIELD_GROUPS) {
+            if (FIELD_GROUPS[group].indexOf(field) !== -1) {
+                if (!grouped[group]) grouped[group] = [];
+                grouped[group].push(field);
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            if (!grouped['Outros']) grouped['Outros'] = [];
+            grouped['Outros'].push(field);
+        }
+    });
+
+    var html = '<p style="color:var(--fg-muted);margin-bottom:12px">Complete os campos abaixo para exportar o metadado:</p>';
+
+    // Iterar sobre FIELD_GROUPS para garantir a ordem definida
+    for (var group in FIELD_GROUPS) {
+        if (grouped[group]) {
+            html += '<div style="margin-bottom:10px">';
+            html += '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--fg-muted);margin-bottom:6px">' + group + '</div>';
+            html += '<div style="display:flex;flex-wrap:wrap;gap:6px">';
+            grouped[group].forEach(function (f) {
+                html += '<span style="background:#fee2e2;color:#b91c1c;font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap">' + f + '</span>';
+            });
+            html += '</div></div>';
+        }
+    }
+
+    // Se houver algum grupo extra (Outros)
+    if (grouped['Outros']) {
+        html += '<div style="margin-bottom:10px">';
+        html += '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--fg-muted);margin-bottom:6px">Outros</div>';
+        html += '<div style="display:flex;flex-wrap:wrap;gap:6px">';
+        grouped['Outros'].forEach(function (f) {
+            html += '<span style="background:#fee2e2;color:#b91c1c;font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap">' + f + '</span>';
+        });
+        html += '</div></div>';
+    }
+
+    Modal.show({
+        title: missing.length + ' campo' + (missing.length > 1 ? 's' : '') + ' pendente' + (missing.length > 1 ? 's' : ''),
+        message: html,
+        type: 'error'
+    });
 }
 
 function populateForm(data) {
@@ -1230,7 +1296,7 @@ function deleteUserContactFromList(source, idx) {
     var c = arr[idx];
     if (!c) return;
     var name = c.data.sigla || c.data.org || 'este contato';
-    Modal.confirm('Excluir "' + name + '" dos Meus Contatos?<br><br>Esta ação remove o contato salvo permanentemente.', function() {
+    Modal.confirm('Excluir "' + name + '" dos Meus Contatos?<br><br>Esta ação remove o contato salvo permanentemente.', function () {
         if (c.data._key) bridge.delete_user_contact(c.data._key);
         arr.splice(idx, 1);
         if (source === 'main') renderContacts();
@@ -1261,7 +1327,7 @@ function saveContactLocally(source, idx) {
 }
 
 function deleteUserContact(key) {
-    Modal.confirm('Excluir este contato dos Meus Contatos?<br><br>Esta ação não pode ser desfeita.', function() {
+    Modal.confirm('Excluir este contato dos Meus Contatos?<br><br>Esta ação não pode ser desfeita.', function () {
         bridge.delete_user_contact(key);
         var boxes = ['search-suggestions', 'proc-suggestions', 'meta-suggestions'];
         boxes.forEach(function (id) {
@@ -1881,7 +1947,7 @@ function initMetaAuthor() {
 // ─── Logout ────────────────────────────────────────────────────────────────────
 
 function doLogout() {
-    Modal.confirm('Deseja realmente sair da conta?', function() {
+    Modal.confirm('Deseja realmente sair da conta?', function () {
         if (typeof bridge !== 'undefined' && bridge.logout) {
             bridge.logout();
         }
