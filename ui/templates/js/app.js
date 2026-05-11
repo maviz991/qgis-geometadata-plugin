@@ -1264,6 +1264,7 @@ function renderContacts() {
         }).join('');
     }
     _checkCdhuWarning(contacts, 'cdhu-warning-main', 2);
+    initCustomSelects();
 }
 
 function buildAccordion(c, idx) {
@@ -1490,9 +1491,17 @@ function _checkCdhuWarning(arr, bannerId, reqPos) {
     if (!banner) return;
     // Only show if any contact is from a catalog (not fully manual)
     var hasCatalogContact = arr.some(function (c) { return c.isManual !== true; });
-    var cdhuInPos = (arr.length >= reqPos) && _isCdhu(arr[reqPos - 1]);
     
-    if (hasCatalogContact && !cdhuInPos) {
+    var ok = false;
+    if (bannerId === 'cdhu-warning-main') {
+        // For Recurso: allowed in Pos 1 OR Pos 2
+        ok = (arr.length >= 1 && _isCdhu(arr[0])) || (arr.length >= 2 && _isCdhu(arr[1]));
+    } else {
+        // For Meta: strictly the reqPos (usually 1)
+        ok = (arr.length >= reqPos) && _isCdhu(arr[reqPos - 1]);
+    }
+    
+    if (hasCatalogContact && !ok) {
         banner.style.display = 'block';
     } else {
         banner.style.display = 'none';
@@ -1732,6 +1741,7 @@ function renderFor(key) {
         }).join('');
     }
     if (key === 'meta') _checkCdhuWarning(arr, 'cdhu-warning-meta', 1);
+    initCustomSelects();
 }
 
 function buildAccordionFor(c, idx, key) {
