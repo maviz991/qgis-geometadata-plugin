@@ -584,16 +584,22 @@ function validateForm(data, silent) {
     } else if (!contacts[0].data.role) {
         missing.push("Responsabilidade do Contato");
     }
+    if (metaContacts.length === 0) {
+        missing.push("Autor do Metadado (ao menos um)");
+    }
     return missing;
 }
 
 // ─── Atualização de Progresso ────────────────────────────────────────────────
-function updateFormProgress() {
+function updateFormProgress(e) {
+    // Se o evento vier da caixa de busca, ignoramos para não causar resets visuais estranhos
+    if (e && e.target && e.target.id === 'contact-search') return;
+
     var data = collectFormData();
     if (!data) return;
 
     var missing = validateForm(data, true); // true = silent, don't show red borders
-    var totalRequired = Object.keys(REQUIRED_LABELS).length + 1; // +1 for Contact (either missing contact or missing role counts as 1 error)
+    var totalRequired = Object.keys(REQUIRED_LABELS).length + 2; // +1 for Resource Contact, +1 for Metadata Contact
     var missingCount = missing.length;
     var filledCount = totalRequired - missingCount;
     var pct = Math.round((filledCount / totalRequired) * 100);
@@ -1060,8 +1066,15 @@ function updateRole(idx, val) {
     contacts[idx].data.role = val;
     var tableSelect = document.getElementById("role-table-" + idx);
     var accSelect = document.getElementById("role-acc-" + idx);
-    if (tableSelect && tableSelect.value !== val) tableSelect.value = val;
-    if (accSelect && accSelect.value !== val) accSelect.value = val;
+
+    if (tableSelect && tableSelect.value !== val) {
+        tableSelect.value = val;
+        tableSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    if (accSelect && accSelect.value !== val) {
+        accSelect.value = val;
+        accSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    }
 }
 
 // ─── Contatos: render ──────────────────────────────────────────────────────────
@@ -1255,32 +1268,32 @@ function renderContacts() {
     if (contacts.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhum contato. Use a busca ou clique em <b>+ Manual</b>.</td></tr>';
         if (accDiv) accDiv.innerHTML = "";
-        return;
-    }
-
-    var last = contacts.length - 1;
-    tbody.innerHTML = contacts.map(function (c, idx) {
-        return '<tr>' +
-            '<td style="text-align:center;color:var(--fg-muted);font-weight:700;font-size:12px">' + (idx + 1) + '</td>' +
-            '<td>' + (c.data.org || '-') + '</td>' +
-            '<td>' + (c.data.sigla || '-') + '</td>' +
-            '<td>' + (c.data.email || '-') + '</td>' +
-            '<td>' + buildRoleSelect(idx, c.data.role) + '</td>' +
-            '<td style="white-space:nowrap">' +
-            '<button class="btn-move" onclick="moveContact(' + idx + ',-1)" data-title="Mover para cima"' + (idx === 0 ? ' disabled' : '') + '>↑</button>' +
-            '<button class="btn-move" onclick="moveContact(' + idx + ', 1)" data-title="Mover para baixo"' + (idx === last ? ' disabled' : '') + '>↓</button>' +
-            '<button class="btn-remove" onclick="removeContact(' + idx + ')" data-title="Remover">✕</button>' +
-            '</td>' +
-            '</tr>';
-    }).join('');
-
-    if (accDiv) {
-        accDiv.innerHTML = contacts.map(function (c, idx) {
-            return buildAccordion(c, idx);
+    } else {
+        var last = contacts.length - 1;
+        tbody.innerHTML = contacts.map(function (c, idx) {
+            return '<tr>' +
+                '<td style="text-align:center;color:var(--fg-muted);font-weight:700;font-size:12px">' + (idx + 1) + '</td>' +
+                '<td>' + (c.data.org || '-') + '</td>' +
+                '<td>' + (c.data.sigla || '-') + '</td>' +
+                '<td>' + (c.data.email || '-') + '</td>' +
+                '<td>' + buildRoleSelect(idx, c.data.role) + '</td>' +
+                '<td style="white-space:nowrap">' +
+                '<button class="btn-move" onclick="moveContact(' + idx + ',-1)" data-title="Mover para cima"' + (idx === 0 ? ' disabled' : '') + '>↑</button>' +
+                '<button class="btn-move" onclick="moveContact(' + idx + ', 1)" data-title="Mover para baixo"' + (idx === last ? ' disabled' : '') + '>↓</button>' +
+                '<button class="btn-remove" onclick="removeContact(' + idx + ')" data-title="Remover">✕</button>' +
+                '</td>' +
+                '</tr>';
         }).join('');
+
+        if (accDiv) {
+            accDiv.innerHTML = contacts.map(function (c, idx) {
+                return buildAccordion(c, idx);
+            }).join('');
+        }
     }
     _checkCdhuWarning(contacts, 'cdhu-warning-main', 2);
     initCustomSelects();
+    updateFormProgress();
 }
 
 function buildAccordion(c, idx) {
@@ -1719,8 +1732,15 @@ function updateRoleFor(key, idx, val) {
     arr[idx].data.role = val;
     var t = document.getElementById('role-' + key + '-t-' + idx);
     var a = document.getElementById('role-' + key + '-a-' + idx);
-    if (t && t.value !== val) t.value = val;
-    if (a && a.value !== val) a.value = val;
+
+    if (t && t.value !== val) {
+        t.value = val;
+        t.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    if (a && a.value !== val) {
+        a.value = val;
+        a.dispatchEvent(new Event('change', { bubbles: true }));
+    }
 }
 
 function renderFor(key) {
@@ -1729,36 +1749,37 @@ function renderFor(key) {
     var accDiv = document.getElementById(key + '-accordions');
     if (!tbody) return;
     if (arr.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Nenhum contato adicionado.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Nenhum contato adicionado. Use a busca ou clique em <b>+ Manual</b></td></tr>';
         if (accDiv) accDiv.innerHTML = '';
-        return;
-    }
-    var last = arr.length - 1;
-    tbody.innerHTML = arr.map(function (c, idx) {
-        var sel = c.data.role || 'pointOfContact';
-        var opts = ROLE_OPTIONS.map(function (r) {
-            var t = r.title ? ' data-title="' + r.title + '"' : '';
-            return '<option value="' + r.value + '"' + (r.value === sel ? ' selected' : '') + t + '>' + r.label + '</option>';
+    } else {
+        var last = arr.length - 1;
+        tbody.innerHTML = arr.map(function (c, idx) {
+            var sel = c.data.role || 'pointOfContact';
+            var opts = ROLE_OPTIONS.map(function (r) {
+                var t = r.title ? ' data-title="' + r.title + '"' : '';
+                return '<option value="' + r.value + '"' + (r.value === sel ? ' selected' : '') + t + '>' + r.label + '</option>';
+            }).join('');
+            return '<tr>' +
+                '<td style="text-align:center;color:var(--fg-muted);font-weight:700;font-size:12px">' + (idx + 1) + '</td>' +
+                '<td>' + (c.data.org || '-') + '</td>' +
+                '<td>' + (c.data.sigla || '-') + '</td>' +
+                '<td><select id="role-' + key + '-t-' + idx + '" class="role-select" onchange="updateRoleFor(\'' + key + '\',' + idx + ',this.value)">' + opts + '</select></td>' +
+                '<td style="white-space:nowrap">' +
+                '<button class="btn-move" onclick="moveFor(\'' + key + '\',' + idx + ',-1)" title="Mover para cima"' + (idx === 0 ? ' disabled' : '') + '>↑</button>' +
+                '<button class="btn-move" onclick="moveFor(\'' + key + '\',' + idx + ', 1)" title="Mover para baixo"' + (idx === last ? ' disabled' : '') + '>↓</button>' +
+                '<button class="btn-remove" onclick="removeFrom(\'' + key + '\',' + idx + ')" title="Remover">✕</button>' +
+                '</td>' +
+                '</tr>';
         }).join('');
-        return '<tr>' +
-            '<td style="text-align:center;color:var(--fg-muted);font-weight:700;font-size:12px">' + (idx + 1) + '</td>' +
-            '<td>' + (c.data.org || '-') + '</td>' +
-            '<td>' + (c.data.sigla || '-') + '</td>' +
-            '<td><select id="role-' + key + '-t-' + idx + '" class="role-select" onchange="updateRoleFor(\'' + key + '\',' + idx + ',this.value)">' + opts + '</select></td>' +
-            '<td style="white-space:nowrap">' +
-            '<button class="btn-move" onclick="moveFor(\'' + key + '\',' + idx + ',-1)" title="Mover para cima"' + (idx === 0 ? ' disabled' : '') + '>↑</button>' +
-            '<button class="btn-move" onclick="moveFor(\'' + key + '\',' + idx + ', 1)" title="Mover para baixo"' + (idx === last ? ' disabled' : '') + '>↓</button>' +
-            '<button class="btn-remove" onclick="removeFrom(\'' + key + '\',' + idx + ')" title="Remover">✕</button>' +
-            '</td>' +
-            '</tr>';
-    }).join('');
-    if (accDiv) {
-        accDiv.innerHTML = arr.map(function (c, idx) {
-            return buildAccordionFor(c, idx, key);
-        }).join('');
+        if (accDiv) {
+            accDiv.innerHTML = arr.map(function (c, idx) {
+                return buildAccordionFor(c, idx, key);
+            }).join('');
+        }
     }
     if (key === 'meta') _checkCdhuWarning(arr, 'cdhu-warning-meta', 1);
     initCustomSelects();
+    updateFormProgress();
 }
 
 function buildAccordionFor(c, idx, key) {
