@@ -585,7 +585,10 @@ function populateForm(data) {
     ];
     SIMPLE_FIELDS.forEach(function (key) {
         var el = document.getElementById("f-" + key);
-        if (el && data[key] !== undefined && data[key] !== null) el.value = data[key];
+        if (el && data[key] !== undefined && data[key] !== null) {
+            el.value = data[key];
+            updateCustomSelect(el);
+        }
     });
     if (Array.isArray(data.MD_Keywords) && data.MD_Keywords.length) {
         keywords = data.MD_Keywords.slice();
@@ -691,7 +694,10 @@ function captureFromLayer() {
         if (!result) { alert("Nenhuma camada ativa ou informações não disponíveis."); return; }
         var codeEl = document.getElementById("f-epsgCode");
         var titleEl = document.getElementById("f-epsgTitle");
-        if (codeEl) codeEl.value = result.code || "";
+        if (codeEl) {
+            codeEl.value = result.code || "";
+            updateCustomSelect(codeEl);
+        }
         if (titleEl) titleEl.value = result.title || "";
         if (result.north !== undefined) {
             var n = document.getElementById("f-northBoundLatitude");
@@ -707,6 +713,22 @@ function captureFromLayer() {
 }
 
 // ─── Utilitário ───────────────────────────────────────────────────────────────
+
+function updateCustomSelect(select) {
+    if (!select || !select.classList.contains('custom-select-initialized')) return;
+    var wrapper = select.nextElementSibling;
+    if (wrapper && wrapper.classList.contains('custom-select')) {
+        var opt = select.options[select.selectedIndex];
+        if (opt) {
+            var valueSpan = wrapper.querySelector('.custom-select-value');
+            if (valueSpan) valueSpan.textContent = opt.text;
+            var items = wrapper.querySelectorAll('.suggestion-item');
+            items.forEach(function(i) { i.classList.remove('active'); });
+            var activeItem = wrapper.querySelector('.suggestion-item[data-value="' + opt.value.replace(/"/g, '\\"') + '"]');
+            if (activeItem) activeItem.classList.add('active');
+        }
+    }
+}
 
 function escHtml(s) {
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');

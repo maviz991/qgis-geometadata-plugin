@@ -19,7 +19,8 @@
             <div class="form-group span-2">
                 <label for="f-title">Título <span class="req">*</span> <button class="help-btn"
                         data-tip="Insira um título claro e autodescritivo. Recomenda-se incluir o tema, a localização e o ano se aplicável.">?</button></label>
-                <input id="f-title" type="text" placeholder="Título do conjunto de dados..." data-title="Nome descritivo. Recomendação: Tema, local e ano.">
+                <input id="f-title" type="text" placeholder="Título do conjunto de dados..."
+                    data-title="Nome descritivo. Recomendação: Tema, local e ano.">
             </div>
 
             <div class="form-group span-2">
@@ -27,10 +28,13 @@
                         data-tip="Selecione o tipo: Criação (quando gerado), Publicação (quando divulgado) ou Revisão (última atualização relevante).">?</button></label>
                 <div class="inline-row">
                     <select id="f-dateType">
-                        <option value="creation" data-title="Data em que o dado foi originalmente produzido">Criação</option>
-                        <option value="publication" data-title="Data em que o dado foi disponibilizado ao público">Publicação
+                        <option value="creation" data-title="Data em que o dado foi originalmente produzido">Criação
                         </option>
-                        <option value="revision" data-title="Data da última revisão ou atualização do dado">Revisão</option>
+                        <option value="publication" data-title="Data em que o dado foi disponibilizado ao público">
+                            Publicação
+                        </option>
+                        <option value="revision" data-title="Data da última revisão ou atualização do dado">Revisão
+                        </option>
                     </select>
                     <input id="f-date" type="datetime-local">
                 </div>
@@ -39,7 +43,8 @@
             <div class="form-group">
                 <label for="f-edition">Edição <button class="help-btn"
                         data-tip="Indique a versão do dado (ex: 1, 2, 3). Comece com 0 ou 1 para a primeira versão.">?</button></label>
-                <input id="f-edition" type="number" value="0" min="0" oninput="toggleEditionDate(this.value)" data-title="Versão numérica do conjunto de dados.">
+                <input id="f-edition" type="number" value="0" min="0" oninput="toggleEditionDate(this.value)"
+                    data-title="Versão numérica do conjunto de dados.">
             </div>
             <div class="form-group">
                 <label for="f-date_edition">Data da Edição <button class="help-btn"
@@ -50,7 +55,9 @@
             <div class="form-group span-2">
                 <label for="f-abstract">Resumo <span class="req">*</span> <button class="help-btn"
                         data-tip="Forneça um resumo detalhado: explique o que o dado representa, sua abrangência espacial, atributos principais e o contexto de sua produção.">?</button></label>
-                <textarea id="f-abstract" rows="4" data-title="Resumo compreensível abordando os elementos chave dos dados." placeholder="Descreva o conjunto de dados..."></textarea>
+                <textarea id="f-abstract" rows="4"
+                    data-title="Resumo compreensível abordando os elementos chave dos dados."
+                    placeholder="Descreva o conjunto de dados..."></textarea>
             </div>
 
             <div class="form-group span-2">
@@ -62,7 +69,8 @@
             <div class="form-group">
                 <label for="f-credit">Crédito <span class="req">*</span> <button class="help-btn"
                         data-tip="Mencione a equipe, departamento ou técnico diretamente responsável pela elaboração técnica deste dado.">?</button></label>
-                <input id="f-credit" type="text" data-title="Pessoa ou setor responsável pela elaboração técnica." placeholder="Técnico responsável" data-validate="no-digits">
+                <input id="f-credit" type="text" data-title="Pessoa ou setor responsável pela elaboração técnica."
+                    placeholder="Técnico responsável" data-validate="no-digits">
             </div>
 
             <div class="form-group">
@@ -70,16 +78,20 @@
                         data-tip="Indique o estágio de produção atual (ex: Contínuo para dados sempre em atualização, Concluído para dados finalizados).">?</button></label>
                 <select id="f-status_codeListValue">
                     <option value="">- Selecione -</option>
-                    <option value="historicalArchive" data-title="Dado mantido para fins históricos, sem novas atualizações">
+                    <option value="historicalArchive"
+                        data-title="Dado mantido para fins históricos, sem novas atualizações">
                         Arquivo Antigo</option>
-                    <option value="completed" data-title="Produção concluída; nenhuma atualização está planejada">Concluído
+                    <option value="completed" data-title="Produção concluída; nenhuma atualização está planejada">
+                        Concluído
                     </option>
-                    <option value="onGoing" data-title="Dado atualizado continuamente ou com periodicidade regular">Contínuo
+                    <option value="onGoing" data-title="Dado atualizado continuamente ou com periodicidade regular">
+                        Contínuo
                     </option>
                     <option value="underDevelopment" data-title="Dado ainda em fase de produção ou desenvolvimento">Em
                         Desenvolvimento</option>
                     <option value="required" data-title="Dado necessário, mas ainda não iniciado">Necessário</option>
-                    <option value="obsolete" data-title="Dado descontinuado ou substituído por versão mais recente">Obsoleto
+                    <option value="obsolete" data-title="Dado descontinuado ou substituído por versão mais recente">
+                        Obsoleto
                     </option>
                     <option value="planned" data-title="Dado planejado para produção futura">Planejado</option>
                 </select>
@@ -89,7 +101,8 @@
                 <label>Palavras-chave <span class="req">*</span> <button class="help-btn"
                         data-tip="Adicione palavras-chave (temas, locais, métodos) para facilitar a busca no catálogo. Pressione Enter para cada termo.">?</button></label>
                 <div class="keyword-input-row">
-                    <input id="kw-input" type="text" data-title="Pressione Enter após digitar cada palavra-chave." placeholder="Adicionar palavra-chave..."
+                    <input id="kw-input" type="text" data-title="Pressione Enter após digitar cada palavra-chave."
+                        placeholder="Adicionar palavra-chave..."
                         onkeydown="if(event.key==='Enter'){event.preventDefault();addKeyword();}">
                     <button class="btn-icon accent" onclick="addKeyword()">+</button>
                 </div>
@@ -119,40 +132,57 @@
             <div class="manual-form-body">
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>Sigla <span class="req">*</span> <button class="help-btn" data-tip="Informe a sigla oficial da instituição (ex: CDHU, IBGE). Use apenas letras maiúsculas.">?</button></label>
-                        <input id="mf-sigla" type="text" data-title="Sigla do órgão. Ex: SMA, INPE, IBGE." placeholder="ex: CDHU" data-format="uppercase">
+                        <label>Sigla <span class="req">*</span> <button class="help-btn"
+                                data-tip="Informe a sigla oficial da instituição (ex: CDHU, IBGE). Use apenas letras maiúsculas.">?</button></label>
+                        <input id="mf-sigla" type="text" data-title="Sigla do órgão. Ex: SMA, INPE, IBGE."
+                            placeholder="ex: CDHU" data-format="uppercase">
                     </div>
                     <div class="form-group">
-                        <label>Organização <span class="req">*</span> <button class="help-btn" data-tip="Informe o nome institucional completo da organização, sem abreviações.">?</button></label>
-                        <input id="mf-org" type="text" data-title="Nome corporativo extenso do órgão." placeholder="Nome completo" data-format="titlecase">
+                        <label>Organização <span class="req">*</span> <button class="help-btn"
+                                data-tip="Informe o nome institucional completo da organização, sem abreviações.">?</button></label>
+                        <input id="mf-org" type="text" data-title="Nome corporativo extenso do órgão."
+                            placeholder="Nome completo" data-format="titlecase">
                     </div>
                     <div class="form-group">
-                        <label>E-mail <button class="help-btn" data-tip="Forneça um e-mail corporativo ou do setor responsável para eventuais dúvidas sobre o dado.">?</button></label>
+                        <label>E-mail <button class="help-btn"
+                                data-tip="Forneça um e-mail corporativo ou do setor responsável para eventuais dúvidas sobre o dado.">?</button></label>
                         <input id="mf-email" type="email" placeholder="contato@exemplo.com" data-validate="email">
                     </div>
                     <div class="form-group">
-                        <label>Regra <button class="help-btn" data-tip="Selecione a responsabilidade: Dono detém direitos, Autor criou, Ponto de Contato atende a dúvidas.">?</button></label>
+                        <label>Regra <button class="help-btn"
+                                data-tip="Selecione a responsabilidade: Dono detém direitos, Autor criou, Ponto de Contato atende a dúvidas.">?</button></label>
                         <select id="mf-role">
                             <option value="">- Selecione -</option>
                             <option value="owner" data-title="Proprietário legal ou institucional do dado">Dono</option>
-                            <option value="author" data-title="Autor principal ou criador técnico do dado">Autor</option>
-                            <option value="processor" data-title="Responsável pelo processamento ou organização do dado">Organizador</option>
-                            <option value="distributor" data-title="Responsável por distribuir ou publicar o dado">Distribuidor</option>
-                            <option value="custodian" data-title="Guardião ou mantenedor responsável pelo armazenamento">Depositário</option>
-                            <option value="resourceProvider" data-title="Fornecedor da infraestrutura ou recurso">Fornecedor de recurso</option>
-                            <option value="principalInvestigator" data-title="Pesquisador ou líder do projeto">Investigador principal</option>
-                            <option value="originator" data-title="Origem ou fonte primária da informação">Originador</option>
-                            <option value="pointOfContact" data-title="Contato principal para tirar dúvidas sobre o dado">Ponto de contato</option>
-                            <option value="publisher" data-title="Entidade que realizou a publicação oficial">Publicador</option>
+                            <option value="author" data-title="Autor principal ou criador técnico do dado">Autor
+                            </option>
+                            <option value="processor"
+                                data-title="Responsável pelo processamento ou organização do dado">Organizador</option>
+                            <option value="distributor" data-title="Responsável por distribuir ou publicar o dado">
+                                Distribuidor</option>
+                            <option value="custodian"
+                                data-title="Guardião ou mantenedor responsável pelo armazenamento">Depositário</option>
+                            <option value="resourceProvider" data-title="Fornecedor da infraestrutura ou recurso">
+                                Fornecedor de recurso</option>
+                            <option value="principalInvestigator" data-title="Pesquisador ou líder do projeto">
+                                Investigador principal</option>
+                            <option value="originator" data-title="Origem ou fonte primária da informação">Originador
+                            </option>
+                            <option value="pointOfContact"
+                                data-title="Contato principal para tirar dúvidas sobre o dado">Ponto de contato</option>
+                            <option value="publisher" data-title="Entidade que realizou a publicação oficial">Publicador
+                            </option>
                             <option value="user" data-title="Usuário ou consumidor final do dado">Utilizador</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Cargo / Departamento <button class="help-btn" data-tip="Indique o setor, gerência ou cargo responsável para direcionar contatos futuros.">?</button></label>
+                        <label>Cargo / Departamento <button class="help-btn"
+                                data-tip="Indique o setor, gerência ou cargo responsável para direcionar contatos futuros.">?</button></label>
                         <input id="mf-position" type="text" data-validate="letters-only">
                     </div>
                     <div class="form-group">
-                        <label>Telefone <button class="help-btn" data-tip="Informe o telefone de contato do setor responsável (ex: +55 11 3111-0000).">?</button></label>
+                        <label>Telefone <button class="help-btn"
+                                data-tip="Informe o telefone de contato do setor responsável (ex: +55 11 3111-0000).">?</button></label>
                         <input id="mf-phone" type="text" placeholder="+55 11 0000-0000" data-format="phone">
                     </div>
                     <div class="form-group span-2">
@@ -164,22 +194,27 @@
                                     class="addr-street" data-title="Nome da rua, avenida, rodovia, etc.">
                             </div>
                             <div class="addr-field-wrap addr-num-wrap">
-                                <input id="mf-address-num" type="text" placeholder="Nº" class="addr-num" data-title="Número ou S/N">
+                                <input id="mf-address-num" type="text" placeholder="Nº" class="addr-num"
+                                    data-title="Número ou S/N">
                             </div>
                             <div class="addr-field-wrap addr-comp-wrap">
-                                <input id="mf-address-comp" type="text" placeholder="Complemento" class="addr-comp" data-title="Complemento (sala, andar, bloco)">
+                                <input id="mf-address-comp" type="text" placeholder="Complemento" class="addr-comp"
+                                    data-title="Complemento (sala, andar, bloco)">
                             </div>
                             <div class="addr-field-wrap addr-bairro-wrap">
-                                <input id="mf-addr-bairro" type="text" placeholder="Bairro" class="addr-bairro" data-title="Bairro ou distrito">
+                                <input id="mf-addr-bairro" type="text" placeholder="Bairro" class="addr-bairro"
+                                    data-title="Bairro ou distrito">
                             </div>
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>Cidade <button class="help-btn" data-tip="Cidade onde a organização está localizada.">?</button></label>
+                        <label>Cidade <button class="help-btn"
+                                data-tip="Cidade onde a organização está localizada.">?</button></label>
                         <input id="mf-city" type="text" data-validate="letters-only">
                     </div>
                     <div class="form-group">
-                        <label>Estado <button class="help-btn" data-tip="Estado (UF) onde a organização está localizada.">?</button></label>
+                        <label>Estado <button class="help-btn"
+                                data-tip="Estado (UF) onde a organização está localizada.">?</button></label>
                         <select id="mf-state">
                             <option value="SP">São Paulo</option>
                             <option value="AC">Acre</option>
@@ -210,11 +245,13 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>CEP <button class="help-btn" data-tip="Informe o CEP (somente números).">?</button></label>
+                        <label>CEP <button class="help-btn"
+                                data-tip="Informe o CEP (somente números).">?</button></label>
                         <input id="mf-zip" type="text" placeholder="00000-000" data-format="cep">
                     </div>
                     <div class="form-group">
-                        <label>País <button class="help-btn" data-tip="País onde a organização está localizada.">?</button></label>
+                        <label>País <button class="help-btn"
+                                data-tip="País onde a organização está localizada.">?</button></label>
                         <input id="mf-country" type="text" value="Brasil" data-validate="letters-only">
                     </div>
                 </div>
@@ -269,11 +306,13 @@
                     <option value="fortnightly" data-title="A cada quinze dias">Quinzenal</option>
                     <option value="weekly" data-title="Uma vez por semana">Semanal</option>
                     <option value="daily" data-title="Uma vez por dia">Diário</option>
-                    <option value="continual" data-title="Atualizado de forma contínua, sem intervalo fixo">Contínuo</option>
+                    <option value="continual" data-title="Atualizado de forma contínua, sem intervalo fixo">Contínuo
+                    </option>
                     <option value="irregular" data-title="Sem periodicidade definida">Irregular</option>
                     <option value="unknown" data-title="Periodicidade desconhecida">Desconhecido</option>
                     <option value="notPlanned" data-title="Sem atualizações futuras planejadas">Não planejado</option>
-                    <option value="asNeeded" data-title="Atualizado somente quando necessário, sem periodicidade fixa">Quando
+                    <option value="asNeeded" data-title="Atualizado somente quando necessário, sem periodicidade fixa">
+                        Quando
                         necessário</option>
                 </select>
             </div>
@@ -290,14 +329,19 @@
                         data-tip="Selecione o formato dos dados: Vetor (pontos, linhas, polígonos) ou Grid/Raster (imagens, grades de elevação).">?</button></label>
                 <select id="f-MD_SpatialRepresentationTypeCode">
                     <option value="">- Selecione -</option>
-                    <option value="vector" data-title="Dado em formato vetorial: pontos, linhas ou polígonos">Vetor</option>
-                    <option value="grid" data-title="Dado em grade regular — imagem raster (ex: satélite, MDT, ortofoto)">
-                        Grid | Raster</option>
-                    <option value="textTable" data-title="Tabela de texto associada a elementos espaciais">Tabela de texto
+                    <option value="vector" data-title="Dado em formato vetorial: pontos, linhas ou polígonos">Vetor
                     </option>
-                    <option value="tin" data-title="Rede triangular irregular para representação de superfície do terreno">
+                    <option value="grid"
+                        data-title="Dado em grade regular — imagem raster (ex: satélite, MDT, ortofoto)">
+                        Grid | Raster</option>
+                    <option value="textTable" data-title="Tabela de texto associada a elementos espaciais">Tabela de
+                        texto
+                    </option>
+                    <option value="tin"
+                        data-title="Rede triangular irregular para representação de superfície do terreno">
                         Rede triangular irregular (TIN)</option>
-                    <option value="stereoscopicModel" data-title="Par de imagens para percepção estereoscópica de relevo">
+                    <option value="stereoscopicModel"
+                        data-title="Par de imagens para percepção estereoscópica de relevo">
                         Modelo estereofônico</option>
                     <option value="video" data-title="Dado em formato de vídeo georreferenciado">Vídeo</option>
                 </select>
@@ -308,12 +352,15 @@
                         data-tip="Selecione a categoria temática principal padronizada que classifica este dado.">?</button></label>
                 <select id="f-topicCategory">
                     <option value="">- Selecione -</option>
-                    <option value="boundaries" data-title="Divisões político-administrativas: municípios, estados, países">
+                    <option value="boundaries"
+                        data-title="Divisões político-administrativas: municípios, estados, países">
                         Limites Administrativos</option>
                     <option value="planningCadastre"
-                        data-title="Ordenamento do território, cadastro imobiliário e uso do solo">Planejamento e Cadastro
+                        data-title="Ordenamento do território, cadastro imobiliário e uso do solo">Planejamento e
+                        Cadastro
                     </option>
-                    <option value="society" data-title="Dados populacionais, socioeconômicos e culturais">Sociedade e Cultura
+                    <option value="society" data-title="Dados populacionais, socioeconômicos e culturais">Sociedade e
+                        Cultura
                     </option>
                     <option value="structure" data-title="Edificações, equipamentos e infraestruturas construídas">
                         Infraestrutura ou Edificação</option>
@@ -324,25 +371,32 @@
                     <option value="imageryBaseMapsEarthCover"
                         data-title="Imagens de satélite, ortofotos e mapas de cobertura da terra">Mapas ou imagens de
                         Satélite</option>
-                    <option value="elevation" data-title="Altitude, batimetria, topografia e modelos digitais de terreno">
+                    <option value="elevation"
+                        data-title="Altitude, batimetria, topografia e modelos digitais de terreno">
                         Altimetria, Batimetria ou Topografia</option>
                     <option value="health" data-title="Saúde pública, serviços médicos e epidemiologia">Saúde</option>
                     <option value="inlandWaters" data-title="Rios, lagos, represas e corpos d'água interiores">Águas
                         Interiores</option>
                     <option value="economy" data-title="Atividades econômicas, emprego e indústria">Economia</option>
                     <option value="biota" data-title="Flora, fauna, biodiversidade e ecossistemas">Biotipos</option>
-                    <option value="climatologyMeteorologyAtmosphere" data-title="Clima, meteorologia e dados atmosféricos">
+                    <option value="climatologyMeteorologyAtmosphere"
+                        data-title="Clima, meteorologia e dados atmosféricos">
                         Climatologia ou Meteorologia</option>
-                    <option value="geoscientificInformation" data-title="Geologia, minerais, solos e recursos do subsolo">
+                    <option value="geoscientificInformation"
+                        data-title="Geologia, minerais, solos e recursos do subsolo">
                         Informação GeoCientífica</option>
-                    <option value="intelligenceMilitary" data-title="Dados de uso militar ou de inteligência governamental">
+                    <option value="intelligenceMilitary"
+                        data-title="Dados de uso militar ou de inteligência governamental">
                         Informação Militar</option>
-                    <option value="environment" data-title="Meio ambiente, poluição e proteção ambiental">Ambiente</option>
+                    <option value="environment" data-title="Meio ambiente, poluição e proteção ambiental">Ambiente
+                    </option>
                     <option value="oceans" data-title="Oceanos, mares e recursos marinhos">Oceanos</option>
                     <option value="utilitiesCommunication"
-                        data-title="Redes de energia, água, saneamento e telecomunicações">Infraestruturas de Comunicação
+                        data-title="Redes de energia, água, saneamento e telecomunicações">Infraestruturas de
+                        Comunicação
                     </option>
-                    <option value="farming" data-title="Agricultura, pecuária, silvicultura e pesca">Agricultura, pesca ou
+                    <option value="farming" data-title="Agricultura, pecuária, silvicultura e pesca">Agricultura, pesca
+                        ou
                         pecuária</option>
                 </select>
             </div>
@@ -372,7 +426,8 @@
                 <label for="f-characterSet">Codificação de Caracteres <button class="help-btn"
                         data-tip="Codificação dos caracteres da tabela. UTF-8 é o padrão para evitar problemas com acentuação.">?</button></label>
                 <select id="f-characterSet">
-                    <option value="utf8" data-title="Unicode UTF-8 — suporta todos os caracteres latinos e especiais">UTF-8
+                    <option value="utf8" data-title="Unicode UTF-8 — suporta todos os caracteres latinos e especiais">
+                        UTF-8
                     </option>
                 </select>
             </div>
@@ -380,7 +435,9 @@
             <div class="form-group">
                 <label for="f-thumbnail_url">URL da Miniatura <button class="help-btn"
                         data-tip="URL para uma miniatura (thumbnail) que será exibida nos catálogos para ilustrar o dado.">?</button></label>
-                <input id="f-thumbnail_url" type="text" placeholder="https://..." data-title="Cole o link de uma imagem hospedada na web que represente bem estes dados." data-validate="url">
+                <input id="f-thumbnail_url" type="text" placeholder="https://..."
+                    data-title="Cole o link de uma imagem hospedada na web que represente bem estes dados."
+                    data-validate="url">
             </div>
 
         </div>
@@ -402,22 +459,30 @@
                     <div></div>
                     <div class="form-group">
                         <label for="f-northBoundLatitude">Norte</label>
-                        <input id="f-northBoundLatitude" type="number" data-title="Coordenada Y máxima (Latitude) em graus decimais." step="0.000001" placeholder="-19.0">
+                        <input id="f-northBoundLatitude" type="number"
+                            data-title="Coordenada Y máxima (Latitude) em graus decimais." step="0.000001"
+                            placeholder="-19.0">
                     </div>
                     <div></div>
                     <div class="form-group">
                         <label for="f-westBoundLongitude">Oeste</label>
-                        <input id="f-westBoundLongitude" type="number" data-title="Coordenada X mínima (Longitude) em graus decimais." step="0.000001" placeholder="-53.0">
+                        <input id="f-westBoundLongitude" type="number"
+                            data-title="Coordenada X mínima (Longitude) em graus decimais." step="0.000001"
+                            placeholder="-53.0">
                     </div>
                     <div class="bbox-center"> </div>
                     <div class="form-group">
                         <label for="f-eastBoundLongitude">Leste</label>
-                        <input id="f-eastBoundLongitude" type="number" data-title="Coordenada X máxima (Longitude) em graus decimais." step="0.000001" placeholder="-44.0">
+                        <input id="f-eastBoundLongitude" type="number"
+                            data-title="Coordenada X máxima (Longitude) em graus decimais." step="0.000001"
+                            placeholder="-44.0">
                     </div>
                     <div></div>
                     <div class="form-group">
                         <label for="f-southBoundLatitude">Sul</label>
-                        <input id="f-southBoundLatitude" type="number" data-title="Coordenada Y mínima (Latitude) em graus decimais." step="0.000001" placeholder="-26.0">
+                        <input id="f-southBoundLatitude" type="number"
+                            data-title="Coordenada Y mínima (Latitude) em graus decimais." step="0.000001"
+                            placeholder="-26.0">
                     </div>
                     <div></div>
                 </div>
@@ -429,17 +494,27 @@
                         data-tip="Selecione o Sistema de Coordenadas em que os dados estão armazenados.">?</button></label>
                 <select id="f-epsgCode" onchange="setEpsgFromCode(this.value)">
                     <option value="">- Selecione -</option>
-                    <option value="EPSG:4674" data-title="SIRGAS 2000 - Sistema de Referência Geocêntrico Oficial do Brasil">EPSG:4674 - SIRGAS 2000</option>
-                    <option value="EPSG:31982" data-title="SIRGAS 2000 Projetado / UTM Zona 22S - Abrange o Oeste de SP">EPSG:31982 - SIRGAS 2000 / UTM 22S</option>
-                    <option value="EPSG:31983" data-title="SIRGAS 2000 Projetado / UTM Zona 23S - Abrange o Leste de SP">EPSG:31983 - SIRGAS 2000 / UTM 23S</option>
-                    <option value="EPSG:4326" data-title="WGS 84 - Sistema de Coordenadas Geográficas Global (Padrão GPS/Web)">EPSG:4326 - WGS 84</option>
+                    <option value="EPSG:4674"
+                        data-title="SIRGAS 2000 - Sistema de Referência Geocêntrico Oficial do Brasil">EPSG:4674 -
+                        SIRGAS 2000</option>
+                    <option value="EPSG:31982"
+                        data-title="SIRGAS 2000 Projetado / UTM Zona 22S - Abrange o Oeste do Estado de SP">EPSG:31982 -
+                        SIRGAS 2000 / UTM 22S</option>
+                    <option value="EPSG:31983"
+                        data-title="SIRGAS 2000 Projetado / UTM Zona 23S - Abrange o Leste do Estado de SP">EPSG:31983 -
+                        SIRGAS 2000 / UTM 23S</option>
+                    <option value="EPSG:4326"
+                        data-title="WGS 84 - Sistema de Coordenadas Geográficas Global (Padrão GPS/Web)">EPSG:4326 - WGS
+                        84</option>
                     <option value="EPSG:31978">EPSG:31978 - SIRGAS 2000 / UTM 18S</option>
                     <option value="EPSG:31979">EPSG:31979 - SIRGAS 2000 / UTM 19S</option>
                     <option value="EPSG:31980">EPSG:31980 - SIRGAS 2000 / UTM 20S</option>
                     <option value="EPSG:31981">EPSG:31981 - SIRGAS 2000 / UTM 21S</option>
                     <option value="EPSG:31984">EPSG:31984 - SIRGAS 2000 / UTM 24S</option>
                     <option value="EPSG:31985">EPSG:31985 - SIRGAS 2000 / UTM 25S</option>
-                    <option value="EPSG:4618" data-title="SAD69 - Sistema de Referência Antigo">EPSG:4618 - SAD69</option>
+                    <option value="EPSG:4618" data-title="SAD69 - Sistema de Referência Antigo (Evitar uso)">EPSG:4618 -
+                        SAD69
+                    </option>
                     <option value="EPSG:29191">EPSG:29191 - SAD69 / UTM 21S</option>
                     <option value="EPSG:29192">EPSG:29192 - SAD69 / UTM 22S</option>
                     <option value="EPSG:29193">EPSG:29193 - SAD69 / UTM 23S</option>
@@ -452,15 +527,16 @@
             <div class="form-group">
                 <label for="f-epsgTitle">Título do SRC <span class="req">*</span> <button class="help-btn"
                         data-tip="Nome completo do Sistema de Referência, preenchido automaticamente ao escolher o EPSG.">?</button></label>
-                <input id="f-epsgTitle" type="text" placeholder="ex: SIRGAS 2000 (EPSG:4674)" data-title="Nome formatado do SRC. Será preenchido automaticamente ao selecionar o EPSG acima.">
+                <input id="f-epsgTitle" type="text" placeholder="ex: SIRGAS 2000 (EPSG:4674)"
+                    data-title="Nome formatado do SRC. Será preenchido automaticamente ao selecionar o EPSG acima.">
             </div>
 
             <!-- Escala -->
             <div class="form-group span-2">
                 <label for="f-spatialResolution_denominator">Escala (denominador) <button class="help-btn"
                         data-tip="Informe apenas o número do denominador da escala original do dado (ex: 10000 para a escala 1:10.000).">?</button></label>
-                <input id="f-spatialResolution_denominator" type="text" placeholder="ex: 25000" data-title="Exemplo: Digite apenas 25000 para uma escala de 1:25.000."
-                    data-validate="digits-only">
+                <input id="f-spatialResolution_denominator" type="text" placeholder="ex: 25000"
+                    data-title="Exemplo: Digite apenas 25000 para uma escala de 1:25.000." data-validate="digits-only">
             </div>
 
             <!-- Altitude -->
@@ -533,39 +609,56 @@
             <div class="manual-form-body">
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>Sigla <span class="req">*</span> <button class="help-btn" data-tip="Informe a sigla oficial da instituição (ex: CDHU, IBGE). Use apenas letras maiúsculas.">?</button></label>
-                        <input id="proc-mf-sigla" type="text" data-title="Sigla do órgão. Ex: SMA, INPE, IBGE." placeholder="ex: IPT" data-format="uppercase">
+                        <label>Sigla <span class="req">*</span> <button class="help-btn"
+                                data-tip="Informe a sigla oficial da instituição (ex: CDHU, IBGE). Use apenas letras maiúsculas.">?</button></label>
+                        <input id="proc-mf-sigla" type="text" data-title="Sigla do órgão. Ex: SMA, INPE, IBGE."
+                            placeholder="ex: IPT" data-format="uppercase">
                     </div>
                     <div class="form-group">
-                        <label>Organização <span class="req">*</span> <button class="help-btn" data-tip="Informe o nome institucional completo da organização, sem abreviações.">?</button></label>
-                        <input id="proc-mf-org" type="text" data-title="Nome corporativo extenso do órgão." placeholder="Nome completo" data-format="titlecase">
+                        <label>Organização <span class="req">*</span> <button class="help-btn"
+                                data-tip="Informe o nome institucional completo da organização, sem abreviações.">?</button></label>
+                        <input id="proc-mf-org" type="text" data-title="Nome corporativo extenso do órgão."
+                            placeholder="Nome completo" data-format="titlecase">
                     </div>
                     <div class="form-group">
-                        <label>E-mail <button class="help-btn" data-tip="Forneça um e-mail corporativo ou do setor responsável para eventuais dúvidas sobre o dado.">?</button></label>
+                        <label>E-mail <button class="help-btn"
+                                data-tip="Forneça um e-mail corporativo ou do setor responsável para eventuais dúvidas sobre o dado.">?</button></label>
                         <input id="proc-mf-email" type="email" placeholder="contato@exemplo.com" data-validate="email">
                     </div>
                     <div class="form-group">
-                        <label>Regra <button class="help-btn" data-tip="Selecione a responsabilidade: Dono detém direitos, Autor criou, Ponto de Contato atende a dúvidas.">?</button></label>
+                        <label>Regra <button class="help-btn"
+                                data-tip="Selecione a responsabilidade: Dono detém direitos, Autor criou, Ponto de Contato atende a dúvidas.">?</button></label>
                         <select id="proc-mf-role">
-                            <option value="processor" data-title="Responsável pelo processamento ou organização do dado" selected>Organizador</option>
+                            <option value="processor" data-title="Responsável pelo processamento ou organização do dado"
+                                selected>Organizador</option>
                             <option value="owner" data-title="Proprietário legal ou institucional do dado">Dono</option>
-                            <option value="author" data-title="Autor principal ou criador técnico do dado">Autor</option>
-                            <option value="distributor" data-title="Responsável por distribuir ou publicar o dado">Distribuidor</option>
-                            <option value="custodian" data-title="Guardião ou mantenedor responsável pelo armazenamento">Depositário</option>
-                            <option value="resourceProvider" data-title="Fornecedor da infraestrutura ou recurso">Fornecedor de recurso</option>
-                            <option value="principalInvestigator" data-title="Pesquisador ou líder do projeto">Investigador principal</option>
-                            <option value="originator" data-title="Origem ou fonte primária da informação">Originador</option>
-                            <option value="pointOfContact" data-title="Contato principal para tirar dúvidas sobre o dado">Ponto de contato</option>
-                            <option value="publisher" data-title="Entidade que realizou a publicação oficial">Publicador</option>
+                            <option value="author" data-title="Autor principal ou criador técnico do dado">Autor
+                            </option>
+                            <option value="distributor" data-title="Responsável por distribuir ou publicar o dado">
+                                Distribuidor</option>
+                            <option value="custodian"
+                                data-title="Guardião ou mantenedor responsável pelo armazenamento">Depositário</option>
+                            <option value="resourceProvider" data-title="Fornecedor da infraestrutura ou recurso">
+                                Fornecedor de recurso</option>
+                            <option value="principalInvestigator" data-title="Pesquisador ou líder do projeto">
+                                Investigador principal</option>
+                            <option value="originator" data-title="Origem ou fonte primária da informação">Originador
+                            </option>
+                            <option value="pointOfContact"
+                                data-title="Contato principal para tirar dúvidas sobre o dado">Ponto de contato</option>
+                            <option value="publisher" data-title="Entidade que realizou a publicação oficial">Publicador
+                            </option>
                             <option value="user" data-title="Usuário ou consumidor final do dado">Utilizador</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Cargo / Departamento <button class="help-btn" data-tip="Indique o setor, gerência ou cargo responsável para direcionar contatos futuros.">?</button></label>
+                        <label>Cargo / Departamento <button class="help-btn"
+                                data-tip="Indique o setor, gerência ou cargo responsável para direcionar contatos futuros.">?</button></label>
                         <input id="proc-mf-position" type="text" data-validate="letters-only">
                     </div>
                     <div class="form-group">
-                        <label>Telefone <button class="help-btn" data-tip="Informe o telefone de contato do setor responsável (ex: +55 11 3111-0000).">?</button></label>
+                        <label>Telefone <button class="help-btn"
+                                data-tip="Informe o telefone de contato do setor responsável (ex: +55 11 3111-0000).">?</button></label>
                         <input id="proc-mf-phone" type="text" placeholder="+55 11 0000-0000" data-format="phone">
                     </div>
                     <div class="form-group span-2">
@@ -577,23 +670,27 @@
                                     class="addr-street" data-title="Nome da rua, avenida, rodovia, etc.">
                             </div>
                             <div class="addr-field-wrap addr-num-wrap">
-                                <input id="proc-mf-address-num" type="text" placeholder="Nº" class="addr-num" data-title="Número ou S/N">
+                                <input id="proc-mf-address-num" type="text" placeholder="Nº" class="addr-num"
+                                    data-title="Número ou S/N">
                             </div>
                             <div class="addr-field-wrap addr-comp-wrap">
-                                <input id="proc-mf-address-comp" type="text" placeholder="Complemento"
-                                    class="addr-comp" data-title="Complemento (sala, andar, bloco)">
+                                <input id="proc-mf-address-comp" type="text" placeholder="Complemento" class="addr-comp"
+                                    data-title="Complemento (sala, andar, bloco)">
                             </div>
                             <div class="addr-field-wrap addr-bairro-wrap">
-                                <input id="proc-mf-addr-bairro" type="text" placeholder="Bairro" class="addr-bairro" data-title="Bairro ou distrito">
+                                <input id="proc-mf-addr-bairro" type="text" placeholder="Bairro" class="addr-bairro"
+                                    data-title="Bairro ou distrito">
                             </div>
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>Cidade <button class="help-btn" data-tip="Cidade onde a organização está localizada.">?</button></label>
+                        <label>Cidade <button class="help-btn"
+                                data-tip="Cidade onde a organização está localizada.">?</button></label>
                         <input id="proc-mf-city" type="text" data-validate="letters-only">
                     </div>
                     <div class="form-group">
-                        <label>Estado <button class="help-btn" data-tip="Estado (UF) onde a organização está localizada.">?</button></label>
+                        <label>Estado <button class="help-btn"
+                                data-tip="Estado (UF) onde a organização está localizada.">?</button></label>
                         <select id="proc-mf-state">
                             <option value="SP">São Paulo</option>
                             <option value="AC">Acre</option>
@@ -624,11 +721,13 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>CEP <button class="help-btn" data-tip="Informe o CEP (somente números).">?</button></label>
+                        <label>CEP <button class="help-btn"
+                                data-tip="Informe o CEP (somente números).">?</button></label>
                         <input id="proc-mf-zip" type="text" placeholder="00000-000" data-format="cep">
                     </div>
                     <div class="form-group">
-                        <label>País <button class="help-btn" data-tip="País onde a organização está localizada.">?</button></label>
+                        <label>País <button class="help-btn"
+                                data-tip="País onde a organização está localizada.">?</button></label>
                         <input id="proc-mf-country" type="text" value="Brasil" data-validate="letters-only">
                     </div>
                 </div>
@@ -676,8 +775,10 @@
 
         <div class="contacts-toolbar">
             <div class="search-wrap">
-                <input id="dist-search" type="text" data-title="Pesquisa as camadas disponíveis diretamente no GeoServer configurado." placeholder="Buscar camada no GeoServer..."
-                    oninput="searchGeoServer(this.value)" onkeydown="if(event.key==='Escape') closeDistSugg()">
+                <input id="dist-search" type="text"
+                    data-title="Pesquisa as camadas disponíveis diretamente no GeoServer configurado."
+                    placeholder="Buscar camada no GeoServer..." oninput="searchGeoServer(this.value)"
+                    onkeydown="if(event.key==='Escape') closeDistSugg()">
                 <div id="dist-suggestions" class="search-suggestions"></div>
                 <span class="search-spinner" id="dist-spinner" style="display:none"></span>
             </div>
@@ -731,19 +832,24 @@
                         <label>Protocolo <button class="help-btn"
                                 data-tip="Selecione o protocolo do serviço. OGC:WMS para visualização, OGC:WFS para download/vetor, ou WWW:LINK para site.">?</button></label>
                         <select id="dist-mf-protocol">
-                            <option value="OGC:WMS" data-title="Web Map Service — serviço de mapas em imagem (visualização)">
+                            <option value="OGC:WMS"
+                                data-title="Web Map Service — serviço de mapas em imagem (visualização)">
                                 OGC:WMS</option>
                             <option value="OGC:WFS"
-                                data-title="Web Feature Service — serviço de feições vetoriais (download/consulta)">OGC:WFS
+                                data-title="Web Feature Service — serviço de feições vetoriais (download/consulta)">
+                                OGC:WFS
                             </option>
                             <option value="OGC:WCS"
-                                data-title="Web Coverage Service — serviço de coberturas raster (grade ou imagem)">OGC:WCS
+                                data-title="Web Coverage Service — serviço de coberturas raster (grade ou imagem)">
+                                OGC:WCS
                             </option>
-                            <option value="OGC:WPS" data-title="Web Processing Service — serviço de processamento remoto">
+                            <option value="OGC:WPS"
+                                data-title="Web Processing Service — serviço de processamento remoto">
                                 OGC:WPS</option>
                             <option value="WWW:DOWNLOAD" data-title="Link direto para download de arquivo">WWW:DOWNLOAD
                             </option>
-                            <option value="WWW:LINK" data-title="Link para página web ou portal com informações do dado">
+                            <option value="WWW:LINK"
+                                data-title="Link para página web ou portal com informações do dado">
                                 WWW:LINK</option>
                         </select>
                     </div>
@@ -800,16 +906,19 @@
                         BY-SA 4.0 - Atribuição-CompartilhaIgual</option>
                     <option value="CC BY-NC 4.0" data-title="Uso livre somente para fins não comerciais">CC BY-NC 4.0 -
                         Atribuição-NãoComercial</option>
-                    <option value="CC BY-NC-SA 4.0" data-title="Não comercial e derivações com a mesma licença">CC BY-NC-SA
+                    <option value="CC BY-NC-SA 4.0" data-title="Não comercial e derivações com a mesma licença">CC
+                        BY-NC-SA
                         4.0 - Atribuição-NãoComercial-CompartilhaIgual</option>
                     <option value="CC0" data-title="Domínio público — sem nenhuma restrição de uso ou atribuição">CC0 -
                         Domínio Público</option>
                     <option value="proprietary"
-                        data-title="Todos os direitos reservados à CDHU; uso somente com autorização expressa">Proprietário -
+                        data-title="Todos os direitos reservados à CDHU; uso somente com autorização expressa">
+                        Proprietário -
                         Todos os direitos reservados (CDHU)</option>
                     <option value="internal" data-title="Uso restrito a colaboradores e sistemas internos da CDHU">Uso
                         interno - CDHU</option>
-                    <option value="other" data-title="Outra licença — descreva as condições nas limitações de uso abaixo">
+                    <option value="other"
+                        data-title="Outra licença — descreva as condições nas limitações de uso abaixo">
                         Outro</option>
                 </select>
             </div>
@@ -828,11 +937,13 @@
                     <option value="">- Selecione -</option>
                     <option value="unrestricted" data-title="Qualquer pessoa pode acessar sem restrições">Sem restrições
                     </option>
-                    <option value="copyright" data-title="Acesso vinculado a direitos autorais do produtor">Direitos autorais
+                    <option value="copyright" data-title="Acesso vinculado a direitos autorais do produtor">Direitos
+                        autorais
                     </option>
                     <option value="license" data-title="Acesso sujeito a aceite de termos de licença">Licença</option>
                     <option value="intellectualPropertyRights"
-                        data-title="Acesso vinculado a direitos de propriedade intelectual">Direitos de prop. intelectual
+                        data-title="Acesso vinculado a direitos de propriedade intelectual">Direitos de prop.
+                        intelectual
                     </option>
                     <option value="restricted" data-title="Acesso restrito a usuários ou grupos específicos">Restrito
                     </option>
@@ -854,7 +965,8 @@
                     <option value="intellectualPropertyRights"
                         data-title="Uso vinculado a direitos de propriedade intelectual">Direitos de prop. intelectual
                     </option>
-                    <option value="restricted" data-title="Uso restrito conforme condições específicas">Restrito</option>
+                    <option value="restricted" data-title="Uso restrito conforme condições específicas">Restrito
+                    </option>
                     <option value="otherRestrictions" data-title="Outras restrições de uso não listadas acima">Outras
                         restrições</option>
                     <option value="patent" data-title="Uso restrito por patente">Patente</option>
@@ -921,39 +1033,56 @@
             <div class="manual-form-body">
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>Sigla <span class="req">*</span> <button class="help-btn" data-tip="Informe a sigla oficial da instituição (ex: CDHU, IBGE). Use apenas letras maiúsculas.">?</button></label>
-                        <input id="meta-mf-sigla" type="text" data-title="Sigla do órgão. Ex: SMA, INPE, IBGE." placeholder="ex: CDHU" data-format="uppercase">
+                        <label>Sigla <span class="req">*</span> <button class="help-btn"
+                                data-tip="Informe a sigla oficial da instituição (ex: CDHU, IBGE). Use apenas letras maiúsculas.">?</button></label>
+                        <input id="meta-mf-sigla" type="text" data-title="Sigla do órgão. Ex: SMA, INPE, IBGE."
+                            placeholder="ex: CDHU" data-format="uppercase">
                     </div>
                     <div class="form-group">
-                        <label>Organização <span class="req">*</span> <button class="help-btn" data-tip="Informe o nome institucional completo da organização, sem abreviações.">?</button></label>
-                        <input id="meta-mf-org" type="text" data-title="Nome corporativo extenso do órgão." placeholder="Nome completo" data-format="titlecase">
+                        <label>Organização <span class="req">*</span> <button class="help-btn"
+                                data-tip="Informe o nome institucional completo da organização, sem abreviações.">?</button></label>
+                        <input id="meta-mf-org" type="text" data-title="Nome corporativo extenso do órgão."
+                            placeholder="Nome completo" data-format="titlecase">
                     </div>
                     <div class="form-group">
-                        <label>E-mail <button class="help-btn" data-tip="Forneça um e-mail corporativo ou do setor responsável para eventuais dúvidas sobre o dado.">?</button></label>
+                        <label>E-mail <button class="help-btn"
+                                data-tip="Forneça um e-mail corporativo ou do setor responsável para eventuais dúvidas sobre o dado.">?</button></label>
                         <input id="meta-mf-email" type="email" placeholder="contato@exemplo.com" data-validate="email">
                     </div>
                     <div class="form-group">
-                        <label>Regra <button class="help-btn" data-tip="Selecione a responsabilidade: Dono detém direitos, Autor criou, Ponto de Contato atende a dúvidas.">?</button></label>
+                        <label>Regra <button class="help-btn"
+                                data-tip="Selecione a responsabilidade: Dono detém direitos, Autor criou, Ponto de Contato atende a dúvidas.">?</button></label>
                         <select id="meta-mf-role">
-                            <option value="author" data-title="Autor principal ou criador técnico do dado" selected>Autor</option>
+                            <option value="author" data-title="Autor principal ou criador técnico do dado" selected>
+                                Autor</option>
                             <option value="owner" data-title="Proprietário legal ou institucional do dado">Dono</option>
-                            <option value="processor" data-title="Responsável pelo processamento ou organização do dado">Organizador</option>
-                            <option value="distributor" data-title="Responsável por distribuir ou publicar o dado">Distribuidor</option>
-                            <option value="custodian" data-title="Guardião ou mantenedor responsável pelo armazenamento">Depositário</option>
-                            <option value="resourceProvider" data-title="Fornecedor da infraestrutura ou recurso">Fornecedor de recurso</option>
-                            <option value="principalInvestigator" data-title="Pesquisador ou líder do projeto">Investigador principal</option>
-                            <option value="originator" data-title="Origem ou fonte primária da informação">Originador</option>
-                            <option value="pointOfContact" data-title="Contato principal para tirar dúvidas sobre o dado">Ponto de contato</option>
-                            <option value="publisher" data-title="Entidade que realizou a publicação oficial">Publicador</option>
+                            <option value="processor"
+                                data-title="Responsável pelo processamento ou organização do dado">Organizador</option>
+                            <option value="distributor" data-title="Responsável por distribuir ou publicar o dado">
+                                Distribuidor</option>
+                            <option value="custodian"
+                                data-title="Guardião ou mantenedor responsável pelo armazenamento">Depositário</option>
+                            <option value="resourceProvider" data-title="Fornecedor da infraestrutura ou recurso">
+                                Fornecedor de recurso</option>
+                            <option value="principalInvestigator" data-title="Pesquisador ou líder do projeto">
+                                Investigador principal</option>
+                            <option value="originator" data-title="Origem ou fonte primária da informação">Originador
+                            </option>
+                            <option value="pointOfContact"
+                                data-title="Contato principal para tirar dúvidas sobre o dado">Ponto de contato</option>
+                            <option value="publisher" data-title="Entidade que realizou a publicação oficial">Publicador
+                            </option>
                             <option value="user" data-title="Usuário ou consumidor final do dado">Utilizador</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Cargo / Departamento <button class="help-btn" data-tip="Indique o setor, gerência ou cargo responsável para direcionar contatos futuros.">?</button></label>
+                        <label>Cargo / Departamento <button class="help-btn"
+                                data-tip="Indique o setor, gerência ou cargo responsável para direcionar contatos futuros.">?</button></label>
                         <input id="meta-mf-position" type="text" data-validate="letters-only">
                     </div>
                     <div class="form-group">
-                        <label>Telefone <button class="help-btn" data-tip="Informe o telefone de contato do setor responsável (ex: +55 11 3111-0000).">?</button></label>
+                        <label>Telefone <button class="help-btn"
+                                data-tip="Informe o telefone de contato do setor responsável (ex: +55 11 3111-0000).">?</button></label>
                         <input id="meta-mf-phone" type="text" placeholder="+55 11 0000-0000" data-format="phone">
                     </div>
                     <div class="form-group span-2">
@@ -965,23 +1094,27 @@
                                     class="addr-street" data-title="Nome da rua, avenida, rodovia, etc.">
                             </div>
                             <div class="addr-field-wrap addr-num-wrap">
-                                <input id="meta-mf-address-num" type="text" placeholder="Nº" class="addr-num" data-title="Número ou S/N">
+                                <input id="meta-mf-address-num" type="text" placeholder="Nº" class="addr-num"
+                                    data-title="Número ou S/N">
                             </div>
                             <div class="addr-field-wrap addr-comp-wrap">
-                                <input id="meta-mf-address-comp" type="text" placeholder="Complemento"
-                                    class="addr-comp" data-title="Complemento (sala, andar, bloco)">
+                                <input id="meta-mf-address-comp" type="text" placeholder="Complemento" class="addr-comp"
+                                    data-title="Complemento (sala, andar, bloco)">
                             </div>
                             <div class="addr-field-wrap addr-bairro-wrap">
-                                <input id="meta-mf-addr-bairro" type="text" placeholder="Bairro" class="addr-bairro" data-title="Bairro ou distrito">
+                                <input id="meta-mf-addr-bairro" type="text" placeholder="Bairro" class="addr-bairro"
+                                    data-title="Bairro ou distrito">
                             </div>
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>Cidade <button class="help-btn" data-tip="Cidade onde a organização está localizada.">?</button></label>
+                        <label>Cidade <button class="help-btn"
+                                data-tip="Cidade onde a organização está localizada.">?</button></label>
                         <input id="meta-mf-city" type="text" data-validate="letters-only">
                     </div>
                     <div class="form-group">
-                        <label>Estado <button class="help-btn" data-tip="Estado (UF) onde a organização está localizada.">?</button></label>
+                        <label>Estado <button class="help-btn"
+                                data-tip="Estado (UF) onde a organização está localizada.">?</button></label>
                         <select id="meta-mf-state">
                             <option value="SP">São Paulo</option>
                             <option value="AC">Acre</option>
@@ -1012,11 +1145,13 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>CEP <button class="help-btn" data-tip="Informe o CEP (somente números).">?</button></label>
+                        <label>CEP <button class="help-btn"
+                                data-tip="Informe o CEP (somente números).">?</button></label>
                         <input id="meta-mf-zip" type="text" placeholder="00000-000" data-format="cep">
                     </div>
                     <div class="form-group">
-                        <label>País <button class="help-btn" data-tip="País onde a organização está localizada.">?</button></label>
+                        <label>País <button class="help-btn"
+                                data-tip="País onde a organização está localizada.">?</button></label>
                         <input id="meta-mf-country" type="text" value="Brasil" data-validate="letters-only">
                     </div>
                 </div>
