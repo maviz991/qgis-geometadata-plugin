@@ -54,6 +54,35 @@ class MainBridge(QObject):
             return layer.name() if layer else ""
         except Exception:
             return ""
+
+    @pyqtSlot(result='QVariant')
+    def list_layers(self):
+        """Retorna lista de camadas carregadas no projeto QGIS atual."""
+        try:
+            from qgis.core import QgsProject, QgsRasterLayer
+            layers = QgsProject.instance().mapLayers().values()
+            result = []
+            for l in layers:
+                t = 'raster' if isinstance(l, QgsRasterLayer) else 'vector'
+                result.append({'id': l.id(), 'name': l.name(), 'type': t})
+            result.sort(key=lambda x: x['name'].lower())
+            return result
+        except Exception as e:
+            print(f"GeoMetadata [list_layers]: {e}")
+            return []
+
+    @pyqtSlot(str)
+    def set_active_layer(self, layer_id: str):
+        """Define a camada ativa no painel de camadas do QGIS."""
+        try:
+            from qgis.core import QgsProject
+            plugin = getattr(self._dialog, 'plugin', None)
+            iface  = getattr(plugin, 'iface', None) or getattr(self._dialog, 'iface', None)
+            layer  = QgsProject.instance().mapLayer(layer_id)
+            if layer and iface:
+                iface.setActiveLayer(layer)
+        except Exception as e:
+            print(f"GeoMetadata [set_active_layer]: {e}")
         
     # --- Slots JS -> Python ---
 
@@ -426,6 +455,88 @@ class MainBridge(QObject):
             print(f"GeoMetadata: contato exportado → {save_path}")
         except Exception as e:
             print(f"GeoMetadata [export_contact_xml]: {e}")
+
+    # ── Rascunho do formulário (draft) ───────────────────────────────────────────
+
+    def _draft_path(self) -> str:
+        try:
+            from qgis.core import QgsApplication
+            base = QgsApplication.qgisSettingsDirPath()
+        except Exception:
+            base = os.path.expanduser('~')
+        return os.path.join(base, 'geometadata_form_draft.json')
+
+    def _layer_key(self) -> str:
+        """Identificador estável da camada ativa (source path ou id)."""
+        try:
+            plugin = getattr(self._dialog, 'plugin', None)
+            iface  = getattr(plugin, 'iface', None) or getattr(self._dialog, 'iface', None)
+            layer  = iface.activeLayer() if iface else None
+            if not layer:
+                return '__no_layer__'
+            return layer.source() or layer.id()
+        except Exception:
+            return '__no_layer__'
+
+    @pyqtSlot(str)
+    def save_draft(self, json_str: str):
+        """Persiste rascunho do formulário marcado com a camada ativa."""
+        import json
+        try:
+            data = json.loads(json_str)
+            data['__layer_key__'] = self._layer_key()
+            with open(self._draft_path(), 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False)
+        except Exception as e:
+            print(f"GeoMetadata [save_draft]: {e}")
+
+    @pyqtSlot(result='QVariant')
+    def load_draft(self):
+        """Retorna o rascunho apenas se pertencer à camada ativa."""
+        import json
+        path = self._draft_path()
+        if not os.path.exists(path):
+            return None
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            if data.get('__layer_key__') != self._layer_key():
+                return None
+            data.pop('__layer_key__', None)
+            return data
+        except Exception as e:
+            print(f"GeoMetadata [load_draft]: {e}")
+            return None
+
+    @pyqtSlot(result='QVariant')
+    def load_layer_metadata(self):
+        """Carrega metadado salvo (DB ou sidecar) da camada ativa e retorna como dict."""
+        try:
+            plugin = getattr(self._dialog, 'plugin', None)
+            iface  = getattr(plugin, 'iface', None) or getattr(self._dialog, 'iface', None)
+            layer  = iface.activeLayer() if iface else None
+            if not layer:
+                return None
+            ps = getattr(self._dialog, 'persistence_service', None)
+            if not ps:
+                return None
+            xml_content = ps.load(layer)
+            if not xml_content:
+                return None
+            from ..core import xml_parser
+            return xml_parser.parse_xml_to_dict(xml_content, is_string=True)
+        except Exception as e:
+            print(f"GeoMetadata [load_layer_metadata]: {e}")
+            return None
+
+    @pyqtSlot()
+    def clear_draft(self):
+        """Remove o rascunho salvo."""
+        try:
+            if os.path.exists(self._draft_path()):
+                os.remove(self._draft_path())
+        except Exception as e:
+            print(f"GeoMetadata [clear_draft]: {e}")
 
     @pyqtSlot(str, result=str)
     def load_panel_html(self, panel_id: str) -> str:

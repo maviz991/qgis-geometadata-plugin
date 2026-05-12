@@ -698,9 +698,8 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         metadata_dict = self._normalize_dates(metadata_dict)
         try:
             from .core import xml_generator
-            template_path = os.path.join(os.path.dirname(__file__), 'assets', 'tamplate_mgb20.xml')
             cdhu_data = self.contatos_predefinidos.get('cdhu', {})
-            xml_payload = xml_generator.generate_xml_from_template(metadata_dict, template_path, cdhu_data)
+            xml_payload = xml_generator.generate_xml(metadata_dict, cdhu_data)
 
             safe_filename = metadata_dict.get('title', 'metadados').replace(' ', '_') + '.xml'
             file_path, _ = QtWidgets.QFileDialog.getSaveFileName(self, 'Salvar Metadados XML', safe_filename, 'Arquivos XML (*.xml)')
@@ -730,9 +729,8 @@ class GeoMetadataDialog(QtWidgets.QDialog):
 
         try:
             from .core import xml_generator
-            template_path = os.path.join(os.path.dirname(__file__), 'assets', 'tamplate_mgb20.xml')
             cdhu_data = self.contatos_predefinidos.get('cdhu', {})
-            xml_payload = xml_generator.generate_xml_from_template(metadata_dict, template_path, cdhu_data)
+            xml_payload = xml_generator.generate_xml(metadata_dict, cdhu_data)
 
             from .core.plugin_config import config_loader
             uuid_criado = self.metadata_service.push_to_geonetwork(xml_payload, config_loader)
@@ -753,9 +751,8 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             metadata_dict = self.form_manager.collect_data()
 
         layer = self.iface.activeLayer()
-        template_path = os.path.join(os.path.dirname(__file__), 'assets', 'tamplate_mgb20.xml')
         cdhu_data = self.contatos_predefinidos.get('cdhu', {})
-        self.persistence_service.save(layer, metadata_dict, template_path, cdhu_data, is_automatic_resave, self)
+        self.persistence_service.save(layer, metadata_dict, cdhu_data, is_automatic_resave, self)
 
     def sanitize_title(self, value):
         """Remove caracteres especiais e normaliza espaços para uso como nome de arquivo."""

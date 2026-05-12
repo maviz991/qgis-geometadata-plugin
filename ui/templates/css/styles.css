@@ -261,10 +261,8 @@ body {
     background: var(--accent);
 }
 
-.layer-badge svg {
-    flex-shrink: 0;
-    width: 13px;
-    height: 13px;
+.layer-picker-wrap {
+    position: relative;
 }
 
 .layer-badge {
@@ -278,11 +276,79 @@ body {
     border-radius: 12px;
     font-size: 11px;
     font-weight: 500;
-    max-width: 200px;
-    overflow: hidden;
+    width: 150px;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+}
+
+.layer-badge:hover {
+    background: #e0f2fe;
+    border-color: #7dd3fc;
+}
+
+.layer-badge.open {
+    background: #e0f2fe;
+    border-color: #38bdf8;
+}
+
+.layer-badge.open #layer-chevron {
+    transform: rotate(180deg);
+}
+
+.layer-picker-dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 240px;
+    max-width: 340px;
+    max-height: 260px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
+    z-index: 9999;
+    padding: 4px 0;
+}
+
+.layer-picker-dropdown .lp-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 14px;
+    font-size: 12px;
+    color: #1e293b;
+    cursor: pointer;
     white-space: nowrap;
+    overflow: hidden;
     text-overflow: ellipsis;
-    flex-shrink: 1;
+    transition: background .1s;
+}
+
+.layer-picker-dropdown .lp-item:hover {
+    background: #f1f5f9;
+}
+
+.layer-picker-dropdown .lp-item.active {
+    background: #f0f9ff;
+    border-left: 3px solid #0369a1;
+    padding-left: 11px;
+    color: #0369a1;
+}
+
+.layer-picker-dropdown .lp-item .lp-icon {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+    opacity: .6;
+}
+
+.layer-picker-dropdown .lp-empty {
+    padding: 12px 14px;
+    font-size: 12px;
+    color: #94a3b8;
+    text-align: center;
 }
 
 .status-dot {

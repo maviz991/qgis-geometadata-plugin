@@ -20,7 +20,7 @@ class PersistenceService:
     def __init__(self, iface):
         self.iface = iface
 
-    def save(self, layer, metadata_dict, template_path, cdhu_data, is_automatic_resave=False, parent_widget=None):
+    def save(self, layer, metadata_dict, cdhu_data, is_automatic_resave=False, parent_widget=None):
         """
         Detecta o tipo de armazenamento da camada e delega a função de salvar.
         Retorna True se sucesso, False caso falhe ou o usuário cancele.
@@ -31,9 +31,9 @@ class PersistenceService:
             return False
 
         if self._is_postgres_layer(layer):
-            return self._save_to_db(layer, metadata_dict, template_path, cdhu_data, is_automatic_resave, parent_widget)
+            return self._save_to_db(layer, metadata_dict, cdhu_data, is_automatic_resave, parent_widget)
         else:
-            return self._save_to_sidecar_file(layer, metadata_dict, template_path, cdhu_data, is_automatic_resave, parent_widget)
+            return self._save_to_sidecar_file(layer, metadata_dict, cdhu_data, is_automatic_resave, parent_widget)
 
     def load(self, layer):
         """
@@ -118,7 +118,7 @@ class PersistenceService:
         msg_box.setStandardButtons(QtWidgets.QMessageBox.Ok)
         msg_box.exec_()
         
-    def _save_to_db(self, layer, metadata_dict, template_path, cdhu_data, is_automatic_resave=False, parent_widget=None):
+    def _save_to_db(self, layer, metadata_dict, cdhu_data, is_automatic_resave=False, parent_widget=None):
         if not self._check_auth_system(parent_widget): return False
         if not psycopg2:
             self._show_message("Erro de Dependência", "A biblioteca psycopg2 não foi encontrada.", parent_widget, icon=QtWidgets.QMessageBox.Critical)
@@ -147,7 +147,7 @@ class PersistenceService:
                     self._show_message("Erro de Auth", f"Não foi possível carregar config '{auth_cfg_id}'.", parent_widget, icon=QtWidgets.QMessageBox.Critical)
                     return False
                                 
-            xml_content = xml_generator.generate_xml_from_template(metadata_dict, template_path, cdhu_data)
+            xml_content = xml_generator.generate_xml(metadata_dict, cdhu_data)
             conn = psycopg2.connect(
                 dbname=conn_details.get('dbname'),
                 user=db_user,
@@ -181,7 +181,7 @@ class PersistenceService:
             self._show_message("Erro DB", f"Não foi possível salvar:\\n\\n{e}", parent_widget, icon=QtWidgets.QMessageBox.Critical)
             return False
 
-    def _save_to_sidecar_file(self, layer, metadata_dict, template_path, cdhu_data, is_automatic_resave=False, parent_widget=None):
+    def _save_to_sidecar_file(self, layer, metadata_dict, cdhu_data, is_automatic_resave=False, parent_widget=None):
         metadata_path = self._get_sidecar_metadata_path(layer)
         if not metadata_path:
             if not is_automatic_resave:
@@ -196,7 +196,7 @@ class PersistenceService:
                 return False
         
         try:
-            xml_content = xml_generator.generate_xml_from_template(metadata_dict, template_path, cdhu_data)
+            xml_content = xml_generator.generate_xml(metadata_dict, cdhu_data)
             with open(metadata_path, 'w', encoding='utf-8') as f:
                 f.write(xml_content)
             

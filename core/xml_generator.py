@@ -1,354 +1,431 @@
-# xml_generator.py (VERSÃO FINAL E COMPLETA)
+# xml_generator.py — Geração Programática ISO 19139 / MGB 2.0
+# Sem dependência de template estático. Construção via lxml.etree.
 
 from lxml import etree as ET
-import uuid
-import os
-from qgis.core import Qgis
+import uuid as _uuid_mod
+import datetime
 
-# --- FUNÇÕES DE AJUDA ---
-def set_element_text(parent_element, xpath, text_value, ns_map):
-    if parent_element is None: return
-    element = parent_element.find(xpath, namespaces=ns_map)
-    if element is not None and text_value is not None:
-        element.text = str(text_value)
+# ── Namespaces canônicos ISO 19139 ──────────────────────────────────────────
+NS = {
+    'gmd': 'http://www.isotc211.org/2005/gmd',
+    'gco': 'http://www.isotc211.org/2005/gco',
+    'gmx': 'http://www.isotc211.org/2005/gmx',
+    'gml': 'http://www.opengis.net/gml/3.2',
+    'xlink': 'http://www.w3.org/1999/xlink',
+    'xsi': 'http://www.w3.org/2001/XMLSchema-instance',
+    'gts': 'http://www.isotc211.org/2005/gts',
+    'srv': 'http://www.isotc211.org/2005/srv',
+}
 
-def set_element_attribute(parent_element, xpath, attr_name, attr_value, ns_map):
-    if parent_element is None: return
-    element = parent_element.find(xpath, namespaces=ns_map)
-    if element is not None and attr_value is not None:
-        element.set(attr_name, str(attr_value))
+CL = 'http://standards.iso.org/iso/19139/resources/gmxCodelists.xml#'
+LOC_CL = 'http://www.loc.gov/standards/iso639-2/'
 
-def update_contact_block(contact_wrapper_node, data_dict, ns_map):
-    if contact_wrapper_node is None: return
-    
-    responsible_party_node = contact_wrapper_node.find('./gmd:CI_ResponsibleParty', namespaces=ns_map)
-    if responsible_party_node is None:
-        responsible_party_node = ET.SubElement(contact_wrapper_node, f"{{{ns_map['gmd']}}}CI_ResponsibleParty")
+def _ns(prefix, tag):
+    return f'{{{NS[prefix]}}}{tag}'
 
-    uuid_value = data_dict.get('uuid') or str(uuid.uuid4())
-    responsible_party_node.set('uuid', uuid_value)
+def _sub(parent, prefix, tag, text=None, attrib=None):
+    el = ET.SubElement(parent, _ns(prefix, tag), attrib or {})
+    if text is not None:
+        el.text = str(text)
+    return el
 
-    structure = {
-        'individualName': 'gco:CharacterString', 'organisationName': 'gco:CharacterString',
-        'positionName': 'gco:CharacterString', 'contactInfo': {'CI_Contact': {
-            'phone': {'CI_Telephone': {'voice': 'gco:CharacterString'}},
-            'address': {'CI_Address': {
-                'deliveryPoint': 'gco:CharacterString', 'city': 'gco:CharacterString',
-                'administrativeArea': 'gco:CharacterString', 'postalCode': 'gco:CharacterString',
-                'country': 'gco:CharacterString', 'electronicMailAddress': 'gco:CharacterString'
-            }}
-        }}, 'role': {'CI_RoleCode': None}
-    }
-    
-    def ensure_structure(parent, struct_dict, local_ns_map):
-        for tag, content in struct_dict.items():
-            node = parent.find(f'./gmd:{tag}', namespaces=local_ns_map)
-            if node is None: node = ET.SubElement(parent, f"{{{local_ns_map['gmd']}}}{tag}")
-            if isinstance(content, dict): ensure_structure(node, content, local_ns_map)
-            elif content:
-                sub_ns, sub_tag = content.split(':')
-                if node.find(f'./{content}', namespaces=local_ns_map) is None: ET.SubElement(node, f"{{{local_ns_map[sub_ns]}}}{sub_tag}")
-
-    ensure_structure(responsible_party_node, structure, ns_map)
-    
-    set_element_text(responsible_party_node, './/gmd:individualName/gco:CharacterString', data_dict.get('contact_individualName'), ns_map)
-    set_element_text(responsible_party_node, './/gmd:organisationName/gco:CharacterString', data_dict.get('contact_organisationName'), ns_map)
-    set_element_text(responsible_party_node, './/gmd:positionName/gco:CharacterString', data_dict.get('contact_positionName'), ns_map)
-    
-    # Ensure CI_Contact, CI_Telephone, CI_Address exist
-    contact_info_node = responsible_party_node.find('./gmd:contactInfo', namespaces=ns_map)
-    if contact_info_node is None:
-        contact_info_node = ET.SubElement(responsible_party_node, f"{{{ns_map['gmd']}}}contactInfo")
-    ci_contact_node = contact_info_node.find('./gmd:CI_Contact', namespaces=ns_map)
-    if ci_contact_node is None:
-        ci_contact_node = ET.SubElement(contact_info_node, f"{{{ns_map['gmd']}}}CI_Contact")
-
-    # Phone
-    phone_node = ci_contact_node.find('./gmd:phone', namespaces=ns_map)
-    if phone_node is None:
-        phone_node = ET.SubElement(ci_contact_node, f"{{{ns_map['gmd']}}}phone")
-    ci_telephone_node = phone_node.find('./gmd:CI_Telephone', namespaces=ns_map)
-    if ci_telephone_node is None:
-        ci_telephone_node = ET.SubElement(phone_node, f"{{{ns_map['gmd']}}}CI_Telephone")
-    voice_node = ci_telephone_node.find('./gmd:voice', namespaces=ns_map)
-    if voice_node is None:
-        voice_node = ET.SubElement(ci_telephone_node, f"{{{ns_map['gmd']}}}voice")
-        ET.SubElement(voice_node, f"{{{ns_map['gco']}}}CharacterString")
-    set_element_text(ci_telephone_node, './gmd:voice/gco:CharacterString', data_dict.get('contact_phone'), ns_map)
-
-    # Address
-    address_node = ci_contact_node.find('./gmd:address', namespaces=ns_map)
-    if address_node is None:
-        address_node = ET.SubElement(ci_contact_node, f"{{{ns_map['gmd']}}}address")
-    ci_address_node = address_node.find('./gmd:CI_Address', namespaces=ns_map)
-    if ci_address_node is None:
-        ci_address_node = ET.SubElement(address_node, f"{{{ns_map['gmd']}}}CI_Address")
-    
-    # Ensure all address sub-elements exist
-    for tag in ['deliveryPoint', 'city', 'administrativeArea', 'postalCode', 'country', 'electronicMailAddress']:
-        element_node = ci_address_node.find(f'./gmd:{tag}', namespaces=ns_map)
-        if element_node is None:
-            element_node = ET.SubElement(ci_address_node, f"{{{ns_map['gmd']}}}{tag}")
-        char_string_node = element_node.find(f'./gco:CharacterString', namespaces=ns_map)
-        if char_string_node is None:
-            ET.SubElement(element_node, f"{{{ns_map['gco']}}}CharacterString")
-
-    set_element_text(ci_address_node, './gmd:deliveryPoint/gco:CharacterString', data_dict.get('contact_deliveryPoint'), ns_map)
-    set_element_text(ci_address_node, './gmd:city/gco:CharacterString', data_dict.get('contact_city'), ns_map)
-    set_element_text(ci_address_node, './gmd:administrativeArea/gco:CharacterString', data_dict.get('contact_administrativeArea'), ns_map)
-    set_element_text(ci_address_node, './gmd:postalCode/gco:CharacterString', data_dict.get('contact_postalCode'), ns_map)
-    set_element_text(ci_address_node, './gmd:country/gco:CharacterString', data_dict.get('contact_country'), ns_map)
-    set_element_text(ci_address_node, './gmd:electronicMailAddress/gco:CharacterString', data_dict.get('contact_email'), ns_map)
-    
-    role_node = responsible_party_node.find('./gmd:role', namespaces=ns_map)
-    if role_node is None:
-        role_node = ET.SubElement(responsible_party_node, f"{{{ns_map['gmd']}}}role")
-    ci_role_code_node = role_node.find('./gmd:CI_RoleCode', namespaces=ns_map)
-    if ci_role_code_node is None:
-        ci_role_code_node = ET.SubElement(role_node, f"{{{ns_map['gmd']}}}CI_RoleCode")
-
-    role_value = data_dict.get('contact_role')
-    set_element_attribute(responsible_party_node, './/gmd:role/gmd:CI_RoleCode', 'codeListValue', role_value, ns_map)
-    
-    xlink_ns_uri = ns_map.get('xlink')
-    if xlink_ns_uri:
-        href_attr = f'{{{xlink_ns_uri}}}href'
-        if href_attr in contact_wrapper_node.attrib:
-            href = contact_wrapper_node.attrib[href_attr]
-            href = href.replace('{uuid}', uuid_value).replace('{contact_role}', role_value or '')
-            contact_wrapper_node.attrib[href_attr] = href
-
-def remove_element_if_exists(parent_element, xpath, ns_map):
-    if parent_element is None: return
-    for element in parent_element.findall(xpath, namespaces=ns_map):
-        element.getparent().remove(element)
-
-# ---------------------------- FUNÇÃO PRINCIPAL ----------------------------
-def generate_xml_from_template(data_dict, template_path, cdhu_contact_data):
-    if not os.path.exists(template_path):
-        raise FileNotFoundError(f"Template XML não encontrado em '{template_path}'")
-
-    parser = ET.XMLParser(remove_blank_text=True)
-    tree = ET.parse(template_path, parser)
-    root = tree.getroot()
-    ns = {k if k is not None else 'gmd': v for k, v in root.nsmap.items()}
-
-     # --- LÓGICA DE VERIFICAÇÃO DE DUPLICATA ---
-    # Compara o UUID do contato selecionado com o UUID do contato padrão CDHU.
-    is_duplicate_contact = (data_dict.get('uuid') and 
-                            cdhu_contact_data.get('uuid') and
-                            data_dict['uuid'] == cdhu_contact_data['uuid'])
-    
-    if is_duplicate_contact:
-        print("Gerador XML: Contato selecionado é o CDHU. Evitando duplicata.")
-
-    # --- ETAPA 1: ATUALIZAR CONTATOS ---
-    contact_wrappers_raiz = root.findall('./gmd:contact', namespaces=ns)
-    if len(contact_wrappers_raiz) >= 2:
-        # Bloco 1: Sempre preenchido com os dados CDHU
-        update_contact_block(contact_wrappers_raiz[0], cdhu_contact_data, ns)
-        
-        # Bloco 2: Preenchido com dados do usuário OU removido se for duplicata
-        if is_duplicate_contact:
-            contact_to_remove = contact_wrappers_raiz[1]
-            contact_to_remove.getparent().remove(contact_to_remove)
-        else:
-            update_contact_block(contact_wrappers_raiz[1], data_dict, ns)
-
-    # Ensure identificationInfo and MD_DataIdentification exist
-    identification_info_node = root.find('./gmd:identificationInfo', namespaces=ns)
-    if identification_info_node is None:
-        identification_info_node = ET.SubElement(root, f"{{{ns['gmd']}}}identificationInfo")
-    
-    id_info = identification_info_node.find('./gmd:MD_DataIdentification', namespaces=ns)
-    if id_info is None:
-        id_info = ET.SubElement(identification_info_node, f"{{{ns['gmd']}}}MD_DataIdentification")
-
-    contact_wrappers_id = id_info.findall('./gmd:pointOfContact', namespaces=ns)
-    if len(contact_wrappers_id) >= 2:
-        # Bloco 1: Preenchido com dados do usuário (ou removido se for CDHU)
-        if is_duplicate_contact:
-            # Neste caso, o "contato do usuário" é o CDHU, que já está no outro bloco.
-            # Então, o primeiro pointOfContact pode ser removido ou limpo. Remover é mais limpo.
-            contact_to_remove = contact_wrappers_id[0]
-            contact_to_remove.getparent().remove(contact_to_remove)
-        else:
-            update_contact_block(contact_wrappers_id[0], data_dict, ns)
-
-        # Bloco 2: Sempre preenchido com os dados CDHU
-        update_contact_block(contact_wrappers_id[1], cdhu_contact_data, ns)
-
-    # Verifica se um UUID já existe no dicionário de dados (vindo de um XML carregado)
-    existing_uuid = data_dict.get('metadata_uuid')
-    
-    if existing_uuid:
-        # Se existe, usa esse UUID. Isso garante que estamos ATUALIZANDO o metadado.
-        final_uuid = existing_uuid
-        print(f"Gerador XML: Usando UUID existente para atualização: {final_uuid}")
+def _char(parent, prefix, tag, text):
+    """Adiciona <gmd:TAG><gco:CharacterString>text</gco:CharacterString></gmd:TAG>"""
+    wrapper = _sub(parent, prefix, tag)
+    if text:
+        _sub(wrapper, 'gco', 'CharacterString', str(text))
     else:
-        # Se não existe, gera um novo. Isso acontece na CRIAÇÃO de um novo metadado.
-        final_uuid = str(uuid.uuid4())
-        print(f"Gerador XML: Gerando novo UUID para criação: {final_uuid}")
-        
-    set_element_text(root, './gmd:fileIdentifier/gco:CharacterString', final_uuid, ns)
+        cs = _sub(wrapper, 'gco', 'CharacterString')
+        cs.set(_ns('gco', 'nilReason'), 'missing')
+    return wrapper
 
-    # --- ETAPA 2: PREENCHER METADADOS GERAIS ---
-    set_element_text(root, './gmd:dateStamp/gco:DateTime', data_dict.get('dateStamp'), ns)
-    set_element_attribute(root, './gmd:language/gmd:LanguageCode', 'codeListValue', data_dict.get('LanguageCode'), ns)
-    hierarchy_level_value = data_dict.get('hierarchyLevel')
-    set_element_attribute(root, './gmd:hierarchyLevel/gmd:MD_ScopeCode', 'codeListValue', hierarchy_level_value, ns)
+def _codelist(parent, prefix, wrapper_tag, cl_tag, cl_name, value):
+    wrapper = _sub(parent, prefix, wrapper_tag)
+    _sub(wrapper, prefix, cl_tag, attrib={
+        'codeList': CL + cl_name,
+        'codeListValue': value or ''
+    })
+    return wrapper
 
-    # Now id_info is guaranteed to exist
-    set_element_text(id_info, './/gmd:title/gco:CharacterString', data_dict.get('title'), ns)
-    set_element_text(id_info, './/gmd:edition/gco:CharacterString', data_dict.get('edition'), ns)
-    
-    # Ensure citation and date elements exist before setting their text
-    citation_node = id_info.find('.//gmd:citation/gmd:CI_Citation', namespaces=ns)
-    if citation_node is None:
-        citation_node = ET.SubElement(id_info, f"{{{ns['gmd']}}}citation")
-        citation_node = ET.SubElement(citation_node, f"{{{ns['gmd']}}}CI_Citation")
-    
-    date_parent_node = citation_node.find('./gmd:date/gmd:CI_Date', namespaces=ns)
-    if date_parent_node is None:
-        date_parent_node = ET.SubElement(citation_node, f"{{{ns['gmd']}}}date")
-        date_parent_node = ET.SubElement(date_parent_node, f"{{{ns['gmd']}}}CI_Date")
-    
-    date_node = date_parent_node.find('./gmd:date/gco:DateTime', namespaces=ns)
-    if date_node is None:
-        date_node = ET.SubElement(date_parent_node, f"{{{ns['gmd']}}}date")
-        ET.SubElement(date_node, f"{{{ns['gco']}}}CharacterString") # Changed to CharacterString as per template
+def _datetime_el(parent, prefix, wrapper_tag, value):
+    wrapper = _sub(parent, prefix, wrapper_tag)
+    if value:
+        _sub(wrapper, 'gco', 'DateTime', str(value))
+    else:
+        dt = _sub(wrapper, 'gco', 'DateTime')
+        dt.set(_ns('gco', 'nilReason'), 'missing')
+    return wrapper
 
-    set_element_text(id_info, './/gmd:date//gco:DateTime', data_dict.get('date_creation'), ns) # Changed to CharacterString
-    set_element_text(id_info, './gmd:abstract/gco:CharacterString', data_dict.get('abstract'), ns)
-    set_element_attribute(id_info, './gmd:status/gmd:MD_ProgressCode', 'codeListValue', data_dict.get('status_codeListValue'), ns)
-    set_element_text(id_info, './/gmd:topicCategory/gmd:MD_TopicCategoryCode', data_dict.get('topicCategory'), ns)
-    
-    # Ensure descriptiveKeywords and MD_Keywords exist
-    descriptive_keywords_node = id_info.find('./gmd:descriptiveKeywords', namespaces=ns)
-    if descriptive_keywords_node is None:
-        descriptive_keywords_node = ET.SubElement(id_info, f"{{{ns['gmd']}}}descriptiveKeywords")
-    
-    keyword_container = descriptive_keywords_node.find('./gmd:MD_Keywords', namespaces=ns)
-    if keyword_container is None:
-        keyword_container = ET.SubElement(descriptive_keywords_node, f"{{{ns['gmd']}}}MD_Keywords")
+# ── Bloco de Contato CI_ResponsibleParty ────────────────────────────────────
+def _build_contact_block(parent, wrapper_tag, contact_data):
+    """
+    contact_data pode vir do formato interno do JS:
+      { sigla, org, position, phone, addr, city, state, zip, country, email, role, uuid }
+    ou do formato legado flat:
+      { contact_individualName, contact_organisationName, ... }
+    """
+    # Normaliza campos — suporta ambos os formatos
+    def _f(key, alt=None):
+        return contact_data.get(key) or (contact_data.get(alt) if alt else '') or ''
 
-    remove_element_if_exists(keyword_container, './gmd:keyword', ns)
-    keywords_list = data_dict.get('MD_Keywords', [])
-    if keywords_list:
-        for keyword_text in keywords_list:
-            kw_node = ET.SubElement(keyword_container, f"{{{ns['gmd']}}}keyword")
-            cs_node = ET.SubElement(kw_node, f"{{{ns['gco']}}}CharacterString")
-            cs_node.text = keyword_text
-    
-    set_element_attribute(id_info, './/gmd:spatialRepresentationType/gmd:MD_SpatialRepresentationTypeCode', 'codeListValue', data_dict.get('MD_SpatialRepresentationTypeCode'), ns)
-    try:
-        scale_value = int(data_dict.get('spatialResolution_denominator'))
-    except (ValueError, TypeError):
-        scale_value = None  # Or a default value like 1 if appropriate
-    set_element_text(id_info, './/gmd:spatialResolution/gmd:MD_Resolution/gmd:equivalentScale/gmd:MD_RepresentativeFraction/gmd:denominator/gco:Integer', scale_value, ns)
-    set_element_text(id_info, './/gmd:westBoundLongitude/gco:Decimal', data_dict.get('westBoundLongitude'), ns)
-    set_element_text(id_info, './/gmd:eastBoundLongitude/gco:Decimal', data_dict.get('eastBoundLongitude'), ns)
-    set_element_text(id_info, './/gmd:southBoundLatitude/gco:Decimal', data_dict.get('southBoundLatitude'), ns)
-    set_element_text(id_info, './/gmd:northBoundLatitude/gco:Decimal', data_dict.get('northBoundLatitude'), ns)
-    
-    # --- ETAPA 3: PREENCHER OU REMOVER BLOCOS OPCIONAIS ---
-    
-    # 3.1 - Thumbnail
-    thumbnail_url = data_dict.get('thumbnail_url')
-    graphic_overview_node = id_info.find('./gmd:graphicOverview', namespaces=ns)
-    
-    if thumbnail_url:
-        if graphic_overview_node is None:
-            graphic_overview_node = ET.SubElement(id_info, f"{{{ns['gmd']}}}graphicOverview")
-            md_browse_graphic_node = ET.SubElement(graphic_overview_node, f"{{{ns['gmd']}}}MD_BrowseGraphic")
-            file_name_node = ET.SubElement(md_browse_graphic_node, f"{{{ns['gmd']}}}fileName")
-            ET.SubElement(file_name_node, f"{{{ns['gco']}}}CharacterString")
-        set_element_text(graphic_overview_node, './/gmd:fileName/gco:CharacterString', thumbnail_url, ns)
-    elif graphic_overview_node is not None:
-        id_info.remove(graphic_overview_node)
+    sigla   = _f('sigla', 'contact_individualName')
+    org     = _f('org', 'contact_organisationName')
+    pos     = _f('position', 'contact_positionName')
+    phone   = _f('phone', 'contact_phone')
+    addr    = _f('addr', 'contact_deliveryPoint')
+    city    = _f('city', 'contact_city')
+    state   = _f('state', 'contact_administrativeArea')
+    zipcode = _f('zip', 'contact_postalCode')
+    country = _f('country', 'contact_country') or 'Brasil'
+    email   = _f('email', 'contact_email')
+    role    = _f('role', 'contact_role') or 'pointOfContact'
+    c_uuid  = contact_data.get('uuid') or str(_uuid_mod.uuid4())
 
-    # 3.2 - Distribuição (WMS e WFS)
-    wms_data = data_dict.get('wms_data')
-    wfs_data = data_dict.get('wfs_data')
-    
-    dist_info = root.find('./gmd:distributionInfo', namespaces=ns)
-    
-    if wms_data or wfs_data:
-        if dist_info is None:
-            dist_info = ET.SubElement(root, f"{{{ns['gmd']}}}distributionInfo")
-        
-        md_distribution_node = dist_info.find('./gmd:MD_Distribution', namespaces=ns)
-        if md_distribution_node is None:
-            md_distribution_node = ET.SubElement(dist_info, f"{{{ns['gmd']}}}MD_Distribution")
-        
-        transfer_options_node = md_distribution_node.find('./gmd:transferOptions', namespaces=ns)
-        if transfer_options_node is None:
-            transfer_options_node = ET.SubElement(md_distribution_node, f"{{{ns['gmd']}}}transferOptions")
-        
-        md_digital_transfer_options_node = transfer_options_node.find('./gmd:MD_DigitalTransferOptions', namespaces=ns)
-        if md_digital_transfer_options_node is None:
-            md_digital_transfer_options_node = ET.SubElement(transfer_options_node, f"{{{ns['gmd']}}}MD_DigitalTransferOptions")
-        
-        online_nodes = md_digital_transfer_options_node.findall('./gmd:onLine', namespaces=ns)
-        
-        # Ensure we have at least two online nodes for WMS and WFS
-        while len(online_nodes) < 2:
-            on_line_node = ET.SubElement(md_digital_transfer_options_node, f"{{{ns['gmd']}}}onLine")
-            ci_online_resource_node = ET.SubElement(on_line_node, f"{{{ns['gmd']}}}CI_OnlineResource")
-            ET.SubElement(ci_online_resource_node, f"{{{ns['gmd']}}}linkage")
-            ET.SubElement(ci_online_resource_node, f"{{{ns['gmd']}}}name")
-            ET.SubElement(ci_online_resource_node, f"{{{ns['gmd']}}}description")
-            ET.SubElement(ci_online_resource_node, f"{{{ns['gmd']}}}protocol")
-            ET.SubElement(ci_online_resource_node.find(f"{{{ns['gmd']}}}linkage"), f"{{{ns['gmd']}}}URL")
-            ET.SubElement(ci_online_resource_node.find(f"{{{ns['gmd']}}}name"), f"{{{ns['gco']}}}CharacterString")
-            ET.SubElement(ci_online_resource_node.find(f"{{{ns['gmd']}}}description"), f"{{{ns['gco']}}}CharacterString")
-            ET.SubElement(ci_online_resource_node.find(f"{{{ns['gmd']}}}protocol"), f"{{{ns['gco']}}}CharacterString")
-            online_nodes = md_digital_transfer_options_node.findall('./gmd:onLine', namespaces=ns) # Re-find nodes after adding
+    # xlink href para integração GeoNetwork
+    xlink_href = (
+        f'local://srv/api/registries/entries/{c_uuid}'
+        f'?lang=por&process=gmd:role/gmd:CI_RoleCode/@codeListValue~{role}&schema=iso19139'
+    )
+    wrapper = _sub(parent, 'gmd', wrapper_tag, attrib={
+        _ns('xlink', 'href'): xlink_href
+    })
 
-        wms_node = online_nodes[0]
-        wfs_node = online_nodes[1]
+    rp = ET.SubElement(wrapper, _ns('gmd', 'CI_ResponsibleParty'), {'uuid': c_uuid})
 
-        # Handle WMS
-        if wms_data:
-            wms_url = f"{wms_data['geoserver_base_url']}/ows?service=WMS&version=1.3.0&request=GetCapabilities"
-            set_element_text(wms_node, './gmd:CI_OnlineResource/gmd:linkage/gmd:URL', wms_url, ns)
-            set_element_text(wms_node, './gmd:CI_OnlineResource/gmd:name/gco:CharacterString', wms_data['geoserver_layer_name'], ns)
-            set_element_text(wms_node, './gmd:CI_OnlineResource/gmd:description/gco:CharacterString', wms_data['geoserver_layer_title'], ns)
-            set_element_text(wms_node, './gmd:CI_OnlineResource/gmd:protocol/gco:CharacterString', 'OGC:WMS', ns)
-        else:
-            # Clear WMS data if not present
-            set_element_text(wms_node, './gmd:CI_OnlineResource/gmd:linkage/gmd:URL', '', ns)
-            set_element_text(wms_node, './gmd:CI_OnlineResource/gmd:name/gco:CharacterString', '', ns)
-            set_element_text(wms_node, './gmd:CI_OnlineResource/gmd:description/gco:CharacterString', '', ns)
-            set_element_text(wms_node, './gmd:CI_OnlineResource/gmd:protocol/gco:CharacterString', '', ns)
+    if sigla:
+        _char(rp, 'gmd', 'individualName', sigla)
+    _char(rp, 'gmd', 'organisationName', org)
+    if pos:
+        _char(rp, 'gmd', 'positionName', pos)
 
-        # Handle WFS
-        if wfs_data:
-            wfs_url = f"{wfs_data['geoserver_base_url']}/wfs"
-            set_element_text(wfs_node, './gmd:CI_OnlineResource/gmd:linkage/gmd:URL', wfs_url, ns)
-            set_element_text(wfs_node, './gmd:CI_OnlineResource/gmd:name/gco:CharacterString', wfs_data['geoserver_layer_name'], ns)
-            set_element_text(wfs_node, './gmd:CI_OnlineResource/gmd:description/gco:CharacterString', wfs_data['geoserver_layer_title'], ns)
-            set_element_text(wfs_node, './gmd:CI_OnlineResource/gmd:protocol/gco:CharacterString', 'OGC:WFS', ns)
-        else:
-            # Clear WFS data if not present
-            set_element_text(wfs_node, './gmd:CI_OnlineResource/gmd:linkage/gmd:URL', '', ns)
-            set_element_text(wfs_node, './gmd:CI_OnlineResource/gmd:name/gco:CharacterString', '', ns)
-            set_element_text(wfs_node, './gmd:CI_OnlineResource/gmd:description/gco:CharacterString', '', ns)
-            set_element_text(wfs_node, './gmd:CI_OnlineResource/gmd:protocol/gco:CharacterString', '', ns)
-        
-        # If after processing, there are no online resources left, remove dist_info
-        # This logic needs to be careful. If we cleared both WMS and WFS, we should remove the parent.
-        # But if the template always has them, we just clear their content.
-        # For now, let's assume the template might not have them, and we create them.
-        # If both wms_data and wfs_data are None, we should remove the dist_info block if it was created by us.
-        # If it was in the template, we just clear its content.
-        # For now, let's rely on clearing the content.
-        
-        # Check if both WMS and WFS data are empty, and if so, remove the distributionInfo block
-        if not wms_data and not wfs_data and dist_info is not None:
-            root.remove(dist_info)
-    elif dist_info is not None: # If no WMS/WFS data and dist_info exists, remove it
-        root.remove(dist_info)
+    ci_contact = _sub(_sub(rp, 'gmd', 'contactInfo'), 'gmd', 'CI_Contact')
 
-    # --- ETAPA 4: SERIALIZAR XML ---
+    if phone:
+        _char(_sub(_sub(ci_contact, 'gmd', 'phone'), 'gmd', 'CI_Telephone'), 'gmd', 'voice', phone)
+
+    ci_addr = _sub(_sub(ci_contact, 'gmd', 'address'), 'gmd', 'CI_Address')
+    if addr:
+        _char(ci_addr, 'gmd', 'deliveryPoint', addr)
+    _char(ci_addr, 'gmd', 'city', city)
+    if state:
+        _char(ci_addr, 'gmd', 'administrativeArea', state)
+    if zipcode:
+        _char(ci_addr, 'gmd', 'postalCode', zipcode)
+    _char(ci_addr, 'gmd', 'country', country)
+    _char(ci_addr, 'gmd', 'electronicMailAddress', email)
+
+    role_wrapper = _sub(rp, 'gmd', 'role')
+    _sub(role_wrapper, 'gmd', 'CI_RoleCode', attrib={
+        'codeList': CL + 'CI_RoleCode',
+        'codeListValue': role
+    })
+
+    return wrapper
+
+# ── Função Principal ─────────────────────────────────────────────────────────
+def generate_xml(data_dict, cdhu_contact_data=None):
+    """
+    Gera XML ISO 19139 completo a partir do dicionário de dados do formulário.
+    Não depende de nenhum arquivo template.
+    Suporta N contatos do recurso e N contatos de metadado.
+    """
+    d = data_dict or {}
+    cdhu = cdhu_contact_data or {}
+
+    # ── Raiz ────────────────────────────────────────────────────────────────
+    nsmap = {k: v for k, v in NS.items()}
+    root = ET.Element(_ns('gmd', 'MD_Metadata'), nsmap=nsmap)
+
+    # ── UUID / fileIdentifier ────────────────────────────────────────────────
+    final_uuid = d.get('metadata_uuid') or d.get('metadataId') or str(_uuid_mod.uuid4())
+    _char(root, 'gmd', 'fileIdentifier', final_uuid)
+
+    # ── Idioma do Metadado ───────────────────────────────────────────────────
+    meta_lang = d.get('metadataLanguage') or 'por'
+    lang_wrapper = _sub(root, 'gmd', 'language')
+    _sub(lang_wrapper, 'gmd', 'LanguageCode', attrib={
+        'codeList': LOC_CL,
+        'codeListValue': meta_lang
+    })
+
+    # ── CharacterSet ─────────────────────────────────────────────────────────
+    charset = d.get('characterSet') or 'utf8'
+    _codelist(root, 'gmd', 'characterSet', 'MD_CharacterSetCode', 'MD_CharacterSetCode', charset)
+
+    # ── hierarchyLevel ───────────────────────────────────────────────────────
+    hier = d.get('hierarchyLevel') or 'dataset'
+    _codelist(root, 'gmd', 'hierarchyLevel', 'MD_ScopeCode', 'MD_ScopeCode', hier)
+    _char(_sub(root, 'gmd', 'hierarchyLevelName'), 'gco', 'CharacterString', hier)
+
+    # ── Contatos do Metadado (gmd:contact) ──────────────────────────────────
+    meta_contacts = d.get('metadataAuthorContacts') or []
+    if meta_contacts:
+        for mc in meta_contacts:
+            cd = mc.get('data', mc)
+            _build_contact_block(root, 'contact', cd)
+    else:
+        # Fallback: usa CDHU como contato de metadado
+        if cdhu:
+            _build_contact_block(root, 'contact', cdhu)
+
+    # ── dateStamp ────────────────────────────────────────────────────────────
+    date_stamp = d.get('dateStamp') or datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+    _datetime_el(root, 'gmd', 'dateStamp', date_stamp)
+
+    # ── metadataStandardName / Version ───────────────────────────────────────
+    _char(root, 'gmd', 'metadataStandardName', 'ISO 19115')
+    _char(root, 'gmd', 'metadataStandardVersion', '2003/Cor.1:2006')
+
+    # ── Sistema de Referência (EPSG) ─────────────────────────────────────────
+    epsg_code  = d.get('epsgCode')
+    epsg_title = d.get('epsgTitle')
+    if epsg_code or epsg_title:
+        ref_sys = _sub(_sub(root, 'gmd', 'referenceSystemInfo'), 'gmd', 'MD_ReferenceSystem')
+        ref_id  = _sub(_sub(ref_sys, 'gmd', 'referenceSystemIdentifier'), 'gmd', 'RS_Identifier')
+        if epsg_code:
+            _char(ref_id, 'gmd', 'code', epsg_code)
+        if epsg_title:
+            _char(ref_id, 'gmd', 'codeSpace', epsg_title)
+
+    # ── identificationInfo ───────────────────────────────────────────────────
+    id_info_wrapper = _sub(root, 'gmd', 'identificationInfo')
+    id_info = _sub(id_info_wrapper, 'gmd', 'MD_DataIdentification')
+
+    # Citation
+    citation = _sub(_sub(id_info, 'gmd', 'citation'), 'gmd', 'CI_Citation')
+    _char(citation, 'gmd', 'title', d.get('title'))
+
+    # Data do dado
+    ci_date = _sub(_sub(citation, 'gmd', 'date'), 'gmd', 'CI_Date')
+    date_val = d.get('date') or d.get('date_creation') or ''
+    _datetime_el(ci_date, 'gmd', 'date', date_val)
+    date_type = d.get('dateType') or 'creation'
+    _codelist(ci_date, 'gmd', 'dateType', 'CI_DateTypeCode', 'CI_DateTypeCode', date_type)
+
+    # Edição
+    edition = d.get('edition')
+    if edition and str(edition) not in ('', '0'):
+        _char(citation, 'gmd', 'edition', edition)
+        date_edition = d.get('date_edition')
+        if date_edition:
+            _datetime_el(citation, 'gmd', 'editionDate', date_edition)
+
+    # Abstract
+    _char(id_info, 'gmd', 'abstract', d.get('abstract') or '')
+
+    # Purpose
+    purpose = d.get('purpose')
+    if purpose:
+        _char(id_info, 'gmd', 'purpose', purpose)
+
+    # Credit
+    credit = d.get('credit')
+    if credit:
+        _char(id_info, 'gmd', 'credit', credit)
+
+    # Status
+    status = d.get('status_codeListValue')
+    if status:
+        _codelist(id_info, 'gmd', 'status', 'MD_ProgressCode', 'MD_ProgressCode', status)
+
+    # ── Contatos do Recurso (pointOfContact) ─────────────────────────────────
+    resource_contacts = d.get('contacts') or []
+    if resource_contacts:
+        for rc in resource_contacts:
+            cd = rc.get('data', rc)
+            _build_contact_block(id_info, 'pointOfContact', cd)
+    else:
+        # Fallback flat fields
+        flat = {
+            'sigla': d.get('contact_individualName', ''),
+            'org':   d.get('contact_organisationName', ''),
+            'email': d.get('contact_email', ''),
+            'role':  d.get('contact_role', 'pointOfContact'),
+        }
+        if flat['org'] or flat['email']:
+            _build_contact_block(id_info, 'pointOfContact', flat)
+        if cdhu:
+            _build_contact_block(id_info, 'pointOfContact', cdhu)
+
+    # Manutenção
+    freq = d.get('maintenanceFrequency')
+    if freq:
+        maint = _sub(_sub(id_info, 'gmd', 'resourceMaintenance'), 'gmd', 'MD_MaintenanceInformation')
+        _codelist(maint, 'gmd', 'maintenanceAndUpdateFrequency',
+                  'MD_MaintenanceFrequencyCode', 'MD_MaintenanceFrequencyCode', freq)
+        next_update = d.get('dateOfNextUpdate')
+        if next_update:
+            _datetime_el(maint, 'gmd', 'dateOfNextUpdate', next_update)
+
+    # Thumbnail
+    thumb = d.get('thumbnail_url')
+    if thumb:
+        _char(
+            _sub(_sub(id_info, 'gmd', 'graphicOverview'), 'gmd', 'MD_BrowseGraphic'),
+            'gmd', 'fileName', thumb
+        )
+
+    # Palavras-chave
+    keywords = d.get('MD_Keywords') or []
+    if keywords:
+        md_kw = _sub(_sub(id_info, 'gmd', 'descriptiveKeywords'), 'gmd', 'MD_Keywords')
+        for kw in keywords:
+            _char(md_kw, 'gmd', 'keyword', kw)
+
+    # Restrições de acesso / uso / licença
+    use_lim   = d.get('useLimitation')
+    acc_con   = d.get('accessConstraints')
+    use_con   = d.get('useConstraints')
+    other_con = d.get('otherConstraints')
+    if use_lim or acc_con or use_con or other_con:
+        res_con = _sub(id_info, 'gmd', 'resourceConstraints')
+        md_legal = _sub(res_con, 'gmd', 'MD_LegalConstraints')
+        if use_lim:
+            _char(md_legal, 'gmd', 'useLimitation', use_lim)
+        if acc_con:
+            _codelist(md_legal, 'gmd', 'accessConstraints',
+                      'MD_RestrictionCode', 'MD_RestrictionCode', acc_con)
+        if use_con:
+            _codelist(md_legal, 'gmd', 'useConstraints',
+                      'MD_RestrictionCode', 'MD_RestrictionCode', use_con)
+        if other_con:
+            _char(md_legal, 'gmd', 'otherConstraints', other_con)
+
+    # Tipo de Representação Espacial
+    spat = d.get('MD_SpatialRepresentationTypeCode')
+    if spat:
+        _codelist(id_info, 'gmd', 'spatialRepresentationType',
+                  'MD_SpatialRepresentationTypeCode', 'MD_SpatialRepresentationTypeCode', spat)
+
+    # Resolução espacial (escala denominador)
+    denom = d.get('spatialResolution_denominator')
+    if denom:
+        try:
+            denom_int = int(float(denom))
+            frac = _sub(
+                _sub(_sub(_sub(id_info, 'gmd', 'spatialResolution'),
+                          'gmd', 'MD_Resolution'),
+                     'gmd', 'equivalentScale'),
+                'gmd', 'MD_RepresentativeFraction'
+            )
+            _sub(frac, 'gmd', 'denominator').append(
+                ET.fromstring(f'<gco:Integer xmlns:gco="{NS["gco"]}">{denom_int}</gco:Integer>')
+            )
+        except (ValueError, TypeError):
+            pass
+
+    # Idioma do dado
+    data_lang = d.get('LanguageCode') or 'por'
+    data_lang_w = _sub(id_info, 'gmd', 'language')
+    _sub(data_lang_w, 'gmd', 'LanguageCode', attrib={
+        'codeList': LOC_CL,
+        'codeListValue': data_lang
+    })
+
+    # CharacterSet do dado
+    _codelist(id_info, 'gmd', 'characterSet', 'MD_CharacterSetCode', 'MD_CharacterSetCode',
+              d.get('characterSet') or 'utf8')
+
+    # Categoria Temática
+    topic = d.get('topicCategory')
+    if topic:
+        _sub(_sub(id_info, 'gmd', 'topicCategory'), 'gmd', 'MD_TopicCategoryCode', topic)
+
+    # Extensão Geográfica
+    west  = d.get('westBoundLongitude')
+    east  = d.get('eastBoundLongitude')
+    south = d.get('southBoundLatitude')
+    north = d.get('northBoundLatitude')
+    t_from = d.get('temporalFrom')
+    t_to   = d.get('temporalTo')
+
+    if any([west, east, south, north, t_from, t_to]):
+        ex_extent = _sub(_sub(id_info, 'gmd', 'extent'), 'gmd', 'EX_Extent')
+
+        if any([west, east, south, north]):
+            geo_el = _sub(_sub(ex_extent, 'gmd', 'geographicElement'), 'gmd', 'EX_GeographicBoundingBox')
+            for tag, val in [('westBoundLongitude', west), ('eastBoundLongitude', east),
+                              ('southBoundLatitude', south), ('northBoundLatitude', north)]:
+                w = _sub(geo_el, 'gmd', tag)
+                dec = ET.SubElement(w, _ns('gco', 'Decimal'))
+                dec.text = str(val) if val else ''
+
+        if t_from or t_to:
+            temp_el = _sub(_sub(ex_extent, 'gmd', 'temporalElement'), 'gmd', 'EX_TemporalExtent')
+            time_period = ET.SubElement(
+                _sub(temp_el, 'gmd', 'extent'),
+                _ns('gml', 'TimePeriod'),
+                {_ns('gml', 'id'): 'tp1'}
+            )
+            ET.SubElement(time_period, _ns('gml', 'beginPosition')).text = str(t_from) if t_from else ''
+            ET.SubElement(time_period, _ns('gml', 'endPosition')).text = str(t_to) if t_to else ''
+
+    # ── Qualidade (dataQualityInfo) ──────────────────────────────────────────
+    statement   = d.get('statement')
+    proc_step   = d.get('processStep')
+    source_desc = d.get('sourceDescription')
+    proc_contacts = d.get('processorContacts') or []
+
+    if statement or proc_step or source_desc:
+        dq = _sub(_sub(root, 'gmd', 'dataQualityInfo'), 'gmd', 'DQ_DataQuality')
+        scope = _sub(_sub(dq, 'gmd', 'scope'), 'gmd', 'DQ_Scope')
+        _codelist(scope, 'gmd', 'level', 'MD_ScopeCode', 'MD_ScopeCode', hier)
+
+        lineage = _sub(_sub(dq, 'gmd', 'lineage'), 'gmd', 'LI_Lineage')
+        if statement:
+            _char(lineage, 'gmd', 'statement', statement)
+
+        if proc_step:
+            li_proc = _sub(_sub(lineage, 'gmd', 'processStep'), 'gmd', 'LI_ProcessStep')
+            _char(li_proc, 'gmd', 'description', proc_step)
+            for pc in proc_contacts:
+                cd = pc.get('data', pc)
+                _build_contact_block(li_proc, 'processor', cd)
+
+        if source_desc:
+            _char(
+                _sub(_sub(lineage, 'gmd', 'source'), 'gmd', 'LI_Source'),
+                'gmd', 'description', source_desc
+            )
+
+    # ── Distribuição (WMS/WFS/Online resources) ──────────────────────────────
+    online_resources = d.get('onlineResources') or []
+    # Compatibilidade com formato legado wms_data/wfs_data
+    wms_data = d.get('wms_data') or {}
+    wfs_data = d.get('wfs_data') or {}
+    if wms_data.get('geoserver_base_url'):
+        online_resources = online_resources or []
+        online_resources.append({
+            'url': f"{wms_data['geoserver_base_url']}/ows?service=WMS&version=1.3.0&request=GetCapabilities",
+            'name': wms_data.get('geoserver_layer_name', ''),
+            'description': wms_data.get('geoserver_layer_title', ''),
+            'protocol': 'OGC:WMS'
+        })
+    if wfs_data.get('geoserver_base_url'):
+        online_resources.append({
+            'url': f"{wfs_data['geoserver_base_url']}/wfs",
+            'name': wfs_data.get('geoserver_layer_name', ''),
+            'description': wfs_data.get('geoserver_layer_title', ''),
+            'protocol': 'OGC:WFS'
+        })
+
+    if online_resources:
+        md_dist = _sub(_sub(_sub(root, 'gmd', 'distributionInfo'),
+                            'gmd', 'MD_Distribution'),
+                       'gmd', 'transferOptions')
+        md_dto = _sub(md_dist, 'gmd', 'MD_DigitalTransferOptions')
+        for res in online_resources:
+            ci_or = _sub(_sub(md_dto, 'gmd', 'onLine'), 'gmd', 'CI_OnlineResource')
+            linkage = _sub(ci_or, 'gmd', 'linkage')
+            ET.SubElement(linkage, _ns('gmd', 'URL')).text = res.get('url', '')
+            protocol = res.get('protocol', '')
+            if protocol:
+                _char(ci_or, 'gmd', 'protocol', protocol)
+            name = res.get('name', '')
+            if name:
+                _char(ci_or, 'gmd', 'name', name)
+            desc = res.get('description', '')
+            if desc:
+                _char(ci_or, 'gmd', 'description', desc)
+
     return ET.tostring(root, pretty_print=True, xml_declaration=True, encoding='utf-8').decode('utf-8')

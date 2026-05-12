@@ -1,6 +1,31 @@
 // app.js - Lógica principal do GeoMetadata HTML
 var bridge;
 
+// ── Mapa tipo de camada (name → 'vector'|'raster') ───────────────────────────
+var _layerTypeMap = {};
+var _activeLayerName = '';
+
+var _LP_INNER_VECTOR = '<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>';
+var _LP_INNER_RASTER = '<rect x="3" y="3" width="18" height="18" rx="1"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/>';
+
+// ── Draft: preserva estado do formulário entre navegações e fechamento ─────────
+var _editorDraft = null;
+var _draftTimer  = null;
+
+function _scheduleDraftSave() {
+    clearTimeout(_draftTimer);
+    _draftTimer = setTimeout(function () {
+        var d = collectFormData();
+        if (!d || typeof bridge === 'undefined') return;
+        // Não sobrescreve o arquivo com formulário vazio
+        var hasContent = d.title || (d.contacts && d.contacts.length > 0) ||
+                         (d.MD_Keywords && d.MD_Keywords.length > 0) || d.abstract;
+        if (!hasContent) return;
+        _editorDraft = d;
+        bridge.save_draft(JSON.stringify(d));
+    }, 1500);
+}
+
 document.addEventListener("DOMContentLoaded", function () {
     _initHelpTooltip();
     _initFieldValidation();
@@ -315,7 +340,12 @@ function initApp() {
     });
 
     bridge.layer_changed.connect(function (name) {
-        updateLayerBadge(name);
+        updateLayerBadge(name, _layerTypeMap[name]);
+        _editorDraft = null;
+        if (document.getElementById('f-title')) {
+            resetEditorForm();
+            _loadFormForLayer(null);
+        }
     });
 
     bridge.gn_contacts_ready.connect(function (key, q, results) {
@@ -344,17 +374,90 @@ function initApp() {
     });
 }
 
-function updateLayerBadge(name) {
+function updateLayerBadge(name, type) {
     var badge = document.getElementById('layer-badge');
     var nameEl = document.getElementById('layer-badge-name');
+    var iconEl = document.getElementById('layer-badge-icon');
     if (!badge || !nameEl) return;
     if (name) {
-        nameEl.textContent = name;
+        _activeLayerName = name;
+        nameEl.textContent = name.length > 16 ? name.slice(0, 16) + '…' : name;
         badge.style.display = 'flex';
+        if (iconEl) {
+            var t = type || _layerTypeMap[name] || 'vector';
+            iconEl.innerHTML = (t === 'raster') ? _LP_INNER_RASTER : _LP_INNER_VECTOR;
+        }
     } else {
         badge.style.display = 'none';
+        closeLayerPicker();
     }
 }
+
+// ── Layer picker dropdown ─────────────────────────────────────────────────────
+
+function toggleLayerPicker(e) {
+    e.stopPropagation();
+    var dropdown = document.getElementById('layer-picker-dropdown');
+    if (!dropdown) return;
+    if (dropdown.style.display === 'none') {
+        openLayerPicker();
+    } else {
+        closeLayerPicker();
+    }
+}
+
+function openLayerPicker() {
+    var dropdown = document.getElementById('layer-picker-dropdown');
+    var badge = document.getElementById('layer-badge');
+    if (!dropdown || typeof bridge === 'undefined') return;
+
+    dropdown.innerHTML = '<div class="lp-empty">Carregando...</div>';
+    dropdown.style.display = 'block';
+    badge.classList.add('open');
+
+    bridge.list_layers(function (layers) {
+        if (!layers || !layers.length) {
+            dropdown.innerHTML = '<div class="lp-empty">Nenhuma camada no projeto.</div>';
+            return;
+        }
+        // Popula mapa de tipos para uso no badge e no signal layer_changed
+        (layers || []).forEach(function (l) { _layerTypeMap[l.name] = l.type; });
+
+        var activeName = _activeLayerName;
+        var mkIcon = function (type) {
+            return '<svg class="lp-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+                (type === 'raster' ? _LP_INNER_RASTER : _LP_INNER_VECTOR) + '</svg>';
+        };
+        dropdown.innerHTML = layers.map(function (l) {
+            var isActive = l.name === activeName;
+            return '<div class="lp-item' + (isActive ? ' active' : '') + '" ' +
+                'data-lid="' + escHtml(l.id) + '" data-lname="' + escHtml(l.name) + '" data-ltype="' + l.type + '" ' +
+                'onclick="selectLayer(this.dataset.lid, this.dataset.lname, this.dataset.ltype)">' +
+                mkIcon(l.type) + escHtml(l.name) + '</div>';
+        }).join('');
+    });
+}
+
+function closeLayerPicker() {
+    var dropdown = document.getElementById('layer-picker-dropdown');
+    var badge = document.getElementById('layer-badge');
+    if (dropdown) dropdown.style.display = 'none';
+    if (badge) badge.classList.remove('open');
+}
+
+function selectLayer(layerId, layerName, layerType) {
+    closeLayerPicker();
+    if (typeof bridge === 'undefined') return;
+    bridge.set_active_layer(layerId);
+    if (layerType) _layerTypeMap[layerName] = layerType;
+    updateLayerBadge(layerName, layerType);
+}
+
+// Fecha o picker ao clicar fora
+document.addEventListener('click', function (e) {
+    var wrap = document.querySelector('.layer-picker-wrap');
+    if (wrap && !wrap.contains(e.target)) closeLayerPicker();
+});
 
 // ─── Navegação ────────────────────────────────────────────────────────────────
 
@@ -364,6 +467,10 @@ function navigate(panelId) {
 }
 
 function loadPanel(panelId) {
+    // Salva estado do editor antes de substituir o HTML
+    if (document.getElementById("f-title")) {
+        _editorDraft = collectFormData();
+    }
     var container = document.getElementById("app-container");
     container.innerHTML = '<div class="loader">Carregando...</div>';
 
@@ -400,13 +507,23 @@ function onPanelLoaded(panelId) {
         initMetaAuthor();
         setTimeout(initCustomSelects, 50);
 
-        // Iniciar rastreio de progresso global
+        // Carrega formulário: draft de sessão > draft de arquivo > metadado salvo
+        var _sessionDraft = _editorDraft;
+        _editorDraft = null;
+        setTimeout(function () { _loadFormForLayer(_sessionDraft); }, 60);
+
+        // Rastreio de progresso e auto-save por eventos de input/change
         setTimeout(updateFormProgress, 100);
         var containerPanel = document.getElementById("tab-identificacao").parentNode;
         if (containerPanel && !containerPanel.hasAttribute('data-progress-listener')) {
             containerPanel.addEventListener('input', updateFormProgress);
             containerPanel.addEventListener('change', updateFormProgress);
             containerPanel.setAttribute('data-progress-listener', 'true');
+        }
+        if (containerPanel && !containerPanel.hasAttribute('data-draft-listener')) {
+            containerPanel.addEventListener('input', _scheduleDraftSave);
+            containerPanel.addEventListener('change', _scheduleDraftSave);
+            containerPanel.setAttribute('data-draft-listener', 'true');
         }
     }
 }
@@ -458,6 +575,34 @@ function trySaveMetadata() {
 }
 
 // ─── Formulário ───────────────────────────────────────────────────────────────
+
+function resetEditorForm() {
+    document.querySelectorAll('[id^="f-"]').forEach(function (el) { el.value = ''; });
+    contacts = []; procContacts = []; metaContacts = []; keywords = []; distResources = [];
+    renderContacts(); renderKeywords(); renderDistResources();
+    renderFor('proc'); renderFor('meta');
+    var uid = document.getElementById('f-metadataId');
+    if (uid) uid.value = generateUUID();
+    updateFormProgress();
+}
+
+// Prioridade: draft (edições não salvas) > metadado salvo (DB/sidecar) > vazio
+function _loadFormForLayer(sessionDraft) {
+    if (sessionDraft) {
+        populateForm(sessionDraft);
+        return;
+    }
+    if (typeof bridge === 'undefined') return;
+    bridge.load_draft(function (draft) {
+        if (draft) {
+            populateForm(draft);
+        } else {
+            bridge.load_layer_metadata(function (saved) {
+                if (saved) populateForm(saved);
+            });
+        }
+    });
+}
 
 function collectFormData() {
     if (!document.getElementById("f-title")) {
@@ -894,9 +1039,10 @@ function renderKeywords() {
     if (!box) return;
     box.innerHTML = keywords.map(function (kw, i) {
         return '<span class="keyword-chip">' + escHtml(kw) +
-            '<button onclick="removeKeyword(' + i + ')" title="Remover">×</button></span>';
+            '<button onclick="removeKeyword(' + i + ')" data-title="Remover">×</button></span>';
     }).join('');
     updateFormProgress();
+    _scheduleDraftSave();
 }
 
 // ─── Distribuição: recursos online ────────────────────────────────────────────
@@ -1049,6 +1195,7 @@ function renderDistResources() {
     if (!tbody) return;
     if (!distResources.length) {
         tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Nenhum recurso adicionado.</td></tr>';
+        _scheduleDraftSave();
         return;
     }
     var protoCls = { 'OGC:WMS': 'wms', 'OGC:WFS': 'wfs', 'OGC:WCS': 'wcs', 'OGC:WPS': 'wps', 'WWW:DOWNLOAD': 'download' };
@@ -1061,11 +1208,12 @@ function renderDistResources() {
             '<td>' + escHtml(r.name || '-') +
             (r.description ? '<br><small style="color:var(--fg-muted)">' + escHtml(r.description) + '</small>' : '') +
             '</td>' +
-            '<td><span class="proto-badge ' + cls + '" title="' + escHtml(r.protocol) + '">' + escHtml(lbl) + '</span></td>' +
-            '<td style="font-size:11px;color:var(--fg-muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + escHtml(r.url) + '">' + escHtml(r.url) + '</td>' +
-            '<td><button class="btn-remove" onclick="removeDistResource(' + i + ')" title="Remover">✕</button></td>' +
+            '<td><span class="proto-badge ' + cls + '" data-title="' + escHtml(r.protocol) + '">' + escHtml(lbl) + '</span></td>' +
+            '<td style="font-size:11px;color:var(--fg-muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" data-title="' + escHtml(r.url) + '">' + escHtml(r.url) + '</td>' +
+            '<td><button class="btn-remove" onclick="removeDistResource(' + i + ')" data-title="Remover">✕</button></td>' +
             '</tr>';
     }).join('');
+    _scheduleDraftSave();
 }
 
 // ─── Licença: preenchimento automático por tipo ────────────────────────────────
@@ -1280,10 +1428,10 @@ function _buildAccActions(isManual, source, idx, isEditing) {
         } else {
             btns += '<button class="btn-edit" onclick="enterAccordionEdit(\'' + source + '\',' + idx + ')">Editar</button>';
             if (isManual === true) {
-                btns += '<button class="btn-save-local" onclick="saveContactLocally(\'' + source + '\',' + idx + ')" title="Salvar na máquina para reutilizar em outras sessões">Salvar localmente</button>';
+                btns += '<button class="btn-save-local" onclick="saveContactLocally(\'' + source + '\',' + idx + ')" data-title="Salvar na máquina para reutilizar em outras sessões">Salvar localmente</button>';
             }
             if (isManual === 'user') {
-                btns += '<button class="btn-delete-user" onclick="deleteUserContactFromList(\'' + source + '\',' + idx + ')" title="Excluir dos Meus Contatos">Excluir</button>';
+                btns += '<button class="btn-delete-user" onclick="deleteUserContactFromList(\'' + source + '\',' + idx + ')" data-title="Excluir dos Meus Contatos">Excluir</button>';
             }
         }
     }
@@ -1374,6 +1522,7 @@ function renderContacts() {
     _checkCdhuWarning(contacts, 'cdhu-warning-main', 2);
     initCustomSelects();
     updateFormProgress();
+    _scheduleDraftSave();
 }
 
 function buildAccordion(c, idx) {
@@ -1637,7 +1786,7 @@ function _renderContactSuggestions(q) {
                 right = '<span class="sugg-badge-gn">Catálogo Online</span>';
             } else if (r._source === 'user') {
                 right = '<span class="sugg-badge-user">Meus Contatos</span>' +
-                    '<button class="sugg-delete-btn" title="Excluir contato salvo" onclick="event.stopPropagation();deleteUserContact(\'' + escHtml(r._key) + '\')">×</button>';
+                    '<button class="sugg-delete-btn" data-title="Excluir contato salvo" onclick="event.stopPropagation();deleteUserContact(\'' + escHtml(r._key) + '\')">×</button>';
             } else {
                 right = '<span class="sugg-badge-local">Catálogo Offline</span>';
             }
@@ -1743,7 +1892,7 @@ function _renderForSuggestions(key, q) {
                 right = '<span class="sugg-badge-gn">Catálogo Online</span>';
             } else if (r._source === 'user') {
                 right = '<span class="sugg-badge-user">Meus Contatos</span>' +
-                    '<button class="sugg-delete-btn" title="Excluir contato salvo" onclick="event.stopPropagation();deleteUserContact(\'' + escHtml(r._key) + '\')">×</button>';
+                    '<button class="sugg-delete-btn" data-title="Excluir contato salvo" onclick="event.stopPropagation();deleteUserContact(\'' + escHtml(r._key) + '\')">×</button>';
             } else {
                 right = '<span class="sugg-badge-local">Catálogo Offline</span>';
             }
@@ -1845,9 +1994,9 @@ function renderFor(key) {
                 '<td>' + (c.data.sigla || '-') + '</td>' +
                 '<td><select id="role-' + key + '-t-' + idx + '" class="role-select" onchange="updateRoleFor(\'' + key + '\',' + idx + ',this.value)">' + opts + '</select></td>' +
                 '<td style="white-space:nowrap">' +
-                '<button class="btn-move" onclick="moveFor(\'' + key + '\',' + idx + ',-1)" title="Mover para cima"' + (idx === 0 ? ' disabled' : '') + '>↑</button>' +
-                '<button class="btn-move" onclick="moveFor(\'' + key + '\',' + idx + ', 1)" title="Mover para baixo"' + (idx === last ? ' disabled' : '') + '>↓</button>' +
-                '<button class="btn-remove" onclick="removeFrom(\'' + key + '\',' + idx + ')" title="Remover">✕</button>' +
+                '<button class="btn-move" onclick="moveFor(\'' + key + '\',' + idx + ',-1)" data-title="Mover para cima"' + (idx === 0 ? ' disabled' : '') + '>↑</button>' +
+                '<button class="btn-move" onclick="moveFor(\'' + key + '\',' + idx + ', 1)" data-title="Mover para baixo"' + (idx === last ? ' disabled' : '') + '>↓</button>' +
+                '<button class="btn-remove" onclick="removeFrom(\'' + key + '\',' + idx + ')" data-title="Remover">✕</button>' +
                 '</td>' +
                 '</tr>';
         }).join('');
@@ -1860,6 +2009,7 @@ function renderFor(key) {
     if (key === 'meta') _checkCdhuWarning(arr, 'cdhu-warning-meta', 1);
     initCustomSelects();
     updateFormProgress();
+    _scheduleDraftSave();
 }
 
 function buildAccordionFor(c, idx, key) {
