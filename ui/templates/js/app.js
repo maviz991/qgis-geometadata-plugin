@@ -10,7 +10,7 @@ var _LP_INNER_RASTER = '<rect x="3" y="3" width="18" height="18" rx="1"/><line x
 
 // ── Draft: preserva estado do formulário entre navegações e fechamento ─────────
 var _editorDraft = null;
-var _draftTimer  = null;
+var _draftTimer = null;
 
 function _scheduleDraftSave() {
     clearTimeout(_draftTimer);
@@ -19,7 +19,7 @@ function _scheduleDraftSave() {
         if (!d || typeof bridge === 'undefined') return;
         // Não sobrescreve o arquivo com formulário vazio
         var hasContent = d.title || (d.contacts && d.contacts.length > 0) ||
-                         (d.MD_Keywords && d.MD_Keywords.length > 0) || d.abstract;
+            (d.MD_Keywords && d.MD_Keywords.length > 0) || d.abstract;
         if (!hasContent) return;
         _editorDraft = d;
         bridge.save_draft(JSON.stringify(d));
@@ -606,7 +606,7 @@ function _loadFormForLayer(sessionDraft) {
 
 function collectFormData() {
     if (!document.getElementById("f-title")) {
-        Modal.alert('Abra "Catálogo Geohab > Editar Metadados" antes de exportar.', 'Ação Necessária', 'warning');
+        Modal.alert('Abra "Catálogo > Editor de Metadados" antes de exportar.', 'Ação Necessária', 'warning');
         return null;
     }
     var get = function (id) {
