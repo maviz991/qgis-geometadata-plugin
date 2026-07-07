@@ -267,7 +267,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         # --- Inicialização dos Microsserviços ---
         from .core.metadata_service import MetadataService
         from .core.persistence_service import PersistenceService
-        self.metadata_service = MetadataService(self.plugin.api_session)
+        self.metadata_service = MetadataService(self.plugin)
         self.persistence_service = PersistenceService(self.iface)
         # O FormManager será inicializado sob demanda ou vinculado à bridge
         self.ui = None # Será atualizado quando o editor HTML carregar

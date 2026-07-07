@@ -506,3 +506,95 @@ Migração do formulário MGB 2.0 do PyQt (`DynamicForm` + `FormManager`) para H
 
 ### Compatibilidade com legado
 `exportar_to_xml(metadata_dict=None)` — se `None`, cai no `form_manager` PyQt (caso ainda exista). Se vier dict do JS, usa diretamente. Sem quebra de compatibilidade.
+
+---
+
+## Registro 9 — Auditoria: Código vs. Documentação (07/07/2026)
+
+### Contexto
+Levantamento no código (branch `dev-v_1.0.4-html`) para verificar o que estava efetivamente implementado versus o que os registros anteriores deste diário descreviam. Duas divergências relevantes foram encontradas.
+
+### Divergências Encontradas
+
+1. **`geoserver_publisher.py` nunca foi criado.** O Registro 2 (17/04/2026) descrevia essa classe como módulo centralizado para a REST API do GeoServer — ela não existe no repositório. O que existe é `ui/geoserver_panel.py`, um placeholder visual de ~4KB (`__init__`, `_build_ui`, `_build_card`) com docstring explícito de "Fase 2", sem nenhuma lógica de publicação. Além disso, `_create_geoserver_panel()` (e `_create_geonetwork_panel()`) em `GeoMetadata_dialog.py` **não são chamados em nenhum lugar** — junto com `ui/dynamic_form.py` e `ui/form_manager.py`, é código PyQt legado órfão, não removido conforme previsto no Roadmap v2.1 ("Deletar `GeoMetadata_dialog_base.ui` e arquivos `.py` legados relacionados" — apenas o `.ui` foi de fato removido).
+2. **Versão ainda é `1.0.1`.** `metadata.txt` não reflete a label "2.0.0 dev" usada neste diário desde o cabeçalho ("Estado Atual do Plugin"). Não há string `2.0.0` em nenhum arquivo versionado (`__init__.py`, `GeoMetadata.py`, `metadata.txt`).
+
+### O que foi confirmado como correto
+Auth via Entra ID/MSAL (`core/entra_auth_provider.py`), UI HTML/QWebEngine como caminho real do construtor, e todo o trabalho de formulário de contatos (validação CEP/telefone, accordion, dedup, `geometadata_user_contacts.json`) — todos batem com o código atual.
+
+### Nota
+Limpeza dos arquivos órfãos (`dynamic_form.py`, `form_manager.py`, `geoserver_panel.py` e scratch files soltos na raiz como `patch*.py`, `temp.py`) foi identificada mas adiada — não faz parte deste registro.
+
+---
+
+## Registro 10 — Correção dos Bugs de Persistência e Publicação GN (07/07/2026)
+
+### Contexto
+Ver `docs_projeto/bugs.md` (registro "conexão", 07/07/2026) para os tracebacks originais.
+
+### Bugs Corrigidos
+
+1. **Crash ao mostrar erro de salvamento no DB.** `core/persistence_service.py:_show_message` usava `QtWidgets.QMessageBox.RichText`, que não existe (é `Qt.TextFormat`, não `QMessageBox`) — o `AttributeError` mascarava o erro real (`psycopg2.errors.UndefinedTable`, tabela `public.qgis_geometadata_plugin` ausente no banco de destino). Corrigido para `QtCore.Qt.RichText`. Adicionado `except psycopg2.errors.UndefinedTable` específico que orienta o usuário a abrir ticket no CDA solicitando a criação da tabela, em vez de mostrar o erro cru.
+2. **Sessão da API congelada no `MetadataService`.** `self.metadata_service = MetadataService(self.plugin.api_session)` capturava o valor da sessão na construção do diálogo (`GeoMetadata_dialog.py:270`), sempre antes do login acontecer. Login via SSO/admin (`ui/main_bridge.py`) atualiza `self.plugin.api_session`, mas o `MetadataService` nunca via essa atualização — resultando em "Sessão da API não foi inicializada" mesmo logado. Fix: `MetadataService` agora guarda referência ao `plugin` e lê `self.plugin.api_session` em tempo real dentro de `push_to_geonetwork`.
+3. **400 Bad Request ao republicar metadado com UUID já existente no GN.** Após o fix do item 2, publicar um metadado cujo `fileIdentifier` já existia no GN (ex.: importado manualmente durante o período em que o login estava quebrado) retornava 400, pois `PUT /srv/api/records` sem `uuidProcessing` usa o default `NOTHING` (rejeita duplicado). Fix: adicionado `uuidProcessing=OVERWRITE` na chamada. Também foi ligado o `translate_http_error` (existia em `metadata_service.py` mas nunca era chamado) ao tratamento de erro, para que um 400 residual de UUID duplicado apareça como mensagem amigável em vez do erro HTTP cru.
+
+### Em aberto
+Registro "metadado GN - online" (`docs_projeto/bugs.md`) segue sem solução: (1) contatos não sendo gravados corretamente no XML gerado (cai no fallback CDHU mesmo com contato do catálogo selecionado) e (2) elementos (recursos WMS/WFS, contatos) somem ao reprocessar o metadado pelo GN — suspeita de comportamento de subtemplate da registry do GN quando o `xlink:href` gerado não corresponde a uma entrada já registrada.
+
+---
+
+## Registro 11 — Causa Raiz do Contato "Sumido" e Fix de Perfil MGB 2.0 (07/07/2026)
+
+### Contexto
+Investigação dos dois bugs em aberto do Registro 10, comparando o template MGB 2.0 instalado no GN (`scratch/template_mgb_2_0.xml`) com o XML que o plugin gera hoje (`scratch/TJ_teste-gn.xml`).
+
+### Causa Raiz Confirmada
+`_build_contact_block()` (`core/xml_generator.py`) envolvia todo `gmd:contact`/`gmd:pointOfContact`/`gmd:processor` num `xlink:href="local://srv/api/registries/entries/{uuid}"` — padrão de referência a subtemplate da registry do GN, deixando a tag auto-fechada sem nenhum dado embutido. O `uuid` usado era **sempre gerado aleatoriamente** (`contact_data.get('uuid') or uuid4()`), porque o JS (`ui/templates/js/app.js`) nunca envia uma chave `uuid` — só `_gn_uuid`, usado apenas para o enriquecimento local dos campos, nunca repassado ao gerador de XML. Resultado: a referência nunca correspondia a uma entrada real da registry do GN, que não conseguia resolver nada — daí o contato "sumir" e, junto com ele, potencialmente outros elementos dependentes.
+
+O template MGB 2.0 instalado no GN não usa esse padrão — embute `CI_ResponsibleParty` diretamente dentro de `gmd:contact`/`gmd:pointOfContact`, sem `xlink:href` e sem `uuid`.
+
+Também identificado: `metadataStandardName`/`metadataStandardVersion` estavam hardcoded como `ISO 19115` / `2003/Cor.1:2006` (perfil ISO 19139 genérico), enquanto o template instalado declara `ISO 19115-3:2014` / `MGB 2.0`.
+
+### Fix Aplicado (v1)
+- `_build_contact_block()`: removido o wrapper `xlink:href`; `CI_ResponsibleParty` agora é sempre embutido diretamente, igual ao template.
+- `generate_xml()`: `metadataStandardName` → `ISO 19115-3:2014`, `metadataStandardVersion` → `MGB 2.0`.
+
+### Teste e Correção do Fix (mesmo dia)
+Testado: ponto de contato passou a aparecer, mas o contato de metadado (`gmd:contact`) não aparecia no **modo de edição** do GN (só no modo de leitura), e os contatos apareciam como "manual" em vez de vinculados ao diretório.
+
+Comparando com `scratch/t-exemplo.xml` (registro real de produção, funcionando 100%), o padrão correto do GN **usa sim `xlink:href`**, mas com o **uuid real** da entrada na registry — não um uuid inventado. O uuid `b98c4847-4d5c-43e1-a5eb-bd0228f6903a` usado no exemplo de produção é exatamente o mesmo já cadastrado no preset `"cdhu"` de `assets/contacts.json` (e os outros presets — DPDU, SSARU, TERRAS, SPHU — também têm seus próprios uuids reais nesse arquivo). O fix v1 removeu o `xlink:href` por completo, o que resolvia o caso de uuid inventado mas quebrava o vínculo com o diretório para os presets institucionais, que sempre tiveram um uuid real disponível.
+
+**Fix v2 (correto)**: `_build_contact_block()` volta a emitir `xlink:href` + `CI_ResponsibleParty uuid="..."`, mas só quando existe um uuid real disponível em `contact_data.get('uuid')` (presets do `contacts.json`) ou `contact_data.get('_gn_uuid')` (contato escolhido via busca no catálogo GN). Sem uuid real — contato puramente manual, nunca cadastrado na registry — embute só o `CI_ResponsibleParty`, sem inventar uuid nem gerar link quebrado.
+
+### Teste v2 e Correção Final (mesmo dia)
+Com o v2 (após recarregar o plugin no QGIS — o teste anterior tinha rodado com o módulo Python antigo ainda em cache), o ponto de contato do recurso passou a aparecer corretamente vinculado ao diretório em modo de edição. A duplicação de CDHU+TERRAS em `gmd:contact` (metadado) e `gmd:pointOfContact` (recurso) é intencional — o usuário adicionou os dois contatos em ambas as seções da UI.
+
+Porém: o painel "Autor dos metadados" do editor do GN (aba Metadados) continuava vazio em modo de edição, mesmo com o dado presente no XML (visível só em modo de leitura). Comparando com o `gmd:contact` de `scratch/t-exemplo.xml` (produção, funcionando 100%): lá o role é `author`. No nosso XML o role do `gmd:contact` saía como `owner`/`pointOfContact` — herdado do papel que o mesmo contato tem na tabela de **recurso**, porque `_build_contact_block` usa o campo `role` do próprio contato sem diferenciar o contexto. O widget "Autor dos metadados" do GN não expõe seletor de Regra (só busca + "+"), ou seja, só reconhece um contato ali quando o role é `author`.
+
+**Fix v3**: em `generate_xml()`, o role é forçado para `'author'` especificamente para os contatos que vão em `gmd:contact` (tanto de `metadataAuthorContacts` quanto o fallback CDHU), independente do role que o contato tem na tabela de recurso.
+
+### Teste v3 — Hipótese Descartada e Fix Revertido (mesmo dia)
+Usuário testou manualmente definindo 2 contatos (CDHU e DPDU) com role `author` diretamente na UI. O XML gerado saiu com `role="author"` corretamente em ambos os `gmd:contact` (com `xlink:href` + uuid real) — e mesmo assim "Autor dos metadados" continuou vazio no modo de edição do GN. **A hipótese do role="author" foi descartada.**
+
+Feedback do usuário: o gerador de XML não deve forçar/alterar o role arbitrariamente — deve refletir exatamente o que está nos dados do contato, sem inventar valor por hipótese. O fix v3 foi **revertido** em `core/xml_generator.py` (`_build_contact_block` volta a usar o role que vem do próprio contato).
+
+### Em Aberto
+"Autor dos metadados" não aparece em modo de edição no GN mesmo com uuid real e role correto no `gmd:contact` — causa raiz ainda não identificada. Possivelmente está fora do escopo do `xml_generator.py`: pode ser uma condição específica do config-editor do perfil MGB2.0 no GN (schema binding daquele campo específico) que exigiria investigação do lado do GN, não do plugin. Pendente: comparar mais a fundo com `scratch/t-exemplo.xml` (ordem de elementos, atributos extras não replicados) antes de tentar outra hipótese.
+
+---
+
+## Registro 12 — Elemento Estrutural Inválido no XML (`hierarchyLevelName`) (07/07/2026)
+
+### Contexto
+Continuação da investigação do Registro 11 ("Autor dos metadados" vazio). Ver `docs_projeto/bugs.md` (registro "metadado GN - online", Bug 3) para o achado completo. Comparação de três arquivos de referência: `scratch/template_mgb_2_0.xml` (template MGB 2.0 instalado no GN), `scratch/t-exemplo.xml` (registro real de produção, funcionando) e `scratch/TJ_teste-gn.xml` (saída atual do plugin).
+
+### Causa Raiz Confirmada
+`generate_xml()` em `core/xml_generator.py` gerava um elemento `gmd:hierarchyLevelName` com `gco:CharacterString` **duplicado/aninhado** — `<gco:CharacterString><gco:CharacterString>dataset</gco:CharacterString></gco:CharacterString>` — inválido contra o XSD ISO19139, já que `gco:CharacterString` é um tipo string simples e não pode conter outro `gco:CharacterString` como filho. Nem o template instalado nem o registro de produção usam esse elemento — o plugin estava inserindo um campo fora do perfil MGB 2.0, além de malformado.
+
+### Fix Aplicado
+Removida a linha `_char(_sub(root, 'gmd', 'hierarchyLevelName'), 'gco', 'CharacterString', hier)` em `core/xml_generator.py` (bloco `hierarchyLevel` de `generate_xml()`). Verificado com teste local (`generate_xml()` chamado direto em Python) que o elemento não aparece mais na saída.
+
+### Hipótese em Aberto
+Elemento inválido no XML pode estar contribuindo para falhas mais amplas de data-binding no editor MGB2.0 do GN — não necessariamente restrito ao campo de contato investigado nos Registros 10-11. Aguardando teste do usuário no GN (após reload do plugin) para confirmar se o painel "Autor dos metadados" passa a aparecer corretamente em modo de edição.
+
+

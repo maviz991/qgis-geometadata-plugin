@@ -3,7 +3,7 @@ import re
 import pathlib
 import traceback
 from qgis.core import Qgis, QgsApplication
-from qgis.PyQt import QtWidgets
+from qgis.PyQt import QtWidgets, QtCore
 
 try:
     import psycopg2
@@ -112,7 +112,7 @@ class PersistenceService:
         if not parent_widget: return
         msg_box = QtWidgets.QMessageBox(parent_widget)
         msg_box.setIcon(icon)
-        msg_box.setTextFormat(QtWidgets.QMessageBox.RichText)
+        msg_box.setTextFormat(QtCore.Qt.RichText)
         msg_box.setText(text)
         msg_box.setWindowTitle(title)
         msg_box.setStandardButtons(QtWidgets.QMessageBox.Ok)
@@ -176,9 +176,18 @@ class PersistenceService:
                 self._show_message("Sucesso!", success_text, parent_widget)
             return True
 
+        except psycopg2.errors.UndefinedTable:
+            traceback.print_exc()
+            message = (
+                "A tabela de metadados ainda não existe neste banco de dados.<br><br>"
+                "Por favor, abra um ticket no <a href='https://cda.cdhu.sp.gov.br'>CDA</a> "
+                "solicitando a criação da tabela <b>public.qgis_geometadata_plugin</b>."
+            )
+            self._show_message("Erro DB", message, parent_widget, icon=QtWidgets.QMessageBox.Critical)
+            return False
         except Exception as e:
             traceback.print_exc()
-            self._show_message("Erro DB", f"Não foi possível salvar:\\n\\n{e}", parent_widget, icon=QtWidgets.QMessageBox.Critical)
+            self._show_message("Erro DB", f"Não foi possível salvar:<br><br>{e}", parent_widget, icon=QtWidgets.QMessageBox.Critical)
             return False
 
     def _save_to_sidecar_file(self, layer, metadata_dict, cdhu_data, is_automatic_resave=False, parent_widget=None):

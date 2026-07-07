@@ -79,18 +79,26 @@ def _build_contact_block(parent, wrapper_tag, contact_data):
     country = _f('country', 'contact_country') or 'Brasil'
     email   = _f('email', 'contact_email')
     role    = _f('role', 'contact_role') or 'pointOfContact'
-    c_uuid  = contact_data.get('uuid') or str(_uuid_mod.uuid4())
 
-    # xlink href para integração GeoNetwork
-    xlink_href = (
-        f'local://srv/api/registries/entries/{c_uuid}'
-        f'?lang=por&process=gmd:role/gmd:CI_RoleCode/@codeListValue~{role}&schema=iso19139'
-    )
-    wrapper = _sub(parent, 'gmd', wrapper_tag, attrib={
-        _ns('xlink', 'href'): xlink_href
-    })
+    # uuid real da entrada na registry do GN (presets institucionais trazem isso
+    # em assets/contacts.json; contatos escolhidos no catálogo trazem em _gn_uuid).
+    # Só usamos o padrão xlink:href de subtemplate quando temos um uuid real —
+    # gerar um uuid aleatório aponta pra uma entrada que não existe na registry
+    # e o GN não consegue resolver (bloco fica vazio no modo de edição).
+    c_uuid = contact_data.get('uuid') or contact_data.get('_gn_uuid') or ''
 
-    rp = ET.SubElement(wrapper, _ns('gmd', 'CI_ResponsibleParty'), {'uuid': c_uuid})
+    if c_uuid:
+        xlink_href = (
+            f'local://srv/api/registries/entries/{c_uuid}'
+            f'?lang=por&process=gmd:role/gmd:CI_RoleCode/@codeListValue~{role}&schema=iso19139'
+        )
+        wrapper = _sub(parent, 'gmd', wrapper_tag, attrib={
+            _ns('xlink', 'href'): xlink_href
+        })
+        rp = ET.SubElement(wrapper, _ns('gmd', 'CI_ResponsibleParty'), {'uuid': c_uuid})
+    else:
+        wrapper = _sub(parent, 'gmd', wrapper_tag)
+        rp = ET.SubElement(wrapper, _ns('gmd', 'CI_ResponsibleParty'))
 
     if sigla:
         _char(rp, 'gmd', 'individualName', sigla)
@@ -155,7 +163,6 @@ def generate_xml(data_dict, cdhu_contact_data=None):
     # ── hierarchyLevel ───────────────────────────────────────────────────────
     hier = d.get('hierarchyLevel') or 'dataset'
     _codelist(root, 'gmd', 'hierarchyLevel', 'MD_ScopeCode', 'MD_ScopeCode', hier)
-    _char(_sub(root, 'gmd', 'hierarchyLevelName'), 'gco', 'CharacterString', hier)
 
     # ── Contatos do Metadado (gmd:contact) ──────────────────────────────────
     meta_contacts = d.get('metadataAuthorContacts') or []
@@ -173,8 +180,10 @@ def generate_xml(data_dict, cdhu_contact_data=None):
     _datetime_el(root, 'gmd', 'dateStamp', date_stamp)
 
     # ── metadataStandardName / Version ───────────────────────────────────────
-    _char(root, 'gmd', 'metadataStandardName', 'ISO 19115')
-    _char(root, 'gmd', 'metadataStandardVersion', '2003/Cor.1:2006')
+    # Deve bater com o perfil MGB 2.0 instalado no catálogo (ver template_mgb_2_0.xml),
+    # não o ISO 19139 genérico — perfil errado faz o GN tratar/validar o registro diferente.
+    _char(root, 'gmd', 'metadataStandardName', 'ISO 19115-3:2014')
+    _char(root, 'gmd', 'metadataStandardVersion', 'MGB 2.0')
 
     # ── Sistema de Referência (EPSG) ─────────────────────────────────────────
     epsg_code  = d.get('epsgCode')
