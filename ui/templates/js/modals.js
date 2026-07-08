@@ -8,11 +8,14 @@ var Modal = (function() {
     function init() {
         if (document.getElementById('modal-overlay')) return;
         
-        var html = 
+        var html =
             '<div id="modal-overlay" class="modal-overlay">' +
             '  <div class="modal-container">' +
             '    <div class="modal-header">' +
-            '      <h3 id="modal-title">Aviso</h3>' +
+            '      <div class="modal-header-left">' +
+            '        <h3 id="modal-title">Aviso</h3>' +
+            '        <span id="modal-header-badge"></span>' +
+            '      </div>' +
             '      <button class="modal-close" onclick="Modal.close()">&times;</button>' +
             '    </div>' +
             '    <div class="modal-body" id="modal-body"></div>' +
@@ -28,10 +31,12 @@ var Modal = (function() {
         
         var overlay = document.getElementById('modal-overlay');
         var titleEl = document.getElementById('modal-title');
+        var badgeEl = document.getElementById('modal-header-badge');
         var bodyEl = document.getElementById('modal-body');
         var footerEl = document.getElementById('modal-footer');
-        
+
         titleEl.textContent = options.title || 'Aviso';
+        if (badgeEl) badgeEl.innerHTML = options.headerBadge || '';
         
         // Handle icons/type
         var iconHtml = '';

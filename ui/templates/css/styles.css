@@ -458,6 +458,15 @@ body {
     background: #94a3b8;
 }
 
+.gn-sync-badge.not_found {
+    background: #f3e8ff;
+    color: #9333ea;
+}
+
+.gn-sync-badge.not_found .gn-sync-dot {
+    background: #a855f7;
+}
+
 .gn-sync-badge.synced {
     background: #dcfce7;
     color: #16a34a;
@@ -802,6 +811,20 @@ body {
     align-items: center;
     gap: 4px;
     flex-shrink: 0;
+}
+
+/* Lista de camadas do GeoServer (Recursos Online): texto único "workspace - nome", sem
+   badge à direita — o space-between padrão de .suggestion-item ficaria sem o que empurrar
+   pra direita, então alinhamos à esquerda aqui. */
+#dist-suggestions .suggestion-item {
+    justify-content: flex-start;
+}
+
+#dist-suggestions .sugg-name {
+    color: var(--fg);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .sugg-delete-btn {
@@ -1685,7 +1708,7 @@ body {
 /* Global Tooltip */
 .global-tooltip {
     position: fixed;
-    z-index: 9999;
+    z-index: 10001; /* acima de .modal-overlay (10000) — senão fica escondido atrás de modais */
     pointer-events: none;
     background: #1e293b;
     color: #f8fafc;

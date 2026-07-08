@@ -443,6 +443,23 @@ class MainBridge(QObject):
             traceback.print_exc()
             return []
 
+    @pyqtSlot(str)
+    def open_file_location(self, file_path: str):
+        """Abre o Explorer na pasta do arquivo, com o arquivo já selecionado/destacado."""
+        import os
+        import subprocess
+        try:
+            norm_path = os.path.normpath(file_path)
+            if os.name == 'nt':
+                # Forma de string (não lista) é a que funciona de forma confiável com
+                # caminhos com espaço — o explorer.exe faz seu próprio parsing da linha
+                # de comando, então as aspas em volta do caminho precisam chegar literais.
+                subprocess.Popen(f'explorer /select,"{norm_path}"')
+            else:
+                subprocess.Popen(['xdg-open', os.path.dirname(norm_path)])
+        except Exception as e:
+            print(f"GeoMetadata [open_file_location]: {e}")
+
     @pyqtSlot(str, str)
     def export_contact_xml(self, xml_string: str, filename: str):
         """Salva o XML de sub-template de contato (ISO 19139) em arquivo escolhido pelo usuário."""
@@ -567,11 +584,13 @@ class MainBridge(QObject):
 
     @pyqtSlot(str)
     def search_gn_metadata(self, query: str):
-        """Busca registros de metadado (não subtemplates) no GN por título. Emite gn_metadata_search_ready."""
+        """Busca registros de metadado (não subtemplates) no GN por título. Emite gn_metadata_search_ready.
+        Funciona sem login (sessão anônima) — GN já filtra pra mostrar só os registros
+        públicos nesse caso; os do setor exigem sessão autenticada."""
         session = getattr(getattr(self._dialog, 'plugin', None), 'api_session', None)
         if not session:
-            self.gn_metadata_search_ready.emit([])
-            return
+            import requests
+            session = requests.Session()
         gn_base = config_loader.get_geonetwork_base_url()
         if not gn_base:
             self.gn_metadata_search_ready.emit([])

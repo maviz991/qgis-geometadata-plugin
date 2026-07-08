@@ -735,7 +735,15 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             if file_path:
                 with open(file_path, 'w', encoding='utf-8') as f:
                     f.write(xml_payload)
-                self.iface.messageBar().pushMessage('Sucesso', f'Metadados salvos em: {file_path}', level=1, duration=5)
+                self.iface.messageBar().pushMessage('Sucesso', f'Metadados salvos em: {file_path}', level=Qgis.Success, duration=5)
+                js_path = json.dumps(file_path)
+                self.show_toast(
+                    'Sucesso',
+                    f'Metadados salvos em:<br>{file_path}'
+                    f"<br><span onclick='bridge.open_file_location({js_path})' "
+                    f'style="color:var(--accent);font-weight:600;text-decoration:underline;cursor:pointer;">Abrir pasta</span>',
+                    'success'
+                )
         except Exception as e:
             self.show_toast('Erro', f'Falha ao exportar XML: {e}', 'error')
 

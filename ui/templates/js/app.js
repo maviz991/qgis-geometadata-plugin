@@ -634,6 +634,7 @@ function trySaveMetadata() {
 }
 
 function tryResetForm() {
+    if (!_requireEditorOpen('descartar as alterações')) return;
     Modal.confirm('Isso vai descartar as alterações não salvas deste formulário. Continuar?', function () {
         if (typeof bridge !== 'undefined') bridge.clear_draft();
         _editorDraft = null;
@@ -643,6 +644,7 @@ function tryResetForm() {
 }
 
 function tryImportXml() {
+    if (!_requireEditorOpen('importar um metadado')) return;
     if (typeof bridge === 'undefined') return;
     bridge.import_xml_file(function (data) {
         if (!data) return; // usuário cancelou o diálogo, ou o arquivo não pôde ser lido
@@ -651,6 +653,12 @@ function tryImportXml() {
             populateForm(data);
             _saveDraftNow();
             checkGnSync(data.metadata_uuid, data.dateStamp || '');
+            // Modal.confirm chama close() logo depois desse callback retornar — abrir o
+            // alert de sucesso na hora faria ele "piscar" (mesmo overlay reaproveitado).
+            // Adiando pro próximo tick, o close() do confirm já rodou antes.
+            setTimeout(function () {
+                Modal.alert('Metadado importado com sucesso.<br>Confira os campos preenchidos no formulário.', 'Importado', 'success');
+            }, 0);
         }, 'Importar Metadado');
     });
 }
@@ -692,11 +700,13 @@ function _loadFormForLayer(sessionDraft) {
 
 var _gnSyncUuid = null;
 var _gnSearchTimer = null;
-// Retrato (JSON) do formulário no momento exato em que o badge virou "Sincronizado" —
-// comparado a cada input/change pra saber se o conteúdo atual bate de novo com o que
-// tá confirmado no GN, mesmo que o usuário tenha revertido a edição manualmente (sem
-// usar nenhum botão de Descartar/Publicar/Puxar).
+// Retrato (JSON) do formulário no momento exato em que o badge virou "Sincronizado" OU
+// "Não encontrado no Geohab" — comparado a cada input/change pra saber se o conteúdo
+// atual bate de novo com esse ponto de partida, mesmo que o usuário tenha revertido a
+// edição manualmente (sem usar nenhum botão de Descartar/Publicar/Puxar). _gnSyncBaseline
+// guarda QUAL desses dois estados é o "limpo" a voltar quando o conteúdo bate de novo.
 var _gnSyncSnapshot = null;
+var _gnSyncBaseline = null; // 'synced' | 'not_found'
 
 var _GN_SYNC_LABELS = {
     checking: 'Verificando…',
@@ -710,7 +720,7 @@ var _GN_SYNC_LABELS = {
 
 var _GN_SYNC_TOOLTIPS = {
     checking: 'Verificando se este metadado está sincronizado com o Geohab...',
-    offline: 'Metadado ainda não publicado no Geohab. Clique pra buscar um registro existente.',
+    offline: 'Metadado ainda não publicado no Geohab. Use "Arquivo > Baixar Metadado" pra buscar um registro existente.',
     synced: 'O formulário bate com o que está publicado no Geohab.',
     modified: 'Editado localmente desde a última sincronização com o Geohab.',
     update_available: 'Existe uma versão mais nova no Geohab. Clique pra puxar a atualização.',
@@ -726,9 +736,12 @@ function setGnBadge(state) {
     badge.style.display = 'flex';
     badge.dataset.title = _GN_SYNC_TOOLTIPS[state] || '';
     label.textContent = _GN_SYNC_LABELS[state] || state;
-    if (state === 'synced') {
+    if (state === 'synced' || state === 'not_found') {
         var snap = collectFormData();
-        if (snap) _gnSyncSnapshot = JSON.stringify(snap);
+        if (snap) {
+            _gnSyncSnapshot = JSON.stringify(snap);
+            _gnSyncBaseline = state;
+        }
     }
 
     var banner = document.getElementById('gn-update-banner');
@@ -736,22 +749,23 @@ function setGnBadge(state) {
 }
 
 // Chamado a cada input/change do formulário. Compara o conteúdo atual contra o retrato
-// do último "Sincronizado" conhecido: se bater de novo, volta pra Sincronizado sozinho
-// (mesmo sem clicar em Descartar); se divergir, vira "Modificado". Só alterna entre
-// esses dois estados — não interfere em checking/offline/not_found/update_available.
+// do último ponto de partida conhecido (Sincronizado ou Não encontrado no Geohab): se
+// bater de novo, volta sozinho pro estado de origem (mesmo sem clicar em Descartar); se
+// divergir, vira "Modificado". Só alterna entre o baseline e "Modificado" — não interfere
+// em checking/offline/update_available.
 function _markGnModifiedIfNeeded() {
-    if (_gnSyncSnapshot === null) return;
+    if (_gnSyncSnapshot === null || _gnSyncBaseline === null) return;
     var badge = document.getElementById('gn-sync-badge');
     if (!badge) return;
-    var isSynced = badge.classList.contains('synced');
+    var isBaseline = badge.classList.contains(_gnSyncBaseline);
     var isModified = badge.classList.contains('modified');
-    if (!isSynced && !isModified) return;
+    if (!isBaseline && !isModified) return;
     var current = collectFormData();
     if (!current) return;
     var matches = JSON.stringify(current) === _gnSyncSnapshot;
     if (matches && isModified) {
-        setGnBadge('synced');
-    } else if (!matches && isSynced) {
+        setGnBadge(_gnSyncBaseline);
+    } else if (!matches && isBaseline) {
         setGnBadge('modified');
     }
 }
@@ -775,7 +789,7 @@ function onGnSyncBadgeClick() {
     var badge = document.getElementById('gn-sync-badge');
     if (!badge) return;
     if (badge.classList.contains('offline')) {
-        openGnSearchModal();
+        Modal.alert('Metadado ainda não publicado no Geohab.<br><br>Para publicar, use "Catálogo > Publicar Metadado"<br><br>Pra buscar um registro já existente, use:<br>    Geohab: "Arquivo > Baixar Metadado"<br>    Local: "Arquivo > Importar metadado".', 'Offline', 'info');
     } else if (badge.classList.contains('update_available')) {
         applyGnUpdate();
     } else if (badge.classList.contains('synced')) {
@@ -798,17 +812,21 @@ function dismissGnUpdateBanner() {
 }
 
 function openGnSearchModal() {
-    if (typeof bridge === 'undefined' || !_isLogged) {
-        Modal.alert('Conecte ao Geohab primeiro pra buscar metadados publicados.', 'Não Autenticado', 'warning');
-        return;
-    }
+    if (!_requireEditorOpen('buscar um metadado')) return;
+    if (typeof bridge === 'undefined') return;
+    // Registros públicos aparecem mesmo sem login (o Python já busca com sessão anônima
+    // nesse caso) — badge com tooltip avisa que logar dá acesso aos do setor também.
+    var loginBadge = _isLogged ? '' :
+        '<span class="modal-info-badge" onclick="Modal.close();navigate(\'login\')" ' +
+        'data-title="Alguns metadados são públicos e aparecem mesmo sem login. Faça login pra ver também os exclusivos do seu setor.">' +
+        'Não Autenticado</span>';
     var bodyHtml =
         '<div class="search-wrap">' +
         '<input type="text" id="gn-search-input" class="modal-search-input" placeholder="Buscar metadado publicado no Geohab...">' +
         '<span class="search-spinner" id="gn-search-spinner" style="display:none"></span>' +
         '</div>' +
         '<div id="gn-search-results" class="gn-search-results"></div>';
-    Modal.show({ title: 'Baixar metadado do Geohab', message: bodyHtml, buttons: [{ label: 'Fechar', primary: false, onClick: null }] });
+    Modal.show({ title: 'Baixar metadado do Geohab', message: bodyHtml, headerBadge: loginBadge, buttons: [{ label: 'Fechar', primary: false, onClick: null }] });
 
     var input = document.getElementById('gn-search-input');
     if (!input) return;
@@ -852,15 +870,21 @@ function pullGnRecord(uuid) {
             populateForm(data);
             _saveDraftNow();
             checkGnSync(data.metadata_uuid, data.dateStamp || '');
+            Modal.alert('Metadado baixado do Geohab com sucesso.<br>Confira os campos preenchidos no formulário.', 'Baixado', 'success');
         });
     }, 'Puxar do Geohab');
 }
 
+// Guard comum pra qualquer ação do menu Arquivo que dependa do editor estar aberto —
+// mesmo toast "Ação Necessária" pra todas (exportar, importar, buscar, descartar).
+function _requireEditorOpen(actionVerb) {
+    if (document.getElementById("f-title")) return true;
+    Modal.alert('Abra "Catálogo > Editor de Metadados" antes de ' + actionVerb + '.', 'Ação Necessária', 'warning');
+    return false;
+}
+
 function collectFormData() {
-    if (!document.getElementById("f-title")) {
-        Modal.alert('Abra "Catálogo > Editor de Metadados" antes de exportar.', 'Ação Necessária', 'warning');
-        return null;
-    }
+    if (!_requireEditorOpen('exportar')) return null;
     var get = function (id) {
         var el = document.getElementById("f-" + id);
         return el ? el.value.trim() : "";
@@ -1335,8 +1359,7 @@ function renderDistSugg() {
     if (!_distSugg.length) { box.style.display = 'none'; return; }
     box.innerHTML = _distSugg.map(function (r, i) {
         return '<div class="suggestion-item" onclick="pickGeoServerLayer(' + i + ')">' +
-            '<span class="sugg-sigla">' + escHtml(r.workspace || '') + '</span>' +
-            '<span class="sugg-name">' + escHtml(r.title || r.name || '') + '</span>' +
+            '<span class="sugg-name"><b>' + escHtml(r.workspace || '') + '</b> - ' + escHtml(r.title || r.name || '') + '</span>' +
             '</div>';
     }).join('');
     box.style.display = 'block';

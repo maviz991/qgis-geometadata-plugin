@@ -77,11 +77,10 @@ class MetadataService:
         """
         Busca o XML completo de um registro do GN por uuid e retorna já convertido
         pra dict (mesmo formato usado por load_layer_metadata/import_xml_file).
-        Retorna None se o registro não existir ou a sessão não estiver autenticada.
+        Retorna None se o registro não existir. Funciona sem login pra registros públicos
+        (sessão anônima) — GN só rejeita (401/403) se o registro exigir autenticação.
         """
-        api_session = self.plugin.api_session
-        if not api_session:
-            raise Exception("Sessão da API não foi inicializada. Faça login primeiro.")
+        api_session = self.plugin.api_session or requests.Session()
 
         records_url = config_loader_instance.get_geonetwork_url().get('records_url')
         if not records_url:
