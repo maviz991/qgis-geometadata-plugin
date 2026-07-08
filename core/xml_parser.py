@@ -19,6 +19,43 @@ def get_element_attribute(parent_element, xpath, attr_name, ns_map):
         return element.get(attr_name)
     return None
 
+def _parse_responsible_party(rp_node, ns_map):
+    """Converte um nó gmd:CI_ResponsibleParty no formato {isManual, data:{...}}
+    esperado pelos arrays contacts/metadataAuthorContacts/processorContacts do JS
+    (mesmo shape gravado por _build_contact_block em core/xml_generator.py)."""
+    if rp_node is None:
+        return None
+    uuid = rp_node.get('uuid')
+    contact = {
+        'sigla':    get_element_text(rp_node, './gmd:individualName/gco:CharacterString', ns_map),
+        'org':      get_element_text(rp_node, './gmd:organisationName/gco:CharacterString', ns_map),
+        'position': get_element_text(rp_node, './gmd:positionName/gco:CharacterString', ns_map),
+        'phone':    get_element_text(rp_node, './/gmd:voice/gco:CharacterString', ns_map),
+        'address':  get_element_text(rp_node, './/gmd:deliveryPoint/gco:CharacterString', ns_map),
+        'city':     get_element_text(rp_node, './/gmd:city/gco:CharacterString', ns_map),
+        'state':    get_element_text(rp_node, './/gmd:administrativeArea/gco:CharacterString', ns_map),
+        'zip':      get_element_text(rp_node, './/gmd:postalCode/gco:CharacterString', ns_map),
+        'country':  get_element_text(rp_node, './/gmd:country/gco:CharacterString', ns_map) or 'Brasil',
+        'email':    get_element_text(rp_node, './/gmd:electronicMailAddress/gco:CharacterString', ns_map),
+        'role':     get_element_attribute(rp_node, './gmd:role/gmd:CI_RoleCode', 'codeListValue', ns_map) or 'pointOfContact',
+    }
+    if uuid:
+        contact['uuid'] = uuid
+    if not contact['org'] and not contact['email'] and not contact['sigla']:
+        return None
+    # Contato com uuid real veio vinculado ao diretório do GN (xlink:href apontando pra
+    # registry) — 'gn' faz o JS mostrar a badge "Catálogo Online" e tratar como não-manual
+    # (mesma lógica de _srcToIsManual/hasCatalogContact em app.js). Sem uuid, é manual mesmo.
+    return {'isManual': ('gn' if uuid else True), 'data': contact}
+
+def _parse_responsible_party_list(rp_nodes, ns_map):
+    result = []
+    for node in rp_nodes:
+        parsed = _parse_responsible_party(node, ns_map)
+        if parsed:
+            result.append(parsed)
+    return result
+
 # --- A função principal ---
 def parse_xml_to_dict(source, is_string=False):
     """
@@ -27,6 +64,12 @@ def parse_xml_to_dict(source, is_string=False):
     try:
         # --- ETAPA 1: Parsing Único ---
         if is_string:
+            # lxml recusa `str` com declaração <?xml ... encoding="..."?> (só aceita
+            # bytes nesse caso, pra respeitar o encoding declarado). Praticamente todo
+            # XML MGB 2.0 real tem essa declaração — convertendo pra bytes evita o erro
+            # "Unicode strings with encoding declaration are not supported".
+            if isinstance(source, str):
+                source = source.encode('utf-8')
             root = ET.fromstring(source)
         else: # caminho de arquivo
             tree = ET.parse(source)
@@ -38,32 +81,60 @@ def parse_xml_to_dict(source, is_string=False):
             'gco': 'http://www.isotc211.org/2005/gco',
             'gts': 'http://www.isotc211.org/2005/gts',
             'srv': 'http://www.isotc211.org/2005/srv',
-            'gml': 'http://www.opengis.net/gml',
+            'gml': 'http://www.opengis.net/gml/3.2',  # tem que bater com o NS usado em xml_generator.py
             'xlink': 'http://www.w3.org/1999/xlink'
         }
-        
+
         data = {}
 
         # --- PREENCHIMENTO DAS INFORMAÇÕES GERAIS ---
-        data['LanguageCode'] = get_element_attribute(root, './gmd:language/gmd:LanguageCode', 'codeListValue', ns)
+        # gmd:language na raiz é o idioma do METADADO (campo metadataLanguage do form) —
+        # o idioma do DADO (LanguageCode) é um gmd:language separado, dentro de id_info.
+        data['metadataLanguage'] = get_element_attribute(root, './gmd:language/gmd:LanguageCode', 'codeListValue', ns)
         data['characterSet'] = get_element_attribute(root, './gmd:characterSet/gmd:MD_CharacterSetCode', 'codeListValue', ns)
         data['hierarchyLevel'] = get_element_attribute(root, './gmd:hierarchyLevel/gmd:MD_ScopeCode', 'codeListValue', ns)
+
+        # Sistema de Referência (EPSG)
+        ref_id = root.find('.//gmd:referenceSystemInfo/gmd:MD_ReferenceSystem/gmd:referenceSystemIdentifier/gmd:RS_Identifier', namespaces=ns)
+        if ref_id is not None:
+            data['epsgCode'] = get_element_text(ref_id, './gmd:code/gco:CharacterString', ns)
+            data['epsgTitle'] = get_element_text(ref_id, './gmd:codeSpace/gco:CharacterString', ns)
 
         # <<< NOVA SEÇÃO: Extrai o UUID do próprio metadado para permitir atualizações >>>
         data['metadata_uuid'] = get_element_text(root, './gmd:fileIdentifier/gco:CharacterString', ns)
         if data.get('metadata_uuid'):
             pass
             #print(f"UUID oficial do metadado encontrado no arquivo XML: {data['metadata_uuid']}")
-        
+
+        # Data do próprio metadado (não do dado) — usada para comparar versão local vs. GN.
+        data['dateStamp'] = get_element_text(root, './gmd:dateStamp/gco:DateTime', ns)
+
+        # Contatos de metadado (gmd:contact no nível raiz) — array no formato que o
+        # form/populateForm espera, espelhando o que _build_contact_block escreve.
+        meta_contact_rps = [c.find('./gmd:CI_ResponsibleParty', namespaces=ns)
+                             for c in root.findall('./gmd:contact', namespaces=ns)]
+        data['metadataAuthorContacts'] = _parse_responsible_party_list(meta_contact_rps, ns)
+
         # --- PREENCHIMENTO DAS INFORMAÇÕES DE IDENTIFICAÇÃO ---
         id_info = root.find('.//gmd:identificationInfo/gmd:MD_DataIdentification', namespaces=ns)
         if id_info is not None:
             data['title'] = get_element_text(id_info, './/gmd:title/gco:CharacterString', ns)
             data['edition'] = get_element_text(id_info, './/gmd:edition/gco:CharacterString', ns)
-            data['date_creation'] = get_element_text(id_info, './/gmd:date//gmd:date/gco:DateTime', ns)
+            data['date_edition'] = get_element_text(id_info, './/gmd:editionDate/gco:DateTime', ns)
+            # Campo do form é "date" (não "date_creation" — mantido também por compat legada).
+            data['date'] = get_element_text(id_info, './/gmd:citation//gmd:date/gmd:CI_Date/gmd:date/gco:DateTime', ns)
+            data['date_creation'] = data['date']
+            data['dateType'] = get_element_attribute(id_info, './/gmd:citation//gmd:dateType/gmd:CI_DateTypeCode', 'codeListValue', ns)
             data['abstract'] = get_element_text(id_info, './gmd:abstract/gco:CharacterString', ns)
+            data['purpose'] = get_element_text(id_info, './gmd:purpose/gco:CharacterString', ns)
+            data['credit'] = get_element_text(id_info, './gmd:credit/gco:CharacterString', ns)
             data['status_codeListValue'] = get_element_attribute(id_info, './gmd:status/gmd:MD_ProgressCode', 'codeListValue', ns)
-            
+
+            # Contatos do recurso (gmd:pointOfContact) — array no formato que o form espera.
+            resource_contact_rps = [c.find('./gmd:CI_ResponsibleParty', namespaces=ns)
+                                     for c in id_info.findall('./gmd:pointOfContact', namespaces=ns)]
+            data['contacts'] = _parse_responsible_party_list(resource_contact_rps, ns)
+
             keywords_list = [node.text.strip() for node in id_info.findall('.//gmd:descriptiveKeywords//gmd:keyword/gco:CharacterString', ns) if node.text]
             data['MD_Keywords'] = keywords_list
 
@@ -76,35 +147,78 @@ def parse_xml_to_dict(source, is_string=False):
             data['southBoundLatitude'] = get_element_text(id_info, './/gmd:southBoundLatitude/gco:Decimal', ns)
             data['northBoundLatitude'] = get_element_text(id_info, './/gmd:northBoundLatitude/gco:Decimal', ns)
 
+            # Extensão temporal (gml:TimePeriod)
+            data['temporalFrom'] = get_element_text(id_info, './/gmd:temporalElement//gml:TimePeriod/gml:beginPosition', ns)
+            data['temporalTo'] = get_element_text(id_info, './/gmd:temporalElement//gml:TimePeriod/gml:endPosition', ns)
+
+            # Idioma do DADO (distinto do idioma do metadado, extraído lá em cima da raiz).
+            data['LanguageCode'] = get_element_attribute(id_info, './gmd:language/gmd:LanguageCode', 'codeListValue', ns)
+
+            # Manutenção (frequência de atualização / próxima atualização)
+            maint = id_info.find('./gmd:resourceMaintenance/gmd:MD_MaintenanceInformation', namespaces=ns)
+            if maint is not None:
+                data['maintenanceFrequency'] = get_element_attribute(maint, './gmd:maintenanceAndUpdateFrequency/gmd:MD_MaintenanceFrequencyCode', 'codeListValue', ns)
+                data['dateOfNextUpdate'] = get_element_text(maint, './gmd:dateOfNextUpdate/gco:DateTime', ns) \
+                    or get_element_text(maint, './gmd:dateOfNextUpdate/gco:Date', ns)
+
+            # Restrições de acesso / uso / licença
+            md_legal = id_info.find('./gmd:resourceConstraints/gmd:MD_LegalConstraints', namespaces=ns)
+            if md_legal is not None:
+                data['useLimitation'] = get_element_text(md_legal, './gmd:useLimitation/gco:CharacterString', ns)
+                data['accessConstraints'] = get_element_attribute(md_legal, './gmd:accessConstraints/gmd:MD_RestrictionCode', 'codeListValue', ns)
+                data['useConstraints'] = get_element_attribute(md_legal, './gmd:useConstraints/gmd:MD_RestrictionCode', 'codeListValue', ns)
+                data['otherConstraints'] = get_element_text(md_legal, './gmd:otherConstraints/gco:CharacterString', ns)
+
             data['thumbnail_url'] = get_element_text(id_info, './gmd:graphicOverview/gmd:MD_BrowseGraphic/gmd:fileName/gco:CharacterString', ns)
+
+        # --- QUALIDADE / LINHAGEM (gmd:dataQualityInfo) ────────────────────────
+        lineage = root.find('.//gmd:dataQualityInfo/gmd:DQ_DataQuality/gmd:lineage/gmd:LI_Lineage', namespaces=ns)
+        if lineage is not None:
+            data['statement'] = get_element_text(lineage, './gmd:statement/gco:CharacterString', ns)
+            li_proc = lineage.find('./gmd:processStep/gmd:LI_ProcessStep', namespaces=ns)
+            if li_proc is not None:
+                data['processStep'] = get_element_text(li_proc, './gmd:description/gco:CharacterString', ns)
+                proc_rps = [c.find('./gmd:CI_ResponsibleParty', namespaces=ns)
+                            for c in li_proc.findall('./gmd:processor', namespaces=ns)]
+                data['processorContacts'] = _parse_responsible_party_list(proc_rps, ns)
+            data['sourceDescription'] = get_element_text(lineage, './gmd:source/gmd:LI_Source/gmd:description/gco:CharacterString', ns)
 
         # --- LEITURA DOS DADOS DA CAMADA ---
         dist_info = root.find('./gmd:distributionInfo/gmd:MD_Distribution', namespaces=ns)
         if dist_info is not None:
             online_resources = dist_info.findall('.//gmd:onLine/gmd:CI_OnlineResource', namespaces=ns)
-            
+
+            # Array no formato esperado por distResources/collectFormData (onlineResources).
+            resources_list = []
             wms_data = {}
             wfs_data = {}
 
             for online_resource in online_resources:
                 protocol = get_element_text(online_resource, './gmd:protocol/gco:CharacterString', ns)
-                if protocol == 'OGC:WMS':
-                    wms_data['geoserver_layer_name'] = get_element_text(online_resource, './gmd:name/gco:CharacterString', ns)
-                    wms_data['geoserver_layer_title'] = get_element_text(online_resource, './gmd:description/gco:CharacterString', ns)
-                    wms_data['online_protocol'] = protocol
-                    
-                    linkage_url = get_element_text(online_resource, './gmd:linkage/gmd:URL', ns)
-                    if linkage_url and '/ows?' in linkage_url:
-                        wms_data['geoserver_base_url'] = linkage_url.split('/ows?')[0]
-                elif protocol == 'OGC:WFS':
-                    wfs_data['geoserver_layer_name'] = get_element_text(online_resource, './gmd:name/gco:CharacterString', ns)
-                    wfs_data['geoserver_layer_title'] = get_element_text(online_resource, './gmd:description/gco:CharacterString', ns)
-                    wfs_data['online_protocol'] = protocol
-                    
-                    linkage_url = get_element_text(online_resource, './gmd:linkage/gmd:URL', ns)
-                    if linkage_url and '/wfs' in linkage_url:
-                        wfs_data['geoserver_base_url'] = linkage_url.split('/wfs')[0]
+                url = get_element_text(online_resource, './gmd:linkage/gmd:URL', ns)
+                name = get_element_text(online_resource, './gmd:name/gco:CharacterString', ns)
+                description = get_element_text(online_resource, './gmd:description/gco:CharacterString', ns)
+                if url:
+                    resources_list.append({
+                        'url': url, 'protocol': protocol or '',
+                        'name': name or '', 'description': description or ''
+                    })
 
+                # Mantido por compatibilidade com código legado que ainda lê wms_data/wfs_data.
+                if protocol == 'OGC:WMS':
+                    wms_data['geoserver_layer_name'] = name
+                    wms_data['geoserver_layer_title'] = description
+                    wms_data['online_protocol'] = protocol
+                    if url and '/ows?' in url:
+                        wms_data['geoserver_base_url'] = url.split('/ows?')[0]
+                elif protocol == 'OGC:WFS':
+                    wfs_data['geoserver_layer_name'] = name
+                    wfs_data['geoserver_layer_title'] = description
+                    wfs_data['online_protocol'] = protocol
+                    if url and '/wfs' in url:
+                        wfs_data['geoserver_base_url'] = url.split('/wfs')[0]
+
+            data['onlineResources'] = resources_list
             data['wms_data'] = wms_data
             data['wfs_data'] = wfs_data
 

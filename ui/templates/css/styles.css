@@ -409,9 +409,122 @@ body {
     display: block;
 }
 
+/* ── Grupo de status (badge de sincronização GN + progresso) ────── */
+.tabs-status-group {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* ── Badge de sincronização com o GeoNetwork ─────────────────────── */
+.gn-sync-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    background: #f1f5f9;
+    color: var(--fg-muted);
+    transition: background 0.15s;
+}
+
+.gn-sync-badge:hover {
+    background: #e2e8f0;
+}
+
+.gn-sync-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #94a3b8;
+    flex-shrink: 0;
+}
+
+.gn-sync-badge.checking .gn-sync-dot {
+    background: #94a3b8;
+    animation: gn-sync-pulse 1.2s ease-in-out infinite;
+}
+
+.gn-sync-badge.offline {
+    background: #f1f5f9;
+    color: var(--fg-muted);
+}
+
+.gn-sync-badge.offline .gn-sync-dot {
+    background: #94a3b8;
+}
+
+.gn-sync-badge.synced {
+    background: #dcfce7;
+    color: #16a34a;
+}
+
+.gn-sync-badge.synced .gn-sync-dot {
+    background: #22c55e;
+}
+
+.gn-sync-badge.update_available {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.gn-sync-badge.update_available .gn-sync-dot {
+    background: #f59e0b;
+}
+
+.gn-sync-badge.modified {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.gn-sync-badge.modified .gn-sync-dot {
+    background: #3b82f6;
+}
+
+@keyframes gn-sync-pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.35;
+    }
+}
+
+/* ── Banner de atualização disponível no GN ──────────────────────── */
+.gn-update-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 24px;
+    background: #fffbeb;
+    border-bottom: 1px solid #fde68a;
+    color: #92400e;
+    font-size: 13px;
+}
+
+.gn-update-banner span {
+    flex: 1;
+}
+
+.gn-update-banner-close {
+    background: none;
+    border: none;
+    font-size: 18px;
+    line-height: 1;
+    color: #92400e;
+    cursor: pointer;
+    padding: 2px 4px;
+}
+
 /* ── Progresso Circular ───────────────────────────────────────── */
 .progress-wrapper {
-    margin-left: auto;
     display: flex;
     align-items: center;
     padding-right: 12px;
@@ -1267,15 +1380,15 @@ body {
 }
 
 .proto-badge.wms {
-    background: #fef3c7;
-    color: #92400e;
-    border: 1px solid #fde68a;
+    background: #fed2c7;
+    color: #92280e;
+    border: 1px solid #fd9b8a;
 }
 
 .proto-badge.wfs {
-    background: #d1fae5;
-    color: #065f46;
-    border: 1px solid #6ee7b7;
+    background: #a0eeff;
+    color: #065f5f;
+    border: 1px solid #52b3b3;
 }
 
 .proto-badge.wcs {

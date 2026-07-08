@@ -210,3 +210,34 @@
     color: var(--fg-muted);
     font-weight: 400;
 }
+
+/* Busca dentro de modal (ex.: Buscar no Geohab) */
+.modal-search-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 10px;
+}
+
+.gn-search-results {
+    max-height: 260px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.gn-search-result {
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    color: var(--fg);
+}
+
+.gn-search-result:hover {
+    background: #fff1f2;
+    color: var(--accent);
+}

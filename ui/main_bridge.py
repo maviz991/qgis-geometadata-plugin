@@ -26,6 +26,9 @@ class MainBridge(QObject):
     gn_contacts_ready   = pyqtSignal(str, str, 'QVariant')  # key, query, results
     gn_contact_enriched = pyqtSignal(str, int, 'QVariant')  # key, idx, enriched_data
     toast               = pyqtSignal(str, str, str)         # message, title, type
+    gn_metadata_search_ready = pyqtSignal('QVariant')       # [{uuid, title, dateStamp}]
+    gn_publish_succeeded = pyqtSignal(str)                  # uuid — publicação confirmada, badge -> Sincronizado
+    local_save_succeeded = pyqtSignal(str)                  # uuid — save local (DB/sidecar) confirmado, recheca badge
 
     def __init__(self, dialog, parent=None):
         super().__init__(parent)
@@ -35,6 +38,7 @@ class MainBridge(QObject):
         self._adm_worker     = None
         self._gn_workers     = {}
         self._enrich_workers = []
+        self._gn_search_worker = None
         try:
             plugin = getattr(dialog, 'plugin', None)
             iface  = getattr(plugin, 'iface', None) or getattr(dialog, 'iface', None)
@@ -481,35 +485,46 @@ class MainBridge(QObject):
         except Exception:
             return '__no_layer__'
 
+    def _load_all_drafts(self) -> dict:
+        """Lê o arquivo de drafts inteiro: {layer_key: form_data}. Migra o formato antigo
+        (um único draft com '__layer_key__' na raiz) transparentemente na primeira leitura."""
+        import json
+        path = self._draft_path()
+        if not os.path.exists(path):
+            return {}
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                raw = json.load(f)
+            if '__layer_key__' in raw:  # formato antigo: um draft só, sem escopo por camada
+                key = raw.pop('__layer_key__')
+                return {key: raw} if key else {}
+            return raw
+        except Exception as e:
+            print(f"GeoMetadata [_load_all_drafts]: {e}")
+            return {}
+
+    def _save_all_drafts(self, drafts: dict):
+        import json
+        with open(self._draft_path(), 'w', encoding='utf-8') as f:
+            json.dump(drafts, f, ensure_ascii=False)
+
     @pyqtSlot(str)
     def save_draft(self, json_str: str):
-        """Persiste rascunho do formulário marcado com a camada ativa."""
+        """Persiste o rascunho do formulário sob a chave da camada ativa. Drafts de outras
+        camadas (já salvos antes) não são afetados — cada camada tem seu próprio slot."""
         import json
         try:
             data = json.loads(json_str)
-            data['__layer_key__'] = self._layer_key()
-            with open(self._draft_path(), 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False)
+            drafts = self._load_all_drafts()
+            drafts[self._layer_key()] = data
+            self._save_all_drafts(drafts)
         except Exception as e:
             print(f"GeoMetadata [save_draft]: {e}")
 
     @pyqtSlot(result='QVariant')
     def load_draft(self):
-        """Retorna o rascunho apenas se pertencer à camada ativa."""
-        import json
-        path = self._draft_path()
-        if not os.path.exists(path):
-            return None
-        try:
-            with open(path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            if data.get('__layer_key__') != self._layer_key():
-                return None
-            data.pop('__layer_key__', None)
-            return data
-        except Exception as e:
-            print(f"GeoMetadata [load_draft]: {e}")
-            return None
+        """Retorna o rascunho da camada ativa, se existir."""
+        return self._load_all_drafts().get(self._layer_key())
 
     @pyqtSlot(result='QVariant')
     def load_layer_metadata(self):
@@ -532,12 +547,83 @@ class MainBridge(QObject):
             print(f"GeoMetadata [load_layer_metadata]: {e}")
             return None
 
+    @pyqtSlot(result='QVariant')
+    def import_xml_file(self):
+        """Abre um XML MGB 2.0 escolhido pelo usuário e retorna como dict pra popular o form."""
+        from qgis.PyQt.QtWidgets import QFileDialog
+        path, _ = QFileDialog.getOpenFileName(self._dialog, "Abrir Metadado XML", "", "XML (*.xml)")
+        if not path:
+            return None
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                xml_content = f.read()
+            from ..core import xml_parser
+            return xml_parser.parse_xml_to_dict(xml_content, is_string=True)
+        except Exception as e:
+            print(f"GeoMetadata [import_xml_file]: {e}")
+            return None
+
+    # ── Puxar do GeoNetwork (busca manual + checagem de sincronização) ─────────
+
+    @pyqtSlot(str)
+    def search_gn_metadata(self, query: str):
+        """Busca registros de metadado (não subtemplates) no GN por título. Emite gn_metadata_search_ready."""
+        session = getattr(getattr(self._dialog, 'plugin', None), 'api_session', None)
+        if not session:
+            self.gn_metadata_search_ready.emit([])
+            return
+        gn_base = config_loader.get_geonetwork_base_url()
+        if not gn_base:
+            self.gn_metadata_search_ready.emit([])
+            return
+        from .web_bridge import _GnRecordSearchWorker
+        if self._gn_search_worker and self._gn_search_worker.isRunning():
+            self._gn_search_worker.quit()
+        worker = _GnRecordSearchWorker(session, query, gn_base)
+        worker.done.connect(lambda results: self.gn_metadata_search_ready.emit(results))
+        self._gn_search_worker = worker
+        worker.start()
+
+    @pyqtSlot(str, result='QVariant')
+    def pull_from_gn(self, uuid: str):
+        """Busca o XML completo de um registro do GN por uuid e retorna como dict."""
+        try:
+            metadata_service = getattr(self._dialog, 'metadata_service', None)
+            if not metadata_service:
+                return None
+            return metadata_service.fetch_from_geonetwork(uuid, config_loader)
+        except Exception as e:
+            print(f"GeoMetadata [pull_from_gn]: {e}")
+            return None
+
+    @pyqtSlot(str, str, result=str)
+    def check_gn_sync(self, uuid: str, local_date_stamp: str) -> str:
+        """Compara o dateStamp local com o do GN. Retorna 'synced', 'update_available',
+        'not_found', 'offline' (sem sessão/uuid) ou 'error'."""
+        if not uuid:
+            return 'offline'
+        try:
+            metadata_service = getattr(self._dialog, 'metadata_service', None)
+            if not metadata_service or not getattr(getattr(self._dialog, 'plugin', None), 'api_session', None):
+                return 'offline'
+            remote = metadata_service.fetch_from_geonetwork(uuid, config_loader)
+            if not remote:
+                return 'not_found'
+            remote_date = remote.get('dateStamp') or ''
+            if remote_date and local_date_stamp and remote_date > local_date_stamp:
+                return 'update_available'
+            return 'synced'
+        except Exception as e:
+            print(f"GeoMetadata [check_gn_sync]: {e}")
+            return 'error'
+
     @pyqtSlot()
     def clear_draft(self):
-        """Remove o rascunho salvo."""
+        """Remove só o rascunho da camada ativa — não mexe nos drafts de outras camadas."""
         try:
-            if os.path.exists(self._draft_path()):
-                os.remove(self._draft_path())
+            drafts = self._load_all_drafts()
+            if drafts.pop(self._layer_key(), None) is not None:
+                self._save_all_drafts(drafts)
         except Exception as e:
             print(f"GeoMetadata [clear_draft]: {e}")
 

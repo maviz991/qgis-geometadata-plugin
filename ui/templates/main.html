@@ -29,6 +29,8 @@
                 <div class="dropdown-content">
                     <a href="#" onclick="trySaveMetadata()">Continuar Depois</a>
                     <a href="#" onclick="tryExportXml()">Exportar Metadado</a>
+                    <a href="#" onclick="tryImportXml()">Importar Metadado</a>
+                    <a href="#" onclick="tryResetForm()">Descartar Alterações</a>
                 </div>
             </div>
 
@@ -72,10 +74,12 @@
                         <polyline points="2 17 12 22 22 17" />
                         <polyline points="2 12 12 17 22 12" />
                     </svg>
-                    <span id="layer-badge-name" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+                    <span id="layer-badge-name"
+                        style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
                     <svg id="layer-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;transition:transform .2s">
-                        <path d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
+                        stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
+                        style="flex-shrink:0;transition:transform .2s">
+                        <path d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
                     </svg>
                 </button>
                 <div id="layer-picker-dropdown" class="layer-picker-dropdown" style="display:none"></div>

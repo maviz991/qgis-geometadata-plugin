@@ -108,6 +108,52 @@ class _GnContactsWorker(QThread):
             self.done.emit(self._key, self._query, [])
 
 
+class _GnRecordSearchWorker(QThread):
+    """Busca registros de metadado (não subtemplates de contato) no GN por título,
+    pra alimentar o fluxo de 'Puxar do Geohab' do editor."""
+    done = pyqtSignal(list)  # [{uuid, title, dateStamp}]
+
+    def __init__(self, session, query: str, gn_base_url: str):
+        super().__init__()
+        self._session = session
+        self._query   = query
+        self._gn_url  = gn_base_url.rstrip('/')
+
+    def run(self):
+        try:
+            es_url  = f"{self._gn_url}/srv/api/search/records/_search"
+            payload = {
+                "size": 20,
+                "query": {"bool": {"must": [
+                    {"term": {"isTemplate": "n"}},
+                    {"match": {"resourceTitleObject.default": self._query}}
+                ]}}
+            }
+            resp = self._session.post(es_url, json=payload, timeout=8, verify=False,
+                                      headers={'Accept': 'application/json'})
+            if resp.status_code != 200:
+                self.done.emit([])
+                return
+
+            hits = resp.json().get('hits', {}).get('hits', [])
+            results = []
+            for hit in hits:
+                src = hit.get('_source', {})
+                title = (src.get('resourceTitleObject') or {}).get('default', '') or ''
+                uuid = src.get('uuid', '')
+                if not uuid or not title:
+                    continue
+                results.append({
+                    'uuid': uuid,
+                    'title': title,
+                    'dateStamp': src.get('changeDate', ''),
+                })
+            self.done.emit(results)
+        except Exception as exc:
+            print(f"GeoMetadata [GnRecordSearchWorker]: {exc}")
+            self.done.emit([])
+
+
 class _GnContactEnrichWorker(QThread):
     """Busca o XML de um sub-template de contato do GeoNetwork e extrai todos os campos."""
     done = pyqtSignal(str, int, dict)  # section_key, idx, enriched_data

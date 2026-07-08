@@ -278,6 +278,11 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.form_is_dirty = False
         self._load_contacts()
 
+        # Corrige em background, sem UI, um lxml 5.2.1 bugado (crash nativo
+        # conhecido ao gerar XML — ver env_checker.silently_fix_lxml_if_needed).
+        from .core.env_checker import silently_fix_lxml_if_needed
+        silently_fix_lxml_if_needed()
+
         palette = iface.mainWindow().palette()
         base_color = palette.color(palette.Base)
         luminance = (0.299 * base_color.red() + 0.587 * base_color.green() + 0.114 * base_color.blue())
@@ -452,11 +457,6 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self._action_exp_xml.setToolTip("Gera e salva o arquivo XML MGB 2.0 no disco")
         menu_geonetwork.addSeparator()
         menu_geonetwork.addAction(self._action_exp_xml)
-
-        self._action_import_metadata = QAction("Importar Metadado (.xml)...", self)
-        self._action_import_metadata.setToolTip("Abre um XML MGB 2.0 existente para edição (em breve)")
-        self._action_import_metadata.setEnabled(False)  # placeholder
-        menu_geonetwork.addAction(self._action_import_metadata)
 
         self._btn_geonetwork = NavButton("GeoNetwork")
         self._btn_geonetwork.setObjectName("HeaderDropdownButton")
@@ -767,7 +767,19 @@ class GeoMetadataDialog(QtWidgets.QDialog):
 
             if uuid_criado:
                 metadata_dict['metadata_uuid'] = uuid_criado
+                # Busca o dateStamp real que o GN carimbou ao processar (não o que estava
+                # no formulário antes de publicar) — sem isso, a próxima checagem de sync
+                # sempre acha que o GN tem uma "atualização nova", já que o dateStamp local
+                # nunca bateria com o que o GN de fato gravou.
+                try:
+                    remote = self.metadata_service.fetch_from_geonetwork(uuid_criado, config_loader)
+                    if remote and remote.get('dateStamp'):
+                        metadata_dict['dateStamp'] = remote['dateStamp']
+                except Exception:
+                    pass
                 self.save_metadata(metadata_dict=metadata_dict, is_automatic_resave=True)
+                if hasattr(self, 'bridge'):
+                    self.bridge.gn_publish_succeeded.emit(uuid_criado)
                 view_url = config_loader.get_metadata_view_url(uuid_criado)
                 self.show_toast(
                     'Sucesso',
@@ -788,7 +800,12 @@ class GeoMetadataDialog(QtWidgets.QDialog):
 
         layer = self.iface.activeLayer()
         cdhu_data = self.contatos_predefinidos.get('cdhu', {})
-        self.persistence_service.save(layer, metadata_dict, cdhu_data, is_automatic_resave, self)
+        success = self.persistence_service.save(layer, metadata_dict, cdhu_data, is_automatic_resave, self)
+        # Só avisa o badge num save explícito do usuário ("Continuar Depois") — o resave
+        # automático pós-publicação já tem seu próprio aviso (gn_publish_succeeded).
+        if success and not is_automatic_resave and hasattr(self, 'bridge'):
+            uuid = metadata_dict.get('metadata_uuid') or metadata_dict.get('metadataId') or ''
+            self.bridge.local_save_succeeded.emit(uuid)
 
     def sanitize_title(self, value):
         """Remove caracteres especiais e normaliza espaços para uso como nome de arquivo."""

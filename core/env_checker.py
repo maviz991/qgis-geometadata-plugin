@@ -65,6 +65,62 @@ def is_webengine_available() -> tuple:
     return False, last_err
 
 
+# ---------------------------------------------------------------------------
+# Fix silencioso: lxml 5.2.1 tem um bug de empacotamento do wheel Windows que
+# causa crash nativo (access violation em xmlDictReference) ao construir XML
+# — ver qgis/QGIS#58205. Corrigido na 5.2.2+. Atualizamos em background sem
+# incomodar o usuário; só é aplicado depois que o QGIS for reiniciado (módulo
+# nativo já carregado na sessão atual não pode ser trocado a quente).
+_LXML_SAFE_MIN_VERSION = (5, 2, 2)
+_lxml_fix_attempted = False
+_lxml_installer_ref = None  # mantém a QThread viva enquanto roda em background
+
+
+def _lxml_version_tuple():
+    try:
+        import lxml
+        return tuple(int(p) for p in lxml.__version__.split('.')[:3])
+    except Exception:
+        return None
+
+
+def is_lxml_safe() -> bool:
+    """False somente quando a versão instalada é conhecidamente afetada pelo bug."""
+    version = _lxml_version_tuple()
+    if version is None:
+        return True
+    return version >= _LXML_SAFE_MIN_VERSION
+
+
+def silently_fix_lxml_if_needed():
+    """Dispara `pip install --user --upgrade lxml>=5.2.2` em background, sem
+    diálogo nem aviso, se a versão instalada tiver o bug de crash conhecido.
+    Roda no máximo uma vez por sessão do QGIS."""
+    global _lxml_fix_attempted, _lxml_installer_ref
+    if _lxml_fix_attempted or is_lxml_safe():
+        return
+    _lxml_fix_attempted = True
+
+    from .dependency_installer import DependencyInstaller
+    installer = DependencyInstaller(
+        f"lxml>={'.'.join(map(str, _LXML_SAFE_MIN_VERSION))}",
+        extra_args=["--upgrade", "--user"]
+    )
+    def _release_ref():
+        global _lxml_installer_ref
+        _lxml_installer_ref = None
+
+    installer.install_success.connect(
+        lambda pkg: print(f"GeoMetadata: {pkg} atualizado em background (efetivo após reiniciar o QGIS).")
+    )
+    installer.install_failed.connect(
+        lambda pkg, err: print(f"GeoMetadata: falha ao atualizar {pkg} em background: {err}")
+    )
+    installer.finished.connect(_release_ref)
+    _lxml_installer_ref = installer
+    installer.start()
+
+
 def missing_packages() -> List[str]:
     """
     Retorna lista de pacotes pip que precisam ser instalados.

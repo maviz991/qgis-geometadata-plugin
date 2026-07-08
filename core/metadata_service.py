@@ -73,6 +73,32 @@ class MetadataService:
         else:
             raise Exception(f"Status inesperado: {response.status_code}")
 
+    def fetch_from_geonetwork(self, uuid, config_loader_instance):
+        """
+        Busca o XML completo de um registro do GN por uuid e retorna já convertido
+        pra dict (mesmo formato usado por load_layer_metadata/import_xml_file).
+        Retorna None se o registro não existir ou a sessão não estiver autenticada.
+        """
+        api_session = self.plugin.api_session
+        if not api_session:
+            raise Exception("Sessão da API não foi inicializada. Faça login primeiro.")
+
+        records_url = config_loader_instance.get_geonetwork_url().get('records_url')
+        if not records_url:
+            raise ValueError("A URL do GeoNetwork não está definida corretamente no config.json.")
+
+        response = api_session.get(
+            f"{records_url}/{uuid}/formatters/xml",
+            timeout=15,
+            verify=False
+        )
+        if response.status_code == 404:
+            return None
+        response.raise_for_status()
+
+        from .xml_parser import parse_xml_to_dict
+        return parse_xml_to_dict(response.text, is_string=True)
+
     def translate_http_error(self, error_text):
         """Traduz mensagens comuns do GeoNetwork"""
         lower_error = error_text.lower()

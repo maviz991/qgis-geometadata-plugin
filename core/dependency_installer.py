@@ -40,9 +40,10 @@ class DependencyInstaller(QThread):
     install_success = pyqtSignal(str)       # nome do pacote
     install_failed  = pyqtSignal(str, str)  # nome do pacote, mensagem de erro
 
-    def __init__(self, package: str, parent=None):
+    def __init__(self, package: str, parent=None, extra_args=None):
         super().__init__(parent)
         self._package = package
+        self._extra_args = extra_args or []
 
     def run(self):
         python = _find_python_executable()
@@ -53,7 +54,7 @@ class DependencyInstaller(QThread):
 
         try:
             result = subprocess.run(
-                [python, "-m", "pip", "install", self._package, "--quiet"],
+                [python, "-m", "pip", "install", self._package, "--quiet"] + self._extra_args,
                 capture_output=True,
                 text=True,
                 timeout=300,

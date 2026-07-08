@@ -14,16 +14,22 @@ var _draftTimer = null;
 
 function _scheduleDraftSave() {
     clearTimeout(_draftTimer);
-    _draftTimer = setTimeout(function () {
-        var d = collectFormData();
-        if (!d || typeof bridge === 'undefined') return;
-        // Não sobrescreve o arquivo com formulário vazio
-        var hasContent = d.title || (d.contacts && d.contacts.length > 0) ||
-            (d.MD_Keywords && d.MD_Keywords.length > 0) || d.abstract;
-        if (!hasContent) return;
-        _editorDraft = d;
-        bridge.save_draft(JSON.stringify(d));
-    }, 1500);
+    _draftTimer = setTimeout(_saveDraftNow, 1500);
+}
+
+// Salva na hora, sem o debounce de 1.5s — usado depois de ações explícitas (pull do GN,
+// importar XML local) que não podem ficar pendentes até uma eventual troca de camada
+// disparar o timer sob a chave da camada errada.
+function _saveDraftNow() {
+    var d = collectFormData();
+    if (!d || typeof bridge === 'undefined') return;
+    // Não sobrescreve o arquivo com formulário vazio
+    var hasContent = d.title || (d.contacts && d.contacts.length > 0) ||
+        (d.MD_Keywords && d.MD_Keywords.length > 0) || d.abstract;
+    if (!hasContent) return;
+    _editorDraft = d;
+    clearTimeout(_draftTimer);
+    bridge.save_draft(JSON.stringify(d));
 }
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -342,6 +348,26 @@ function initApp() {
         Modal.alert(message, title, type);
     });
 
+    bridge.gn_publish_succeeded.connect(function (uuid) {
+        var uidEl = document.getElementById('f-metadataId');
+        if (uidEl) uidEl.value = uuid;
+        if (typeof bridge !== 'undefined') bridge.clear_draft(); // save no DB/sidecar já é a fonte da verdade agora
+        setGnBadge('synced');
+    });
+
+    // Save local (Continuar Depois) confirmado — recheca contra o GN na hora, sem
+    // esperar reabrir a camada (não força "Sincronizado": um save local sozinho não
+    // significa que bate com o GN, o checkGnSync decide o estado certo).
+    bridge.local_save_succeeded.connect(function (uuid) {
+        if (!uuid) return;
+        var data = collectFormData();
+        checkGnSync(uuid, (data && data.dateStamp) || '');
+    });
+
+    bridge.gn_metadata_search_ready.connect(function (results) {
+        _renderGnSearchResults(results);
+    });
+
     bridge.auth_status.connect(function (isLogged, username) {
         updateUserUI(isLogged, username);
     });
@@ -353,8 +379,11 @@ function initApp() {
     bridge.layer_changed.connect(function (name) {
         updateLayerBadge(name, _layerTypeMap[name]);
         _editorDraft = null;
+        dismissGnUpdateBanner();
         if (document.getElementById('f-title')) {
             resetEditorForm();
+            var badge = document.getElementById('gn-sync-badge');
+            if (badge) badge.style.display = 'none';
             _loadFormForLayer(null);
         }
     });
@@ -536,6 +565,11 @@ function onPanelLoaded(panelId) {
             containerPanel.addEventListener('change', _scheduleDraftSave);
             containerPanel.setAttribute('data-draft-listener', 'true');
         }
+        if (containerPanel && !containerPanel.hasAttribute('data-sync-listener')) {
+            containerPanel.addEventListener('input', _markGnModifiedIfNeeded);
+            containerPanel.addEventListener('change', _markGnModifiedIfNeeded);
+            containerPanel.setAttribute('data-sync-listener', 'true');
+        }
     }
 }
 
@@ -599,6 +633,28 @@ function trySaveMetadata() {
     }, 'Confirmar Salvamento');
 }
 
+function tryResetForm() {
+    Modal.confirm('Isso vai descartar as alterações não salvas deste formulário. Continuar?', function () {
+        if (typeof bridge !== 'undefined') bridge.clear_draft();
+        _editorDraft = null;
+        resetEditorForm();
+        _loadFormForLayer(null);
+    }, 'Descartar Alterações');
+}
+
+function tryImportXml() {
+    if (typeof bridge === 'undefined') return;
+    bridge.import_xml_file(function (data) {
+        if (!data) return; // usuário cancelou o diálogo, ou o arquivo não pôde ser lido
+        Modal.confirm('Isso vai substituir os dados atuais do formulário. Continuar?', function () {
+            resetEditorForm();
+            populateForm(data);
+            _saveDraftNow();
+            checkGnSync(data.metadata_uuid, data.dateStamp || '');
+        }, 'Importar Metadado');
+    });
+}
+
 // ─── Formulário ───────────────────────────────────────────────────────────────
 
 function resetEditorForm() {
@@ -615,18 +671,172 @@ function resetEditorForm() {
 function _loadFormForLayer(sessionDraft) {
     if (sessionDraft) {
         populateForm(sessionDraft);
+        checkGnSync(sessionDraft.metadata_uuid, sessionDraft.dateStamp || '');
         return;
     }
     if (typeof bridge === 'undefined') return;
     bridge.load_draft(function (draft) {
         if (draft) {
             populateForm(draft);
+            checkGnSync(draft.metadata_uuid, draft.dateStamp || '');
         } else {
             bridge.load_layer_metadata(function (saved) {
                 if (saved) populateForm(saved);
+                checkGnSync(saved && saved.metadata_uuid, (saved && saved.dateStamp) || '');
             });
         }
     });
+}
+
+// ─── Sincronização com o GeoNetwork (badge + busca manual + auto-check) ────────
+
+var _gnSyncUuid = null;
+var _gnSearchTimer = null;
+// Retrato (JSON) do formulário no momento exato em que o badge virou "Sincronizado" —
+// comparado a cada input/change pra saber se o conteúdo atual bate de novo com o que
+// tá confirmado no GN, mesmo que o usuário tenha revertido a edição manualmente (sem
+// usar nenhum botão de Descartar/Publicar/Puxar).
+var _gnSyncSnapshot = null;
+
+var _GN_SYNC_LABELS = {
+    checking:          'Verificando…',
+    offline:           'Offline',
+    synced:            'Sincronizado',
+    modified:          'Modificado',
+    update_available:  'Atualização disponível',
+    not_found:         'Não encontrado no GN',
+    error:             'Erro ao verificar'
+};
+
+function setGnBadge(state) {
+    var badge = document.getElementById('gn-sync-badge');
+    var label = document.getElementById('gn-sync-label');
+    if (!badge || !label) return;
+    badge.className = 'gn-sync-badge ' + state;
+    badge.style.display = 'flex';
+    badge.dataset.title = state === 'offline'
+        ? 'Metadado ainda não publicado no Geohab. Clique pra buscar um registro existente.'
+        : state === 'modified'
+            ? 'Editado localmente desde a última sincronização com o Geohab.'
+            : '';
+    label.textContent = _GN_SYNC_LABELS[state] || state;
+    if (state === 'synced') {
+        var snap = collectFormData();
+        if (snap) _gnSyncSnapshot = JSON.stringify(snap);
+    }
+
+    var banner = document.getElementById('gn-update-banner');
+    if (banner) banner.style.display = (state === 'update_available') ? 'flex' : 'none';
+}
+
+// Chamado a cada input/change do formulário. Compara o conteúdo atual contra o retrato
+// do último "Sincronizado" conhecido: se bater de novo, volta pra Sincronizado sozinho
+// (mesmo sem clicar em Descartar); se divergir, vira "Modificado". Só alterna entre
+// esses dois estados — não interfere em checking/offline/not_found/update_available.
+function _markGnModifiedIfNeeded() {
+    if (_gnSyncSnapshot === null) return;
+    var badge = document.getElementById('gn-sync-badge');
+    if (!badge) return;
+    var isSynced = badge.classList.contains('synced');
+    var isModified = badge.classList.contains('modified');
+    if (!isSynced && !isModified) return;
+    var current = collectFormData();
+    if (!current) return;
+    var matches = JSON.stringify(current) === _gnSyncSnapshot;
+    if (matches && isModified) {
+        setGnBadge('synced');
+    } else if (!matches && isSynced) {
+        setGnBadge('modified');
+    }
+}
+
+function checkGnSync(uuid, dateStamp) {
+    _gnSyncUuid = uuid || null;
+    if (!uuid || typeof bridge === 'undefined') {
+        setGnBadge('offline');
+        return;
+    }
+    // Sessão é checada de verdade do lado Python (check_gn_sync olha
+    // self._dialog.plugin.api_session ao vivo) — não usar _isLogged aqui, é só um
+    // cache de UI que pode ficar desatualizado logo após login/reconexão.
+    setGnBadge('checking');
+    bridge.check_gn_sync(uuid, dateStamp || '', function (result) {
+        setGnBadge(result);
+    });
+}
+
+function onGnSyncBadgeClick() {
+    var badge = document.getElementById('gn-sync-badge');
+    if (!badge) return;
+    if (badge.classList.contains('offline')) {
+        openGnSearchModal();
+    } else if (badge.classList.contains('update_available')) {
+        applyGnUpdate();
+    } else if (badge.classList.contains('synced')) {
+        Modal.alert('Este metadado já está sincronizado com o Geohab.', 'Sincronizado', 'success');
+    } else if (badge.classList.contains('modified')) {
+        Modal.alert('Você tem alterações locais não publicadas.<br><br>Publique no Geohab ("Catálogo > Publicar Metadado") pra sincronizar, ou "Arquivo > Descartar Alterações" pra voltar ao último estado sincronizado.', 'Modificado', 'warning');
+    } else if (badge.classList.contains('not_found')) {
+        Modal.alert('Este metadado tem um UUID salvo localmente, mas não foi encontrado no catálogo Geohab (nunca publicado, ou removido de lá).', 'Não encontrado no GN', 'warning');
+    }
+}
+
+function applyGnUpdate() {
+    if (!_gnSyncUuid) return;
+    pullGnRecord(_gnSyncUuid);
+}
+
+function dismissGnUpdateBanner() {
+    var banner = document.getElementById('gn-update-banner');
+    if (banner) banner.style.display = 'none';
+}
+
+function openGnSearchModal() {
+    if (typeof bridge === 'undefined') {
+        Modal.alert('Conecte ao Geohab primeiro.', 'Não Autenticado', 'warning');
+        return;
+    }
+    var bodyHtml =
+        '<input type="text" id="gn-search-input" class="modal-search-input" placeholder="Buscar metadado publicado no Geohab...">' +
+        '<div id="gn-search-results" class="gn-search-results"></div>';
+    Modal.show({ title: 'Buscar no Geohab', message: bodyHtml, buttons: [{ label: 'Fechar', primary: false, onClick: null }] });
+
+    var input = document.getElementById('gn-search-input');
+    if (!input) return;
+    input.focus();
+    input.addEventListener('input', function () {
+        clearTimeout(_gnSearchTimer);
+        var q = input.value.trim();
+        _gnSearchTimer = setTimeout(function () { bridge.search_gn_metadata(q); }, 300);
+    });
+}
+
+function _renderGnSearchResults(results) {
+    var box = document.getElementById('gn-search-results');
+    if (!box) return; // modal já foi fechado
+    if (!results || !results.length) {
+        box.innerHTML = '<div class="empty-state">Nenhum resultado.</div>';
+        return;
+    }
+    box.innerHTML = results.map(function (r) {
+        return '<div class="gn-search-result" onclick="pullGnRecord(\'' + r.uuid + '\')">' + r.title + '</div>';
+    }).join('');
+}
+
+function pullGnRecord(uuid) {
+    Modal.close();
+    Modal.confirm('Isso vai substituir os dados atuais do formulário. Continuar?', function () {
+        bridge.pull_from_gn(uuid, function (data) {
+            if (!data) {
+                Modal.alert('Não foi possível carregar esse registro do Geohab.', 'Erro', 'error');
+                return;
+            }
+            resetEditorForm();
+            populateForm(data);
+            _saveDraftNow();
+            checkGnSync(data.metadata_uuid, data.dateStamp || '');
+        });
+    }, 'Puxar do Geohab');
 }
 
 function collectFormData() {
@@ -677,6 +887,7 @@ function collectFormData() {
         sourceDescription: get("sourceDescription"),
         processorContacts: procContacts,
         metadataId: get("metadataId"),
+        metadata_uuid: get("metadataId"), // alias — mesma chave usada por xml_parser.py/pull do GN
         metadataLanguage: get("metadataLanguage"),
         metadataAuthorContacts: metaContacts,
         onlineResources: distResources.slice(),
@@ -892,6 +1103,13 @@ function populateForm(data) {
             updateCustomSelect(el);
         }
     });
+    // metadata_uuid (chave usada pelo xml_parser.py/GN) é alias de metadataId (chave do
+    // campo do form) — sem isso, dado puxado do GN ou importado de arquivo local não
+    // preenche o UUID real do registro, mantendo o UUID aleatório do resetEditorForm().
+    if (data.metadata_uuid) {
+        var uidEl = document.getElementById('f-metadataId');
+        if (uidEl) uidEl.value = data.metadata_uuid;
+    }
     if (Array.isArray(data.MD_Keywords) && data.MD_Keywords.length) {
         keywords = data.MD_Keywords.slice();
         renderKeywords();

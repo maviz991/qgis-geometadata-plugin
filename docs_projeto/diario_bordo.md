@@ -636,3 +636,99 @@ Fix em `core/metadata_service.py` (`push_to_geonetwork`): passou a extrair o uui
 
 Pedido extra do usuário: mensagem de sucesso agora inclui um link "Acesse aqui" pro registro publicado (`config_loader.get_metadata_view_url(uuid_criado)`, método que já existia em `core/plugin_config.py` — monta a URL a partir do `geonetwork_url` do config, nada hardcoded), no mesmo padrão `target="_blank"` do link do CDA já usado no rodapé (`main.html`).
 
+---
+
+## Registro 14 — Links Externos, Centralização da URL do CDA e Crash Nativo do lxml (08/07/2026)
+
+### Contexto
+Sequência de três ajustes menores, todos no mesmo dia, decorrentes do trabalho do Registro 13 (toast/seletor de UUID) e de um crash reportado pelo usuário ao salvar no banco.
+
+### 1. Links Abrindo Dentro do QGIS em Vez do Navegador
+Usuário notou que o link "Acesse aqui" do toast de publicação (e outros, como o CDA no rodapé) só abriam no navegador padrão com Ctrl+clique — clique normal navegava dentro do próprio QtWebEngine embutido no QGIS.
+
+**Causa**: links com `target="_blank"` não passam por `acceptNavigationRequest()` (que já tínhamos, cobrindo só clique direto em links sem esse atributo) — o Qt delega pra `createWindow()`, que não estava implementado.
+
+**Fix**: nova classe `_ExternalLinkPage(QWebEnginePage)` em `GeoMetadata_dialog.py`:
+- `acceptNavigationRequest()`: se for clique em link (`NavigationTypeLinkClicked`) com esquema `http`/`https`, abre via `QDesktopServices.openUrl()` e bloqueia a navegação interna. Links `file://` (usados pela navegação por `href="#"` do próprio SPA — "Editor de Metadado", "Publicar Metadado" etc.) passam direto, sem interferência.
+- `createWindow()`: cria uma `QWebEnginePage` descartável, escuta `urlChanged` (dispara quando o Qt define a URL de destino do `target="_blank"`), abre externamente e destrói a página fantasma — sem popup real.
+- Conectado via `self.web_view.setPage(_ExternalLinkPage(self.web_view))`, antes do `QWebChannel`. Cobre todos os links do plugin de uma vez.
+
+### 2. Centralização da URL do CDA
+Pedido do usuário: a URL do CDA (`https://cda.cdhu.sp.gov.br/marketplace/formcreator/front/formdisplay.php?id=36`) estava hardcoded em 4 lugares diferentes (`core/persistence_service.py`, `ui/setup_dialog.py` ×2, `ui/web_bridge.py`, `ui/templates/main.html`). Centralizada em `assets/config.json` (chave `cda_url`) + `config_loader.get_cda_url()`. O link do rodapé em `main.html` (HTML estático) agora é preenchido em runtime via JS, lendo `data.cda_url` do retorno de `bridge.get_initial_data()` — variável global `CDA_URL` em `app.js`, reaproveitável por outros pontos do JS no futuro.
+
+Deixados de fora, de propósito (código morto confirmado nas auditorias anteriores, não referenciado por nenhum `.py` do plugin): `ui/templates/login.html` (usado só pelo `LoginDialog` nativo nunca conectado), `Guide_user.html`, `user_guide.html`, `editando.html`.
+
+### 3. Crash Nativo "Windows fatal exception: access violation" ao Salvar
+Usuário reportou crash do QGIS inteiro (não uma exceção Python capturável) ao salvar metadado no banco. Traceback apontava pra `xml_generator.py:145`, dentro de `ET.Element(...)` — literalmente a criação do elemento raiz do XML. Reabrir o QGIS resolveu, indicando comportamento intermitente (race condition), não bug determinístico de lógica.
+
+**Investigação**: o stack trace nativo mostrava o crash dentro de `xmlDictReference` (função interna do libxml2, usada por trás do `lxml`) ao tentar entrar numa critical section do Windows — sinal de corrupção de memória por concorrência. Verificação descartou threads do próprio plugin: nenhuma `QThread` em background usa `lxml` (a única que parseia XML de contato do GN, `_GnContactEnrichWorker` em `web_bridge.py`, usa regex puro, não lxml). Busca na web confirmou: é um bug conhecido e já documentado — [qgis/QGIS#58205](https://github.com/qgis/QGIS/issues/58205) — um bug de empacotamento do wheel Windows do **lxml 5.2.1** especificamente, corrigido na 5.2.2+. Confirmado no disco do usuário: `C:\Program Files\QGIS 3.34.12\apps\Python312\Lib\site-packages\lxml-5.2.1.dist-info` — a versão exata afetada.
+
+**Fix**: em vez de expor isso como mais um item na `SetupDialog` (visível, com label amigável, como `msal`/`PyQtWebEngine`), o usuário pediu correção silenciosa. Implementado:
+- `core/dependency_installer.py`: `DependencyInstaller` ganhou parâmetro opcional `extra_args` (lista de flags extras pro `pip install`), sem alterar o comportamento dos usos existentes.
+- `core/env_checker.py`: `is_lxml_safe()` compara a versão instalada contra `(5, 2, 2)`; `silently_fix_lxml_if_needed()` dispara `pip install --user --upgrade "lxml>=5.2.2"` em background via `DependencyInstaller`, sem diálogo, uma vez por sessão do QGIS (referência à `QThread` mantida num global do módulo pra não ser coletada pelo GC no meio da execução).
+- `GeoMetadata_dialog.py`: chamado no `__init__`, junto com `_load_contacts()`.
+
+**Limitação conhecida**: por ser um módulo nativo (`.pyd`) já carregado em memória na sessão atual do QGIS, o upgrade baixado só passa a valer depois que o usuário **reiniciar o QGIS** — não elimina o risco de crash na sessão corrente em que o fix é aplicado.
+
+---
+
+## Registro 15 — Reset, Importar Metadado, Pull do GeoNetwork e Badge de Sincronização (08/07/2026)
+
+### Contexto
+Pedido do usuário pra resolver um gap do sistema de draft (editar por teste e não conseguir voltar ao último save nem limpar o form) integrado a três funcionalidades novas relacionadas: importar XML local, puxar metadado do GeoNetwork (busca manual + sincronização automática) e um badge de status por registro. Planejado via `EnterPlanMode` com pesquisa prévia do código (draft/dirty mechanism, endpoints de busca do GN já usados pra contatos, `xml_parser.py`) e duas rodadas de `AskUserQuestion` pra decidir o fluxo do pull e a posição do badge.
+
+### Implementação (plano aprovado)
+1. **Descartar Alterações**: novo item no menu "Arquivo", usa `bridge.clear_draft()` (já existia, nunca era chamado por nenhum JS).
+2. **Importar Metadado (.xml)**: `QFileDialog.getOpenFileName` (padrão inédito no plugin) + slot `import_xml_file()` em `ui/main_bridge.py`.
+3. **Puxar do Geohab (busca manual)**: badge "Offline" clicável abre busca por título, reaproveitando o Elasticsearch já usado pra contatos (`_GnContactsWorker`) mas com `isTemplate: "n"` (registros, não subtemplates) — novo `_GnRecordSearchWorker` em `ui/web_bridge.py`. Escolher um resultado busca o XML completo via `{records_url}/{uuid}/formatters/xml` (mesmo endpoint já validado por `_GnContactEnrichWorker`) — novo `MetadataService.fetch_from_geonetwork()`.
+4. **Sincronização automática + badge**: ao carregar uma camada com `metadata_uuid` conhecido, `check_gn_sync()` compara `dateStamp` local vs. GN em background; se o GN tiver uma versão mais nova, badge vira "Atualização disponível" com banner não-bloqueante ("Atualizar agora") — nunca sobrescreve sozinho.
+
+Dependência resolvida antes: `xml_parser.py` não extraía `gmd:dateStamp` — adicionado.
+
+Arquivos: `core/xml_parser.py`, `core/metadata_service.py`, `ui/web_bridge.py`, `ui/main_bridge.py`, `ui/templates/main.html`, `ui/templates/panels/editor.html`, `ui/templates/js/app.js`, `ui/templates/css/{styles,modals}.css`, `GeoMetadata_dialog.py` (removido `_action_import_metadata`, `QAction` morto nunca ligado ao menu HTML vivo).
+
+### Bugs encontrados testando a implementação (mesmo dia)
+
+**Bug 9 — `ValueError: Unicode strings with encoding declaration are not supported`**: `lxml` recusa parsear uma `str` Python com `<?xml ... encoding="UTF-8"?>` (só aceita `bytes` nesse caso). Praticamente todo XML MGB 2.0 real tem essa declaração. Fix na raiz em `core/xml_parser.py` (`parse_xml_to_dict`): converte `str` pra bytes antes de `ET.fromstring()`. Vale pra todo mundo que chama a função, não só as features novas.
+
+**Bug 7 — estado de sincronização/draft sempre "volta ao inicial" ao trocar de camada**. Duas causas raiz:
+- **Chave errada**: `xml_parser.py` gera `metadata_uuid`; o campo do form (`f-metadataId`) e `collectFormData()` usam `metadataId`. Dado puxado do GN/importado nunca preenchia o UUID real do form. Fix: `populateForm()` prioriza `data.metadata_uuid`; `collectFormData()` emite `metadata_uuid` como alias.
+- **A causa de verdade, mais grave**: `geometadata_form_draft.json` nunca foi um arquivo *por camada* — é um slot único com uma tag `__layer_key__`. Qualquer save enquanto outra camada está ativa sobrescreve o draft inteiro, destruindo o da camada anterior. Usuário documentou o sintoma em detalhe (`docs_projeto/bugs.md` Bug 7) — explicava exatamente por que "Não encontrado no GN"/edições incompletas somem ao trocar de camada e voltar. Fix: `save_draft`/`load_draft`/`clear_draft` em `ui/main_bridge.py` reescritos pra um dict `{chave_da_camada: dados}`, com migração automática do formato antigo. Complementado com: (a) pull do GN e import local salvando na hora (`_saveDraftNow()`, sem o debounce de 1.5s) pra fechar a janela de corrida numa troca de camada rápida; (b) removido um atalho `!_isLogged` redundante em `checkGnSync()` (JS) que podia mostrar "Offline" com sessão válida por causa de um cache desatualizado — `check_gn_sync` do lado Python já verifica a sessão ao vivo.
+
+**Bug 8 — parser não preenchia todos os campos**: `xml_parser.py` só recuperava campos simples e **um** contato — não lia `gmd:pointOfContact`/`gmd:contact`/`gmd:processor` como as listas que `populateForm()` espera, nem `purpose`/`credit`/linhagem, nem `onlineResources` completo. Fix: novo `_parse_responsible_party()`/`_parse_responsible_party_list()` + extração dos campos faltantes, espelhando a estrutura que `xml_generator.py` escreve. Validado com round-trip completo (`generate_xml` → `parse_xml_to_dict`).
+
+**Ruído de console**: `_load_from_db` (agora chamado a cada abertura de camada por causa do `check_gn_sync` automático) imprimia o traceback completo de `psycopg2.errors.UndefinedTable` toda vez — mesma causa do Bug 1, só que no caminho de leitura. Silenciado especificamente esse caso em `core/persistence_service.py`, sem mudar o comportamento (retorna `None`).
+
+### Bug 10 — Modelo de Estados do Badge de Sincronização (mesmo dia)
+
+Testando ainda mais a fundo, o usuário achou três problemas no ciclo de vida do badge: (1) publicar no GN não atualizava o badge pra "Sincronizado" — só no próximo carregamento da camada; (2) esse próximo carregamento mostrava "Atualização disponível" (falso positivo), mesmo sendo a própria publicação recém-feita; (3) não existia um estado pra "editei algo localmente depois de sincronizar, mas ainda não publiquei".
+
+**Causa (1)+(2)**: `exportar_to_geo()` nunca avisava o JS que a publicação tinha dado certo (só o toast genérico) — o badge só reagia no próximo `checkGnSync()`, que compara `dateStamp`. E esse `dateStamp` salvo localmente era o que estava no formulário *antes* de publicar, não o que o GN carimba ao processar (sempre mais novo) — a checagem seguinte sempre concluía "o GN tem algo mais novo", mesmo sendo nossa própria publicação.
+
+**Causa (3)**: não existia rastreamento de "modificado desde a última sincronização" — só a comparação de `dateStamp` contra o GN, que não captura edição local ainda não publicada.
+
+**Modelo adotado** (proposto pelo usuário, inspirado no fluxo git):
+- **Sincronizado** — UI/salvo local bate com o GN.
+- **Modificado** — estava sincronizado, mas o usuário alterou algo sem publicar (equivalente a "unstaged changes").
+- **Não encontrado no GN** (untracked) — salvo local/banco com um uuid que não existe no GN.
+- **Offline** — nada salvo ainda, só estado de UI/sessão — estado inicial.
+
+**Fix**:
+- Novo sinal `gn_publish_succeeded(uuid)` em `ui/main_bridge.py`, emitido por `exportar_to_geo()` (`GeoMetadata_dialog.py`) logo após publicar com sucesso — que também busca de volta o `dateStamp` real do GN (`fetch_from_geonetwork`) antes de salvar localmente, eliminando a causa do falso "atualização disponível".
+- No JS, esse sinal seta o badge direto pra "Sincronizado" e limpa o draft (o save no DB/sidecar já é a fonte da verdade a partir daí).
+- Estado "Modificado": flag `_gnSyncClean` (setada em `setGnBadge` sempre que o estado vira `synced`) + listener de `input`/`change` no formulário (`_markGnModifiedIfNeeded`) que vira "Modificado" assim que o usuário mexe em algo estando limpo. Clicar no badge nesse estado explica a situação e orienta: publicar pra sincronizar, ou "Arquivo > Descartar Alterações" pra voltar ao último estado sincronizado.
+
+### Bug 11 — Mapeamento Campo a Campo `xml_generator.py` × `xml_parser.py` (mesmo dia)
+
+Testando o pull/import mais a fundo, o usuário notou vários campos vazios após popular o form a partir de um XML: tipo de data, data/hora do recurso, frequência de atualização (e possivelmente data da próxima atualização), código EPSG/SRC, campos de licença e idioma do metadado. Contatos vinham com os dados certos, mas sempre marcados "manual" na UI, mesmo quando vinculados ao diretório do GN.
+
+**Investigação**: em vez de adivinhar campo por campo, comparei sistematicamente cada `d.get(...)` de `core/xml_generator.py` contra o que `core/xml_parser.py` (já expandido no Bug 8) efetivamente extraía. Achados, em ordem de descoberta:
+
+1. **Idioma do metadado vs. idioma do dado confundidos**: `gmd:language` na raiz do `MD_Metadata` é o idioma do *metadado* (`metadataLanguage`), mas o parser jogava esse valor na chave `LanguageCode` — que na verdade é o idioma do *dado*, escrito como um `gmd:language` **separado** dentro de `id_info` (`MD_DataIdentification`). O parser nunca lia esse segundo elemento.
+2. **Chave errada pra data de citação**: extraída pra `date_creation`, mas o campo real do form (`collectFormData()`) é `date`. `dateType` (CI_DateTypeCode) nunca era extraído.
+3. **Blocos inteiros nunca lidos**: `referenceSystemInfo` (EPSG/SRC), `resourceMaintenance` (frequência/próxima atualização), `resourceConstraints` (licença) e `editionDate` — zero extração pra nenhum desses.
+4. **Bônus, achado ao adicionar extensão temporal**: o dict de namespaces do parser tinha `gml: 'http://www.opengis.net/gml'` — mas `xml_generator.py` usa `http://www.opengis.net/gml/3.2` (com versão). Qualquer XPath futuro com prefixo `gml:` nunca teria batido com nada até essa correção.
+5. **Contatos sempre "manual"**: `_parse_responsible_party()` (do Bug 8) sempre retornava `isManual: True`, independente de o `CI_ResponsibleParty` ter um atributo `uuid` real (indicando vínculo com o diretório/registry do GN). O JS usa `isManual === 'gn'` pra decidir se mostra a badge "Catálogo Online" — sem essa distinção, todo contato parecia manual mesmo quando não era.
+
+**Fix**: `core/xml_parser.py` ganhou extração de `date`/`dateType`, `date_edition`, `metadataLanguage` (raiz, corrigido) separado de `LanguageCode` (id_info, novo), `epsgCode`/`epsgTitle`, `maintenanceFrequency`/`dateOfNextUpdate`, `useLimitation`/`accessConstraints`/`useConstraints`/`otherConstraints`, e `temporalFrom`/`temporalTo` (depois de corrigir o namespace do `gml`). `_parse_responsible_party()` agora retorna `isManual: 'gn'` quando o nó tem `uuid`, senão `True`. Validado com round-trip completo (`generate_xml` → `parse_xml_to_dict`) cobrindo os 16 campos novos de uma vez — bateu 100%.
+
