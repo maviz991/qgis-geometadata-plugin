@@ -699,13 +699,23 @@ var _gnSearchTimer = null;
 var _gnSyncSnapshot = null;
 
 var _GN_SYNC_LABELS = {
-    checking:          'Verificando…',
-    offline:           'Offline',
-    synced:            'Sincronizado',
-    modified:          'Modificado',
-    update_available:  'Atualização disponível',
-    not_found:         'Não encontrado no GN',
-    error:             'Erro ao verificar'
+    checking: 'Verificando…',
+    offline: 'Offline',
+    synced: 'Sincronizado',
+    modified: 'Modificado',
+    update_available: 'Atualização disponível',
+    not_found: 'Não encontrado no Geohab',
+    error: 'Erro ao verificar'
+};
+
+var _GN_SYNC_TOOLTIPS = {
+    checking: 'Verificando se este metadado está sincronizado com o Geohab...',
+    offline: 'Metadado ainda não publicado no Geohab. Clique pra buscar um registro existente.',
+    synced: 'O formulário bate com o que está publicado no Geohab.',
+    modified: 'Editado localmente desde a última sincronização com o Geohab.',
+    update_available: 'Existe uma versão mais nova no Geohab. Clique pra puxar a atualização.',
+    not_found: 'Este metadado tem um UUID salvo localmente, mas não foi encontrado no Geohab (nunca publicado, ou removido de lá).',
+    error: 'Não foi possível verificar o status no Geohab agora.'
 };
 
 function setGnBadge(state) {
@@ -714,11 +724,7 @@ function setGnBadge(state) {
     if (!badge || !label) return;
     badge.className = 'gn-sync-badge ' + state;
     badge.style.display = 'flex';
-    badge.dataset.title = state === 'offline'
-        ? 'Metadado ainda não publicado no Geohab. Clique pra buscar um registro existente.'
-        : state === 'modified'
-            ? 'Editado localmente desde a última sincronização com o Geohab.'
-            : '';
+    badge.dataset.title = _GN_SYNC_TOOLTIPS[state] || '';
     label.textContent = _GN_SYNC_LABELS[state] || state;
     if (state === 'synced') {
         var snap = collectFormData();
@@ -777,7 +783,7 @@ function onGnSyncBadgeClick() {
     } else if (badge.classList.contains('modified')) {
         Modal.alert('Você tem alterações locais não publicadas.<br><br>Publique no Geohab ("Catálogo > Publicar Metadado") pra sincronizar, ou "Arquivo > Descartar Alterações" pra voltar ao último estado sincronizado.', 'Modificado', 'warning');
     } else if (badge.classList.contains('not_found')) {
-        Modal.alert('Este metadado tem um UUID salvo localmente, mas não foi encontrado no catálogo Geohab (nunca publicado, ou removido de lá).', 'Não encontrado no GN', 'warning');
+        Modal.alert('Este metadado tem um UUID salvo localmente ou no bando de dados, mas não foi encontrado no catálogo Geohab (nunca publicado, ou removido de lá).', 'Não encontrado no Geohab', 'warning');
     }
 }
 
@@ -792,14 +798,17 @@ function dismissGnUpdateBanner() {
 }
 
 function openGnSearchModal() {
-    if (typeof bridge === 'undefined') {
-        Modal.alert('Conecte ao Geohab primeiro.', 'Não Autenticado', 'warning');
+    if (typeof bridge === 'undefined' || !_isLogged) {
+        Modal.alert('Conecte ao Geohab primeiro pra buscar metadados publicados.', 'Não Autenticado', 'warning');
         return;
     }
     var bodyHtml =
+        '<div class="search-wrap">' +
         '<input type="text" id="gn-search-input" class="modal-search-input" placeholder="Buscar metadado publicado no Geohab...">' +
+        '<span class="search-spinner" id="gn-search-spinner" style="display:none"></span>' +
+        '</div>' +
         '<div id="gn-search-results" class="gn-search-results"></div>';
-    Modal.show({ title: 'Buscar no Geohab', message: bodyHtml, buttons: [{ label: 'Fechar', primary: false, onClick: null }] });
+    Modal.show({ title: 'Baixar metadado do Geohab', message: bodyHtml, buttons: [{ label: 'Fechar', primary: false, onClick: null }] });
 
     var input = document.getElementById('gn-search-input');
     if (!input) return;
@@ -807,19 +816,27 @@ function openGnSearchModal() {
     input.addEventListener('input', function () {
         clearTimeout(_gnSearchTimer);
         var q = input.value.trim();
+        var spinner = document.getElementById('gn-search-spinner');
+        if (spinner) spinner.style.display = q ? 'block' : 'none';
         _gnSearchTimer = setTimeout(function () { bridge.search_gn_metadata(q); }, 300);
     });
 }
 
 function _renderGnSearchResults(results) {
+    var spinner = document.getElementById('gn-search-spinner');
+    if (spinner) spinner.style.display = 'none';
     var box = document.getElementById('gn-search-results');
     if (!box) return; // modal já foi fechado
     if (!results || !results.length) {
-        box.innerHTML = '<div class="empty-state">Nenhum resultado.</div>';
+        box.innerHTML = '<div class="suggestion-item" style="color:var(--fg-muted);cursor:default;">Nenhum resultado.</div>';
         return;
     }
+    // Mesmo padrão visual da lista de sugestão de contatos (.suggestion-item). Sem badge
+    // aqui — toda essa busca já é exclusivamente no catálogo online, seria redundante.
     box.innerHTML = results.map(function (r) {
-        return '<div class="gn-search-result" onclick="pullGnRecord(\'' + r.uuid + '\')">' + r.title + '</div>';
+        return '<div class="suggestion-item" onclick="pullGnRecord(\'' + escHtml(r.uuid) + '\')">' +
+            '<span>' + escHtml(r.title) + '</span>' +
+            '</div>';
     }).join('');
 }
 

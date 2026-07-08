@@ -732,3 +732,34 @@ Testando o pull/import mais a fundo, o usuário notou vários campos vazios apó
 
 **Fix**: `core/xml_parser.py` ganhou extração de `date`/`dateType`, `date_edition`, `metadataLanguage` (raiz, corrigido) separado de `LanguageCode` (id_info, novo), `epsgCode`/`epsgTitle`, `maintenanceFrequency`/`dateOfNextUpdate`, `useLimitation`/`accessConstraints`/`useConstraints`/`otherConstraints`, e `temporalFrom`/`temporalTo` (depois de corrigir o namespace do `gml`). `_parse_responsible_party()` agora retorna `isManual: 'gn'` quando o nó tem `uuid`, senão `True`. Validado com round-trip completo (`generate_xml` → `parse_xml_to_dict`) cobrindo os 16 campos novos de uma vez — bateu 100%.
 
+### Bug 12 — Transições Automáticas do Badge (mesmo dia)
+
+Duas transições de estado do badge só aconteciam reabrindo a camada, não em tempo real:
+
+1. **Offline → Não encontrado no GN** depois de um save local ("Continuar Depois").
+2. **Modificado → Sincronizado** quando o usuário revertia uma edição manualmente pro valor original, sem usar nenhum botão (Descartar/Publicar/Puxar) — confirmado com o usuário via `AskUserQuestion` que era esse o cenário específico (não Descartar, nem pull-então-edita-então-descarta).
+
+**Causa (1)**: `save_metadata()` (`GeoMetadata_dialog.py`) descartava o retorno de `persistence_service.save(...)` e não tinha nenhum sinal avisando o JS de sucesso — diferente do `exportar_to_geo()`, que já ganhou `gn_publish_succeeded` no Bug 10.
+
+**Causa (2)**: o estado "Modificado" do Bug 10 usava só uma flag booleana (`_gnSyncClean`), que virava `true` ao entrar em "Sincronizado" e `false` no primeiro `input`/`change` — mas nunca voltava a `true` sozinha, porque não guardava *o que* tinha mudado, só *que* algo tinha mudado em algum momento.
+
+**Fix**:
+- Novo sinal `local_save_succeeded(uuid)` em `ui/main_bridge.py`, emitido por `save_metadata()` quando o save é bem-sucedido e não é o auto-resave pós-publicação (que já dispara `gn_publish_succeeded` separadamente). No JS, isso chama `checkGnSync()` na hora — sem forçar "Sincronizado" direto, já que salvar local sozinho não garante que bate com o GN.
+- Trocada a flag `_gnSyncClean` por um **retrato** do formulário: `_gnSyncSnapshot = JSON.stringify(collectFormData())`, capturado dentro de `setGnBadge()` toda vez que o estado vira `synced`. O listener de `input`/`change` (`_markGnModifiedIfNeeded`) agora compara o conteúdo atual contra esse retrato a cada edição — bate de novo → volta pra "Sincronizado" sozinho; diverge → "Modificado". Restrito a alternar só entre esses dois estados, sem interferir em checking/offline/not_found/update_available.
+
+### Registro 16 — Modal "Baixar Metadado" (busca no GN): tooltips, entrada pelo menu, busca e visual (08/07/2026)
+
+Sequência de ajustes pequenos, todos no fluxo de busca do GN que puxa metadado pro editor (o mesmo modal usado quando o badge está "Offline").
+
+**Tooltips ausentes**: só o estado "Offline" do badge tinha tooltip — os demais tinham `data-title=""`, e o sistema de tooltip global (delegated `mouseover` listener em `app.js`) só renderiza se o texto não for vazio. Fix: dict `_GN_SYNC_TOOLTIPS` com um texto por estado, usado em `setGnBadge()`.
+
+**Entrada pelo menu**: pedido de um item no menu "Arquivo" com a mesma função do clique no badge offline. Adicionado "Baixar Metadado" (`main.html`), chamando `openGnSearchModal()` diretamente — mesma função, sem duplicar lógica. Como consequência, o guard de login (`_isLogged`, além de checar se `bridge` existe) foi colocado dentro da própria `openGnSearchModal()` — único ponto de entrada usado tanto pelo badge quanto pelo menu, então a checagem cobre os dois de uma vez, mostrando "Conecte ao Geohab primeiro pra buscar metadados publicados" quando deslogado.
+
+**Bug na busca — só ~2 resultados**: a query usava `{"match": {"resourceTitleObject.default": query}}` no Elasticsearch do GN, que não lida bem com termos curtos (2-3 letras) — mesmo tipo de problema que a busca de contatos (`_GnContactsWorker`) já tinha resolvido de outro jeito. Fix: `_GnRecordSearchWorker` (`ui/web_bridge.py`) reescrito pro mesmo padrão da busca de contatos — busca ampla (até 100 registros, só `{"term": {"isTemplate": "n"}}`, sem filtro de texto no servidor) e filtro por substring do lado do Python.
+
+**Visual da lista e tamanho do modal**: usuário comparou com prints a busca de metadado (HTML avulso, `.gn-search-result`) contra a de contatos (`.suggestion-item`, com badge de origem) — pediu pra igualar o visual, mas achou a badge "Catálogo Online" irrelevante nesse caso específico (busca de metadado é sempre no catálogo online, a badge não distingue nada). Fix: `_renderGnSearchResults()` reaproveitando `.suggestion-item` sem badge. Também trocado `.gn-search-results` de `max-height: 260px` pra `height: 280px` fixo (~5-6 linhas visíveis), já que o modal ficava crescendo/encolhendo a cada busca.
+
+**Spinner de carregamento**: adicionado no canto direito do campo, reaproveitando `.search-wrap`/`.search-spinner` (mesmo padrão da busca de camadas do GeoServer) — sem CSS novo. Ficou levemente abaixo do centro vertical do campo: causa é o comportamento padrão de `<input>` como `inline-block`, que deixa um espaço "fantasma" de baseline abaixo do texto, deslocando a centralização por `top: 50%` do spinner. Fix: `display: block` em `.modal-search-input`.
+
+**Pergunta respondida no processo**: publicar no Geohab sempre atualiza a cópia local também (silenciosamente, via `save_metadata(is_automatic_resave=True)` dentro de `exportar_to_geo()`) — no banco se a camada ativa for Postgres/PostGIS, ou em arquivo sidecar `.xml` se for baseada em arquivo. Não é uma escolha do usuário, é automático conforme o tipo da camada.
+

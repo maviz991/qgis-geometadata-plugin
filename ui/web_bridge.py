@@ -121,14 +121,11 @@ class _GnRecordSearchWorker(QThread):
 
     def run(self):
         try:
+            # Mesmo padrão do _GnContactsWorker: busca um lote amplo sem filtro de texto
+            # no Elasticsearch (um `match` não lida bem com termos curtos de 2-3 letras,
+            # que é o caso comum aqui) e filtra por substring do lado de cá.
             es_url  = f"{self._gn_url}/srv/api/search/records/_search"
-            payload = {
-                "size": 20,
-                "query": {"bool": {"must": [
-                    {"term": {"isTemplate": "n"}},
-                    {"match": {"resourceTitleObject.default": self._query}}
-                ]}}
-            }
+            payload = {"size": 100, "query": {"term": {"isTemplate": "n"}}}
             resp = self._session.post(es_url, json=payload, timeout=8, verify=False,
                                       headers={'Accept': 'application/json'})
             if resp.status_code != 200:
@@ -136,12 +133,15 @@ class _GnRecordSearchWorker(QThread):
                 return
 
             hits = resp.json().get('hits', {}).get('hits', [])
+            q = self._query.lower().strip()
             results = []
             for hit in hits:
                 src = hit.get('_source', {})
                 title = (src.get('resourceTitleObject') or {}).get('default', '') or ''
                 uuid = src.get('uuid', '')
                 if not uuid or not title:
+                    continue
+                if q and q not in title.lower():
                     continue
                 results.append({
                     'uuid': uuid,

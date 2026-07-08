@@ -211,8 +211,11 @@
     font-weight: 400;
 }
 
-/* Busca dentro de modal (ex.: Buscar no Geohab) */
+/* Busca dentro de modal (ex.: Baixar metadado do Geohab) */
 .modal-search-input {
+    display: block;
+    /* evita o espaço "fantasma" de baseline do inline-block padrão do
+                        <input>, que desalinhava o .search-spinner centralizado por top:50% */
     width: 100%;
     padding: 8px 12px;
     border: 1px solid var(--border);
@@ -221,23 +224,12 @@
     margin-bottom: 10px;
 }
 
+/* Itens da lista em si reaproveitam .suggestion-item (mesmo padrão visual da busca de
+   contatos, em ui/templates/css/styles.css). Altura FIXA (não max-height) pra não ficar
+   crescendo/encolhendo o modal conforme o número de resultados muda — ~5-6 linhas visíveis. */
 .gn-search-results {
-    max-height: 260px;
+    height: 280px;
     overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.gn-search-result {
-    padding: 8px 10px;
-    border-radius: 6px;
-    font-size: 13px;
-    cursor: pointer;
-    color: var(--fg);
-}
-
-.gn-search-result:hover {
-    background: #fff1f2;
-    color: var(--accent);
+    border: 1px solid var(--border);
+    border-radius: 8px;
 }
