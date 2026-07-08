@@ -317,9 +317,16 @@ document.addEventListener("click", function (e) {
     closeSuggestions();
 });
 
+var CDA_URL = "https://cda.cdhu.sp.gov.br"; // fallback só até bridge.get_initial_data() responder
+
 function initApp() {
     bridge.get_initial_data(function (data) {
         if (data) updateUserUI(data.is_logged, data.user);
+        if (data && data.cda_url) {
+            CDA_URL = data.cda_url;
+            var cdaLink = document.getElementById('cda-link');
+            if (cdaLink) cdaLink.href = CDA_URL;
+        }
         navigate("home");
     });
 
@@ -329,6 +336,10 @@ function initApp() {
 
     bridge.nav_changed.connect(function (panelId) {
         loadPanel(panelId);
+    });
+
+    bridge.toast.connect(function (message, title, type) {
+        Modal.alert(message, title, type);
     });
 
     bridge.auth_status.connect(function (isLogged, username) {
@@ -563,7 +574,21 @@ function tryExportGeohab() {
         requestAnimationFrame(function () { validateForm(data, false); });
         return;
     }
-    bridge.export_geohab(data);
+    Modal.confirmOptions({
+        title: 'Confirmar publicação',
+        message: 'Publicar "' + (data.title || '') + '" no catálogo Geohab?',
+        confirmLabel: 'Publicar',
+        options: [
+            { value: 'NOTHING', label: 'Nenhum', hint: 'Rejeita a publicação se já existir um metadado com mesmo UUID.' },
+            { value: 'OVERWRITE', label: 'Sobrescrever metadados com o mesmo UUID', hint: 'Atualiza o registro existente com este UUID.' },
+            { value: 'GENERATEUUID', label: 'Gerar UUID para o metadado inserido', hint: 'Sempre cria um registro novo, com um UUID novo.' }
+        ],
+        defaultIndex: 0,
+        onConfirm: function (uuidProcessing) {
+            data.uuidProcessing = uuidProcessing;
+            bridge.export_geohab(data);
+        }
+    });
 }
 
 function trySaveMetadata() {

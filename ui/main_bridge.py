@@ -8,6 +8,7 @@ Exposto ao JS via QWebChannel como 'bridge'.
 
 import os
 from qgis.PyQt.QtCore import QObject, pyqtSignal, pyqtSlot
+from ..core.plugin_config import config_loader
 
 class MainBridge(QObject):
     """
@@ -24,6 +25,7 @@ class MainBridge(QObject):
     layer_changed      = pyqtSignal(str)            # Nome da camada ativa mudou
     gn_contacts_ready   = pyqtSignal(str, str, 'QVariant')  # key, query, results
     gn_contact_enriched = pyqtSignal(str, int, 'QVariant')  # key, idx, enriched_data
+    toast               = pyqtSignal(str, str, str)         # message, title, type
 
     def __init__(self, dialog, parent=None):
         super().__init__(parent)
@@ -197,7 +199,8 @@ class MainBridge(QObject):
         return {
             "version": "3.0.0-beta",
             "user": username,
-            "is_logged": is_logged
+            "is_logged": is_logged,
+            "cda_url": config_loader.get_cda_url()
         }
 
     @pyqtSlot(result='QVariant')

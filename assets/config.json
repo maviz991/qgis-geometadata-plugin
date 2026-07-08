@@ -1,6 +1,7 @@
 {
     "geonetwork_url": "https://geo-d.cdhu.sp.gov.br/geonetwork",
     "geoserver_url": "https://geo-d.cdhu.sp.gov.br/geoserver",
+    "cda_url": "https://cda.cdhu.sp.gov.br/marketplace/formcreator/front/formdisplay.php?id=36",
     "entra_id": {
         "client_id": "5b35e805-c93d-43d7-8442-ba5cd353a2eb",
         "tenant_id": "db7bf049-33c1-41b0-93d1-bbc94b70d699",

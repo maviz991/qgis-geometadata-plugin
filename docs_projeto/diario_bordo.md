@@ -597,4 +597,42 @@ Removida a linha `_char(_sub(root, 'gmd', 'hierarchyLevelName'), 'gco', 'Charact
 ### Hipótese em Aberto
 Elemento inválido no XML pode estar contribuindo para falhas mais amplas de data-binding no editor MGB2.0 do GN — não necessariamente restrito ao campo de contato investigado nos Registros 10-11. Aguardando teste do usuário no GN (após reload do plugin) para confirmar se o painel "Autor dos metadados" passa a aparecer corretamente em modo de edição.
 
+---
+
+## Registro 13 — Seletor de Processamento de UUID, Sistema de Toast e Fix do enum `uuidProcessing` (07-08/07/2026)
+
+### Contexto
+GeoNetwork expõe 3 estratégias na publicação de um metadado com UUID já existente ("Processamento de identificador de registro": Nenhum / Sobrescrever / Gerar UUID novo). Até aqui o plugin forçava `uuidProcessing=OVERWRITE` sempre, sem o usuário poder escolher. Pedido do usuário: replicar essa escolha no plugin.
+
+### Implementação Inicial (QDialog nativo)
+Primeira versão (`_ask_uuid_processing()` em `GeoMetadata_dialog.py`) usou um `QDialog`/`QRadioButton` nativo do Qt antes de chamar `push_to_geonetwork()`. Funcionalmente correto, mas visualmente destoante — janela nua do Windows no meio de uma UI 100% HTML/CSS.
+
+### Bug: enum `uuidProcessing` errado
+Ao testar com a opção "Nenhum", GN devolveu erro cru do Spring: `Failed to convert value of type 'java.lang.String' to required type '...MEFLib$UuidAction'`. Causa: o valor enviado pro parâmetro era `'NONE'`, mas o enum Java real (`MEFLib$UuidAction`) só aceita `NOTHING`, `OVERWRITE`, `GENERATEUUID` — não existe `NONE`. Fix: trocado `'NONE'` → `'NOTHING'` em `core/metadata_service.py` (default de `push_to_geonetwork`) e no seletor, mantendo o label "Nenhum" na UI (só o valor da API mudou).
+
+De quebra, achado outro bug de tradução: `translate_http_error()` tinha a chave `"already exists"` (com "s"), mas a mensagem real do GN pra UUID duplicado diz `"already exist and you choose no action..."` (sem "s") — o `in` nunca batia, e o erro aparecia cru pro usuário. Chave trocada para `"already exist"` (substring que casa com ambos os casos) e o texto atualizado pra orientar o uso do seletor de UUID em vez da instrução antiga ("delete o registro").
+
+### Sistema de Toast (padrão visual HTML/CSS)
+Tarefa acoplada, já pendente desde o Registro 4 (backlog "Toast/notificação de sucesso/falha"). Antes de implementar, auditamos todos os `QMessageBox` do repositório e confirmamos que boa parte estava em código morto (`form_manager.py`, `unified_login_dialog.py`, e métodos legados em `GeoMetadata_dialog.py` que dependem de `self.ui`/`self.form_manager`, nunca instanciados na UI HTML atual — consistente com a auditoria do Registro 9). Escopo final ficou restrito aos caminhos vivos, todos disparados via `main_bridge.py`: exportar XML, publicar no GN, salvar (DB/sidecar).
+
+Implementação:
+- `ui/main_bridge.py`: novo sinal `toast = pyqtSignal(str, str, str)` (message, title, type).
+- `ui/templates/js/app.js`: `bridge.toast.connect(...)` chama `Modal.alert(message, title, type)` — reaproveita o sistema de modal HTML/CSS já existente (`modals.js`/`modals.css`), o mesmo usado pelas validações client-side.
+- `GeoMetadata_dialog.py`: novo método `show_toast(title, message, msg_type)` que emite o sinal da bridge; cai automaticamente no `show_message()` nativo antigo se a bridge ainda não existir (único caso real: erro ao carregar `assets/contacts.json` no `__init__`, antes da webview carregar).
+- `core/persistence_service.py`: `_show_message()` tenta `parent_widget.show_toast(...)` primeiro, com o mesmo fallback nativo — parâmetro `icon=QMessageBox.X` trocado por `msg_type='error'/'warning'/'success'/'info'` em todos os call sites.
+- Confirmações com decisão (Ok/Cancel que ramificam o fluxo Python) ficaram fora do escopo do toast de propósito — não dá pra bloquear/ramificar de forma limpa com um toast assíncrono sem reescrever o fluxo todo.
+
+### Fix Final: Seletor de UUID Também Migrado pro HTML
+Usuário sinalizou (com print) que o seletor de UUID ainda aparecia como diálogo nativo do Windows — exatamente o problema descrito acima, fora do escopo inicial do toast por ser uma confirmação com decisão. Resolvido migrando esse caso específico também:
+- `ui/templates/js/modals.js`: novo `Modal.confirmOptions()` — confirmação genérica com N opções em radio button, reaproveitável.
+- `ui/templates/css/modals.css`: estilos `.modal-radio-group`/`.modal-radio-option` no padrão visual do projeto (tokens `--border`, `--accent`, `--fg-muted`).
+- `ui/templates/js/app.js`: `tryExportGeohab()` agora chama `Modal.confirmOptions(...)` com as 3 opções antes de `bridge.export_geohab(data)`; a escolha viaja em `data.uuidProcessing`.
+- `GeoMetadata_dialog.py`: removido `_ask_uuid_processing()` (QDialog nativo) e o import órfão de `QDialog`. `exportar_to_geo()` agora só lê `metadata_dict.pop('uuidProcessing', None) or 'NOTHING'` — decisão já vem pronta do JS.
+
+### Bug 5 Resolvido: UUID Errado na Mensagem de Sucesso
+Confirmado com log de diagnóstico temporário (`print` do JSON bruto de resposta, removido depois): a resposta do `PUT /srv/api/records` (`SimpleMetadataProcessingReport`) tem sim um campo `uuid` na raiz, mas é o **id do job de processamento**, não o uuid do metadado publicado — por isso a mensagem de sucesso mostrava um valor diferente a cada publicação, mesmo com o GN indexando/sobrescrevendo o registro certo por baixo dos panos. O uuid real fica em `metadataInfos` (mapa id-interno → lista de infos, cada uma com seu próprio campo `uuid`).
+
+Fix em `core/metadata_service.py` (`push_to_geonetwork`): passou a extrair o uuid do primeiro entry de `metadataInfos` em vez do campo `uuid` da raiz. Verificado com a resposta real capturada do GN.
+
+Pedido extra do usuário: mensagem de sucesso agora inclui um link "Acesse aqui" pro registro publicado (`config_loader.get_metadata_view_url(uuid_criado)`, método que já existia em `core/plugin_config.py` — monta a URL a partir do `geonetwork_url` do config, nada hardcoded), no mesmo padrão `target="_blank"` do link do CDA já usado no rodapé (`main.html`).
 

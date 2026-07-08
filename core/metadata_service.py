@@ -10,9 +10,12 @@ class MetadataService:
     def __init__(self, plugin):
         self.plugin = plugin
 
-    def push_to_geonetwork(self, xml_payload, config_loader_instance):
+    def push_to_geonetwork(self, xml_payload, config_loader_instance, uuid_processing='NOTHING'):
         """
         Publica um XML no GeoNetwork e retorna o UUID resultante ou lança exceção.
+        uuid_processing: valores do enum GN `MEFLib$UuidAction` — 'NOTHING' (rejeita se o
+        UUID já existir, padrão do GN), 'OVERWRITE' (sobrescreve o metadado existente com o
+        mesmo UUID) ou 'GENERATEUUID' (ignora o UUID do XML e cria um registro novo).
         """
         api_session = self.plugin.api_session
         if not api_session:
@@ -41,14 +44,11 @@ class MetadataService:
         if csrf_token:
             headers['X-XSRF-TOKEN'] = csrf_token
 
-        # publishToAll falso por padrão. uuidProcessing=OVERWRITE permite republicar
-        # um metadado cujo fileIdentifier já existe no GN (ex.: reenvio/atualização),
-        # em vez do GN rejeitar como uuid duplicado (o padrão é NOTHING).
         response = api_session.put(
             geonetwork_api_url,
             data=xml_payload.encode('utf-8'),
             headers=headers,
-            params={'publishToAll': 'false', 'uuidProcessing': 'OVERWRITE'}
+            params={'publishToAll': 'false', 'uuidProcessing': uuid_processing}
         )
         
         try:
@@ -60,7 +60,13 @@ class MetadataService:
             uuid_return = "N/A"
             try:
                 response_data = response.json()
-                uuid_return = response_data.get('@uuid', response_data.get('uuid', 'N/A'))
+                # O campo 'uuid' na raiz da resposta é o id do job de processamento (SimpleMetadataProcessingReport),
+                # não o uuid do metadado. O uuid real do registro fica dentro de 'metadataInfos'
+                # (mapa id-interno -> lista de infos), ex.: {'348': [{'uuid': '...', 'message': '...'}]}.
+                for entries in (response_data.get('metadataInfos') or {}).values():
+                    if entries:
+                        uuid_return = entries[0].get('uuid', 'N/A')
+                        break
             except json.JSONDecodeError:
                 pass
             return uuid_return
@@ -76,7 +82,7 @@ class MetadataService:
             "forbidden": "Você não tem privilégios de revisor.",
             "invalid credentials": "Credenciais inválidas.",
             "validation failed": "Falha na validação do servidor.",
-            "already exists": "Já existe um metadado com este UUID no catálogo. Delete o registro existente no GeoNetwork ou gere um novo metadado antes de publicar.",
+            "already exist": "Já existe um metadado com este UUID no catálogo. Ao publicar novamente, escolha \"Sobrescrever\" ou \"Gerar UUID\" na tela de confirmação.",
             "nullpointerexception": "Erro interno do servidor.",
         }
         for key, translation in translations.items():

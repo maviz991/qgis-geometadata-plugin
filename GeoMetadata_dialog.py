@@ -28,7 +28,7 @@ except ImportError:
 import requests
 from qgis.PyQt import QtWidgets, QtCore
 from qgis.PyQt.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
+    QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
     QWidget, QMessageBox, QToolButton, QMenu, QAction, QSizePolicy,
     QStackedWidget, QApplication, QStyledItemDelegate, QStyle
 )
@@ -54,17 +54,45 @@ from .ui.styles import get_stylesheet
 
 # WebEngine imports (Robust detection)
 try:
-    from qgis.PyQt.QtWebEngineWidgets import QWebEngineView
+    from qgis.PyQt.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
     from qgis.PyQt.QtWebChannel import QWebChannel
 except ImportError:
     try:
-        from PyQt5.QtWebEngineWidgets import QWebEngineView
+        from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
         from PyQt5.QtWebChannel import QWebChannel
     except ImportError:
         QWebEngineView = None
+        QWebEnginePage = None
         QWebChannel = None
 
 from .ui.main_bridge import MainBridge
+
+
+if QWebEnginePage is not None:
+    class _ExternalLinkPage(QWebEnginePage):
+        """QWebEnginePage que abre links http(s) clicados no navegador padrão do
+        sistema em vez de navegar para longe da UI do plugin dentro do QGIS.
+        Navegação interna (file://, usada pelo SPA da própria UI) segue normal."""
+        def acceptNavigationRequest(self, url, nav_type, isMainFrame):
+            if nav_type == QWebEnginePage.NavigationTypeLinkClicked and url.scheme() in ('http', 'https'):
+                QDesktopServices.openUrl(url)
+                return False
+            return super().acceptNavigationRequest(url, nav_type, isMainFrame)
+
+        def createWindow(self, _type):
+            """Links com target="_blank" (ou window.open()) não passam por
+            acceptNavigationRequest — o Qt chama createWindow() em vez disso.
+            Devolvemos uma página descartável só pra capturar a URL de destino
+            assim que ela for definida, abrir no navegador do sistema e jogar fora."""
+            throwaway = QWebEnginePage(self.profile(), self)
+
+            def _on_url_ready(url):
+                throwaway.urlChanged.disconnect(_on_url_ready)
+                QDesktopServices.openUrl(url)
+                throwaway.deleteLater()
+
+            throwaway.urlChanged.connect(_on_url_ready)
+            return throwaway
 
 
 # --- 4. Helpers de Estilo ---
@@ -298,8 +326,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             with open(contacts_path, 'r', encoding='utf-8') as f:
                 self.contatos_predefinidos = json.load(f)
         except Exception as e:
-            from qgis.PyQt import QtWidgets
-            QtWidgets.QMessageBox.warning(self, "Aviso", f"Erro ao carregar contatos: {e}")
+            self.show_toast("Aviso", f"Erro ao carregar contatos: {e}", 'warning')
 
     # --- Métodos de Construção e Configuração da UI (Estrutura) ---
     def _setup_main_window(self):
@@ -324,6 +351,8 @@ class GeoMetadataDialog(QtWidgets.QDialog):
 
         self.web_view = QWebEngineView()
         self.web_view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        if QWebEnginePage is not None:
+            self.web_view.setPage(_ExternalLinkPage(self.web_view))
 
         # Configura o QWebChannel para comunicação
         self.bridge = MainBridge(self)
@@ -690,7 +719,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         """Gera o XML e permite salvar no disco manual."""
         if metadata_dict is None:
             if not hasattr(self, 'form_manager') or not self.form_manager:
-                QtWidgets.QMessageBox.information(self, 'Atenção', 'Preencha o formulário em "Catálogo Geohab > Editar Metadados" antes de exportar.')
+                self.show_toast('Atenção', 'Preencha o formulário em "Catálogo Geohab > Editar Metadados" antes de exportar.', 'warning')
                 return
             if not self.form_manager.validate_form(): return
             metadata_dict = self.form_manager.collect_data()
@@ -708,24 +737,25 @@ class GeoMetadataDialog(QtWidgets.QDialog):
                     f.write(xml_payload)
                 self.iface.messageBar().pushMessage('Sucesso', f'Metadados salvos em: {file_path}', level=1, duration=5)
         except Exception as e:
-            QtWidgets.QMessageBox.critical(self, 'Erro', f'Falha ao exportar XML: {e}')
+            self.show_toast('Erro', f'Falha ao exportar XML: {e}', 'error')
 
     def exportar_to_geo(self, metadata_dict=None):
-        """Exporta para o GeoNetwork usando o MetadataService."""
+        """Exporta para o GeoNetwork usando o MetadataService. A escolha de processamento
+        de UUID (Nenhum/Sobrescrever/Gerar novo) é feita no modal HTML antes da chamada
+        e chega aqui em metadata_dict['uuidProcessing']."""
         if metadata_dict is None:
             if not hasattr(self, 'form_manager') or not self.form_manager:
-                QtWidgets.QMessageBox.information(self, 'Atenção', 'Preencha o formulário em "Catálogo Geohab > Editar Metadados" antes de publicar.')
+                self.show_toast('Atenção', 'Preencha o formulário em "Catálogo Geohab > Editar Metadados" antes de publicar.', 'warning')
                 return
             if not self.form_manager.validate_form(): return
             metadata_dict = self.form_manager.collect_data()
 
         if not self.plugin.api_session:
-            QtWidgets.QMessageBox.warning(self, 'Não Autenticado', 'Conecte ao Geohab primeiro.')
+            self.show_toast('Não Autenticado', 'Conecte ao Geohab primeiro.', 'warning')
             return
 
         metadata_dict = self._normalize_dates(metadata_dict)
-        reply = QtWidgets.QMessageBox.question(self, 'Confirmar', f"Exportar \"{metadata_dict.get('title')}\"?", QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel)
-        if reply != QtWidgets.QMessageBox.Ok: return
+        uuid_processing = metadata_dict.pop('uuidProcessing', None) or 'NOTHING'
 
         try:
             from .core import xml_generator
@@ -733,14 +763,20 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             xml_payload = xml_generator.generate_xml(metadata_dict, cdhu_data)
 
             from .core.plugin_config import config_loader
-            uuid_criado = self.metadata_service.push_to_geonetwork(xml_payload, config_loader)
+            uuid_criado = self.metadata_service.push_to_geonetwork(xml_payload, config_loader, uuid_processing)
 
             if uuid_criado:
                 metadata_dict['metadata_uuid'] = uuid_criado
                 self.save_metadata(metadata_dict=metadata_dict, is_automatic_resave=True)
-                QtWidgets.QMessageBox.information(self, 'Sucesso', f'Metadado exportado.\nUUID: {uuid_criado}')
+                view_url = config_loader.get_metadata_view_url(uuid_criado)
+                self.show_toast(
+                    'Sucesso',
+                    f'Metadado exportado.<br>UUID: {uuid_criado}'
+                    f'<br><a href="{view_url}" target="_blank">Acesse aqui</a>',
+                    'success'
+                )
         except Exception as e:
-            QtWidgets.QMessageBox.critical(self, 'Erro', f'Falha no GeoNetwork: {e}')
+            self.show_toast('Erro', f'Falha no GeoNetwork: {e}', 'error')
 
     def save_metadata(self, metadata_dict=None, is_automatic_resave=False):
         """Usa o PersistenceService para salvar no DB ou XML Sidecar."""
@@ -1230,7 +1266,8 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.close()
 
     def show_message(self, title, text, icon=None):
-        """Exibe um QMessageBox com suporte a Rich Text (HTML)."""
+        """Exibe um QMessageBox nativo com suporte a Rich Text (HTML). Usado como fallback
+        de `show_toast` quando a bridge/webview ainda não está pronta."""
         from qgis.PyQt import QtWidgets
         from qgis.PyQt.QtCore import Qt
         if icon is None:
@@ -1242,3 +1279,16 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         msg_box.setWindowTitle(title)
         msg_box.setStandardButtons(QtWidgets.QMessageBox.Ok)
         msg_box.exec_()
+
+    def show_toast(self, title, message, msg_type='info'):
+        """Notificação no padrão visual HTML/CSS do projeto (Modal.alert via bridge).
+        Cai para o QMessageBox nativo (`show_message`) se a bridge ainda não existir
+        (ex.: erros durante a construção do diálogo, antes da webview carregar)."""
+        if getattr(self, 'bridge', None):
+            self.bridge.toast.emit(message, title, msg_type)
+            return
+        icon_map = {
+            'error': QtWidgets.QMessageBox.Critical,
+            'warning': QtWidgets.QMessageBox.Warning,
+        }
+        self.show_message(title, message, icon=icon_map.get(msg_type, QtWidgets.QMessageBox.Information))

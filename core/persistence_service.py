@@ -11,6 +11,7 @@ except ImportError:
     psycopg2 = None
 
 from . import xml_generator
+from .plugin_config import config_loader
 
 class PersistenceService:
     """
@@ -27,7 +28,7 @@ class PersistenceService:
         """
         if not layer:
             if not is_automatic_resave and parent_widget:
-                self._show_message("Nenhuma Camada Ativa", "Por favor, selecione uma camada no painel de camadas.", parent_widget, icon=QtWidgets.QMessageBox.Warning)
+                self._show_message("Nenhuma Camada Ativa", "Por favor, selecione uma camada no painel de camadas.", parent_widget, msg_type='warning')
             return False
 
         if self._is_postgres_layer(layer):
@@ -104,14 +105,24 @@ class PersistenceService:
                 message = (
                     "Seu QGIS está com a autenticação desabilitada. Feche-o e inicie novamente."
                 )
-                self._show_message(title, message, parent_widget, icon=QtWidgets.QMessageBox.Critical)
+                self._show_message(title, message, parent_widget, msg_type='error')
             return False
         return True
 
-    def _show_message(self, title, text, parent_widget, icon=QtWidgets.QMessageBox.Information):
+    def _show_message(self, title, text, parent_widget, msg_type='info'):
+        """Notifica o usuário no padrão visual HTML/CSS do projeto (via `parent_widget.show_toast`).
+        Cai para QMessageBox nativo se o parent não expuser esse método."""
         if not parent_widget: return
+        notify = getattr(parent_widget, 'show_toast', None)
+        if callable(notify):
+            notify(title, text, msg_type)
+            return
+        icon_map = {
+            'error': QtWidgets.QMessageBox.Critical,
+            'warning': QtWidgets.QMessageBox.Warning,
+        }
         msg_box = QtWidgets.QMessageBox(parent_widget)
-        msg_box.setIcon(icon)
+        msg_box.setIcon(icon_map.get(msg_type, QtWidgets.QMessageBox.Information))
         msg_box.setTextFormat(QtCore.Qt.RichText)
         msg_box.setText(text)
         msg_box.setWindowTitle(title)
@@ -121,12 +132,12 @@ class PersistenceService:
     def _save_to_db(self, layer, metadata_dict, cdhu_data, is_automatic_resave=False, parent_widget=None):
         if not self._check_auth_system(parent_widget): return False
         if not psycopg2:
-            self._show_message("Erro de Dependência", "A biblioteca psycopg2 não foi encontrada.", parent_widget, icon=QtWidgets.QMessageBox.Critical)
+            self._show_message("Erro de Dependência", "A biblioteca psycopg2 não foi encontrada.", parent_widget, msg_type='error')
             return False
 
         conn_details = self._get_postgres_connection_details(layer)
         if not conn_details.get('f_table_name'):
-            self._show_message("Erro", "Não foi possível identificar a tabela da camada.", parent_widget, icon=QtWidgets.QMessageBox.Warning)
+            self._show_message("Erro", "Não foi possível identificar a tabela da camada.", parent_widget, msg_type='warning')
             return False
             
         # A confirmação agora é feita pela interface HTML/JS antes de chamar este método.
@@ -144,7 +155,7 @@ class PersistenceService:
                     db_user = config.configMap().get('username')
                     db_password = config.configMap().get('password')
                 else:
-                    self._show_message("Erro de Auth", f"Não foi possível carregar config '{auth_cfg_id}'.", parent_widget, icon=QtWidgets.QMessageBox.Critical)
+                    self._show_message("Erro de Auth", f"Não foi possível carregar config '{auth_cfg_id}'.", parent_widget, msg_type='error')
                     return False
                                 
             xml_content = xml_generator.generate_xml(metadata_dict, cdhu_data)
@@ -173,21 +184,21 @@ class PersistenceService:
             if not is_automatic_resave:
                 self.iface.messageBar().pushMessage("Sucesso", f"Metadado salvo para a camada '{layer.name()}'.", level=Qgis.Success, duration=5)
                 success_text = (f"<p style='font-size:14px; font-weight: bold;'>Metadado Salvo no Banco!</p>")
-                self._show_message("Sucesso!", success_text, parent_widget)
+                self._show_message("Sucesso!", success_text, parent_widget, msg_type='success')
             return True
 
         except psycopg2.errors.UndefinedTable:
             traceback.print_exc()
             message = (
                 "A tabela de metadados ainda não existe neste banco de dados.<br><br>"
-                "Por favor, abra um ticket no <a href='https://cda.cdhu.sp.gov.br'>CDA</a> "
+                f"Por favor, abra um ticket no <a href='{config_loader.get_cda_url()}'>CDA</a> "
                 "solicitando a criação da tabela <b>public.qgis_geometadata_plugin</b>."
             )
-            self._show_message("Erro DB", message, parent_widget, icon=QtWidgets.QMessageBox.Critical)
+            self._show_message("Erro DB", message, parent_widget, msg_type='error')
             return False
         except Exception as e:
             traceback.print_exc()
-            self._show_message("Erro DB", f"Não foi possível salvar:<br><br>{e}", parent_widget, icon=QtWidgets.QMessageBox.Critical)
+            self._show_message("Erro DB", f"Não foi possível salvar:<br><br>{e}", parent_widget, msg_type='error')
             return False
 
     def _save_to_sidecar_file(self, layer, metadata_dict, cdhu_data, is_automatic_resave=False, parent_widget=None):
@@ -195,7 +206,7 @@ class PersistenceService:
         if not metadata_path:
             if not is_automatic_resave:
                 layer_name = layer.name() if layer else "A camada"
-                self._show_message("Impossível salvar local", f"<p>A camada {layer_name} não está salva num arquivo.</p>", parent_widget, icon=QtWidgets.QMessageBox.Warning)
+                self._show_message("Impossível salvar local", f"<p>A camada {layer_name} não está salva num arquivo.</p>", parent_widget, msg_type='warning')
             return False
 
         if not is_automatic_resave and parent_widget:
@@ -211,11 +222,11 @@ class PersistenceService:
             
             if not is_automatic_resave:
                 self.iface.messageBar().pushMessage("Sucesso", "Arquivo salvo.", level=Qgis.Success)
-                self._show_message("Sucesso!", f"<p>Salvo em:<br>{metadata_path}</p>", parent_widget)
+                self._show_message("Sucesso!", f"<p>Salvo em:<br>{metadata_path}</p>", parent_widget, msg_type='success')
             return True
         except Exception as e:
             traceback.print_exc()
-            self._show_message("Erro IO", f"Falha ao escrever XML:\\n{e}", parent_widget, icon=QtWidgets.QMessageBox.Critical)
+            self._show_message("Erro IO", f"Falha ao escrever XML:<br>{e}", parent_widget, msg_type='error')
             return False
 
     def _load_from_db(self, layer):

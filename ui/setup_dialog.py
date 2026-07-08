@@ -18,6 +18,7 @@ from qgis.PyQt.QtGui import QPixmap, QColor, QPalette
 
 from ..core.env_checker import PACKAGE_LABELS
 from ..core.dependency_installer import MultiPackageInstaller
+from ..core.plugin_config import config_loader
 
 _PLUGIN_ROOT = os.path.dirname(os.path.dirname(__file__))
 _LOGO_PATH   = os.path.join(_PLUGIN_ROOT, "img", "logo.png")
@@ -197,17 +198,18 @@ class SetupDialog(QDialog):
         ico.style().polish(ico)
         
         # Mensagem contextual para PyQtWebEngine
+        cda_url = config_loader.get_cda_url()
         if "PyQtWebEngine" in pkg:
             msg = (
                 f"Falha ao carregar a interface visual.\n\n"
                 f"Isso ocorre por uma incompatibilidade do ambiente QGIS.\n"
-                f"SOLUÇÃO: Abra um ticket no CDA (<a href='https://cda.cdhu.sp.gov.br'>cda.cdhu.sp.gov.br</a>)."
+                f"SOLUÇÃO: Abra um ticket no CDA (<a href='{cda_url}'>cda.cdhu.sp.gov.br</a>)."
             )
         else:
             msg = (
                 "Falha ao configurar componente de login.<br><br>"
                 "Por favor, entre em contato com o suporte técnico no "
-                "<a href='https://cda.cdhu.sp.gov.br'>CDA (cda.cdhu.sp.gov.br)</a>."
+                f"<a href='{cda_url}'>CDA (cda.cdhu.sp.gov.br)</a>."
             )
 
         short = error[:120] + "..." if len(error) > 120 else error

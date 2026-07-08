@@ -51,6 +51,10 @@ class PluginConfig:
     def get_geoserver_url(self):
         return self.config.get("geoserver_url", "")
 
+    def get_cda_url(self):
+        """ URL do formulário de chamado do CDA. Único lugar a alterar se o link mudar. """
+        return self.config.get("cda_url", "https://cda.cdhu.sp.gov.br")
+
     def get_entra_id_config(self):
         """
         Retorna as configurações do Microsoft Entra ID.

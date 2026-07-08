@@ -114,11 +114,41 @@ var Modal = (function() {
         });
     }
 
+    // Confirmação com opções em radio button (ex.: processamento de UUID no GeoNetwork)
+    function confirmOptions(config) {
+        var optionsHtml = '<div class="modal-radio-group">';
+        config.options.forEach(function (opt, i) {
+            optionsHtml +=
+                '<label class="modal-radio-option">' +
+                '  <input type="radio" name="modal-radio-choice" value="' + opt.value + '"' + (i === (config.defaultIndex || 0) ? ' checked' : '') + '>' +
+                '  <span class="modal-radio-text"><strong>' + opt.label + '</strong><small>' + opt.hint + '</small></span>' +
+                '</label>';
+        });
+        optionsHtml += '</div>';
+
+        var bodyHtml = (config.message ? '<p>' + config.message + '</p>' : '') + optionsHtml;
+
+        show({
+            title: config.title || 'Confirmar',
+            message: bodyHtml,
+            buttons: [
+                { label: config.cancelLabel || 'Cancelar', primary: false, onClick: null },
+                {
+                    label: config.confirmLabel || 'Confirmar', primary: true, onClick: function () {
+                        var checked = document.querySelector('input[name="modal-radio-choice"]:checked');
+                        if (config.onConfirm) config.onConfirm(checked ? checked.value : config.options[config.defaultIndex || 0].value);
+                    }
+                }
+            ]
+        });
+    }
+
     return {
         show: show,
         close: close,
         alert: alert,
-        confirm: confirm
+        confirm: confirm,
+        confirmOptions: confirmOptions
     };
 })();
 

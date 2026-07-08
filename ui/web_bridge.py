@@ -21,6 +21,7 @@ from qgis.PyQt.QtCore import QObject, pyqtSignal, pyqtSlot
 
 from ..core.entra_auth_provider import EntraAuthProvider, is_msal_available
 from ..core.dependency_installer import DependencyInstaller
+from ..core.plugin_config import config_loader
 
 
 # ---------------------------------------------------------------------------
@@ -291,5 +292,5 @@ class LoginBridge(QObject):
         self.install_error.emit(
             f"Falha na configuração automática.<br><br>"
             f"Por favor, abra um ticket no <b>CDA</b>: "
-            f"<a href='https://cda.cdhu.sp.gov.br'>cda.cdhu.sp.gov.br</a>"
+            f"<a href='{config_loader.get_cda_url()}'>cda.cdhu.sp.gov.br</a>"
         )
