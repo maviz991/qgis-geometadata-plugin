@@ -82,7 +82,7 @@ Mostra quais serviços (WMS/WFS) do GeoServer foram vinculados a este metadado. 
 4.  **Edite e Salve:** Faça as alterações desejadas e use os botões **Continuar depois** ou **Exportar para Geohab** para salvar suas modificações.
     *   **Importante:** Note que a **Extensão Geográfica** será sempre atualizada para refletir o estado *atual* da camada, mesmo que você tenha carregado um metadado antigo. Isso garante que a informação esteja sempre correta.
 
-### **5. Primeiro Uso — Instalação Automática de Dependência**
+### **5. Primeiro Uso - Instalação Automática de Dependência**
 
 Na primeira vez que o plugin for carregado, ele verifica se a biblioteca `msal` (necessária para o login corporativo) está instalada no QGIS.
 
@@ -102,7 +102,7 @@ Na primeira vez que o plugin for carregado, ele verifica se a biblioteca `msal` 
     *   **Causa:** O sistema pode estar bloqueando a abertura do navegador padrão.
     *   **Solução:** Verifique se há um navegador padrão configurado no Windows. Se o problema persistir, abra um CDA.
 
-*   **Não consigo fazer login — a página da Microsoft diz que minha conta não tem acesso.**
+*   **Não consigo fazer login - a página da Microsoft diz que minha conta não tem acesso.**
     *   **Causa:** Sua conta corporativa não está com permissão no sistema QGIS-Plugin-Geohab-SSO.
     *   **Solução:** Solicite acesso ao TI informando seu usuário e o nome do aplicativo: **QGIS-Plugin-Geohab-SSO**.
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-web_bridge.py — GeoMetadata Plugin
+web_bridge.py - GeoMetadata Plugin
 =====================================
 Objeto Python exposto ao JavaScript via QWebChannel.
 Atua como ponte bidirecional entre a UI HTML e a lógica Python do plugin.
@@ -86,12 +86,12 @@ class LoginBridge(QObject):
     Exposto ao JS como `channel.objects.bridge`.
 
     Sinais Python → JS (conectar via bridge.<signal>.connect(...) no JS):
-        sso_status(msg: str)     — mensagem de status durante o fluxo SSO
-        sso_failed(msg: str)     — SSO falhou
-        admin_failed(msg: str)   — login admin falhou
-        install_status(msg: str) — progresso da instalação do msal
-        install_done()           — msal instalado, reiniciar QGIS
-        install_error(msg: str)  — instalação falhou
+        sso_status(msg: str)     - mensagem de status durante o fluxo SSO
+        sso_failed(msg: str)     - SSO falhou
+        admin_failed(msg: str)   - login admin falhou
+        install_status(msg: str) - progresso da instalação do msal
+        install_done()           - msal instalado, reiniciar QGIS
+        install_error(msg: str)  - instalação falhou
 
     Slots JS → Python (chamar via bridge.<slot>(...) no JS):
         get_msal_state() -> bool
@@ -118,7 +118,7 @@ class LoginBridge(QObject):
         self._geoserver_url = geoserver_url
         self._dialog        = dialog   # referência ao LoginDialog (QDialog)
 
-        # Resultado do login — lido pelo dialog após accept()
+        # Resultado do login - lido pelo dialog após accept()
         self.session:  object = None
         self.username: str    = ""
 

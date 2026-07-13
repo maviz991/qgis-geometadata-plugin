@@ -44,7 +44,7 @@ def _parse_responsible_party(rp_node, ns_map):
     if not contact['org'] and not contact['email'] and not contact['sigla']:
         return None
     # Contato com uuid real veio vinculado ao diretório do GN (xlink:href apontando pra
-    # registry) — 'gn' faz o JS mostrar a badge "Catálogo Online" e tratar como não-manual
+    # registry) - 'gn' faz o JS mostrar a badge "Catálogo Online" e tratar como não-manual
     # (mesma lógica de _srcToIsManual/hasCatalogContact em app.js). Sem uuid, é manual mesmo.
     return {'isManual': ('gn' if uuid else True), 'data': contact}
 
@@ -66,7 +66,7 @@ def parse_xml_to_dict(source, is_string=False):
         if is_string:
             # lxml recusa `str` com declaração <?xml ... encoding="..."?> (só aceita
             # bytes nesse caso, pra respeitar o encoding declarado). Praticamente todo
-            # XML MGB 2.0 real tem essa declaração — convertendo pra bytes evita o erro
+            # XML MGB 2.0 real tem essa declaração - convertendo pra bytes evita o erro
             # "Unicode strings with encoding declaration are not supported".
             if isinstance(source, str):
                 source = source.encode('utf-8')
@@ -88,7 +88,7 @@ def parse_xml_to_dict(source, is_string=False):
         data = {}
 
         # --- PREENCHIMENTO DAS INFORMAÇÕES GERAIS ---
-        # gmd:language na raiz é o idioma do METADADO (campo metadataLanguage do form) —
+        # gmd:language na raiz é o idioma do METADADO (campo metadataLanguage do form) -
         # o idioma do DADO (LanguageCode) é um gmd:language separado, dentro de id_info.
         data['metadataLanguage'] = get_element_attribute(root, './gmd:language/gmd:LanguageCode', 'codeListValue', ns)
         data['characterSet'] = get_element_attribute(root, './gmd:characterSet/gmd:MD_CharacterSetCode', 'codeListValue', ns)
@@ -106,10 +106,10 @@ def parse_xml_to_dict(source, is_string=False):
             pass
             #print(f"UUID oficial do metadado encontrado no arquivo XML: {data['metadata_uuid']}")
 
-        # Data do próprio metadado (não do dado) — usada para comparar versão local vs. GN.
+        # Data do próprio metadado (não do dado) - usada para comparar versão local vs. GN.
         data['dateStamp'] = get_element_text(root, './gmd:dateStamp/gco:DateTime', ns)
 
-        # Contatos de metadado (gmd:contact no nível raiz) — array no formato que o
+        # Contatos de metadado (gmd:contact no nível raiz) - array no formato que o
         # form/populateForm espera, espelhando o que _build_contact_block escreve.
         meta_contact_rps = [c.find('./gmd:CI_ResponsibleParty', namespaces=ns)
                              for c in root.findall('./gmd:contact', namespaces=ns)]
@@ -121,7 +121,7 @@ def parse_xml_to_dict(source, is_string=False):
             data['title'] = get_element_text(id_info, './/gmd:title/gco:CharacterString', ns)
             data['edition'] = get_element_text(id_info, './/gmd:edition/gco:CharacterString', ns)
             data['date_edition'] = get_element_text(id_info, './/gmd:editionDate/gco:DateTime', ns)
-            # Campo do form é "date" (não "date_creation" — mantido também por compat legada).
+            # Campo do form é "date" (não "date_creation" - mantido também por compat legada).
             data['date'] = get_element_text(id_info, './/gmd:citation//gmd:date/gmd:CI_Date/gmd:date/gco:DateTime', ns)
             data['date_creation'] = data['date']
             data['dateType'] = get_element_attribute(id_info, './/gmd:citation//gmd:dateType/gmd:CI_DateTypeCode', 'codeListValue', ns)
@@ -130,7 +130,7 @@ def parse_xml_to_dict(source, is_string=False):
             data['credit'] = get_element_text(id_info, './gmd:credit/gco:CharacterString', ns)
             data['status_codeListValue'] = get_element_attribute(id_info, './gmd:status/gmd:MD_ProgressCode', 'codeListValue', ns)
 
-            # Contatos do recurso (gmd:pointOfContact) — array no formato que o form espera.
+            # Contatos do recurso (gmd:pointOfContact) - array no formato que o form espera.
             resource_contact_rps = [c.find('./gmd:CI_ResponsibleParty', namespaces=ns)
                                      for c in id_info.findall('./gmd:pointOfContact', namespaces=ns)]
             data['contacts'] = _parse_responsible_party_list(resource_contact_rps, ns)

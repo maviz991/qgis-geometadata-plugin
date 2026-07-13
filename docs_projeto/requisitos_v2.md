@@ -1,4 +1,4 @@
-# Requisitos de Desenvolvimento — GeoMetadata v2.0
+# Requisitos de Desenvolvimento - GeoMetadata v2.0
 
 **Versão Atual em Produção:** `1.0.1`  
 **Versão Alvo:** `2.0.0`  
@@ -40,28 +40,28 @@ A v1.0.1 já entrega o fluxo completo de metadados (formulário → XML MGB 2.0 
 
 ### O que foi removido (limpeza v2.0)
 
-- `auth_webview.py` — Protótipo experimental, nunca integrado à produção.
-- `geoserver_login_dialog.py` — Diálogo legado substituído pelo `UnifiedLoginDialog`.
+- `auth_webview.py` - Protótipo experimental, nunca integrado à produção.
+- `geoserver_login_dialog.py` - Diálogo legado substituído pelo `UnifiedLoginDialog`.
 
 ---
 
-## 3. Requisitos Funcionais (RF) — v2.0
+## 3. Requisitos Funcionais (RF) - v2.0
 
 ### Módulo A: Publicação de Dados Vetoriais no GeoServer
 
-**RF01 — Listagem de Workspaces e DataStores**
+**RF01 - Listagem de Workspaces e DataStores**
 O plugin deve acionar a REST API do GeoServer (usando a sessão autenticada existente) para listar os workspaces e datastores disponíveis. O usuário selecionará o destino em ComboBoxes antes de publicar.
 
-**RF02 — Publicação Lógica (PostGIS)**
+**RF02 - Publicação Lógica (PostGIS)**
 Para camadas cujos dados já existem no banco corporativo, o plugin envia apenas o comando de registro `FeatureType` via REST, sem tráfego de dados espaciais.
 - *Pré-requisito:* A camada selecionada no QGIS deve ser do tipo PostgreSQL.
 
-**RF03 — Upload de Arquivo (Criação e Sobrescrita)**
+**RF03 - Upload de Arquivo (Criação e Sobrescrita)**
 Para camadas locais (shapefiles, GeoPackages), o plugin converte para o formato aceito pelo GeoServer e envia via REST API.
 - Suporte inicial: Shapefile (`.zip` com todos os arquivos do ESRI)
 - Modos: `Criar novo` ou `Sobrescrever existente`
 
-**RF04 — Validação de Nome de Camada (Regex)**
+**RF04 - Validação de Nome de Camada (Regex)**
 Antes de qualquer publicação, o plugin valida o nome da camada com regex para:
 - Remover espaços e caracteres especiais (apenas `[a-z0-9_]`)
 - Garantir que o nome **não começa com número** (bug conhecido do GeoServer)
@@ -71,23 +71,23 @@ Antes de qualquer publicação, o plugin valida o nome da camada com regex para:
 
 ### Módulo B: Exportação de Estilos (SLD)
 
-**RF05 — Conversão de Simbologia para SLD**
+**RF05 - Conversão de Simbologia para SLD**
 Usar a API nativa do QGIS (`QgsMapLayer.exportSldStyle()`) para exportar a simbologia configurada no QGIS para o padrão OGC SLD 1.1.0.
 
 > **Limitação documentada:** A conversão é do tipo *best-effort*. Estilos complexos (regras data-driven, blending modes, efeitos de camada) podem não ter equivalente SLD. O plugin **exibirá um aviso** ao usuário antes de exportar.
 
-**RF06 — Envio e Vínculo do Estilo ao GeoServer**
+**RF06 - Envio e Vínculo do Estilo ao GeoServer**
 Enviar o arquivo `.sld` gerado via REST API (`PUT /geoserver/rest/styles/{name}`) e definir como estilo padrão (`Default`) da camada publicada.
 
 ---
 
 ### Módulo C: Edição de Metadados Existentes
 
-**RF07 — Abertura de XML Existente**
+**RF07 - Abertura de XML Existente**
 Permitir que o usuário carregue um arquivo `.xml` MGB 2.0 existente diretamente no plugin (via `QFileDialog`) para edição.
 - O `xml_parser.py` já tem a base desta lógica; será exposta via botão na UI.
 
-**RF08 — Re-publicação com UUID Preservado**
+**RF08 - Re-publicação com UUID Preservado**
 Ao exportar par o Geohab um XML carregado externamente, o plugin deve usar o UUID original do arquivo (não gerar um novo) para que a operação funcione como **atualização** (HTTP PUT) e não como criação de registro duplicado.
 
 ---
@@ -108,7 +108,7 @@ Ao exportar par o Geohab um XML carregado externamente, o plugin deve usar o UUI
 | ID | Regra |
 |---|---|
 | RN01 | **Nomenclatura de Camadas:** Regex obrigatório: `[a-z][a-z0-9_]*`. Nomes não podem começar com número. |
-| RN02 | **Erro 403:** Exibir mensagem clara de "Acesso Negado — você não possui permissão de escrita neste Workspace" sem expor detalhes técnicos ao usuário. |
+| RN02 | **Erro 403:** Exibir mensagem clara de "Acesso Negado - você não possui permissão de escrita neste Workspace" sem expor detalhes técnicos ao usuário. |
 | RN03 | **Validação de Append:** (Backlog) Em operações de Append futuras, comparar schemas via `DescribeFeatureType` antes de enviar dados. |
 | RN04 | **Aviso de SLD:** Exibir aviso informativo antes de exportar estilo, indicando que simbologia complexa pode não ser traduzida perfeitamente. |
 
@@ -125,28 +125,28 @@ Ao exportar par o Geohab um XML carregado externamente, o plugin deve usar o UUI
 
 ## 7. Plano de Implementação por Fases
 
-### Fase 1 — Autenticação e Fundação GeoServer (Prioridade Alta)
+### Fase 1 - Autenticação e Fundação GeoServer (Prioridade Alta)
 1. **Implementar Módulo Entra ID:** Criar provedor de auth usando `msal-python` e fluxo PKCE.
 2. **Abstração de Sessão:** Garantir que o plugin suporte tanto Bearer Token quanto Basic Auth (fallback).
-3. Criar `geoserver_publisher.py` — classe com métodos para REST API do GeoServer
+3. Criar `geoserver_publisher.py` - classe com métodos para REST API do GeoServer
 4. Implementar RF01 (listagem de workspaces/datastores)
 5. Implementar RF04 (validação e sanitização de nomes)
 6. Criar a aba ou wizard de publicação na UI principal
 
-### Fase 2 — Upload e Publicação (Prioridade Alta)
+### Fase 2 - Upload e Publicação (Prioridade Alta)
 7. Implementar RF02 (publicação lógica PostGIS)
 8. Implementar RF03 (upload shapefile em ZIP)
 9. Implementar RNF02 (QThread + barra de progresso)
 
-### Fase 3 — Estilos SLD (Prioridade Média)
+### Fase 3 - Estilos SLD (Prioridade Média)
 10. Implementar RF05 (exportação SLD via API QGIS)
 11. Implementar RF06 (envio e vínculo ao GeoServer)
 
-### Fase 4 — Metadados (Prioridade Média)
+### Fase 4 - Metadados (Prioridade Média)
 12. Implementar RF07 (abertura de XML existente via FileDialog)
 13. Implementar RF08 (re-publicação com UUID preservado)
 
-### Fase 5 — Qualidade e Housekeeping
+### Fase 5 - Qualidade e Housekeeping
 14. Corrigir RNF04 (`verify=False` → certificado corporativo)
 15. Refinar mensagens de erro (RN02)
 16. Atualizar `metadata.txt` para versão `2.0.0`
@@ -156,7 +156,7 @@ Ao exportar par o Geohab um XML carregado externamente, o plugin deve usar o UUI
 
 ## 8. Verificação e Testes
 
-### Testes de Integração (Ambiente DEV — `geo-d.cdhu.sp.gov.br`)
+### Testes de Integração (Ambiente DEV - `geo-d.cdhu.sp.gov.br`)
 - Login com credenciais válidas → sessão retornada corretamente
 - Listagem de workspaces → retorna lista real do GeoServer DEV
 - Upload de shapefile simples → camada visível no GeoServer DEV

@@ -13,7 +13,7 @@ class GeoNetworkService:
     def push_to_geonetwork(self, xml_payload, config_loader_instance, uuid_processing='NOTHING'):
         """
         Publica um XML no GeoNetwork e retorna o UUID resultante ou lança exceção.
-        uuid_processing: valores do enum GN `MEFLib$UuidAction` — 'NOTHING' (rejeita se o
+        uuid_processing: valores do enum GN `MEFLib$UuidAction` - 'NOTHING' (rejeita se o
         UUID já existir, padrão do GN), 'OVERWRITE' (sobrescreve o metadado existente com o
         mesmo UUID) ou 'GENERATEUUID' (ignora o UUID do XML e cria um registro novo).
         """
@@ -78,7 +78,7 @@ class GeoNetworkService:
         Busca o XML completo de um registro do GN por uuid e retorna já convertido
         pra dict (mesmo formato usado por load_layer_metadata/import_xml_file).
         Retorna None se o registro não existir. Funciona sem login pra registros públicos
-        (sessão anônima) — GN só rejeita (401/403) se o registro exigir autenticação.
+        (sessão anônima) - GN só rejeita (401/403) se o registro exigir autenticação.
         """
         api_session = self.plugin.api_session or requests.Session()
 

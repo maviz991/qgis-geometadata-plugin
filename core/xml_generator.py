@@ -1,4 +1,4 @@
-# xml_generator.py — Geração Programática ISO 19139 / MGB 2.0
+# xml_generator.py - Geração Programática ISO 19139 / MGB 2.0
 # Sem dependência de template estático. Construção via lxml.etree.
 
 from lxml import etree as ET
@@ -64,7 +64,7 @@ def _build_contact_block(parent, wrapper_tag, contact_data):
     ou do formato legado flat:
       { contact_individualName, contact_organisationName, ... }
     """
-    # Normaliza campos — suporta ambos os formatos
+    # Normaliza campos - suporta ambos os formatos
     def _f(key, alt=None):
         return contact_data.get(key) or (contact_data.get(alt) if alt else '') or ''
 
@@ -82,7 +82,7 @@ def _build_contact_block(parent, wrapper_tag, contact_data):
 
     # uuid real da entrada na registry do GN (presets institucionais trazem isso
     # em assets/contacts.json; contatos escolhidos no catálogo trazem em _gn_uuid).
-    # Só usamos o padrão xlink:href de subtemplate quando temos um uuid real —
+    # Só usamos o padrão xlink:href de subtemplate quando temos um uuid real -
     # gerar um uuid aleatório aponta pra uma entrada que não existe na registry
     # e o GN não consegue resolver (bloco fica vazio no modo de edição).
     c_uuid = contact_data.get('uuid') or contact_data.get('_gn_uuid') or ''
@@ -181,7 +181,7 @@ def generate_xml(data_dict, cdhu_contact_data=None):
 
     # ── metadataStandardName / Version ───────────────────────────────────────
     # Deve bater com o perfil MGB 2.0 instalado no catálogo (ver template_mgb_2_0.xml),
-    # não o ISO 19139 genérico — perfil errado faz o GN tratar/validar o registro diferente.
+    # não o ISO 19139 genérico - perfil errado faz o GN tratar/validar o registro diferente.
     _char(root, 'gmd', 'metadataStandardName', 'ISO 19115-3:2014')
     _char(root, 'gmd', 'metadataStandardVersion', 'MGB 2.0')
 

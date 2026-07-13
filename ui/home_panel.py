@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-HomePanel — Tela inicial do plugin GeoMetadata / Geohab.
+HomePanel - Tela inicial do plugin GeoMetadata / Geohab.
 
 Exibe cards para cada módulo disponível, permitindo navegação direta
 para os painéis funcionais sem precisar usar o menu do header.
@@ -16,7 +16,7 @@ from qgis.PyQt.QtGui import QFont, QPixmap
 
 class HomePanel(QWidget):
     """
-    Painel Home — ponto de entrada do plugin.
+    Painel Home - ponto de entrada do plugin.
 
     Emite sinais para navegar aos painéis filhos:
       - navigate_geonetwork
@@ -99,7 +99,7 @@ class HomePanel(QWidget):
                 subtitle    = "Publicação de Camadas",
                 description = (
                     "Publique camadas vetoriais diretamente no Geohab, "
-                    "exporte estilos SLD e gerencie workspaces — sem sair do QGIS."
+                    "exporte estilos SLD e gerencie workspaces - sem sair do QGIS."
                 ),
                 features    = [
                     "Publicação lógica PostGIS",
@@ -107,7 +107,7 @@ class HomePanel(QWidget):
                     "Exportação de estilos SLD",
                     "Gestão de workspaces",
                 ],
-                btn_label   = "Em breve — Fase 2",
+                btn_label   = "Em breve - Fase 2",
                 btn_action  = self.navigate_geoserver.emit,
                 status      = "soon",
                 icon_text   = "🗄️",

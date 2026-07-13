@@ -5,13 +5,13 @@ import unicodedata
 class GeoServerService:
     """
     Serviço que abstrai a comunicação com o GeoServer (API REST). Espelha o padrão
-    de core/geonetwork_service.py — nenhuma dependência de Qt aqui, só requests puro.
+    de core/geonetwork_service.py - nenhuma dependência de Qt aqui, só requests puro.
     """
     def __init__(self, plugin):
         self.plugin = plugin
 
     def list_workspaces(self, config_loader_instance):
-        """RF01 — lista os workspaces disponíveis no GeoServer."""
+        """RF01 - lista os workspaces disponíveis no GeoServer."""
         api_session = self.plugin.api_session
         if not api_session:
             raise Exception("Sessão da API não foi inicializada. Faça login primeiro.")
@@ -32,7 +32,7 @@ class GeoServerService:
         return [w.get('name') for w in workspaces if w.get('name')]
 
     def list_datastores(self, workspace, config_loader_instance):
-        """RF01 — lista os datastores de um workspace do GeoServer."""
+        """RF01 - lista os datastores de um workspace do GeoServer."""
         api_session = self.plugin.api_session
         if not api_session:
             raise Exception("Sessão da API não foi inicializada. Faça login primeiro.")
@@ -54,7 +54,7 @@ class GeoServerService:
 
     @staticmethod
     def sanitize_layer_name(name):
-        """RF04 — regex obrigatório `[a-z][a-z0-9_]*`: minúsculas, sem espaços/acentos/
+        """RF04 - regex obrigatório `[a-z][a-z0-9_]*`: minúsculas, sem espaços/acentos/
         caracteres especiais, e nunca começando com número (bug conhecido do GeoServer)."""
         normalized = unicodedata.normalize('NFKD', name or '').encode('ascii', 'ignore').decode('ascii')
         clean = re.sub(r'[^a-z0-9_]', '_', normalized.lower())

@@ -12,9 +12,9 @@ var _LP_INNER_VECTOR = '<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline po
 var _LP_INNER_RASTER = '<rect x="3" y="3" width="18" height="18" rx="1"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/>';
 
 // ── Draft: preserva estado do formulário entre navegações e fechamento ─────────
-// (o mecanismo de agendamento/gravação em si é específico do editor GN — ver
+// (o mecanismo de agendamento/gravação em si é específico do editor GN - ver
 // _scheduleDraftSave/_saveDraftNow em geonetwork.js; aqui só a variável compartilhada
-// entre o app-shell — que a captura antes de trocar de painel — e o editor.)
+// entre o app-shell - que a captura antes de trocar de painel - e o editor.)
 var _editorDraft = null;
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -611,7 +611,7 @@ function initGlobalTooltips() {
         if (!tipText) return;
 
         // Skip só o próprio campo (input/select/textarea) quando o form-group já tem um
-        // botão "?" de ajuda — evita tooltip duplicado nele. Nunca pula itens dentro de
+        // botão "?" de ajuda - evita tooltip duplicado nele. Nunca pula itens dentro de
         // um dropdown (não têm "?") nem outros elementos com data-title próprio no mesmo
         // form-group, como um botão de ação ao lado do campo.
         var inDropdown = target.closest('.custom-select-dropdown');

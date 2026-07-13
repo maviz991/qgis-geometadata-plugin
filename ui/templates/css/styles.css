@@ -591,7 +591,7 @@ body {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-/* Dropdown items — override shared suggestion-item colors */
+/* Dropdown items - override shared suggestion-item colors */
 .custom-select-dropdown .suggestion-item {
     justify-content: flex-start;
     color: var(--fg);
@@ -611,7 +611,8 @@ body {
 /* Global Tooltip */
 .global-tooltip {
     position: fixed;
-    z-index: 10001; /* acima de .modal-overlay (10000) — senão fica escondido atrás de modais */
+    z-index: 10001;
+    /* acima de .modal-overlay (10000) - senão fica escondido atrás de modais */
     pointer-events: none;
     background: #1e293b;
     color: #f8fafc;

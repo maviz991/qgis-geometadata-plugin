@@ -2537,7 +2537,7 @@
         var _distStagedLayer = null;
 
         var _GEOSERVER_BASE = 'https://geo-d.cdhu.sp.gov.br/geoserver';
-        var _geoserverAllLayers = null;   // cache — carregado uma vez
+        var _geoserverAllLayers = null;   // cache - carregado uma vez
         var _geoserverLoading = false;
         var _pendingQuery = null;
 
@@ -2702,7 +2702,7 @@
                 var cls = protoCls[r.protocol] || 'link';
                 return '<tr>' +
                     '<td style="text-align:center">' + (i + 1) + '</td>' +
-                    '<td>' + escHtml(r.name || '—') +
+                    '<td>' + escHtml(r.name || '-') +
                     (r.description ? '<br><small style="color:var(--fg-muted)">' + escHtml(r.description) + '</small>' : '') +
                     '</td>' +
                     '<td><span class="proto-badge ' + cls + '">' + escHtml(r.protocol) + '</span></td>' +
@@ -2719,8 +2719,8 @@
             'CC BY-NC 4.0': { useLimitation: 'Creative Commons Atribuição-NãoComercial 4.0 Internacional (CC BY-NC 4.0).', accessConstraints: 'license', useConstraints: 'license', otherConstraints: '' },
             'CC BY-NC-SA 4.0': { useLimitation: 'Creative Commons Atribuição-NãoComercial-CompartilhaIgual 4.0 Internacional (CC BY-NC-SA 4.0).', accessConstraints: 'license', useConstraints: 'license', otherConstraints: '' },
             'CC0': { useLimitation: 'CC0 1.0 Dedicação ao Domínio Público. Nenhum direito reservado.', accessConstraints: 'unrestricted', useConstraints: 'unrestricted', otherConstraints: '' },
-            'proprietary': { useLimitation: 'Todos os direitos reservados. Uso autorizado exclusivamente conforme termos estabelecidos pela CDHU.', accessConstraints: 'copyright', useConstraints: 'intellectualPropertyRights', otherConstraints: '© CDHU — Companhia de Desenvolvimento Habitacional e Urbano do Estado de São Paulo. Todos os direitos reservados.' },
-            'internal': { useLimitation: 'Uso interno restrito à CDHU e suas unidades. Distribuição externa não autorizada.', accessConstraints: 'restricted', useConstraints: 'restricted', otherConstraints: '© CDHU — Companhia de Desenvolvimento Habitacional e Urbano do Estado de São Paulo. Documento de uso interno.' }
+            'proprietary': { useLimitation: 'Todos os direitos reservados. Uso autorizado exclusivamente conforme termos estabelecidos pela CDHU.', accessConstraints: 'copyright', useConstraints: 'intellectualPropertyRights', otherConstraints: '© CDHU - Companhia de Desenvolvimento Habitacional e Urbano do Estado de São Paulo. Todos os direitos reservados.' },
+            'internal': { useLimitation: 'Uso interno restrito à CDHU e suas unidades. Distribuição externa não autorizada.', accessConstraints: 'restricted', useConstraints: 'restricted', otherConstraints: '© CDHU - Companhia de Desenvolvimento Habitacional e Urbano do Estado de São Paulo. Documento de uso interno.' }
         };
 
         function onLicenseChange(val) {

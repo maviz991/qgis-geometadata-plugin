@@ -1,7 +1,7 @@
-/* geonetwork.css — Editor de metadados GeoNetwork (painel editor.html): abas, grid de
+/* geonetwork.css - Editor de metadados GeoNetwork (painel editor.html): abas, grid de
    campos, contatos, badge de sincronização, distribuição de recursos, keywords, etc.
    Estilos de app-shell (navbar, layer picker, modais, tooltip global, custom-select,
-   busca genérica) ficam em styles.css — inclusive .search-wrap/.search-suggestions/
+   busca genérica) ficam em styles.css - inclusive .search-wrap/.search-suggestions/
    .suggestion-item, que o custom-select genérico (app.js) também usa. */
 
 /* ── Indicador de carregamento (publicar/salvar no Geohab) ────────────────────── */
@@ -479,7 +479,7 @@
 }
 
 /* Lista de camadas do GeoServer (Recursos Online): texto único "workspace - nome", sem
-   badge à direita — o space-between padrão de .suggestion-item ficaria sem o que empurrar
+   badge à direita - o space-between padrão de .suggestion-item ficaria sem o que empurrar
    pra direita, então alinhamos à esquerda aqui. */
 #dist-suggestions .suggestion-item {
     justify-content: flex-start;

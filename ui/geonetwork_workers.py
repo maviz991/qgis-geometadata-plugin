@@ -1,19 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-geonetwork_workers.py — GeoMetadata Plugin
+geonetwork_workers.py - GeoMetadata Plugin
 =====================================
-Workers (QThread) usados só pelo GeoNetworkBridge — busca de contatos,
+Workers (QThread) usados só pelo GeoNetworkBridge - busca de contatos,
 busca de registros de metadado, enriquecimento de contato via GN, e
-publicação (RNF02 — chamadas de rede não podem travar a UI do QGIS).
+publicação (RNF02 - chamadas de rede não podem travar a UI do QGIS).
 """
 
 from qgis.PyQt.QtCore import QThread, pyqtSignal
 
 
 class _GnPublishWorker(QThread):
-    """Publica o XML no GeoNetwork e busca de volta o dateStamp real que o GN carimbou —
+    """Publica o XML no GeoNetwork e busca de volta o dateStamp real que o GN carimbou -
     as duas chamadas de rede do fluxo de publicação, isoladas da UI thread. Só usa
-    core/geonetwork_service.py (requests puro, sem QtWidgets) — seguro rodar em thread,
+    core/geonetwork_service.py (requests puro, sem QtWidgets) - seguro rodar em thread,
     diferente do PersistenceService (que abre QMessageBox nativo e por isso continua
     rodando na thread principal)."""
     done = pyqtSignal(str, str, str)  # uuid_criado, date_stamp, error_message ('' se ok)
@@ -35,7 +35,7 @@ class _GnPublishWorker(QThread):
                     if remote and remote.get('dateStamp'):
                         date_stamp = remote['dateStamp']
                 except Exception:
-                    pass  # não crítico — sync check refaz essa consulta depois
+                    pass  # não crítico - sync check refaz essa consulta depois
             self.done.emit(uuid_criado or '', date_stamp, '')
         except Exception as exc:
             self.done.emit('', '', str(exc))

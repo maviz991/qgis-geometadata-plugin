@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-setup_dialog.py — GeoMetadata Plugin
+setup_dialog.py - GeoMetadata Plugin
 =====================================
 Tela de boas-vindas / preparação de ambiente.
 Exibida na primeira carga quando dependências estão ausentes.
@@ -24,7 +24,7 @@ _PLUGIN_ROOT = os.path.dirname(os.path.dirname(__file__))
 _LOGO_PATH   = os.path.join(_PLUGIN_ROOT, "img", "logo.png")
 _ACCENT      = "#e5222d"
 
-# Ícones de estado (texto puro — sem emoji exige suporte de fonte)
+# Ícones de estado (texto puro - sem emoji exige suporte de fonte)
 _ICON_WAIT  = "○"
 _ICON_RUN   = "▶"
 _ICON_OK    = "✓"
@@ -56,7 +56,7 @@ class SetupDialog(QDialog):
         self._row_widgets: dict = {}   # pkg -> (icon_lbl, text_lbl)
         self._dark = _is_dark_theme()
 
-        self.setWindowTitle("GeoMetadata — Preparando ambiente")
+        self.setWindowTitle("GeoMetadata - Preparando ambiente")
         self.setWindowFlags(
             Qt.Dialog |
             Qt.WindowTitleHint |

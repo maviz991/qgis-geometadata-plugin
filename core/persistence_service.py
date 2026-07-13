@@ -265,7 +265,7 @@ class PersistenceService:
             cursor.close()
             conn.close()
         except psycopg2.errors.UndefinedTable:
-            # Tabela ainda não existe nesse banco (ver Bug 1 em docs_projeto/bugs.md) — condição
+            # Tabela ainda não existe nesse banco (ver Bug 1 em docs_projeto/bugs.md) - condição
             # conhecida, não um erro de verdade. Sem traceback aqui: esse caminho de leitura roda
             # a cada troca de camada, e um dump completo por clique só gera ruído no console.
             pass

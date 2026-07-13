@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-main_bridge.py — GeoMetadata Plugin
+main_bridge.py - GeoMetadata Plugin
 =====================================
 Ponte de comunicação genérica (app-shell) para a interface principal em HTML:
 navegação, camadas do QGIS, login/logout, e utilidades sem domínio específico
@@ -226,7 +226,7 @@ class MainBridge(QObject):
             norm_path = os.path.normpath(file_path)
             if os.name == 'nt':
                 # Forma de string (não lista) é a que funciona de forma confiável com
-                # caminhos com espaço — o explorer.exe faz seu próprio parsing da linha
+                # caminhos com espaço - o explorer.exe faz seu próprio parsing da linha
                 # de comando, então as aspas em volta do caminho precisam chegar literais.
                 subprocess.Popen(f'explorer /select,"{norm_path}"')
             else:

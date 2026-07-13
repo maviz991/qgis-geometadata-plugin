@@ -1,9 +1,9 @@
-# Solicitação de Infraestrutura — Autenticação Entra ID para Plugin QGIS
+# Solicitação de Infraestrutura - Autenticação Entra ID para Plugin QGIS
 ## Plugin GeoMetadata v2.0
 
 **Data:** 22/04/2026  
 **Solicitante:** Equipe de Geoprocessamento  
-**Prioridade:** Alta — Bloqueia evolução do plugin GeoMetadata para v2.0
+**Prioridade:** Alta - Bloqueia evolução do plugin GeoMetadata para v2.0
 
 ---
 
@@ -45,12 +45,12 @@ Criar um **novo registro de aplicativo** no Microsoft Entra Admin Center:
 |-------|-------|
 | **Nome** | `GeoMetadata QGIS Plugin` (ou nome a critério do TI) |
 | **Supported account types** | `Accounts in this organizational directory only` (Single tenant) |
-| **Redirect URI — Plataforma** | `Public client/native (mobile & desktop)` |
-| **Redirect URI — Valor** | `http://localhost` |
+| **Redirect URI - Plataforma** | `Public client/native (mobile & desktop)` |
+| **Redirect URI - Valor** | `http://localhost` |
 
 > **Por que "Public Client"?**  
 > O plugin roda no desktop do usuário (não tem servidor backend próprio).  
-> A autenticação usa o fluxo **OAuth2 + PKCE** — seguro sem necessidade de Client Secret.  
+> A autenticação usa o fluxo **OAuth2 + PKCE** - seguro sem necessidade de Client Secret.  
 > É o mesmo mecanismo que VS Code, GitHub Desktop e outras apps desktop usam.
 
 #### API Permissions (Delegated)
@@ -65,11 +65,11 @@ Em **API Permissions → Add a Permission → Microsoft Graph → Delegated Perm
 
 Após adicionar, clicar em **"Grant admin consent for [Organização]"**.
 
-> **Nota:** NÃO é necessário `GroupMember.Read.All` nem configuração de grupos neste momento — o controle de permissões (quem pode publicar, quem pode editar) já é gerenciado pelo GeoOrchestra/GeoServer existente.
+> **Nota:** NÃO é necessário `GroupMember.Read.All` nem configuração de grupos neste momento - o controle de permissões (quem pode publicar, quem pode editar) já é gerenciado pelo GeoOrchestra/GeoServer existente.
 
 ---
 
-## 3. Ponto Crítico — Validação com o TI
+## 3. Ponto Crítico - Validação com o TI
 
 Precisamos confirmar **uma questão técnica** com o time que administra o GeoOrchestra:
 
@@ -79,7 +79,7 @@ Precisamos confirmar **uma questão técnica** com o time que administra o GeoOr
 
 ### Por que essa pergunta é importante:
 
-- Quando um **navegador** acessa o GeoOrchestra, o Gateway faz o redirect OAuth2 e gerencia cookies de sessão — isso já funciona.
+- Quando um **navegador** acessa o GeoOrchestra, o Gateway faz o redirect OAuth2 e gerencia cookies de sessão - isso já funciona.
 - Quando uma **aplicação desktop** (nosso plugin) acessa via REST API, ela não pode fazer redirect no browser a cada request. Ela precisa enviar o token diretamente no header HTTP.
 - Se o Gateway **não** aceita Bearer JWT externo, precisaremos de uma abordagem alternativa (ex: o plugin simular o fluxo web e capturar o cookie de sessão do Gateway).
 
@@ -87,9 +87,9 @@ Precisamos confirmar **uma questão técnica** com o time que administra o GeoOr
 
 | Cenário | Impacto no Plugin | Ação necessária do TI |
 |---------|-------------------|----------------------|
-| **Gateway aceita Bearer JWT** | ✅ Ideal — plugin envia token direto | Nenhuma config adicional no Gateway |
-| **Gateway só aceita cookies de sessão** | ⚠️ Funciona — plugin faz login via browser e captura cookie | Nenhuma, mas é menos elegante |
-| **Gateway precisa de ajuste para aceitar Bearer** | 🔧 Possível — Spring Security suporta Resource Server | Habilitar `oauth2-resource-server` no Gateway |
+| **Gateway aceita Bearer JWT** | ✅ Ideal - plugin envia token direto | Nenhuma config adicional no Gateway |
+| **Gateway só aceita cookies de sessão** | ⚠️ Funciona - plugin faz login via browser e captura cookie | Nenhuma, mas é menos elegante |
+| **Gateway precisa de ajuste para aceitar Bearer** | 🔧 Possível - Spring Security suporta Resource Server | Habilitar `oauth2-resource-server` no Gateway |
 
 ---
 
@@ -112,7 +112,7 @@ Precisamos confirmar **uma questão técnica** com o time que administra o GeoOr
 
 ---
 
-## 6. Fluxo Técnico — Como Funciona no Desktop
+## 6. Fluxo Técnico - Como Funciona no Desktop
 
 ```
   PC DO USUÁRIO

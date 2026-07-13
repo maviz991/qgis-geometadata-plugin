@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-env_checker.py — GeoMetadata Plugin
+env_checker.py - GeoMetadata Plugin
 =====================================
 Verifica a disponibilidade das dependências externas do plugin.
 Consultado antes de qualquer instalação para evitar trabalho desnecessário.
@@ -68,7 +68,7 @@ def is_webengine_available() -> tuple:
 # ---------------------------------------------------------------------------
 # Fix silencioso: lxml 5.2.1 tem um bug de empacotamento do wheel Windows que
 # causa crash nativo (access violation em xmlDictReference) ao construir XML
-# — ver qgis/QGIS#58205. Corrigido na 5.2.2+. Atualizamos em background sem
+# - ver qgis/QGIS#58205. Corrigido na 5.2.2+. Atualizamos em background sem
 # incomodar o usuário; só é aplicado depois que o QGIS for reiniciado (módulo
 # nativo já carregado na sessão atual não pode ser trocado a quente).
 _LXML_SAFE_MIN_VERSION = (5, 2, 2)

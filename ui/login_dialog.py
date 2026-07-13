@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-login_dialog.py — GeoMetadata Plugin
+login_dialog.py - GeoMetadata Plugin
 =====================================
 Diálogo de autenticação unificado.
 
@@ -96,7 +96,7 @@ class _AdminWorker(QThread):
 
 
 # ---------------------------------------------------------------------------
-# LoginDialog — roteador HTML vs QSS
+# LoginDialog - roteador HTML vs QSS
 # ---------------------------------------------------------------------------
 class LoginDialog(QDialog):
     """

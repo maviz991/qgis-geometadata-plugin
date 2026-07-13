@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-GeoServerPanel — Painel de publicação GeoServer (Placeholder v2.0)
+GeoServerPanel - Painel de publicação GeoServer (Placeholder v2.0)
 
 Exibe uma tela de boas-vindas com informações sobre o que estará
 disponível neste painel na fase 2 do desenvolvimento.
@@ -61,7 +61,7 @@ class GeoServerPanel(QWidget):
         card_layout.addWidget(icon_label)
 
         # Título
-        title = QLabel("GeoServer — Publicação de Camadas")
+        title = QLabel("GeoServer - Publicação de Camadas")
         title.setObjectName("GeoServerPlaceholderTitle")
         title.setAlignment(Qt.AlignCenter)
         title.setWordWrap(True)
@@ -109,7 +109,7 @@ class GeoServerPanel(QWidget):
             card_layout.addLayout(row)
 
         # Badge "Em breve"
-        badge = QLabel("🚧  Em desenvolvimento — Fase 2")
+        badge = QLabel("🚧  Em desenvolvimento - Fase 2")
         badge.setObjectName("ComingSoonBadge")
         badge.setAlignment(Qt.AlignCenter)
         card_layout.addWidget(badge)

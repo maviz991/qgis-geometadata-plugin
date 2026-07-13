@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-entra_login_dialog.py — GeoMetadata Plugin
+entra_login_dialog.py - GeoMetadata Plugin
 ===========================================
 Diálogo de login via Microsoft Entra ID (OAuth2 + PKCE).
 
@@ -22,7 +22,7 @@ from ..core.dependency_installer import DependencyInstaller
 
 
 # ---------------------------------------------------------------------------
-# Worker — roda a autenticação MSAL em thread separada
+# Worker - roda a autenticação MSAL em thread separada
 # ---------------------------------------------------------------------------
 class _AuthWorker(QThread):
     """Executa acquire_token_interactive() em background para não travar a UI."""
@@ -47,7 +47,7 @@ class _AuthWorker(QThread):
 
 
 # ---------------------------------------------------------------------------
-# EntraLoginDialog — janela de login
+# EntraLoginDialog - janela de login
 # ---------------------------------------------------------------------------
 class EntraLoginDialog(QDialog):
     """
@@ -262,7 +262,7 @@ class EntraLoginDialog(QDialog):
         self._btn_install.setEnabled(True)
 
     # ------------------------------------------------------------------
-    # Getters — usar após exec_() retornar Accepted
+    # Getters - usar após exec_() retornar Accepted
     # ------------------------------------------------------------------
 
     def get_provider(self) -> EntraAuthProvider:

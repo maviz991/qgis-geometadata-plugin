@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-geoserver_bridge.py — GeoMetadata Plugin
+geoserver_bridge.py - GeoMetadata Plugin
 =====================================
 Ponte de comunicação específica do GeoServer (busca de camadas hoje;
-publicação de camadas/workspaces nas próximas fases — ver requisitos_v2.md).
+publicação de camadas/workspaces nas próximas fases - ver requisitos_v2.md).
 Exposto ao JS via QWebChannel como 'gsBridge'.
 """
 
@@ -28,7 +28,7 @@ class GeoServerBridge(QObject):
 
     @pyqtSlot()
     def list_workspaces(self):
-        """RF01 — lista os workspaces do GeoServer em background (QThread, RNF02) e
+        """RF01 - lista os workspaces do GeoServer em background (QThread, RNF02) e
         emite gs_workspaces_ready(workspaces, error) quando terminar."""
         geoserver_service = getattr(self._dialog, 'geoserver_service', None)
         if not geoserver_service:
@@ -44,7 +44,7 @@ class GeoServerBridge(QObject):
     def search_geoserver(self, query: str):
         """Busca camadas públicas no GeoServer via WMS GetCapabilities (sem autenticação).
         Usado hoje pelo editor GN (aba 'Recursos associados') pra linkar uma camada
-        existente ao metadado — é o gsBridge quem sabe falar com o GeoServer."""
+        existente ao metadado - é o gsBridge quem sabe falar com o GeoServer."""
         try:
             import ssl
             import urllib.request

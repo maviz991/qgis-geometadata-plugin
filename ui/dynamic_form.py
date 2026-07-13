@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Formulário dinâmico — layout com QTabWidget (abas).
+Formulário dinâmico - layout com QTabWidget (abas).
 Abas: Identificação | Contato | Extensão | Metadados
-Atributos idênticos ao .ui original — FormManager não muda.
+Atributos idênticos ao .ui original - FormManager não muda.
 """
 from qgis.PyQt.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
@@ -14,7 +14,7 @@ from qgis.PyQt.QtCore import Qt, QDateTime
 
 
 # ---------------------------------------------------------------------------
-# Helpers — campo com label acima
+# Helpers - campo com label acima
 # ---------------------------------------------------------------------------
 
 def _field(label_text, widget, required=False):
@@ -52,7 +52,7 @@ def _tab_scroll(content_widget):
     scroll.setFrameShape(QFrame.NoFrame)
     scroll.setObjectName("TabScrollArea")
     scroll.setWidget(content_widget)
-    # Forçar fundo branco — QSS não atinge o viewport interno do QScrollArea
+    # Forçar fundo branco - QSS não atinge o viewport interno do QScrollArea
     white = QColor("#ffffff")
     for w in (scroll, scroll.viewport(), content_widget):
         w.setAutoFillBackground(True)
@@ -210,11 +210,11 @@ class DynamicForm:
         root_v.addWidget(footer)
 
     # ------------------------------------------------------------------
-    # Aba 1 — Identificação (padrão GeoNetwork: id + contato na mesma tela)
+    # Aba 1 - Identificação (padrão GeoNetwork: id + contato na mesma tela)
     # ------------------------------------------------------------------
 
     def _tab_identificacao(self):
-        # Container principal — sem scroll
+        # Container principal - sem scroll
         wrapper = QWidget()
         wrapper.setObjectName("TabContent")
         wrapper_v = QVBoxLayout(wrapper)
@@ -229,7 +229,7 @@ class DynamicForm:
         bar.setExpanding(False)
         bar.setDrawBase(False)
         bar.setElideMode(Qt.ElideNone)
-        # QSS direto — a cascata do parent nem sempre funciona no QGIS
+        # QSS direto - a cascata do parent nem sempre funciona no QGIS
         sub_tabs.setStyleSheet("""
             QTabWidget::pane {
                 border: none;
@@ -471,7 +471,7 @@ class DynamicForm:
         return {"widget": section, "body": body}
 
     # ------------------------------------------------------------------
-    # Aba 2 — Classificação (campos técnicos)
+    # Aba 2 - Classificação (campos técnicos)
     # ------------------------------------------------------------------
 
     def _tab_classificacao(self):
@@ -568,7 +568,7 @@ class DynamicForm:
                 if r.parent() and any(r.collect().values())]
 
     # ------------------------------------------------------------------
-    # Aba 3 — Extensão Geográfica
+    # Aba 3 - Extensão Geográfica
     # ------------------------------------------------------------------
 
     def _tab_extensao(self):
@@ -596,7 +596,7 @@ class DynamicForm:
         return content
 
     # ------------------------------------------------------------------
-    # Aba 4 — Metadados (datas)
+    # Aba 4 - Metadados (datas)
     # ------------------------------------------------------------------
 
     def _tab_metadados(self):

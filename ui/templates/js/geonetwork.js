@@ -11,12 +11,12 @@ function _scheduleDraftSave() {
     _draftTimer = setTimeout(_saveDraftNow, 1500);
 }
 
-// Salva na hora, sem o debounce de 1.5s — usado depois de ações explícitas (pull do GN,
+// Salva na hora, sem o debounce de 1.5s - usado depois de ações explícitas (pull do GN,
 // importar XML local) que não podem ficar pendentes até uma eventual troca de camada
 // disparar o timer sob a chave da camada errada.
 function _saveDraftNow() {
     // O timer de debounce (1.5s) pode disparar depois que o usuário já navegou pra
-    // outro painel — sem essa checagem, collectFormData() aciona o guard de "Ação
+    // outro painel - sem essa checagem, collectFormData() aciona o guard de "Ação
     // Necessária" à toa, já que o editor não existe mais no DOM.
     if (!document.getElementById("f-title")) { clearTimeout(_draftTimer); return; }
     var d = collectFormData();
@@ -50,7 +50,7 @@ document.addEventListener("click", function (e) {
 });
 
 // ── Indicador de carregamento (publicar/salvar) ─────────────────────────────────
-// Servidor do Geohab ou banco às vezes demora — sem isso, o clique não dava nenhum
+// Servidor do Geohab ou banco às vezes demora - sem isso, o clique não dava nenhum
 // feedback até a resposta chegar. Não é um modal bloqueante de propósito: se algum
 // caminho de erro não emitir nenhum sinal pro JS (ex.: diálogo nativo do Qt), o
 // timeout de segurança evita que o indicador fique preso pra sempre.
@@ -93,7 +93,7 @@ function _initGnBridge() {
         setGnBadge('synced');
     });
 
-    // Save local (Continuar Depois) confirmado — recheca contra o GN na hora, sem
+    // Save local (Continuar Depois) confirmado - recheca contra o GN na hora, sem
     // esperar reabrir a camada (não força "Sincronizado": um save local sozinho não
     // significa que bate com o GN, o checkGnSync decide o estado certo).
     gnBridge.local_save_succeeded.connect(function (uuid) {
@@ -133,7 +133,7 @@ function _initGnBridge() {
     });
 }
 
-// Chamado por loadPanel() (app.js) antes de trocar o HTML do painel — captura o
+// Chamado por loadPanel() (app.js) antes de trocar o HTML do painel - captura o
 // estado do formulário se o editor estava aberto.
 function _onBeforePanelUnload() {
     if (document.getElementById("f-title")) {
@@ -273,7 +273,7 @@ function tryImportXml() {
             populateForm(data);
             _saveDraftNow();
             checkGnSync(data.metadata_uuid, data.dateStamp || '');
-            // Modal.confirm chama close() logo depois desse callback retornar — abrir o
+            // Modal.confirm chama close() logo depois desse callback retornar - abrir o
             // alert de sucesso na hora faria ele "piscar" (mesmo overlay reaproveitado).
             // Adiando pro próximo tick, o close() do confirm já rodou antes.
             setTimeout(function () {
@@ -297,7 +297,7 @@ function resetEditorForm() {
 }
 
 // Mostra uma prévia pequena da miniatura (URL da aba Classificação) logo abaixo do
-// campo — só se a imagem realmente carregar, pra não deixar um ícone de imagem quebrada
+// campo - só se a imagem realmente carregar, pra não deixar um ícone de imagem quebrada
 // à mostra quando a URL for inválida ou ainda não tiver sido preenchida.
 function _updateThumbnailPreview() {
     var wrap = document.getElementById('thumb-preview-wrap');
@@ -341,7 +341,7 @@ function _loadFormForLayer(sessionDraft) {
 var _gnSyncUuid = null;
 var _gnSearchTimer = null;
 // Retrato (JSON) do formulário no momento exato em que o badge virou "Sincronizado" OU
-// "Não encontrado no Geohab" — comparado a cada input/change pra saber se o conteúdo
+// "Não encontrado no Geohab" - comparado a cada input/change pra saber se o conteúdo
 // atual bate de novo com esse ponto de partida, mesmo que o usuário tenha revertido a
 // edição manualmente (sem usar nenhum botão de Descartar/Publicar/Puxar). _gnSyncBaseline
 // guarda QUAL desses dois estados é o "limpo" a voltar quando o conteúdo bate de novo.
@@ -391,7 +391,7 @@ function setGnBadge(state) {
 // Chamado a cada input/change do formulário. Compara o conteúdo atual contra o retrato
 // do último ponto de partida conhecido (Sincronizado ou Não encontrado no Geohab): se
 // bater de novo, volta sozinho pro estado de origem (mesmo sem clicar em Descartar); se
-// divergir, vira "Modificado". Só alterna entre o baseline e "Modificado" — não interfere
+// divergir, vira "Modificado". Só alterna entre o baseline e "Modificado" - não interfere
 // em checking/offline/update_available.
 function _markGnModifiedIfNeeded() {
     if (_gnSyncSnapshot === null || _gnSyncBaseline === null) return;
@@ -417,7 +417,7 @@ function checkGnSync(uuid, dateStamp) {
         return;
     }
     // Sessão é checada de verdade do lado Python (check_gn_sync olha
-    // self._dialog.plugin.api_session ao vivo) — não usar _isLogged aqui, é só um
+    // self._dialog.plugin.api_session ao vivo) - não usar _isLogged aqui, é só um
     // cache de UI que pode ficar desatualizado logo após login/reconexão.
     setGnBadge('checking');
     gnBridge.check_gn_sync(uuid, dateStamp || '', function (result) {
@@ -455,7 +455,7 @@ function openGnSearchModal() {
     if (!_requireEditorOpen('buscar um metadado')) return;
     if (typeof gnBridge === 'undefined') return;
     // Registros públicos aparecem mesmo sem login (o Python já busca com sessão anônima
-    // nesse caso) — badge com tooltip avisa que logar dá acesso aos do setor também.
+    // nesse caso) - badge com tooltip avisa que logar dá acesso aos do setor também.
     var loginBadge = _isLogged ? '' :
         '<span class="modal-info-badge" onclick="Modal.close();navigate(\'login\')" ' +
         'data-title="Alguns metadados são públicos e aparecem mesmo sem login. Faça login pra ver também os exclusivos do seu setor.">' +
@@ -490,7 +490,7 @@ function _renderGnSearchResults(results) {
         return;
     }
     // Mesmo padrão visual da lista de sugestão de contatos (.suggestion-item). Sem badge
-    // aqui — toda essa busca já é exclusivamente no catálogo online, seria redundante.
+    // aqui - toda essa busca já é exclusivamente no catálogo online, seria redundante.
     box.innerHTML = results.map(function (r) {
         return '<div class="suggestion-item" onclick="pullGnRecord(\'' + escHtml(r.uuid) + '\')">' +
             '<span>' + escHtml(r.title) + '</span>' +
@@ -515,7 +515,7 @@ function pullGnRecord(uuid) {
     }, 'Puxar do Geohab');
 }
 
-// Guard comum pra qualquer ação do menu Arquivo que dependa do editor estar aberto —
+// Guard comum pra qualquer ação do menu Arquivo que dependa do editor estar aberto -
 // mesmo toast "Ação Necessária" pra todas (exportar, importar, buscar, descartar).
 function _requireEditorOpen(actionVerb) {
     if (document.getElementById("f-title")) return true;
@@ -568,7 +568,7 @@ function collectFormData() {
         sourceDescription: get("sourceDescription"),
         processorContacts: procContacts,
         metadataId: get("metadataId"),
-        metadata_uuid: get("metadataId"), // alias — mesma chave usada por xml_parser.py/pull do GN
+        metadata_uuid: get("metadataId"), // alias - mesma chave usada por xml_parser.py/pull do GN
         metadataLanguage: get("metadataLanguage"),
         metadataAuthorContacts: metaContacts,
         onlineResources: distResources.slice(),
@@ -785,7 +785,7 @@ function populateForm(data) {
         }
     });
     // metadata_uuid (chave usada pelo xml_parser.py/GN) é alias de metadataId (chave do
-    // campo do form) — sem isso, dado puxado do GN ou importado de arquivo local não
+    // campo do form) - sem isso, dado puxado do GN ou importado de arquivo local não
     // preenche o UUID real do registro, mantendo o UUID aleatório do resetEditorForm().
     if (data.metadata_uuid) {
         var uidEl = document.getElementById('f-metadataId');
@@ -1047,7 +1047,7 @@ function confirmDistLayer() {
 }
 
 // Gera uma miniatura (WMS GetMap) a partir da camada do GeoServer recém-associada em
-// Distribuição e preenche "Classificação > URL da Miniatura" — só se o campo estiver
+// Distribuição e preenche "Classificação > URL da Miniatura" - só se o campo estiver
 // vazio, pra nunca sobrescrever uma URL externa que o usuário já tenha colocado lá.
 function _buildWmsThumbnailUrl(wmsUrl, layerName) {
     var w = document.getElementById('f-westBoundLongitude');
@@ -1056,7 +1056,7 @@ function _buildWmsThumbnailUrl(wmsUrl, layerName) {
     var n = document.getElementById('f-northBoundLatitude');
     var bbox = (w && w.value && e && e.value && s && s.value && n && n.value)
         ? [w.value, s.value, e.value, n.value].join(',')
-        : '-180,-90,180,90'; // sem extensão preenchida ainda (aba Extensão) — cai pro mundo todo
+        : '-180,-90,180,90'; // sem extensão preenchida ainda (aba Extensão) - cai pro mundo todo
     return wmsUrl + '&version=1.1.0&request=GetMap&layers=' + encodeURIComponent(layerName) +
         '&bbox=' + bbox + '&width=768&height=478&srs=CRS:84&styles=&format=image%2Fpng';
 }

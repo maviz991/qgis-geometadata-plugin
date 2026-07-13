@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-geonetwork_bridge.py — GeoMetadata Plugin
+geonetwork_bridge.py - GeoMetadata Plugin
 =====================================
 Ponte de comunicação específica do fluxo GeoNetwork (editor de metadados):
 contatos, rascunho do formulário, exportar/publicar, busca e pull no GN.
@@ -21,8 +21,8 @@ class GeoNetworkBridge(QObject):
     gn_contacts_ready        = pyqtSignal(str, str, 'QVariant')  # key, query, results
     gn_contact_enriched      = pyqtSignal(str, int, 'QVariant')  # key, idx, enriched_data
     gn_metadata_search_ready = pyqtSignal('QVariant')            # [{uuid, title, dateStamp}]
-    gn_publish_succeeded     = pyqtSignal(str)  # uuid — publicação confirmada, badge -> Sincronizado
-    local_save_succeeded     = pyqtSignal(str)  # uuid — save local (DB/sidecar) confirmado, recheca badge
+    gn_publish_succeeded     = pyqtSignal(str)  # uuid - publicação confirmada, badge -> Sincronizado
+    local_save_succeeded     = pyqtSignal(str)  # uuid - save local (DB/sidecar) confirmado, recheca badge
 
     def __init__(self, dialog, parent=None):
         super().__init__(parent)
@@ -245,7 +245,7 @@ class GeoNetworkBridge(QObject):
     @pyqtSlot(str)
     def save_draft(self, json_str: str):
         """Persiste o rascunho do formulário sob a chave da camada ativa. Drafts de outras
-        camadas (já salvos antes) não são afetados — cada camada tem seu próprio slot."""
+        camadas (já salvos antes) não são afetados - cada camada tem seu próprio slot."""
         import json
         try:
             data = json.loads(json_str)
@@ -299,7 +299,7 @@ class GeoNetworkBridge(QObject):
 
     @pyqtSlot()
     def clear_draft(self):
-        """Remove só o rascunho da camada ativa — não mexe nos drafts de outras camadas."""
+        """Remove só o rascunho da camada ativa - não mexe nos drafts de outras camadas."""
         try:
             drafts = self._load_all_drafts()
             if drafts.pop(self._layer_key(), None) is not None:
@@ -312,7 +312,7 @@ class GeoNetworkBridge(QObject):
     @pyqtSlot(str)
     def search_gn_metadata(self, query: str):
         """Busca registros de metadado (não subtemplates) no GN por título. Emite gn_metadata_search_ready.
-        Funciona sem login (sessão anônima) — GN já filtra pra mostrar só os registros
+        Funciona sem login (sessão anônima) - GN já filtra pra mostrar só os registros
         públicos nesse caso; os do setor exigem sessão autenticada."""
         session = getattr(getattr(self._dialog, 'plugin', None), 'api_session', None)
         if not session:

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-geoserver_workers.py — GeoMetadata Plugin
+geoserver_workers.py - GeoMetadata Plugin
 =====================================
-Workers (QThread) usados pelo GeoServerBridge — chamadas REST que não podem
+Workers (QThread) usados pelo GeoServerBridge - chamadas REST que não podem
 bloquear a UI do QGIS (RNF02 de requisitos_v2.md).
 """
 

@@ -245,7 +245,7 @@
 
 /* Itens da lista em si reaproveitam .suggestion-item (mesmo padrão visual da busca de
    contatos, em ui/templates/css/styles.css). Altura FIXA (não max-height) pra não ficar
-   crescendo/encolhendo o modal conforme o número de resultados muda — ~5-6 linhas visíveis. */
+   crescendo/encolhendo o modal conforme o número de resultados muda - ~5-6 linhas visíveis. */
 .gn-search-results {
     height: 280px;
     overflow-y: auto;

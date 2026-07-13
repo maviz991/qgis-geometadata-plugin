@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-entra_auth_provider.py — GeoMetadata Plugin
+entra_auth_provider.py - GeoMetadata Plugin
 ============================================
 Provedor de autenticação via Microsoft Entra ID (Azure AD).
 
@@ -44,7 +44,7 @@ def get_msal_install_instructions():
 
 
 # ---------------------------------------------------------------------------
-# BearerTokenAuth — injeta o token Bearer em cada requisição
+# BearerTokenAuth - injeta o token Bearer em cada requisição
 # ---------------------------------------------------------------------------
 class BearerTokenAuth(AuthBase):
     """
@@ -72,7 +72,7 @@ class BearerTokenAuth(AuthBase):
 
 
 # ---------------------------------------------------------------------------
-# EntraAuthProvider — gerenciador principal da autenticação Entra ID
+# EntraAuthProvider - gerenciador principal da autenticação Entra ID
 # ---------------------------------------------------------------------------
 class EntraAuthProvider:
     """
@@ -106,7 +106,7 @@ class EntraAuthProvider:
         # Cache de token em memória (sem persistência em disco por ora)
         self._token_cache = msal.SerializableTokenCache()
 
-        # Instância da aplicação MSAL (Public Client — sem client_secret)
+        # Instância da aplicação MSAL (Public Client - sem client_secret)
         self._app = msal.PublicClientApplication(
             client_id=self._client_id,
             authority=self._authority,
@@ -141,7 +141,7 @@ class EntraAuthProvider:
                 self._token_result = result
                 return True
 
-        # Passo 2: Nenhum token em cache — abre browser para login interativo
+        # Passo 2: Nenhum token em cache - abre browser para login interativo
         # O msal gerencia o listener localhost automaticamente (PKCE)
         result = self._app.acquire_token_interactive(scopes=self._scopes)
 
@@ -149,7 +149,7 @@ class EntraAuthProvider:
             self._token_result = result
             return True
 
-        # Falhou — armazena o erro para inspeção
+        # Falhou - armazena o erro para inspeção
         self._token_result = result or {}
         return False
 

@@ -1,4 +1,4 @@
-# Planejamento do Plugin GeoMetadata — Histórico (v1.x)
+# Planejamento do Plugin GeoMetadata - Histórico (v1.x)
 
 > **[HISTÓRICO]** Este documento registra a concepção original e o estado atual (v1.0.1) do plugin.
 > Para o plano de evolução para v2.0, consulte `requisitos_v2.md`.
@@ -23,17 +23,17 @@
 
 ---
 
-## Fluxo de Trabalho Atual (v1.0.1 — Em Produção)
+## Fluxo de Trabalho Atual (v1.0.1 - Em Produção)
 
 1. Usuário seleciona uma camada no painel de camadas do QGIS.
 2. Abre o plugin `GeoMetadata` pela barra de ferramentas.
 3. O formulário carrega com campos pré-preenchidos (título, BBox, UUID) se já houver metadado associado.
 4. Usuário preenche os campos MGB 2.0.
 5. Ações disponíveis:
-   - **Continuar depois** — Salva em arquivo sidecar (`.xml` ao lado do shapefile) ou em tabela PostgreSQL.
-   - **Exportar Metadado** — Gera XML MGB 2.0 e salva localmente.
-   - **Exportar para Geohab** — Envia via REST API ao GeoNetwork (requer login).
-   - **Associar Camada** — Vincula URLs WMS/WFS ao metadado.
+   - **Continuar depois** - Salva em arquivo sidecar (`.xml` ao lado do shapefile) ou em tabela PostgreSQL.
+   - **Exportar Metadado** - Gera XML MGB 2.0 e salva localmente.
+   - **Exportar para Geohab** - Envia via REST API ao GeoNetwork (requer login).
+   - **Associar Camada** - Vincula URLs WMS/WFS ao metadado.
 
 ---
 

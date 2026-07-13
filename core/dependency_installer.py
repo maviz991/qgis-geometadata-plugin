@@ -72,7 +72,7 @@ class DependencyInstaller(QThread):
 
 
 # ---------------------------------------------------------------------------
-# Instalador de múltiplos pacotes — sequencial com progresso por pacote
+# Instalador de múltiplos pacotes - sequencial com progresso por pacote
 # ---------------------------------------------------------------------------
 class MultiPackageInstaller(QThread):
     """

@@ -13,28 +13,28 @@ A geração de XML atual usa `assets/tamplate_mgb20.xml` como esqueleto estátic
 
 ## Análise das Abordagens
 
-### Opção A — Geração Programática Pura (sem template)
+### Opção A - Geração Programática Pura (sem template)
 Construir o XML diretamente via `lxml.etree`, criando cada elemento com namespaces corretos.
 
 | Prós | Contras |
 |---|---|
 | Controle total da estrutura | Mais código a escrever |
-| Funciona 100% offline | — |
-| Suporta N contatos, N keywords | — |
-| CodeLists corretos desde a origem | — |
-| Fácil adicionar novos campos | — |
-| Sem dependência de arquivo externo | — |
+| Funciona 100% offline | - |
+| Suporta N contatos, N keywords | - |
+| CodeLists corretos desde a origem | - |
+| Fácil adicionar novos campos | - |
+| Sem dependência de arquivo externo | - |
 
-### Opção B — Template XML Enriquecido (abordagem atual melhorada)
+### Opção B - Template XML Enriquecido (abordagem atual melhorada)
 Ampliar o `tamplate_mgb20.xml` para incluir todos os novos campos, e ajustar o `xml_generator.py`.
 
 | Prós | Contras |
 |---|---|
 | Menos refatoração | Continua frágil para N contatos |
 | Mais fácil de visualizar a estrutura | Dois arquivos para manter em sincronia |
-| — | Exige regenerar o template para novos campos |
+| - | Exige regenerar o template para novos campos |
 
-### Opção C — Template + Geração Híbrida
+### Opção C - Template + Geração Híbrida
 Usar um template mínimo apenas para namespaces/cabeçalho e gerar o corpo programaticamente.
 
 > [!TIP]
@@ -46,11 +46,11 @@ Usar um template mínimo apenas para namespaces/cabeçalho e gerar o corpo progr
 ## Open Questions
 
 > [!IMPORTANT]
-> **Decisão 1 — Abordagem:** Confirmar Opção A (geração programática) ou Opção B (ampliar template)?
+> **Decisão 1 - Abordagem:** Confirmar Opção A (geração programática) ou Opção B (ampliar template)?
 > A Opção A é recomendada, mas a B é mais rápida para entregar no curto prazo.
 
 > [!IMPORTANT]
-> **Decisão 2 — Contatos múltiplos:** O formulário agora suporta N contatos do recurso e N contatos de metadado. No XML, cada um deve gerar um `<gmd:contact>` ou `<gmd:pointOfContact>` separado. Confirmar esse comportamento?
+> **Decisão 2 - Contatos múltiplos:** O formulário agora suporta N contatos do recurso e N contatos de metadado. No XML, cada um deve gerar um `<gmd:contact>` ou `<gmd:pointOfContact>` separado. Confirmar esse comportamento?
 
 > [!WARNING]
 > **MGB 2.0 vs ISO 19139 puro:** O "MGB 2.0" não tem esquema XSD oficial publicado. Na prática, os XMLs que o GeoNetwork aceita são **ISO 19139 com perfil MGB** (sem extensão de esquema formal). Isso significa que podemos gerar ISO 19139 puro com as CodeLists corretas e ele será válido tanto no QGIS quanto no GeoNetwork.

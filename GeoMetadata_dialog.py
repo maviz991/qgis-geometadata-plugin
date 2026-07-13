@@ -83,7 +83,7 @@ if QWebEnginePage is not None:
 
         def createWindow(self, _type):
             """Links com target="_blank" (ou window.open()) não passam por
-            acceptNavigationRequest — o Qt chama createWindow() em vez disso.
+            acceptNavigationRequest - o Qt chama createWindow() em vez disso.
             Devolvemos uma página descartável só pra capturar a URL de destino
             assim que ela for definida, abrir no navegador do sistema e jogar fora."""
             throwaway = QWebEnginePage(self.profile(), self)
@@ -145,7 +145,7 @@ class CustomHeightDelegate(QStyledItemDelegate):
         painter.restore()
 class NavButton(QPushButton):
     """
-    Botão de navegação do header — hover e estado ativo via setStyleSheet()
+    Botão de navegação do header - hover e estado ativo via setStyleSheet()
     direto no widget. Sem seletores QSS de propriedade, sem polish().
     """
 
@@ -166,7 +166,7 @@ class NavButton(QPushButton):
         self._timer.setInterval(200)
         self._timer.timeout.connect(self._maybe_close)
         self.setAttribute(Qt.WA_Hover, True)
-        # Expande verticalmente para preencher o header — border-bottom alinha ao fundo
+        # Expande verticalmente para preencher o header - border-bottom alinha ao fundo
         self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
 
     # ------------------------------------------------------------------
@@ -281,7 +281,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self._load_contacts()
 
         # Corrige em background, sem UI, um lxml 5.2.1 bugado (crash nativo
-        # conhecido ao gerar XML — ver env_checker.silently_fix_lxml_if_needed).
+        # conhecido ao gerar XML - ver env_checker.silently_fix_lxml_if_needed).
         from .core.env_checker import silently_fix_lxml_if_needed
         silently_fix_lxml_if_needed()
 
@@ -363,7 +363,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         if QWebEnginePage is not None:
             self.web_view.setPage(_ExternalLinkPage(self.web_view))
 
-        # Configura o QWebChannel para comunicação — três bridges por domínio
+        # Configura o QWebChannel para comunicação - três bridges por domínio
         # (genérico, GeoNetwork, GeoServer), cada um exposto ao JS com seu próprio nome.
         self.bridge = MainBridge(self)
         self.gn_bridge = GeoNetworkBridge(self)
@@ -423,7 +423,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         layout.setSpacing(0)
         layout.setContentsMargins(0, 0, 16, 0)
 
-        # Logo clicável — navega para Home
+        # Logo clicável - navega para Home
         pixmap = QPixmap(":/plugins/geometadata/img/header_logo.png")
         scaled = pixmap.scaled(170, 58, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self._logo_btn = QPushButton()
@@ -481,7 +481,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         menu_geoserver.addSeparator()
 
         # Aviso de Fase 2 (visual informativo)
-        self._action_gs_fase2 = QAction("Em desenvolvimento  —  Fase 2", self)
+        self._action_gs_fase2 = QAction("Em desenvolvimento  -  Fase 2", self)
         self._action_gs_fase2.setEnabled(False)
         menu_geoserver.addAction(self._action_gs_fase2)
 
@@ -621,7 +621,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
     def _navigate_to_home(self):
         """Navega para a Home (índice 0)."""
         self._stacked.setCurrentIndex(0)
-        self._set_active_nav_btn(None)  # logo é Home — nenhum botão nav ativo
+        self._set_active_nav_btn(None)  # logo é Home - nenhum botão nav ativo
 
     def _navigate_to_geonetwork(self):
         """Navega para o painel GeoNetwork (índice 1)."""
@@ -783,7 +783,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             return
 
         # As duas chamadas de rede (publicar + buscar dateStamp de volta) rodam numa
-        # QThread — se rodassem direto aqui, travariam a UI inteira do QGIS (inclusive o
+        # QThread - se rodassem direto aqui, travariam a UI inteira do QGIS (inclusive o
         # próprio indicador de "Publicando..." no JS) até o servidor do Geohab responder.
         from .core.plugin_config import config_loader
         from .ui.geonetwork_workers import _GnPublishWorker
@@ -801,7 +801,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             return
         metadata_dict['metadata_uuid'] = uuid_criado
         # dateStamp real que o GN carimbou ao processar (não o que estava no formulário
-        # antes de publicar) — sem isso, a próxima checagem de sync sempre acha que o GN
+        # antes de publicar) - sem isso, a próxima checagem de sync sempre acha que o GN
         # tem uma "atualização nova", já que o dateStamp local nunca bateria com o do GN.
         if date_stamp:
             metadata_dict['dateStamp'] = date_stamp
@@ -827,7 +827,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         layer = self.iface.activeLayer()
         cdhu_data = self.contatos_predefinidos.get('cdhu', {})
         success = self.persistence_service.save(layer, metadata_dict, cdhu_data, is_automatic_resave, self)
-        # Só avisa o badge num save explícito do usuário ("Continuar Depois") — o resave
+        # Só avisa o badge num save explícito do usuário ("Continuar Depois") - o resave
         # automático pós-publicação já tem seu próprio aviso (gn_publish_succeeded).
         if success and not is_automatic_resave and hasattr(self, 'gn_bridge'):
             uuid = metadata_dict.get('metadata_uuid') or metadata_dict.get('metadataId') or ''
