@@ -46,7 +46,7 @@ from qgis.core import (
 # --- 3. Imports de Módulos Locais do Plugin ---
 from .core import xml_generator, xml_parser
 from .ui.form_manager import FormManager
-from .core.metadata_service import MetadataService
+from .core.geonetwork_service import GeoNetworkService
 from .core.persistence_service import PersistenceService
 from . import resources
 from .core.plugin_config import config_loader
@@ -66,6 +66,8 @@ except ImportError:
         QWebChannel = None
 
 from .ui.main_bridge import MainBridge
+from .ui.geonetwork_bridge import GeoNetworkBridge
+from .ui.geoserver_bridge import GeoServerBridge
 
 
 if QWebEnginePage is not None:
@@ -298,9 +300,11 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self._build_ui_structure()
         
         # --- Inicialização dos Microsserviços ---
-        from .core.metadata_service import MetadataService
+        from .core.geonetwork_service import GeoNetworkService
+        from .core.geoserver_service import GeoServerService
         from .core.persistence_service import PersistenceService
-        self.metadata_service = MetadataService(self.plugin)
+        self.geonetwork_service = GeoNetworkService(self.plugin)
+        self.geoserver_service = GeoServerService(self.plugin)
         self.persistence_service = PersistenceService(self.iface)
         # O FormManager será inicializado sob demanda ou vinculado à bridge
         self.ui = None # Será atualizado quando o editor HTML carregar
@@ -359,10 +363,15 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         if QWebEnginePage is not None:
             self.web_view.setPage(_ExternalLinkPage(self.web_view))
 
-        # Configura o QWebChannel para comunicação
+        # Configura o QWebChannel para comunicação — três bridges por domínio
+        # (genérico, GeoNetwork, GeoServer), cada um exposto ao JS com seu próprio nome.
         self.bridge = MainBridge(self)
+        self.gn_bridge = GeoNetworkBridge(self)
+        self.gs_bridge = GeoServerBridge(self)
         self.channel = QWebChannel(self.web_view.page())
         self.channel.registerObject("bridge", self.bridge)
+        self.channel.registerObject("gnBridge", self.gn_bridge)
+        self.channel.registerObject("gsBridge", self.gs_bridge)
         self.web_view.page().setWebChannel(self.channel)
 
         # Carrega o arquivo HTML principal
@@ -748,7 +757,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             self.show_toast('Erro', f'Falha ao exportar XML: {e}', 'error')
 
     def exportar_to_geo(self, metadata_dict=None):
-        """Exporta para o GeoNetwork usando o MetadataService. A escolha de processamento
+        """Exporta para o GeoNetwork usando o GeoNetworkService. A escolha de processamento
         de UUID (Nenhum/Sobrescrever/Gerar novo) é feita no modal HTML antes da chamada
         e chega aqui em metadata_dict['uuidProcessing']."""
         if metadata_dict is None:
@@ -769,34 +778,43 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             from .core import xml_generator
             cdhu_data = self.contatos_predefinidos.get('cdhu', {})
             xml_payload = xml_generator.generate_xml(metadata_dict, cdhu_data)
-
-            from .core.plugin_config import config_loader
-            uuid_criado = self.metadata_service.push_to_geonetwork(xml_payload, config_loader, uuid_processing)
-
-            if uuid_criado:
-                metadata_dict['metadata_uuid'] = uuid_criado
-                # Busca o dateStamp real que o GN carimbou ao processar (não o que estava
-                # no formulário antes de publicar) — sem isso, a próxima checagem de sync
-                # sempre acha que o GN tem uma "atualização nova", já que o dateStamp local
-                # nunca bateria com o que o GN de fato gravou.
-                try:
-                    remote = self.metadata_service.fetch_from_geonetwork(uuid_criado, config_loader)
-                    if remote and remote.get('dateStamp'):
-                        metadata_dict['dateStamp'] = remote['dateStamp']
-                except Exception:
-                    pass
-                self.save_metadata(metadata_dict=metadata_dict, is_automatic_resave=True)
-                if hasattr(self, 'bridge'):
-                    self.bridge.gn_publish_succeeded.emit(uuid_criado)
-                view_url = config_loader.get_metadata_view_url(uuid_criado)
-                self.show_toast(
-                    'Sucesso',
-                    f'Metadado exportado.<br>UUID: {uuid_criado}'
-                    f'<br><a href="{view_url}" target="_blank">Acesse aqui</a>',
-                    'success'
-                )
         except Exception as e:
-            self.show_toast('Erro', f'Falha no GeoNetwork: {e}', 'error')
+            self.show_toast('Erro', f'Falha ao gerar XML: {e}', 'error')
+            return
+
+        # As duas chamadas de rede (publicar + buscar dateStamp de volta) rodam numa
+        # QThread — se rodassem direto aqui, travariam a UI inteira do QGIS (inclusive o
+        # próprio indicador de "Publicando..." no JS) até o servidor do Geohab responder.
+        from .core.plugin_config import config_loader
+        from .ui.geonetwork_workers import _GnPublishWorker
+        self._gn_publish_worker = _GnPublishWorker(self.geonetwork_service, xml_payload, config_loader, uuid_processing)
+        self._gn_publish_worker.done.connect(
+            lambda uuid_criado, date_stamp, error: self._on_gn_publish_done(metadata_dict, uuid_criado, date_stamp, error)
+        )
+        self._gn_publish_worker.start()
+
+    def _on_gn_publish_done(self, metadata_dict, uuid_criado, date_stamp, error):
+        """Callback (thread principal) quando o _GnPublishWorker termina a publicação no GN."""
+        from .core.plugin_config import config_loader
+        if error or not uuid_criado:
+            self.show_toast('Erro', f'Falha no GeoNetwork: {error or "resposta inesperada do servidor"}', 'error')
+            return
+        metadata_dict['metadata_uuid'] = uuid_criado
+        # dateStamp real que o GN carimbou ao processar (não o que estava no formulário
+        # antes de publicar) — sem isso, a próxima checagem de sync sempre acha que o GN
+        # tem uma "atualização nova", já que o dateStamp local nunca bateria com o do GN.
+        if date_stamp:
+            metadata_dict['dateStamp'] = date_stamp
+        self.save_metadata(metadata_dict=metadata_dict, is_automatic_resave=True)
+        if hasattr(self, 'gn_bridge'):
+            self.gn_bridge.gn_publish_succeeded.emit(uuid_criado)
+        view_url = config_loader.get_metadata_view_url(uuid_criado)
+        self.show_toast(
+            'Sucesso',
+            f'Metadado exportado.<br>UUID: {uuid_criado}'
+            f'<br><a href="{view_url}" target="_blank">Acesse aqui</a>',
+            'success'
+        )
 
     def save_metadata(self, metadata_dict=None, is_automatic_resave=False):
         """Usa o PersistenceService para salvar no DB ou XML Sidecar."""
@@ -811,9 +829,9 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         success = self.persistence_service.save(layer, metadata_dict, cdhu_data, is_automatic_resave, self)
         # Só avisa o badge num save explícito do usuário ("Continuar Depois") — o resave
         # automático pós-publicação já tem seu próprio aviso (gn_publish_succeeded).
-        if success and not is_automatic_resave and hasattr(self, 'bridge'):
+        if success and not is_automatic_resave and hasattr(self, 'gn_bridge'):
             uuid = metadata_dict.get('metadata_uuid') or metadata_dict.get('metadataId') or ''
-            self.bridge.local_save_succeeded.emit(uuid)
+            self.gn_bridge.local_save_succeeded.emit(uuid)
 
     def sanitize_title(self, value):
         """Remove caracteres especiais e normaliza espaços para uso como nome de arquivo."""

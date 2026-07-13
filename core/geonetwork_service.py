@@ -3,7 +3,7 @@ import requests
 import traceback
 from qgis.PyQt import QtWidgets
 
-class MetadataService:
+class GeoNetworkService:
     """
     Serviço que abstrai a comunicação com o GeoNetwork (API REST).
     """

@@ -1,0 +1,1126 @@
+/* geonetwork.css — Editor de metadados GeoNetwork (painel editor.html): abas, grid de
+   campos, contatos, badge de sincronização, distribuição de recursos, keywords, etc.
+   Estilos de app-shell (navbar, layer picker, modais, tooltip global, custom-select,
+   busca genérica) ficam em styles.css — inclusive .search-wrap/.search-suggestions/
+   .suggestion-item, que o custom-select genérico (app.js) também usa. */
+
+/* ── Indicador de carregamento (publicar/salvar no Geohab) ────────────────────── */
+.gn-action-loading {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 9000;
+    align-items: center;
+    gap: 10px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+    padding: 12px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--fg);
+}
+
+/* ── Editor panel ─────────────────────────────────────────────── */
+.editor-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+}
+
+/* ── Abas ─────────────────────────────────────────────────────── */
+.form-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: white;
+    padding: 0 24px;
+    flex-shrink: 0;
+}
+
+.tab-link {
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    padding: 14px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--fg-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    outline: none;
+    margin-bottom: -1px;
+}
+
+.tab-link:hover {
+    color: var(--fg);
+}
+
+.tab-link.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+.tab-content {
+    display: none;
+    overflow-y: auto;
+    flex: 1;
+    position: relative;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* ── Grupo de status (badge de sincronização GN + progresso) ────── */
+.tabs-status-group {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* ── Badge de sincronização com o GeoNetwork ─────────────────────── */
+.gn-sync-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    background: #f1f5f9;
+    color: var(--fg-muted);
+    transition: background 0.15s;
+}
+
+.gn-sync-badge:hover {
+    background: #e2e8f0;
+}
+
+.gn-sync-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #94a3b8;
+    flex-shrink: 0;
+}
+
+.gn-sync-badge.checking .gn-sync-dot {
+    background: #94a3b8;
+    animation: gn-sync-pulse 1.2s ease-in-out infinite;
+}
+
+.gn-sync-badge.offline {
+    background: #f1f5f9;
+    color: var(--fg-muted);
+}
+
+.gn-sync-badge.offline .gn-sync-dot {
+    background: #94a3b8;
+}
+
+.gn-sync-badge.not_found {
+    background: #f3e8ff;
+    color: #9333ea;
+}
+
+.gn-sync-badge.not_found .gn-sync-dot {
+    background: #a855f7;
+}
+
+.gn-sync-badge.synced {
+    background: #dcfce7;
+    color: #16a34a;
+}
+
+.gn-sync-badge.synced .gn-sync-dot {
+    background: #22c55e;
+}
+
+.gn-sync-badge.update_available {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.gn-sync-badge.update_available .gn-sync-dot {
+    background: #f59e0b;
+}
+
+.gn-sync-badge.modified {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.gn-sync-badge.modified .gn-sync-dot {
+    background: #3b82f6;
+}
+
+@keyframes gn-sync-pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.35;
+    }
+}
+
+/* ── Banner de atualização disponível no GN ──────────────────────── */
+.gn-update-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 24px;
+    background: #fffbeb;
+    border-bottom: 1px solid #fde68a;
+    color: #92400e;
+    font-size: 13px;
+}
+
+.gn-update-banner span {
+    flex: 1;
+}
+
+.gn-update-banner-close {
+    background: none;
+    border: none;
+    font-size: 18px;
+    line-height: 1;
+    color: #92400e;
+    cursor: pointer;
+    padding: 2px 4px;
+}
+
+/* ── Progresso Circular ───────────────────────────────────────── */
+.progress-wrapper {
+    display: flex;
+    align-items: center;
+    padding-right: 12px;
+}
+
+.circular-progress {
+    position: relative;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: conic-gradient(#3b82f6 calc(var(--progress) * 1%), #e2e8f0 0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.3s ease;
+}
+
+.circular-progress::before {
+    content: "";
+    position: absolute;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background-color: white;
+}
+
+.progress-value {
+    position: relative;
+    font-size: 10px;
+    font-weight: 700;
+    color: #475569;
+}
+
+.circular-progress.completed {
+    background: conic-gradient(#22c55e calc(var(--progress) * 1%), #e2e8f0 0);
+}
+
+.circular-progress.completed .progress-value {
+    color: #16a34a;
+}
+
+/* ── Grid de campos ───────────────────────────────────────────── */
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    padding: 28px;
+    max-width: 100%;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group.span-2 {
+    grid-column: span 2;
+}
+
+.form-group label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--fg-muted);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    color: var(--fg);
+    background: white;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(229, 34, 45, 0.08);
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.form-group input.error,
+.form-group select.error,
+.form-group textarea.error,
+.custom-select.error .custom-select-trigger {
+    border-color: var(--accent);
+    background: #fff5f5;
+}
+
+.form-group input:disabled,
+.form-group select:disabled {
+    opacity: 0.38;
+    cursor: not-allowed;
+    background: #f8fafc;
+}
+
+.form-group input[readonly] {
+    background: #f1f5f9;
+    color: var(--fg-muted);
+    cursor: default;
+    user-select: text;
+}
+
+.req {
+    color: var(--accent);
+}
+
+/* ── Linha inline (dois campos lado a lado) ────────────────────── */
+.inline-row {
+    display: flex;
+    gap: 8px;
+}
+
+.inline-row select {
+    flex: 0 0 160px;
+}
+
+.inline-row input {
+    flex: 1;
+    min-width: 0;
+}
+
+/* ── BBox ─────────────────────────────────────────────────────── */
+.bbox-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    align-items: end;
+    margin-top: 8px;
+}
+
+.bbox-center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 38px;
+    font-size: 22px;
+}
+
+/* ── Barra de busca de contatos ───────────────────────────────── */
+.contacts-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 20px 28px 0;
+}
+
+.search-spinner {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes spin {
+    to {
+        transform: translateY(-50%) rotate(360deg);
+    }
+}
+
+@keyframes spin-simple {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.contacts-toolbar input {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+}
+
+.contacts-toolbar input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(229, 34, 45, 0.08);
+}
+
+.sugg-badge-gn,
+.sugg-badge-local,
+.sugg-badge-user {
+    flex-shrink: 0;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    letter-spacing: 0.02em;
+}
+
+.sugg-badge-gn {
+    background: #dcfce7;
+    color: #16a34a;
+}
+
+.sugg-badge-local {
+    background: #f0f0f0;
+    color: #9333ea;
+}
+
+.sugg-badge-user {
+    background: #fff7ed;
+    color: #c2410c;
+}
+
+.sugg-right {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+/* Lista de camadas do GeoServer (Recursos Online): texto único "workspace - nome", sem
+   badge à direita — o space-between padrão de .suggestion-item ficaria sem o que empurrar
+   pra direita, então alinhamos à esquerda aqui. */
+#dist-suggestions .suggestion-item {
+    justify-content: flex-start;
+}
+
+#dist-suggestions .sugg-name {
+    color: var(--fg);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sugg-delete-btn {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0 2px;
+    cursor: pointer;
+    border-radius: 3px;
+}
+
+.sugg-delete-btn:hover {
+    color: var(--accent);
+    background: #fff0f0;
+}
+
+.btn-save-local {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 14px;
+    border-radius: 6px;
+    border: 1.5px solid #f97316;
+    color: #c2410c;
+    background: transparent;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.btn-save-local:hover {
+    background: #fff7ed;
+}
+
+.btn-save-local:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.btn-delete-user {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 14px;
+    border-radius: 6px;
+    border: 1.5px solid #fca5a5;
+    color: var(--accent);
+    background: transparent;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.btn-delete-user:hover {
+    background: #fff0f0;
+    border-color: var(--accent);
+}
+
+.btn-icon {
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: white;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    white-space: nowrap;
+    font-weight: 600;
+    color: var(--fg);
+}
+
+.btn-icon:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.btn-icon.accent {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+
+.btn-icon.accent:hover {
+    background: var(--accent-hover);
+}
+
+/* ── Tabela de contatos ───────────────────────────────────────── */
+.contacts-table-wrap {
+    padding: 16px 28px 0;
+}
+
+.contacts-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.contacts-table th {
+    text-align: left;
+    padding: 8px 12px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--fg-muted);
+    border-bottom: 1px solid var(--border);
+}
+
+.contacts-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+}
+
+.contacts-table tr:last-child td {
+    border-bottom: none;
+}
+
+.empty-state {
+    color: var(--fg-muted);
+    font-style: italic;
+    text-align: center;
+    padding: 24px !important;
+}
+
+.role-select {
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+    font-family: inherit;
+    color: var(--fg);
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.role-select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(229, 34, 45, 0.08);
+}
+
+.btn-remove,
+.btn-move {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 4px;
+}
+
+.btn-remove:hover {
+    color: var(--accent);
+    background: #fff0f0;
+}
+
+.btn-move:hover {
+    color: var(--fg);
+    background: #f1f5f9;
+}
+
+.btn-move:disabled {
+    opacity: 0.2;
+    cursor: default;
+}
+
+/* ── Formulário manual (colapsável) ───────────────────────────── */
+.manual-form-wrap {
+    margin: 12px 28px 0;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    background: #fafbfc;
+    overflow: hidden;
+}
+
+.manual-form-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--fg-muted);
+    cursor: pointer;
+    user-select: none;
+}
+
+.manual-form-header:hover {
+    background: #f1f5f9;
+}
+
+.manual-form-body {
+    padding: 16px;
+}
+
+.manual-form-body .form-grid {
+    padding: 0;
+    gap: 12px;
+}
+
+.manual-form-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+}
+
+/* ── Accordions de contatos ───────────────────────────────────── */
+.contacts-accordions {
+    padding: 12px 28px 28px;
+}
+
+.contact-accordion {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    overflow: hidden;
+}
+
+.accordion-header {
+    width: 100%;
+    text-align: left;
+    background: white;
+    border: none;
+    padding: 12px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--fg);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.accordion-header:hover {
+    background: #f8fafc;
+}
+
+.acc-arrow {
+    min-width: 16px;
+    display: inline-flex;
+    align-items: center;
+}
+
+.acc-chevron {
+    width: 14px;
+    height: 14px;
+    transform: rotate(-90deg);
+    transition: transform 0.2s;
+}
+
+.acc-chevron.open {
+    transform: rotate(0deg);
+}
+
+.badge-manual {
+    margin-left: auto;
+    background: #eff6ff;
+    color: #3b82f6;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.badge-preset {
+    margin-left: auto;
+    background: #f0f0f0;
+    color: #9333ea;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.badge-gn {
+    margin-left: auto;
+    background: #f0f0f0;
+    color: #16a34a;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.badge-user {
+    margin-left: auto;
+    background: #fff7ed;
+    color: #c2410c;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.acc-actions {
+    display: flex;
+    gap: 8px;
+    padding: 10px 16px 14px;
+    border-top: 1px solid var(--border);
+    margin-top: 8px;
+}
+
+.btn-edit,
+.btn-save,
+.btn-cancel,
+.btn-export-contact {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 14px;
+    border-radius: 6px;
+    border: 1.5px solid;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.btn-edit {
+    background: transparent;
+    border-color: #94a3b8;
+    color: #475569;
+}
+
+.btn-edit:hover {
+    background: #f1f5f9;
+    border-color: #64748b;
+}
+
+.btn-save {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+}
+
+.btn-save:hover {
+    opacity: 0.88;
+}
+
+.btn-cancel {
+    background: transparent;
+    border-color: #94a3b8;
+    color: #64748b;
+}
+
+.btn-cancel:hover {
+    background: #f1f5f9;
+}
+
+.btn-export-contact {
+    margin-left: auto;
+    background: transparent;
+    border-color: #94a3b8;
+    color: #475569;
+}
+
+.btn-export-contact:hover {
+    background: #f1f5f9;
+    border-color: #64748b;
+}
+
+.suggestion-loading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px;
+    color: var(--fg-muted);
+    font-size: 12px;
+    font-style: italic;
+    cursor: default;
+    border-top: 1px solid var(--border);
+}
+
+.suggestion-spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin-simple 0.8s linear infinite;
+    flex-shrink: 0;
+    transform-origin: center;
+}
+
+.accordion-body {
+    display: none;
+    border-top: 1px solid var(--border);
+    background: #fafbfc;
+}
+
+.accordion-body .form-grid {
+    padding: 16px;
+    gap: 12px;
+}
+
+.readonly-field {
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    color: var(--fg);
+    background: #f8fafc;
+    font-family: inherit;
+    cursor: default;
+}
+
+/* ── Barra de ações no topo de um tab ────────────────────────── */
+.tab-header-actions {
+    position: absolute;
+    top: 10px;
+    right: 16px;
+    z-index: 10;
+}
+
+/* ── Título de seção dentro de uma aba ───────────────────────── */
+.section-heading {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--fg-muted);
+    padding: 20px 28px 4px;
+    margin: 0;
+}
+
+/* ── Banner de aviso CDHU ─────────────────────────────────────── */
+.cdhu-warning {
+    margin: 8px 20px 0;
+    padding: 10px 14px;
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    border-left: 4px solid #f59e0b;
+    border-radius: 6px;
+    font-size: 12.5px;
+    color: #92400e;
+    line-height: 1.5;
+}
+
+.cdhu-warning strong {
+    color: #78350f;
+}
+
+/* ── Accordion de campos extras (Extensão) ────────────────────── */
+.extra-accordion {
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.extra-accordion summary {
+    padding: 12px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--fg-muted);
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+}
+
+.extra-accordion summary::-webkit-details-marker {
+    display: none;
+}
+
+.extra-accordion summary::before {
+    content: '';
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    vertical-align: middle;
+    margin-right: 6px;
+    background: url('../../../img/chevron_down.svg') no-repeat center / contain;
+    transform: rotate(-90deg);
+    transition: transform 0.2s;
+}
+
+.extra-accordion[open] summary::before {
+    transform: rotate(0deg);
+}
+
+.extra-accordion summary:hover {
+    background: #f1f5f9;
+}
+
+@keyframes accordionSlideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.extra-accordion[open] .extra-accordion-grid {
+    animation: accordionSlideDown 0.2s ease;
+}
+
+.accordion-body.open-anim {
+    animation: accordionSlideDown 0.2s ease;
+}
+
+.extra-accordion-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    padding: 16px;
+    border-top: 1px solid var(--border);
+    background: #fafbfc;
+}
+
+/* ── Keyword chips ────────────────────────────────────────────── */
+.keyword-input-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.keyword-input-row input {
+    flex: 1;
+}
+
+.keyword-input-row .btn-icon {
+    padding: 0 14px;
+    font-size: 18px;
+    line-height: 1;
+}
+
+.keyword-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-height: 24px;
+}
+
+.keyword-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+    border-radius: 20px;
+    padding: 3px 8px 3px 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.keyword-chip button {
+    background: none;
+    border: none;
+    color: #93c5fd;
+    cursor: pointer;
+    padding: 0 2px;
+    font-size: 14px;
+    line-height: 1;
+}
+
+.keyword-chip button:hover {
+    color: #1d4ed8;
+}
+
+/* ── Protocol badges (WMS / WFS / etc) ────────────────────────── */
+.proto-badge {
+    display: inline-block;
+    min-width: 52px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    text-align: center;
+}
+
+.proto-badge.wms {
+    background: #fed2c7;
+    color: #92280e;
+    border: 1px solid #fd9b8a;
+}
+
+.proto-badge.wfs {
+    background: #a0eeff;
+    color: #065f5f;
+    border: 1px solid #52b3b3;
+}
+
+.proto-badge.wcs {
+    background: #ede9fe;
+    color: #5b21b6;
+    border: 1px solid #c4b5fd;
+}
+
+.proto-badge.wps {
+    background: #fce7f3;
+    color: #9d174d;
+    border: 1px solid #fbcfe8;
+}
+
+.proto-badge.download {
+    background: #e0f2fe;
+    color: #075985;
+    border: 1px solid #7dd3fc;
+}
+
+.proto-badge.link {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+}
+
+/* ── Distribution: protocol toggles ──────────────────────────── */
+.dist-card-protocols {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.dist-proto-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: white;
+    transition: border-color 0.15s, background 0.15s;
+    font-size: 13px;
+}
+
+.dist-proto-toggle input {
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+    accent-color: #3b82f6;
+}
+
+/* ── Split address row (contatos) ─────────────────────────────── */
+.address-split {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.addr-field-wrap {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.addr-field-wrap input {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.addr-street-wrap {
+    flex: 2 1 0;
+}
+
+.addr-num-wrap {
+    flex: 0 0 72px;
+}
+
+.addr-comp-wrap {
+    flex: 1 1 0;
+}
+
+.addr-bairro-wrap {
+    flex: 1 1 0;
+}
