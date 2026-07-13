@@ -610,10 +610,13 @@ function initGlobalTooltips() {
         var tipText = target.getAttribute('data-title');
         if (!tipText) return;
 
-        // Skip if the form-group already has a ? help button,
-        // but never skip items inside a dropdown (they have no ? button)
+        // Skip só o próprio campo (input/select/textarea) quando o form-group já tem um
+        // botão "?" de ajuda — evita tooltip duplicado nele. Nunca pula itens dentro de
+        // um dropdown (não têm "?") nem outros elementos com data-title próprio no mesmo
+        // form-group, como um botão de ação ao lado do campo.
         var inDropdown = target.closest('.custom-select-dropdown');
-        if (!inDropdown) {
+        var isFieldEl = target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.tagName === 'TEXTAREA';
+        if (!inDropdown && isFieldEl) {
             var formGroup = target.closest('.form-group');
             if (formGroup && formGroup.querySelector('.help-btn')) return;
         }

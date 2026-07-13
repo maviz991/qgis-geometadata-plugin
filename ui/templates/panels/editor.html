@@ -473,10 +473,17 @@
 
             <div class="form-group">
                 <label for="f-thumbnail_url">URL da Miniatura <button class="help-btn"
-                        data-tip="URL para uma miniatura (thumbnail) que será exibida nos catálogos para ilustrar o dado.">?</button></label>
-                <input id="f-thumbnail_url" type="text" placeholder="https://..."
-                    data-title="Cole o link de uma imagem hospedada na web que represente bem estes dados."
-                    data-validate="url">
+                        data-tip="URL para uma miniatura (thumbnail) que será exibida nos catálogos para ilustrar o dado. Se você associar uma camada do GeoServer na aba Distribuição e este campo estiver vazio, uma miniatura é gerada automaticamente a partir dela, mas você pode colar uma URL externa própria a qualquer momento.">?</button></label>
+                <div class="thumb-url-row">
+                    <input id="f-thumbnail_url" type="text" placeholder="https://..."
+                        data-title="Cole o link de uma imagem hospedada na web que represente bem estes dados, ou associe uma camada em Distribuição pra gerar uma automaticamente."
+                        data-validate="url">
+                    <button type="button" class="btn-icon" onclick="fillThumbnailFromWms()"
+                        data-title="Se já houver um WMS associado em Distribuição, gera a miniatura a partir dele. Senão, leva você até lá.">Gerar miniatura</button>
+                </div>
+                <div id="thumb-preview-wrap" class="thumb-preview-wrap" style="display:none">
+                    <img id="f-thumbnail-preview" class="thumb-preview" alt="Pré-visualização da miniatura">
+                </div>
             </div>
 
         </div>

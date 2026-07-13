@@ -195,6 +195,12 @@ function _onEditorPanelLoaded() {
         containerPanel.addEventListener('change', _markGnModifiedIfNeeded);
         containerPanel.setAttribute('data-sync-listener', 'true');
     }
+
+    var thumbInput = document.getElementById('f-thumbnail_url');
+    if (thumbInput) {
+        thumbInput.addEventListener('input', _updateThumbnailPreview);
+        thumbInput.addEventListener('change', _updateThumbnailPreview);
+    }
 }
 
 // ─── Ações de exportação (chamadas pelo header) ───────────────────────────────
@@ -287,6 +293,26 @@ function resetEditorForm() {
     var uid = document.getElementById('f-metadataId');
     if (uid) uid.value = generateUUID();
     updateFormProgress();
+    _updateThumbnailPreview();
+}
+
+// Mostra uma prévia pequena da miniatura (URL da aba Classificação) logo abaixo do
+// campo — só se a imagem realmente carregar, pra não deixar um ícone de imagem quebrada
+// à mostra quando a URL for inválida ou ainda não tiver sido preenchida.
+function _updateThumbnailPreview() {
+    var wrap = document.getElementById('thumb-preview-wrap');
+    var img = document.getElementById('f-thumbnail-preview');
+    var input = document.getElementById('f-thumbnail_url');
+    if (!wrap || !img || !input) return;
+    var url = input.value.trim();
+    if (!url) {
+        wrap.style.display = 'none';
+        img.removeAttribute('src');
+        return;
+    }
+    img.onload = function () { wrap.style.display = 'block'; };
+    img.onerror = function () { wrap.style.display = 'none'; };
+    img.src = url;
 }
 
 // Prioridade: draft (edições não salvas) > metadado salvo (DB/sidecar) > vazio
@@ -335,7 +361,7 @@ var _GN_SYNC_LABELS = {
 var _GN_SYNC_TOOLTIPS = {
     checking: 'Verificando se este metadado está sincronizado com o Geohab...',
     offline: 'Metadado ainda não publicado no Geohab. Use "Arquivo > Baixar Metadado" pra buscar um registro existente.',
-    synced: 'O formulário bate com o que está publicado no Geohab.',
+    synced: 'O formulário atual está sincronizado com o que está publicado no Geohab.',
     modified: 'Editado localmente desde a última sincronização com o Geohab.',
     update_available: 'Existe uma versão mais nova no Geohab. Clique pra puxar a atualização.',
     not_found: 'Este metadado tem um UUID salvo localmente, mas não foi encontrado no Geohab (nunca publicado, ou removido de lá).',
@@ -790,6 +816,7 @@ function populateForm(data) {
         renderDistResources();
     }
     updateFormProgress();
+    _updateThumbnailPreview();
 }
 
 // ─── Edição condicional ────────────────────────────────────────────────────────
@@ -1009,8 +1036,64 @@ function confirmDistLayer() {
         }
     });
     if (skipped) alert('Serviço(s) já adicionado(s) foram ignorados.');
+
+    var wmsChk = document.getElementById('dist-pick-wms');
+    if (wmsChk && wmsChk.checked && l.wms_url && l.name) {
+        _maybeAutoFillThumbnail(l);
+    }
+
     cancelDistLayer();
     renderDistResources();
+}
+
+// Gera uma miniatura (WMS GetMap) a partir da camada do GeoServer recém-associada em
+// Distribuição e preenche "Classificação > URL da Miniatura" — só se o campo estiver
+// vazio, pra nunca sobrescrever uma URL externa que o usuário já tenha colocado lá.
+function _buildWmsThumbnailUrl(wmsUrl, layerName) {
+    var w = document.getElementById('f-westBoundLongitude');
+    var e = document.getElementById('f-eastBoundLongitude');
+    var s = document.getElementById('f-southBoundLatitude');
+    var n = document.getElementById('f-northBoundLatitude');
+    var bbox = (w && w.value && e && e.value && s && s.value && n && n.value)
+        ? [w.value, s.value, e.value, n.value].join(',')
+        : '-180,-90,180,90'; // sem extensão preenchida ainda (aba Extensão) — cai pro mundo todo
+    return wmsUrl + '&version=1.1.0&request=GetMap&layers=' + encodeURIComponent(layerName) +
+        '&bbox=' + bbox + '&width=768&height=478&srs=CRS:84&styles=&format=image%2Fpng';
+}
+
+function _maybeAutoFillThumbnail(l) {
+    var thumbEl = document.getElementById('f-thumbnail_url');
+    if (!thumbEl || thumbEl.value.trim()) return;
+
+    thumbEl.value = _buildWmsThumbnailUrl(l.wms_url, l.name);
+    updateFormProgress();
+    _scheduleDraftSave();
+    _updateThumbnailPreview();
+
+    Modal.alert(
+        'A URL da miniatura (aba Classificação) foi preenchida automaticamente com uma imagem gerada a partir da camada do GeoServer que você acabou de associar.' +
+        '<br><br>Se preferir, pode substituir por qualquer outra URL externa.',
+        'Miniatura gerada automaticamente', 'info'
+    );
+}
+
+// Atalho ao lado do campo "URL da Miniatura": se já existe um WMS associado em
+// Distribuição, gera a miniatura a partir dele (sobrescrevendo, já que é ação explícita
+// do usuário); senão, leva até a aba Distribuição pra associar um primeiro.
+function fillThumbnailFromWms() {
+    var wmsResource = distResources.find(function (r) { return r.protocol === 'OGC:WMS'; });
+    if (!wmsResource) {
+        var distBtn = document.querySelector('.tab-link[onclick*="distribuicao"]');
+        showTab('distribuicao', distBtn);
+        Modal.alert('Nenhum WMS associado ainda.<br><br>Associe uma camada do GeoServer aqui em Distribuição pra poder gerar a miniatura a partir dela.', 'Sem WMS associado', 'info');
+        return;
+    }
+    var thumbEl = document.getElementById('f-thumbnail_url');
+    if (!thumbEl) return;
+    thumbEl.value = _buildWmsThumbnailUrl(wmsResource.url, wmsResource.name);
+    updateFormProgress();
+    _scheduleDraftSave();
+    _updateThumbnailPreview();
 }
 
 function toggleDistManual() {
