@@ -21,6 +21,10 @@ function _scheduleDraftSave() {
 // importar XML local) que não podem ficar pendentes até uma eventual troca de camada
 // disparar o timer sob a chave da camada errada.
 function _saveDraftNow() {
+    // O timer de debounce (1.5s) pode disparar depois que o usuário já navegou pra
+    // outro painel — sem essa checagem, collectFormData() aciona o guard de "Ação
+    // Necessária" à toa, já que o editor não existe mais no DOM.
+    if (!document.getElementById("f-title")) { clearTimeout(_draftTimer); return; }
     var d = collectFormData();
     if (!d || typeof bridge === 'undefined') return;
     // Não sobrescreve o arquivo com formulário vazio
@@ -789,7 +793,7 @@ function onGnSyncBadgeClick() {
     var badge = document.getElementById('gn-sync-badge');
     if (!badge) return;
     if (badge.classList.contains('offline')) {
-        Modal.alert('Metadado ainda não publicado no Geohab.<br><br>Para publicar, use "Catálogo > Publicar Metadado"<br><br>Pra buscar um registro já existente, use:<br>    Geohab: "Arquivo > Baixar Metadado"<br>    Local: "Arquivo > Importar metadado".', 'Offline', 'info');
+        Modal.alert('Metadado ainda não publicado no Geohab.<br><br>Para publicar, use "Catálogo > Publicar Metadado"<br><br>Pra buscar um registro já existente, use:<br>- Geohab: "Arquivo > Baixar Metadado"<br>- Local: "Arquivo > Importar metadado".', 'Offline', 'info');
     } else if (badge.classList.contains('update_available')) {
         applyGnUpdate();
     } else if (badge.classList.contains('synced')) {
@@ -2412,27 +2416,36 @@ function doAdminLogin() {
     }
 }
 
+function _activeLoginSuffix() {
+    var adminWrap = document.getElementById('login-admin-wrap');
+    return (adminWrap && adminWrap.style.display !== 'none') ? '-adm' : '';
+}
+
 function showLoginLoading() {
-    var area = document.getElementById('login-loading-area');
+    var area = document.getElementById('login-loading-area' + _activeLoginSuffix());
     if (area) area.style.display = 'flex';
 }
 
 function hideLoginLoading() {
-    var area = document.getElementById('login-loading-area');
-    if (area) area.style.display = 'none';
+    ['', '-adm'].forEach(function (suf) {
+        var area = document.getElementById('login-loading-area' + suf);
+        if (area) area.style.display = 'none';
+    });
 }
 
 function setLoginState(loading) {
     if (loading) { showLoginLoading(); } else { hideLoginLoading(); }
-    var errEl = document.getElementById('login-error-msg') ||
-        document.getElementById('login-error-msg-adm');
-    if (!loading && errEl) errEl.style.display = 'none';
+    if (!loading) {
+        ['login-error-msg', 'login-error-msg-adm'].forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+    }
 }
 
 function setLoginError(msg) {
     hideLoginLoading();
-    var errEl = document.getElementById('login-error-msg') ||
-        document.getElementById('login-error-msg-adm');
+    var errEl = document.getElementById('login-error-msg' + _activeLoginSuffix());
     if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
     else { Modal.alert(msg, 'Erro de Login', 'error'); }
 }

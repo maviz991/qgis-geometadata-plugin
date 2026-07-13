@@ -3,7 +3,6 @@
     <div class="page-bg"></div>
 
     <div class="login-topbar">
-        <img src="../../img/cdhu-logo-white.svg" alt="CDHU" class="login-logo">
         <button class="login-toggle-btn" id="login-toggle-btn" onclick="toggleLoginMode()">ACESSO CORPORATIVO</button>
     </div>
 
@@ -34,6 +33,12 @@
             <h2 class="login-card-title">Geohab</h2>
             <p class="login-card-sub">Acesso com conta local</p>
             <p id="login-error-msg-adm" class="login-error" style="display:none"></p>
+            <div id="login-loading-area-adm" class="login-loading-area" style="display:none">
+                <div class="login-loading-bar">
+                    <div class="login-loading-track"></div>
+                </div>
+                <span class="login-loading-msg">Verificando credenciais</span>
+            </div>
             <div class="login-field">
                 <input id="admin-user" type="text" placeholder="Usuário" autocomplete="username"
                     onkeydown="if(event.key==='Enter')document.getElementById('admin-pass').focus()">
@@ -125,12 +130,8 @@
         padding: 20px 32px;
         display: flex;
         align-items: center;
-        justify-content: space-between;
+        justify-content: flex-end;
         z-index: 10;
-    }
-
-    .login-logo {
-        height: 34px;
     }
 
     .login-toggle-btn {
@@ -167,19 +168,6 @@
         align-items: center;
         gap: 14px;
         box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
-        animation: cardIn 0.3s ease-out;
-    }
-
-    @keyframes cardIn {
-        from {
-            opacity: 0;
-            transform: translateY(18px) scale(0.97);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-        }
     }
 
     .login-card-logo {

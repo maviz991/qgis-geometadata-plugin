@@ -12,8 +12,6 @@
     z-index: 10000;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.12s ease, visibility 0.12s;
-    will-change: opacity;
 }
 
 .modal-overlay.active {
@@ -27,16 +25,9 @@
     max-width: 450px;
     border-radius: 12px;
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    transform: translateY(8px);
-    transition: transform 0.12s cubic-bezier(0.2, 0.8, 0.2, 1);
-    will-change: transform;
     overflow: hidden;
     display: flex;
     flex-direction: column;
-}
-
-.modal-overlay.active .modal-container {
-    transform: translateY(0);
 }
 
 .modal-header {
