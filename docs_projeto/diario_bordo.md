@@ -763,3 +763,13 @@ Sequência de ajustes pequenos, todos no fluxo de busca do GN que puxa metadado 
 
 **Pergunta respondida no processo**: publicar no Geohab sempre atualiza a cópia local também (silenciosamente, via `save_metadata(is_automatic_resave=True)` dentro de `exportar_to_geo()`) - no banco se a camada ativa for Postgres/PostGIS, ou em arquivo sidecar `.xml` se for baseada em arquivo. Não é uma escolha do usuário, é automático conforme o tipo da camada.
 
+# Registro 17 - 13/07/2026
+**Planejamento do GS gerou novas issues**
+
+Fora de escopo
+RF03 (upload de arquivo/shapefile) — cortado por decisão de negócio, não só adiado: publicação só é aceita a partir de dado já no banco PostgreSQL. Um módulo futuro separado pode existir para levar camadas locais ao banco (aproveitando o DB Manager do QGIS), mas isso não faz parte deste plano.
+RF05/RF06 (SLD) — Fase 3 de requisitos_v2.md.
+RF07/RF08 (edição de XML externo) — Fase 4.
+RNF02 "barra de progresso" — como não há mais upload de arquivo, a única operação de rede é o POST featuretypes (rápido); o indicador indeterminado (_showActionLoading) já cobre bem esse caso, sem necessidade de progresso percentual.
+RNF04 (verify=False → certificado corporativo) — Fase 5, item de housekeeping separado.
+Verificação automática de que o datastore PostGIS escolhido realmente aponta pro mesmo banco/schema da camada QGIS — fica como limitação conhecida documentada no toast de erro caso o registro falhe (a REST API do GeoServer retorna 500/details nesse caso, cai no translate_gs_error genérico); não implemento verificação prévia comparando GET /datastores/{ds}.json com a URI da camada porque não é requisito explícito e adicionaria uma chamada REST extra por seleção de datastore.
