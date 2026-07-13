@@ -1,9 +1,51 @@
 <div class="geoserver-panel">
-    <h1>GeoServer - Publicação de Camadas</h1>
-    <p>Fase 1 (requisitos_v2.md): listagem de workspaces. Publicação de camadas, estilos SLD
-        e upload de arquivos chegam nas próximas fases.</p>
+    <h1>Publicação de Camadas</h1>
+    <!--!<p>Registra no GeoServer uma camada que já está no banco PostgreSQL corporativo. Camadas
+        locais (shapefile, GeoPackage etc.) precisam ser levadas ao banco antes de publicar.</p>-->
 
-    <div id="gs-workspace-list" class="gs-workspace-list">
-        <div class="gs-empty">Carregando workspaces...</div>
+    <div id="gs-layer-card" class="gs-layer-card">
+        <div class="gs-empty">Detectando camada ativa...</div>
+    </div>
+
+    <div id="gs-publish-form" class="gs-publish-form" style="display:none">
+        <div class="gs-form-row">
+            <div class="form-group">
+                <label for="gs-workspace">Workspace</label>
+                <div id="gs-workspace-wrap">
+                    <select id="gs-workspace" onchange="onGsWorkspaceChange(this.value)">
+                        <option value="">Carregando...</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="gs-datastore">Datastore</label>
+                <div id="gs-datastore-wrap">
+                    <select id="gs-datastore" disabled>
+                        <option value="">Selecione um workspace primeiro</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="gs-form-row">
+            <div class="form-group">
+                <label for="gs-layer-name">Nome da camada publicada <button class="help-btn"
+                        data-tip="Nome que a camada vai ter no GeoServer. É ajustado automaticamente para minúsculas, sem espaços/acentos e sem começar com número (exigência do GeoServer).">?</button></label>
+                <input id="gs-layer-name" type="text" placeholder="nome_da_camada"
+                    oninput="onGsLayerNameInput(this.value)">
+                <small id="gs-layer-name-preview" class="gs-name-preview"></small>
+            </div>
+
+            <div class="form-group">
+                <label for="gs-layer-title">Título <button class="help-btn"
+                        data-tip="Nome de exibição da camada no GeoServer (livre, sem as regras de sanitização do campo Nome). Pré-preenchido com o título do metadado, se houver.">?</button></label>
+                <input id="gs-layer-title" type="text" placeholder="Título de exibição">
+            </div>
+        </div>
+
+        <button id="gs-publish-btn" class="btn btn-primary" onclick="confirmGsPublish()" disabled>
+            Publicar no GeoServer
+        </button>
     </div>
 </div>

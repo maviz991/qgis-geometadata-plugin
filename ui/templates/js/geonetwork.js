@@ -49,44 +49,17 @@ document.addEventListener("click", function (e) {
     closeSuggestions();
 });
 
-// ── Indicador de carregamento (publicar/salvar) ─────────────────────────────────
-// Servidor do Geohab ou banco às vezes demora - sem isso, o clique não dava nenhum
-// feedback até a resposta chegar. Não é um modal bloqueante de propósito: se algum
-// caminho de erro não emitir nenhum sinal pro JS (ex.: diálogo nativo do Qt), o
-// timeout de segurança evita que o indicador fique preso pra sempre.
-var _gnActionLoadingTimer = null;
-
-function _showGnActionLoading(message) {
-    var el = document.getElementById('gn-action-loading');
-    if (!el) {
-        el = document.createElement('div');
-        el.id = 'gn-action-loading';
-        el.className = 'gn-action-loading';
-        el.innerHTML = '<span class="suggestion-spinner"></span><span id="gn-action-loading-text"></span>';
-        document.body.appendChild(el);
-    }
-    document.getElementById('gn-action-loading-text').textContent = message;
-    el.style.display = 'flex';
-    clearTimeout(_gnActionLoadingTimer);
-    _gnActionLoadingTimer = setTimeout(_hideGnActionLoading, 20000);
-}
-
-function _hideGnActionLoading() {
-    clearTimeout(_gnActionLoadingTimer);
-    var el = document.getElementById('gn-action-loading');
-    if (el) el.style.display = 'none';
-}
-
 // ── Ganchos chamados pelo app-shell (app.js) ────────────────────────────────────
+// (indicador de carregamento _showActionLoading/_hideActionLoading é genérico, mora em app.js)
 
 function _initGnBridge() {
     // toast cobre sucesso E erro de publicar (export_geohab); save_metadata só emite
     // local_save_succeeded no sucesso (erro dela hoje só mostra diálogo nativo do Qt,
-    // por isso o timeout de segurança acima).
-    bridge.toast.connect(function () { _hideGnActionLoading(); });
+    // por isso o timeout de segurança em _showActionLoading).
+    bridge.toast.connect(function () { _hideActionLoading(); });
 
     gnBridge.gn_publish_succeeded.connect(function (uuid) {
-        _hideGnActionLoading();
+        _hideActionLoading();
         var uidEl = document.getElementById('f-metadataId');
         if (uidEl) uidEl.value = uuid;
         if (typeof gnBridge !== 'undefined') gnBridge.clear_draft(); // save no DB/sidecar já é a fonte da verdade agora
@@ -97,7 +70,7 @@ function _initGnBridge() {
     // esperar reabrir a camada (não força "Sincronizado": um save local sozinho não
     // significa que bate com o GN, o checkGnSync decide o estado certo).
     gnBridge.local_save_succeeded.connect(function (uuid) {
-        _hideGnActionLoading();
+        _hideActionLoading();
         if (!uuid) return;
         var data = collectFormData();
         checkGnSync(uuid, (data && data.dateStamp) || '');
@@ -154,7 +127,12 @@ function _onActiveLayerChanged(name) {
 
 // Chamado por onPanelLoaded() (app.js) quando o painel "editor" acabou de carregar.
 function _onEditorPanelLoaded() {
-    showTab("identificacao", document.querySelector(".tab-link"));
+    // Se tem um vínculo GS pendente (recém-publicado no GeoServer, ver geoserver.js), já
+    // abre direto na aba Distribuição - evita o "flash" de Identificação seguido de troca
+    // de aba alguns instantes depois, que dava a impressão de ter ido pra home do editor.
+    var _initialTabId = window._pendingGsDistLayer ? 'distribuicao' : 'identificacao';
+    var _initialTabBtn = document.querySelector('.tab-link[onclick*="' + _initialTabId + '"]') || document.querySelector('.tab-link');
+    showTab(_initialTabId, _initialTabBtn);
     var _d = new Date(); _d.setHours(_d.getHours() - 3);
     var now = _d.toISOString().slice(0, 16);
     var ds = document.getElementById("f-dateStamp");
@@ -238,7 +216,7 @@ function tryExportGeohab() {
         defaultIndex: 0,
         onConfirm: function (uuidProcessing) {
             data.uuidProcessing = uuidProcessing;
-            _showGnActionLoading('Publicando no Geohab...');
+            _showActionLoading('Publicando no Geohab...');
             gnBridge.export_geohab(data);
         }
     });
@@ -248,7 +226,7 @@ function trySaveMetadata() {
     var data = collectFormData();
     if (!data) return;
     Modal.confirm('Deseja realmente salvar as alterações no banco de dados?', function () {
-        _showGnActionLoading('Salvando...');
+        _showActionLoading('Salvando...');
         gnBridge.save_metadata(data);
     }, 'Confirmar Salvamento');
 }
@@ -315,22 +293,28 @@ function _updateThumbnailPreview() {
     img.src = url;
 }
 
-// Prioridade: draft (edições não salvas) > metadado salvo (DB/sidecar) > vazio
+// Prioridade: draft (edições não salvas) > metadado salvo (DB/sidecar) > vazio.
+// Em todo caminho de saída (mesmo o "vazio", quando a camada não tem metadado nenhum
+// ainda) chama _applyPendingGsDistLayerIfAny() - garante que um vínculo GS pendente
+// (ver geoserver.js) seja aplicado exatamente uma vez, não importa qual ramo resolveu.
 function _loadFormForLayer(sessionDraft) {
     if (sessionDraft) {
         populateForm(sessionDraft);
         checkGnSync(sessionDraft.metadata_uuid, sessionDraft.dateStamp || '');
+        _applyPendingGsDistLayerIfAny();
         return;
     }
-    if (typeof gnBridge === 'undefined') return;
+    if (typeof gnBridge === 'undefined') { _applyPendingGsDistLayerIfAny(); return; }
     gnBridge.load_draft(function (draft) {
         if (draft) {
             populateForm(draft);
             checkGnSync(draft.metadata_uuid, draft.dateStamp || '');
+            _applyPendingGsDistLayerIfAny();
         } else {
             gnBridge.load_layer_metadata(function (saved) {
                 if (saved) populateForm(saved);
                 checkGnSync(saved && saved.metadata_uuid, (saved && saved.dateStamp) || '');
+                _applyPendingGsDistLayerIfAny();
             });
         }
     });
@@ -1046,6 +1030,47 @@ function confirmDistLayer() {
     renderDistResources();
 }
 
+// Aplica o vínculo WMS+WFS pendente de uma publicação recém-feita no GeoServer (aba GS ->
+// gs_publish_done -> window._pendingGsDistLayer, ver geoserver.js). Chamada a partir de
+// _loadFormForLayer() depois que o formulário do editor termina de carregar pra essa
+// camada (populateForm, quando existe metadado salvo, sobrescreve distResources - por
+// isso não dá pra aplicar isso ANTES do form carregar, senão o vínculo seria perdido).
+// WFS entra como default aqui (diferente do fluxo manual de busca, onde é opt-in) porque
+// a camada acabou de ser publicada pelo próprio usuário autenticado - WFS sempre disponível.
+function _applyPendingGsDistLayerIfAny() {
+    var l = window._pendingGsDistLayer;
+    window._pendingGsDistLayer = null;
+    if (!l || !l.wms_url || !l.name) return;
+    if (!document.getElementById('f-title')) return; // editor não está mais aberto, desiste
+
+    var distBtn = document.querySelector('.tab-link[onclick*="distribuicao"]');
+    if (distBtn) showTab('distribuicao', distBtn);
+
+    var linked = [];
+    var alreadyHadWms = _distDuplicate(l.wms_url, 'OGC:WMS');
+    if (!alreadyHadWms) {
+        distResources.push({ url: l.wms_url, protocol: 'OGC:WMS', name: l.name, description: l.title || l.name });
+        linked.push('WMS');
+    }
+    var alreadyHadWfs = !l.wfs_url || _distDuplicate(l.wfs_url, 'OGC:WFS');
+    if (!alreadyHadWfs) {
+        distResources.push({ url: l.wfs_url, protocol: 'OGC:WFS', name: l.name, description: l.title || l.name });
+        linked.push('WFS');
+    }
+    if (linked.length) {
+        renderDistResources();
+        updateFormProgress();
+        _scheduleDraftSave();
+    }
+
+    var thumbFilled = _maybeAutoFillThumbnail(l, true); // silencioso - o toast final é montado abaixo
+
+    var parts = ['Camada "' + escHtml(l.title || l.name) + '" publicada com sucesso no GeoServer.'];
+    if (linked.length) parts.push('Vinculada automaticamente aqui em Distribuição (' + linked.join(' + ') + ').');
+    if (thumbFilled) parts.push('Miniatura gerada automaticamente na aba Classificação.');
+    Modal.alert(parts.join('<br>'), 'Sucesso', 'success');
+}
+
 // Gera uma miniatura (WMS GetMap) a partir da camada do GeoServer recém-associada em
 // Distribuição e preenche "Classificação > URL da Miniatura" - só se o campo estiver
 // vazio, pra nunca sobrescrever uma URL externa que o usuário já tenha colocado lá.
@@ -1061,20 +1086,23 @@ function _buildWmsThumbnailUrl(wmsUrl, layerName) {
         '&bbox=' + bbox + '&width=768&height=478&srs=CRS:84&styles=&format=image%2Fpng';
 }
 
-function _maybeAutoFillThumbnail(l) {
+function _maybeAutoFillThumbnail(l, silent) {
     var thumbEl = document.getElementById('f-thumbnail_url');
-    if (!thumbEl || thumbEl.value.trim()) return;
+    if (!thumbEl || thumbEl.value.trim()) return false;
 
     thumbEl.value = _buildWmsThumbnailUrl(l.wms_url, l.name);
     updateFormProgress();
     _scheduleDraftSave();
     _updateThumbnailPreview();
 
-    Modal.alert(
-        'A URL da miniatura (aba Classificação) foi preenchida automaticamente com uma imagem gerada a partir da camada do GeoServer que você acabou de associar.' +
-        '<br><br>Se preferir, pode substituir por qualquer outra URL externa.',
-        'Miniatura gerada automaticamente', 'info'
-    );
+    if (!silent) {
+        Modal.alert(
+            'A URL da miniatura (aba Classificação) foi preenchida automaticamente com uma imagem gerada a partir da camada do GeoServer que você acabou de associar.' +
+            '<br><br>Se preferir, pode substituir por qualquer outra URL externa.',
+            'Miniatura gerada automaticamente', 'info'
+        );
+    }
+    return true;
 }
 
 // Atalho ao lado do campo "URL da Miniatura": se já existe um WMS associado em

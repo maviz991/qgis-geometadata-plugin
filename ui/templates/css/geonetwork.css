@@ -4,26 +4,6 @@
    busca genérica) ficam em styles.css - inclusive .search-wrap/.search-suggestions/
    .suggestion-item, que o custom-select genérico (app.js) também usa. */
 
-/* ── Indicador de carregamento (publicar/salvar no Geohab) ────────────────────── */
-.gn-action-loading {
-    display: none;
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 9000;
-    align-items: center;
-    gap: 10px;
-    background: white;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
-    padding: 12px 18px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--fg);
-}
-
 /* ── Atalho "gerar miniatura do WMS" ao lado do campo ─────────────────────────── */
 .thumb-url-row {
     display: flex;
@@ -424,11 +404,6 @@
     }
 }
 
-@keyframes spin-simple {
-    to {
-        transform: rotate(360deg);
-    }
-}
 
 .contacts-toolbar input {
     width: 100%;
@@ -861,18 +836,6 @@
     font-style: italic;
     cursor: default;
     border-top: 1px solid var(--border);
-}
-
-.suggestion-spinner {
-    display: inline-block;
-    width: 12px;
-    height: 12px;
-    border: 2px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin-simple 0.8s linear infinite;
-    flex-shrink: 0;
-    transform-origin: center;
 }
 
 .accordion-body {

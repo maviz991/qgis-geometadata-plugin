@@ -402,6 +402,44 @@ body {
     color: var(--accent);
 }
 
+.suggestion-spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin-simple 0.8s linear infinite;
+    flex-shrink: 0;
+    transform-origin: center;
+}
+
+@keyframes spin-simple {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ── Indicador de carregamento central genérico (publicar/salvar - GN ou GS) ─── */
+.action-loading {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 9000;
+    align-items: center;
+    gap: 10px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+    padding: 12px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--fg);
+}
+
 /* ── Home cards ───────────────────────────────────────────────── */
 .home-panel {
     padding: 32px;

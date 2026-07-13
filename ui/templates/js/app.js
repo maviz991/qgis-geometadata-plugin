@@ -328,6 +328,7 @@ function initApp() {
         updateLayerBadge(name, _layerTypeMap[name]);
         _editorDraft = null;
         if (typeof _onActiveLayerChanged === 'function') _onActiveLayerChanged(name);
+        if (typeof _onGsActiveLayerChanged === 'function') _onGsActiveLayerChanged(name);
     });
 
     if (typeof _initGnBridge === 'function') _initGnBridge();
@@ -511,6 +512,32 @@ function updateCustomSelect(select) {
 
 function escHtml(s) {
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// Indicador de carregamento central genérico (usado por qualquer operação de rede
+// demorada - publicação/salvamento no GN, publicação no GS etc.). Timeout de segurança
+// de 20s evita que fique preso na tela caso o sinal de conclusão nunca chegue.
+var _actionLoadingTimer = null;
+
+function _showActionLoading(message) {
+    var el = document.getElementById('action-loading');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'action-loading';
+        el.className = 'action-loading';
+        el.innerHTML = '<span class="suggestion-spinner"></span><span id="action-loading-text"></span>';
+        document.body.appendChild(el);
+    }
+    document.getElementById('action-loading-text').textContent = message;
+    el.style.display = 'flex';
+    clearTimeout(_actionLoadingTimer);
+    _actionLoadingTimer = setTimeout(_hideActionLoading, 20000);
+}
+
+function _hideActionLoading() {
+    clearTimeout(_actionLoadingTimer);
+    var el = document.getElementById('action-loading');
+    if (el) el.style.display = 'none';
 }
 
 function generateUUID() {

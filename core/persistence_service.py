@@ -12,6 +12,7 @@ except ImportError:
 
 from . import xml_generator
 from .plugin_config import config_loader
+from .geoserver_service import parse_postgres_uri
 
 class PersistenceService:
     """
@@ -61,30 +62,7 @@ class PersistenceService:
         return layer.providerType() == 'postgres'
 
     def _get_postgres_connection_details(self, layer):
-        uri = layer.source()
-        details = {}
-        pattern = re.compile(r"(\w+)='([^']*)'|(\w+)=([^\s]+)")
-        matches = pattern.findall(uri)
-        
-        for key_quoted, val_quoted, key_unquoted, val_unquoted in matches:
-            key = key_quoted or key_unquoted
-            value = val_quoted or val_unquoted
-            if key:
-                details[key] = value
-
-        details['f_table_catalog'] = details.get('dbname')
-        full_table_identifier = details.get('table', '')
-        clean_identifier = full_table_identifier.replace('"', '')
-
-        if '.' in clean_identifier:
-            parts = clean_identifier.split('.', 1)
-            details['f_table_schema'] = parts[0]
-            details['f_table_name'] = parts[1]
-        else:
-            details['f_table_schema'] = details.get('sschema', details.get('schema', 'public'))
-            details['f_table_name'] = clean_identifier
-            
-        return details
+        return parse_postgres_uri(layer.source())
 
     def _get_sidecar_metadata_path(self, layer):
         if not layer or not layer.source(): return None
