@@ -42,14 +42,17 @@
 
 .thumb-preview-wrap {
     margin-top: 8px;
-    display: flex;
-    justify-content: center;
+    width: 100%;
 }
 
 .thumb-preview {
     display: block;
-    max-width: 160px;
-    max-height: 100px;
+    /* Bloco com largura menor que o container + margin auto nas laterais = centralizado,
+       independente do wrap ser flex ou não (imagem tem largura intrínseca, não 'auto'
+       esticando pro container inteiro). */
+    margin: 0 auto;
+    max-width: 320px;
+    max-height: 200px;
     border: 1px solid var(--border);
     border-radius: 6px;
     background: #f8fafc;
@@ -280,6 +283,10 @@
     gap: 20px;
     padding: 28px;
     max-width: 100%;
+    /* Sem isso, o Grid estica todo item pra bater com o mais alto da linha (ex.: o campo
+       ao lado de "URL da Miniatura" esticava por causa da prévia da imagem), o que também
+       bagunçava o posicionamento do dropdown do custom-select nesse campo esticado. */
+    align-items: start;
 }
 
 .form-group {
