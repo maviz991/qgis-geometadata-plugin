@@ -83,6 +83,62 @@ class GeoServerService:
         datastores = (data.get('dataStores') or {}).get('dataStore') or []
         return [d.get('name') for d in datastores if d.get('name')]
 
+    def list_featuretypes(self, workspace, datastore, config_loader_instance):
+        """Lista as tabelas visíveis nesse datastore (list=all - inclui as ainda não
+        publicadas), igual a tela 'Publicar'/'Publicar novamente' do próprio GeoServer.
+        Usado pra confirmar, ANTES do usuário clicar em publicar, que a tabela da camada
+        ativa do QGIS realmente existe nesse workspace/datastore - evita o 400 'no
+        attributes were specified' que acontece quando o Schema configurado no datastore
+        é diferente do schema onde a tabela vive de verdade no banco."""
+        api_session = self.plugin.api_session
+        if not api_session:
+            raise Exception("Sessão da API não foi inicializada. Faça login primeiro.")
+
+        base_url = config_loader_instance.get_geoserver_url().rstrip('/')
+        if not base_url:
+            raise ValueError("A URL do GeoServer não está definida corretamente no config.json.")
+
+        response = api_session.get(
+            f"{base_url}/rest/workspaces/{workspace}/datastores/{datastore}/featuretypes",
+            params={'list': 'all'},
+            headers={'Accept': 'application/json'},
+            timeout=20,
+            verify=False
+        )
+        response.raise_for_status()
+        data = response.json()
+        names = (data.get('list') or {}).get('string') or []
+        if isinstance(names, str):
+            names = [names]  # GeoServer devolve string solta (não array) quando só tem 1 item
+        return names
+
+    def find_datastore_for_table(self, table_name, config_loader_instance, progress_callback=None):
+        """Varre todos os workspaces/datastores do GeoServer procurando onde a tabela
+        `table_name` está visível (list=all) - usado pelo botão "Detectar automaticamente"
+        quando o usuário não sabe o workspace/datastore certo da camada. Pode demorar (1
+        chamada REST por workspace + 1 por datastore de cada workspace), por isso reporta
+        progresso via `progress_callback(mensagem)` quando fornecido. Retorna uma lista de
+        {'workspace':..., 'datastore':...} - pode ter mais de um resultado se a tabela
+        aparecer em mais de um datastore."""
+        workspaces = self.list_workspaces(config_loader_instance)
+        matches = []
+        table_lower = (table_name or '').lower()
+        for i, ws in enumerate(workspaces):
+            if progress_callback:
+                progress_callback(f'Verificando workspace "{ws}" ({i + 1}/{len(workspaces)})...')
+            try:
+                datastores = self.list_datastores(ws, config_loader_instance)
+            except Exception:
+                continue
+            for ds in datastores:
+                try:
+                    names = self.list_featuretypes(ws, ds, config_loader_instance)
+                except Exception:
+                    continue
+                if any((n or '').lower() == table_lower for n in names):
+                    matches.append({'workspace': ws, 'datastore': ds})
+        return matches
+
     @staticmethod
     def sanitize_layer_name(name):
         """RF04 - regex obrigatório `[a-z][a-z0-9_]*`: minúsculas, sem espaços/acentos/

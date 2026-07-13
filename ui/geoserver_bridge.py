@@ -18,6 +18,9 @@ class GeoServerBridge(QObject):
 
     gs_workspaces_ready = pyqtSignal(list, str)  # workspaces, error
     gs_datastores_ready = pyqtSignal(list, str)  # datastores, error
+    gs_featuretypes_ready = pyqtSignal(list, str)  # nomes de tabela visíveis no datastore, error
+    gs_find_datastore_progress = pyqtSignal(str)  # mensagem de status da varredura
+    gs_find_datastore_done = pyqtSignal(list, str)  # [{'workspace':..,'datastore':..}, ...], error
     gs_publish_done = pyqtSignal(bool, str, str, str, str)  # sucesso, mensagem, nome_publicado, wms_url, wfs_url
 
     # Cache de camadas do GeoServer (carregado uma vez por sessão)
@@ -28,6 +31,8 @@ class GeoServerBridge(QObject):
         self._dialog = dialog
         self._workspaces_worker = None
         self._datastores_worker = None
+        self._featuretypes_worker = None
+        self._find_datastore_worker = None
         self._publish_worker = None
 
     @pyqtSlot()
@@ -57,6 +62,45 @@ class GeoServerBridge(QObject):
         self._datastores_worker = _GsDatastoresWorker(geoserver_service, workspace, config_loader)
         self._datastores_worker.done.connect(self.gs_datastores_ready.emit)
         self._datastores_worker.start()
+
+    @pyqtSlot(str, str)
+    def list_featuretypes(self, workspace, datastore):
+        """Lista as tabelas visíveis nesse datastore (list=all) em background e emite
+        gs_featuretypes_ready(nomes, error) - usado pra validar, antes de publicar, se a
+        tabela da camada ativa realmente existe ali (ver GeoServerService.list_featuretypes)."""
+        geoserver_service = getattr(self._dialog, 'geoserver_service', None)
+        if not geoserver_service:
+            self.gs_featuretypes_ready.emit([], 'Serviço GeoServer não inicializado.')
+            return
+        from ..core.plugin_config import config_loader
+        from .geoserver_workers import _GsFeatureTypesWorker
+        self._featuretypes_worker = _GsFeatureTypesWorker(geoserver_service, workspace, datastore, config_loader)
+        self._featuretypes_worker.done.connect(self.gs_featuretypes_ready.emit)
+        self._featuretypes_worker.start()
+
+    @pyqtSlot()
+    def find_datastore_for_active_layer(self):
+        """Botão "Detectar automaticamente": varre todos os workspaces/datastores do
+        GeoServer procurando onde a tabela da camada ativa está visível (mais lento que
+        os outros métodos - reporta progresso via gs_find_datastore_progress). Emite
+        gs_find_datastore_done([{'workspace':..,'datastore':..}, ...], error) ao final."""
+        geoserver_service = getattr(self._dialog, 'geoserver_service', None)
+        if not geoserver_service:
+            self.gs_find_datastore_done.emit([], 'Serviço GeoServer não inicializado.')
+            return
+
+        layer = self._active_layer()
+        info = geoserver_service.get_active_layer_publish_info(layer)
+        if not info.get('publishable') or not info.get('table'):
+            self.gs_find_datastore_done.emit([], info.get('reason') or 'Camada não publicável.')
+            return
+
+        from ..core.plugin_config import config_loader
+        from .geoserver_workers import _GsFindDatastoreWorker
+        self._find_datastore_worker = _GsFindDatastoreWorker(geoserver_service, info['table'], config_loader)
+        self._find_datastore_worker.progress.connect(self.gs_find_datastore_progress.emit)
+        self._find_datastore_worker.done.connect(self.gs_find_datastore_done.emit)
+        self._find_datastore_worker.start()
 
     def _active_layer(self):
         plugin = getattr(self._dialog, 'plugin', None)
