@@ -347,8 +347,8 @@ function _loadFormForLayer(sessionDraft) {
 
 var _gnSyncUuid = null;
 var _gnSyncUuidLayerName = null; // qual camada esse uuid corresponde - usado pelo GS (geoserver.js) como
-                                  // dica de fallback quando a busca local (banco/sidecar) não acha nada,
-                                  // só quando bate com a camada ativa (evita puxar uuid de outra camada)
+// dica de fallback quando a busca local (banco/sidecar) não acha nada,
+// só quando bate com a camada ativa (evita puxar uuid de outra camada)
 var _gnSearchTimer = null;
 // Retrato (JSON) do formulário no momento exato em que o badge virou "Sincronizado" OU
 // "Não encontrado no Geohab" - comparado a cada input/change pra saber se o conteúdo
@@ -445,24 +445,16 @@ function setGnBadge(state) {
     if (banner) banner.style.display = (state === 'sys_update_available') ? 'flex' : 'none';
 }
 
-// Reescreve o texto/tooltip do badge com base no estado GN atual (classe já aplicada em
-// setGnBadge). O RÓTULO visível fica só com o estado GN (curto, é um status, não uma
-// descrição) - o status GS (_gsBadgeState, ver checkGsPublishStatus mais abaixo) só entra
-// no TOOLTIP (hover) e no modal de clique (_gsStatusModalSuffix/onGnSyncBadgeClick), não
-// no texto sempre visível do badge. Ainda é o MESMO badge (#gn-sync-badge), não um segundo
-// componente - só que a informação combinada agora fica sob demanda, não empilhada no rótulo.
+// Reescreve o texto/tooltip do badge GN com base no estado atual.
+// O status GeoServer NÃO entra aqui - fica exclusivamente no badge/painel GeoServer.
 function _refreshGnBadgeLabel() {
     var badge = document.getElementById('gn-sync-badge');
     var label = document.getElementById('gn-sync-label');
     if (!badge || !label || badge.style.display === 'none') return;
     var state = badge.className.replace('gn-sync-badge', '').trim();
     if (!state) return;
-    var tooltip = _GN_SYNC_TOOLTIPS[state] || '';
-    if (_gsBadgeState) {
-        tooltip += (tooltip ? '\n\n' : '') + _GS_STATUS_LABELS[_gsBadgeState] + ': ' + _gsStatusTooltip(_gsBadgeState);
-    }
     label.textContent = _GN_SYNC_LABELS[state] || state;
-    badge.dataset.title = tooltip;
+    badge.dataset.title = _GN_SYNC_TOOLTIPS[state] || '';
 }
 
 // Chamado a cada input/change do formulário. Compara o conteúdo atual contra o retrato
@@ -586,13 +578,18 @@ var _gsLastBadgePublished = false; // idem _gsSyncIsPublished (geoserver.js) - s
 var _GS_STATUS_LABELS = {
     db_not_found: 'GeoServer: Não Encontrado (DB)',
     sys_not_found: 'GeoServer: Não Encontrado (Geohab)',
+    sys_modified: 'GeoServer: Divergente',
     db_synced: 'GeoServer: Sincronizado (DB)',
     sys_synced: 'GeoServer: Publicado'
 };
 
 var _GS_STATUS_TOOLTIPS = {
     db_not_found: 'Essa camada ainda não foi publicada nem salva no GeoServer (verificado sem login no Geohab).',
-    sys_not_found: 'Essa camada ainda não foi publicada nem salva no GeoServer. Use "Serviços > Configurar Camada" pra começar.'
+    sys_not_found: 'Essa camada ainda não foi publicada nem salva no GeoServer. Use "Serviços > Configurar Camada" pra começar.',
+    // Só aparece depois da checagem AO VIVO (_checkGsSyncOnline, geoserver.js) confirmar
+    // que o que está publicado de verdade no GeoServer não bate mais com o que está salvo
+    // no banco (ex.: editou o resumo e só "Continuar Depois", sem republicar).
+    sys_modified: 'O que está salvo no banco não bate mais com o que está publicado no GeoServer agora. Abra "Serviços > Configurar Camada" e republique pra sincronizar.'
     // db_synced/sys_synced não têm entrada fixa aqui - ver _gsStatusTooltip logo abaixo.
 };
 

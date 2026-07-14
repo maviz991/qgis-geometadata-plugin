@@ -732,8 +732,8 @@ var _GS_SYNC_MODALS = {
 function _gsPublishTooltip(tierPrefix, isPublished) {
     var levelNote = tierPrefix === 'sys' ? '' : ' (verificado sem login - o GeoServer pode ter uma versão diferente)';
     return isPublished
-        ? ('Essa camada já foi publicada no GeoServer' + levelNote + '.')
-        : ('O formulário atual bate com o que está salvo no banco, mas ainda NÃO foi publicado no GeoServer' + levelNote + '. Publique em "Serviços > Publicar Camada" quando quiser que valha lá.');
+        ? ('Essa camada já foi publicada no Geohab' + levelNote + '.')
+        : ('O formulário atual bate com o que está salvo no banco, mas ainda NÃO foi publicado no Geohab' + levelNote + '. Publique em "Serviços > Publicar Camada" quando quiser que valha lá.');
 }
 
 function setGsBadge(state) {
