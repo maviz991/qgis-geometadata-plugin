@@ -116,3 +116,50 @@ class _GsPublishWorker(QThread):
             self.done.emit(True, '', self._published_name)
         except Exception as exc:
             self.done.emit(False, str(exc), self._published_name)
+
+
+class _GsSyncCheckWorker(QThread):
+    """Confere ao vivo (REST, GeoServerService.fetch_published_featuretype) se o
+    formulário bate com o que está DE FATO publicado no GeoServer agora - nível 'sistema'
+    do badge (ver GeoServerBridge.check_gs_sync). Chamada de rede isolada da UI thread
+    (RNF02) - antes rodava direto no slot pyqtSlot, travando o painel GS inteiro enquanto
+    esperava a resposta."""
+    done = pyqtSignal('QVariant')  # {'state': 'sys_synced'|'sys_modified'|'sys_not_found'|'error', 'workspace':, 'datastore':, 'published_name':, [+ 'title'/'abstract'/'keywords' ao vivo quando encontrado]}
+
+    def __init__(self, geoserver_service, workspace, datastore, published_name, title, abstract, keywords, config_loader_instance):
+        super().__init__()
+        self._service = geoserver_service
+        self._workspace = workspace
+        self._datastore = datastore
+        self._published_name = published_name
+        self._title = title
+        self._abstract = abstract
+        self._keywords = keywords
+        self._config = config_loader_instance
+
+    def run(self):
+        # workspace/datastore/published_name sempre presentes no resultado - o JS usa isso
+        # pra confirmar que a resposta ainda corresponde à checagem que ele espera (camada/
+        # destino pode ter trocado enquanto essa chamada estava em voo).
+        base = {'workspace': self._workspace, 'datastore': self._datastore, 'published_name': self._published_name}
+        try:
+            remote = self._service.fetch_published_featuretype(
+                self._workspace, self._datastore, self._published_name, self._config
+            )
+            if remote is None:
+                base['state'] = 'sys_not_found'
+                self.done.emit(base)
+                return
+            remote_kw = sorted((k or '').strip() for k in (remote.get('keywords') or []))
+            local_kw = sorted((k or '').strip() for k in (self._keywords or []))
+            matches = (
+                (remote.get('title') or '').strip() == (self._title or '').strip() and
+                (remote.get('abstract') or '').strip() == (self._abstract or '').strip() and
+                remote_kw == local_kw
+            )
+            base['state'] = 'sys_synced' if matches else 'sys_modified'
+            base.update(remote)
+            self.done.emit(base)
+        except Exception as exc:
+            print(f"GeoMetadata [_GsSyncCheckWorker]: {exc}")
+            self.done.emit({'state': 'error'})

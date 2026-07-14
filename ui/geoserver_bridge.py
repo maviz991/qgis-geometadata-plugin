@@ -25,6 +25,7 @@ class GeoServerBridge(QObject):
     gs_find_datastore_done = pyqtSignal(list, str)  # [{'workspace':..,'datastore':..}, ...], error
     gs_publish_done = pyqtSignal(bool, str, str, str, str)  # sucesso, mensagem, nome_publicado, wms_url, wfs_url
     gs_destination_saved = pyqtSignal(bool)  # db_ok - "Continuar Depois" do painel GeoServer
+    gs_sync_checked = pyqtSignal('QVariant')  # resultado de check_gs_sync (ver _GsSyncCheckWorker)
 
     # Cache de camadas do GeoServer (carregado uma vez por sessão)
     _geoserver_layers_cache = None
@@ -37,6 +38,7 @@ class GeoServerBridge(QObject):
         self._featuretypes_worker = None
         self._find_datastore_worker = None
         self._publish_worker = None
+        self._sync_check_worker = None
 
     @pyqtSlot()
     def list_workspaces(self):
@@ -280,7 +282,7 @@ class GeoServerBridge(QObject):
         from ..core.geoserver_service import GeoServerService
         return GeoServerService.sanitize_layer_name(name)
 
-    @pyqtSlot(str, str, str, str, str, 'QVariant', result='QVariant')
+    @pyqtSlot(str, str, str, str, str, 'QVariant')
     def check_gs_sync(self, workspace, datastore, published_name, title, abstract, keywords):
         """Compara o formulário atual contra o que está DE FATO publicado no GeoServer
         agora (REST, ao vivo via GeoServerService.fetch_published_featuretype) - nível
@@ -291,31 +293,27 @@ class GeoServerBridge(QObject):
         esse live-check) continua resolvido inteiramente no JS via info.saved_* (ver
         get_active_layer_publish_info), sem depender deste método.
 
-        Retorna um dict {'state': 'sys_synced'|'sys_modified'|'sys_not_found'|'error', ...}
-        - quando encontrado (synced/modified), inclui também 'title'/'abstract'/'keywords'
-        com o conteúdo AO VIVO, pro JS poder usar como novo snapshot de comparação local
-        (ver _checkGsSyncOnline, geoserver.js) em vez de só o que está no banco."""
+        Roda em background (QThread, RNF02 - ver _GsSyncCheckWorker) e emite
+        gs_sync_checked(result) quando terminar, em vez de retornar direto: a chamada de
+        rede aqui é síncrona (requests.get) e travava o painel GS inteiro (UI thread
+        bloqueada) enquanto esperava a resposta do GeoServer, na primeira versão deste
+        método. `result` é um dict {'state': 'sys_synced'|'sys_modified'|'sys_not_found'|
+        'error', 'workspace':, 'datastore':, 'published_name':, [+ 'title'/'abstract'/
+        'keywords' ao vivo quando encontrado]} - o JS usa workspace/datastore/
+        published_name pra confirmar que a resposta ainda corresponde à checagem que ele
+        espera (ver _onGsSyncChecked, geoserver.js)."""
         geoserver_service = getattr(self._dialog, 'geoserver_service', None)
         if not geoserver_service or not workspace or not datastore or not published_name:
-            return {'state': 'error'}
-        try:
-            from ..core.plugin_config import config_loader
-            remote = geoserver_service.fetch_published_featuretype(workspace, datastore, published_name, config_loader)
-            if remote is None:
-                return {'state': 'sys_not_found'}
-            remote_kw = sorted((k or '').strip() for k in (remote.get('keywords') or []))
-            local_kw = sorted((k or '').strip() for k in (keywords or []))
-            matches = (
-                (remote.get('title') or '').strip() == (title or '').strip() and
-                (remote.get('abstract') or '').strip() == (abstract or '').strip() and
-                remote_kw == local_kw
-            )
-            result = {'state': 'sys_synced' if matches else 'sys_modified'}
-            result.update(remote)
-            return result
-        except Exception as exc:
-            print(f"GeoMetadata [check_gs_sync]: {exc}")
-            return {'state': 'error'}
+            self.gs_sync_checked.emit({'state': 'error'})
+            return
+        from ..core.plugin_config import config_loader
+        from .geoserver_workers import _GsSyncCheckWorker
+        keywords = list(keywords) if keywords else []
+        self._sync_check_worker = _GsSyncCheckWorker(
+            geoserver_service, workspace, datastore, published_name, title, abstract, keywords, config_loader
+        )
+        self._sync_check_worker.done.connect(self.gs_sync_checked.emit)
+        self._sync_check_worker.start()
 
     @pyqtSlot(str, str, str, str, str, 'QVariant')
     def save_destination_now(self, workspace, datastore, published_name, title, abstract, keywords):

@@ -75,6 +75,12 @@ function _initGsBridge() {
             Modal.alert('Rascunho salvo localmente nesta máquina, mas não deu pra gravar no banco agora (a coluna geoserver_publish_xml pode ainda não existir nesse ambiente).', 'Salvo (local)', 'info');
         }
     });
+    // Resultado de check_gs_sync (verificação AO VIVO contra o GeoServer, ver
+    // _checkGsSyncOnline) - roda em background no lado Python (QThread, RNF02) e chega por
+    // sinal, não por callback direto, já que a chamada de rede não pode travar a UI.
+    gsBridge.gs_sync_checked.connect(function (result) {
+        _onGsSyncChecked(result);
+    });
 }
 
 // Chamado por onPanelLoaded() (app.js) quando o painel "geoserver" acabou de carregar.
@@ -782,6 +788,12 @@ function _checkGsSyncNow() {
 // silenciosamente não faz nada fora disso (o badge fica no nível banco, calculado por
 // _checkGsSyncNow). Cacheia por 60s (mesma janela de _GN_RECHECK_STALE_MS, geonetwork.js)
 // por camada+destino, pra não bater no GeoServer de novo a cada revisita do painel.
+//
+// Chamada "fire and forget" - check_gs_sync roda em background no lado Python (QThread,
+// RNF02) e o resultado chega depois pelo sinal gs_sync_checked (ver _onGsSyncChecked
+// abaixo), não por um callback direto aqui: a primeira versão chamava a REST API do
+// GeoServer direto no slot pyqtSlot (síncrono), o que travava o painel GS inteiro
+// enquanto esperava a resposta de rede.
 function _checkGsSyncOnline(info) {
     if (!_isLogged || typeof gsBridge === 'undefined' || !gsBridge.check_gs_sync) return;
     if (!info || !info.saved_workspace || !info.saved_datastore || !info.saved_published_name) return;
@@ -789,45 +801,53 @@ function _checkGsSyncOnline(info) {
     var key = _activeLayerName + '|' + ws + '|' + ds + '|' + name;
     if (_gsOnlineLastCheckedKey === key && (Date.now() - _gsOnlineLastCheckedAt) < _GN_RECHECK_STALE_MS) return;
     var d = _gsCollectFormState();
-    gsBridge.check_gs_sync(ws, ds, name, d.title, d.abstract, d.keywords, function (result) {
-        // A camada/destino pode ter trocado enquanto a checagem rodava - só aplica se
-        // ainda for a mesma (evita aplicar um resultado velho numa camada errada).
-        if (!document.getElementById('gs-layer-card') || !_gsLayerInfo) return;
-        if (_gsLayerInfo.saved_workspace !== ws || _gsLayerInfo.saved_datastore !== ds ||
-            _gsLayerInfo.saved_published_name !== name) return;
+    gsBridge.check_gs_sync(ws, ds, name, d.title, d.abstract, d.keywords);
+}
 
-        var state = result && result.state;
-        if (state === 'sys_synced') {
-            _gsSyncHasRecord = true;
-            _gsSyncSnapshot = JSON.stringify(_gsCollectFormState());
-            _gsSyncIsPublished = true;
-            setGsBadge('sys_synced');
-        } else if (state === 'sys_modified') {
-            // Diverge do que está DE FATO publicado agora - monta o snapshot a partir do
-            // conteúdo AO VIVO (não do banco), pra digitação seguinte (_checkGsSyncNow,
-            // local) continuar comparando contra a fonte mais confiável disponível.
-            _gsSyncHasRecord = true;
-            _gsSyncSnapshot = JSON.stringify({
-                workspace: ws, datastore: ds, published_name: name,
-                title: result.title || '', abstract: result.abstract || '', keywords: result.keywords || []
-            });
-            _gsSyncIsPublished = true;
-            setGsBadge('sys_modified');
-        } else if (state === 'sys_not_found') {
-            // O banco achava que estava publicado, mas não existe mais lá (removido, ou
-            // nunca chegou a publicar de verdade - só "Continuar Depois").
-            _gsSyncHasRecord = false;
-            _gsSyncIsPublished = false;
-            setGsBadge('sys_not_found');
-        }
-        // 'error' (rede fora, etc.) - mantém o que _checkGsSyncNow (banco) já mostrou, sem
-        // piorar a UX por causa de uma falha de rede momentânea.
-        if (state && state !== 'error') {
-            _gsOnlineLastCheckedKey = key;
-            _gsOnlineLastCheckedAt = Date.now();
-        }
-        updateGsFormProgress();
-    });
+// Sinal gs_sync_checked (ver _initGsBridge) - resultado de check_gs_sync, chegando de
+// forma assíncrona (não como retorno/callback direto de uma chamada). O próprio result
+// já vem com workspace/datastore/published_name ecoados (ver _GsSyncCheckWorker,
+// geoserver_workers.py) - usa isso pra confirmar que ainda corresponde ao destino atual
+// da camada ativa, em vez de guardar um "contexto esperado" separado (mais simples e
+// robusto se houver mais de uma checagem em voo ao mesmo tempo).
+function _onGsSyncChecked(result) {
+    if (!document.getElementById('gs-layer-card') || !_gsLayerInfo) return;
+    if (!result || result.workspace !== _gsLayerInfo.saved_workspace ||
+        result.datastore !== _gsLayerInfo.saved_datastore ||
+        result.published_name !== _gsLayerInfo.saved_published_name) return;
+
+    var state = result.state;
+    var key = _activeLayerName + '|' + result.workspace + '|' + result.datastore + '|' + result.published_name;
+    if (state === 'sys_synced') {
+        _gsSyncHasRecord = true;
+        _gsSyncSnapshot = JSON.stringify(_gsCollectFormState());
+        _gsSyncIsPublished = true;
+        setGsBadge('sys_synced');
+    } else if (state === 'sys_modified') {
+        // Diverge do que está DE FATO publicado agora - monta o snapshot a partir do
+        // conteúdo AO VIVO (não do banco), pra digitação seguinte (_checkGsSyncNow,
+        // local) continuar comparando contra a fonte mais confiável disponível.
+        _gsSyncHasRecord = true;
+        _gsSyncSnapshot = JSON.stringify({
+            workspace: result.workspace, datastore: result.datastore, published_name: result.published_name,
+            title: result.title || '', abstract: result.abstract || '', keywords: result.keywords || []
+        });
+        _gsSyncIsPublished = true;
+        setGsBadge('sys_modified');
+    } else if (state === 'sys_not_found') {
+        // O banco achava que estava publicado, mas não existe mais lá (removido, ou
+        // nunca chegou a publicar de verdade - só "Continuar Depois").
+        _gsSyncHasRecord = false;
+        _gsSyncIsPublished = false;
+        setGsBadge('sys_not_found');
+    }
+    // 'error' (rede fora, etc.) - mantém o que _checkGsSyncNow (banco) já mostrou, sem
+    // piorar a UX por causa de uma falha de rede momentânea.
+    if (state && state !== 'error') {
+        _gsOnlineLastCheckedKey = key;
+        _gsOnlineLastCheckedAt = Date.now();
+    }
+    updateGsFormProgress();
 }
 
 // Chamado por _onAuthStateChangedForSync (geonetwork.js) quando o login muda de verdade -
