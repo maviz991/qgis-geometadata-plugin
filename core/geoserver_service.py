@@ -3,6 +3,11 @@ import unicodedata
 
 import requests
 
+try:
+    import psycopg2
+except ImportError:
+    psycopg2 = None
+
 
 def parse_postgres_uri(source):
     """Extrai host/port/dbname/user/schema/table de layer.source() de uma camada PostGIS
@@ -31,6 +36,40 @@ def parse_postgres_uri(source):
         details['f_table_name'] = clean_identifier
 
     return details
+
+
+def connect_to_layer_db(layer):
+    """Abre uma conexão psycopg2 direta com o banco da própria camada PostGIS (mesma
+    lógica de auth de core/persistence_service.py's _save_to_db/_load_from_db, mas
+    extraída aqui pra não duplicar uma terceira vez em save_publish_destination/
+    load_publish_destination abaixo - não mexe no persistence_service.py existente pra
+    não arriscar o caminho de salvar metadado, que já funciona em produção). Não precisa
+    de login no GeoServer/GeoNetwork - só a credencial da camada já configurada no QGIS."""
+    if not psycopg2:
+        raise Exception("A biblioteca psycopg2 não foi encontrada.")
+
+    details = parse_postgres_uri(layer.source())
+    db_user = details.get('user')
+    db_password = details.get('password')
+
+    if not db_password and details.get('authcfg'):
+        from qgis.core import QgsApplication
+        auth_manager = QgsApplication.authManager()
+        auth_cfg_id = details['authcfg']
+        config = auth_manager.availableAuthMethodConfigs().get(auth_cfg_id)
+        if config and auth_manager.loadAuthenticationConfig(auth_cfg_id, config, True):
+            db_user = config.configMap().get('username')
+            db_password = config.configMap().get('password')
+        else:
+            raise Exception(f"Não foi possível carregar a configuração de autenticação '{auth_cfg_id}'.")
+
+    return psycopg2.connect(
+        dbname=details.get('dbname'),
+        user=db_user,
+        password=db_password,
+        host=details.get('host'),
+        port=details.get('port', 5432)
+    ), details
 
 
 class GeoServerService:
@@ -224,6 +263,122 @@ class GeoServerService:
             response.raise_for_status()
         except requests.exceptions.HTTPError:
             raise Exception(self.translate_gs_error(response.status_code, response.text or ''))
+
+    @staticmethod
+    def _build_publish_xml(workspace, datastore, published_name, title, abstract=None, keywords=None):
+        import xml.etree.ElementTree as ET
+        root = ET.Element('geoserver_publish')
+        ET.SubElement(root, 'workspace').text = workspace or ''
+        ET.SubElement(root, 'datastore').text = datastore or ''
+        ET.SubElement(root, 'published_name').text = published_name or ''
+        ET.SubElement(root, 'title').text = title or ''
+        ET.SubElement(root, 'abstract').text = abstract or ''
+        keywords_el = ET.SubElement(root, 'keywords')
+        for kw in (keywords or []):
+            ET.SubElement(keywords_el, 'keyword').text = kw
+        body = ET.tostring(root, encoding='unicode')
+        return '<?xml version="1.0" encoding="UTF-8"?>\n' + body
+
+    @staticmethod
+    def _parse_publish_xml(xml_text):
+        import xml.etree.ElementTree as ET
+        if not xml_text:
+            return None
+        try:
+            root = ET.fromstring(xml_text)
+        except ET.ParseError:
+            return None
+        get = lambda tag: (root.findtext(tag) or '')
+        keywords_el = root.find('keywords')
+        keywords = [k.text for k in keywords_el.findall('keyword') if k.text] if keywords_el is not None else []
+        return {
+            'workspace': get('workspace'),
+            'datastore': get('datastore'),
+            'published_name': get('published_name'),
+            'title': get('title'),
+            'abstract': get('abstract'),
+            'keywords': keywords,
+        }
+
+    @staticmethod
+    def save_publish_destination(layer, workspace, datastore, published_name, title, abstract=None, keywords=None):
+        """Guarda no banco da própria camada, na mesma linha/tabela do metadado
+        (public.qgis_geometadata_plugin, coluna geoserver_publish_xml) qual workspace/
+        datastore/nome/título/resumo/palavras-chave foram usados na última publicação -
+        pra pré-preencher a aba Destino/Identificação da próxima vez, mesmo sem rascunho
+        local. Chamado automaticamente logo após uma publicação bem-sucedida (ver
+        GeoServerBridge._on_publish_done) e também ao promover um rascunho local via
+        "Continuar Depois" (ver GeoMetadata_dialog._promote_gs_draft_to_db). O UPSERT toca
+        só essa coluna - nunca mexe em metadata_xml/owner/update_time, que são exclusivos
+        do fluxo "Continuar Depois" do editor GN (core/persistence_service.py); os dois
+        lados fazem UPSERTs independentes na mesma linha sem pisar um no outro, o Postgres
+        só sobrescreve a coluna listada no SET. Falha silenciosa se a coluna/tabela ainda
+        não existir nesse banco (mesma condição do Bug 1 documentado em docs_projeto/
+        bugs.md) - é só bookkeeping, não pode derrubar uma publicação que já deu certo.
+        Retorna True/False (não levanta exceção) - o botão "Continuar Depois" do painel
+        GeoServer usa isso pra avisar o usuário se a gravação no banco realmente aconteceu."""
+        if not psycopg2 or not layer:
+            return False
+        try:
+            conn, details = connect_to_layer_db(layer)
+        except Exception as exc:
+            print(f"GeoMetadata [save_publish_destination] conexão: {exc}")
+            return False
+        try:
+            cursor = conn.cursor()
+            xml_text = GeoServerService._build_publish_xml(workspace, datastore, published_name, title, abstract, keywords)
+            sql = """
+                INSERT INTO public.qgis_geometadata_plugin
+                    (f_table_catalog, f_table_schema, f_table_name, geoserver_publish_xml)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT ON CONSTRAINT qgis_geometadata_plugin_unique_layer
+                DO UPDATE SET geoserver_publish_xml = EXCLUDED.geoserver_publish_xml;
+            """
+            cursor.execute(sql, (
+                details.get('f_table_catalog'), details['f_table_schema'], details['f_table_name'], xml_text
+            ))
+            conn.commit()
+            cursor.close()
+            return True
+        except psycopg2.errors.UndefinedColumn:
+            return False  # coluna ainda não provisionada nesse banco - condição conhecida, sem traceback
+        except Exception as exc:
+            print(f"GeoMetadata [save_publish_destination]: {exc}")
+            return False
+        finally:
+            conn.close()
+
+    @staticmethod
+    def load_publish_destination(layer):
+        """Lê o último workspace/datastore/nome/título publicados pra essa camada (ver
+        save_publish_destination). Retorna None se não houver registro/coluna ainda."""
+        if not psycopg2 or not layer:
+            return None
+        try:
+            conn, details = connect_to_layer_db(layer)
+        except Exception as exc:
+            print(f"GeoMetadata [load_publish_destination] conexão: {exc}")
+            return None
+        result = None
+        try:
+            cursor = conn.cursor()
+            sql = """
+                SELECT geoserver_publish_xml
+                FROM public.qgis_geometadata_plugin
+                WHERE f_table_catalog = %s AND f_table_schema = %s AND f_table_name = %s;
+            """
+            cursor.execute(sql, (details.get('f_table_catalog'), details['f_table_schema'], details['f_table_name']))
+            row = cursor.fetchone()
+            if row:
+                result = GeoServerService._parse_publish_xml(row[0])
+            cursor.close()
+        except psycopg2.errors.UndefinedColumn:
+            pass  # coluna ainda não provisionada nesse banco - condição conhecida, sem traceback
+        except Exception as exc:
+            print(f"GeoMetadata [load_publish_destination]: {exc}")
+        finally:
+            conn.close()
+        return result
 
     @staticmethod
     def translate_gs_error(status_code, text):

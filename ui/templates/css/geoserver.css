@@ -1,7 +1,7 @@
-/* geoserver.css - Painel de publicação GeoServer. Reaproveita .form-grid/.form-group/
-   .form-tabs (geonetwork.css) pro mesmo layout largo em colunas do editor de metadados,
-   em vez de reinventar caixas com borda próprias - só o específico daqui fica aqui:
-   cabeçalho com status da camada detectada, e o link de detecção automática. */
+/* geoserver.css - Painel de publicação GeoServer, em abas (Destino/Identificação/
+   Estilos) no mesmo padrão visual do editor de metadados GN. Reaproveita .form-tabs/
+   .tab-link/.tab-content/.form-grid/.form-group/.keyword-chips (geonetwork.css, já
+   globais) - só o específico daqui fica aqui. */
 
 .geoserver-panel {
     display: flex;
@@ -10,30 +10,12 @@
     width: 100%;
 }
 
-/* ── Cabeçalho: título + status da camada detectada, igual .form-tabs/.tabs-status-group ── */
-.gs-panel-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 0 24px;
-    height: 49px;
-    border-bottom: 1px solid var(--border);
-    background: white;
-    flex-shrink: 0;
-}
-
-.gs-panel-header h1 {
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--fg);
-    margin: 0;
-}
-
+/* ── Aba Destino: card da camada + linha workspace/datastore/detectar ──────────── */
 .gs-layer-status {
     display: flex;
-    align-items: center;
-    gap: 8px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
 }
 
 .gs-status-text {
@@ -44,66 +26,77 @@
 
 .gs-status-text.gs-warning-text {
     font-style: normal;
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.gs-layer-detected-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .gs-layer-badge {
     flex-shrink: 0;
     padding: 3px 9px;
     border-radius: 999px;
-    background: #2f5f86;
-    color: white;
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    color: rgb(47, 95, 134);
     font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
 
+.gs-layer-detected-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
 .gs-layer-detected-name {
-    font-size: 12px;
+    font-size: 13px;
+    font-weight: 600;
     color: var(--fg);
 }
 
-.gs-layer-detected-name small {
+.gs-layer-detected-schema {
     color: var(--fg-muted);
-    margin-left: 4px;
+    font-size: 12px;
 }
 
-#gs-publish-form.form-grid {
+/* Workspace + Datastore + botão "Detectar automaticamente" na mesma linha, ocupando
+   a largura toda do grid (as duas colunas) - sem isso, .gs-destino-row cai só na
+   primeira coluna do .form-grid, sobrando metade da tela vazia à direita. */
+.gs-destino-row {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: flex-end;
+    gap: 20px;
+}
+
+.gs-destino-row .form-group {
     flex: 1;
-    overflow-y: auto;
+    min-width: 0;
+    margin-bottom: 0;
 }
 
-.gs-name-preview {
-    display: block;
-    margin-top: 6px;
-    color: var(--fg-muted);
-    font-size: 12px;
+/* Grupo do botão "Detectar automaticamente": label vazio (&nbsp;) na mesma altura de
+   "WORKSPACE"/"DATASTORE" - sem isso o botão (sem label) ficava desalinhado com as
+   caixas dos dropdowns, mesmo com align-items:flex-end no row. */
+.gs-autodetect-group {
+    flex: 0 0 auto;
 }
 
-.gs-name-preview.gs-warning-text {
-    color: var(--accent);
-    font-weight: 600;
+.gs-autodetect-btn {
+    flex-shrink: 0;
+    font-size: 14px;
+    padding: 9px 14px;
+    white-space: nowrap;
 }
 
-/* ── "Detectar automaticamente": link discreto, não uma caixa separada ─────────── */
-.gs-autodetect-link {
-    display: block;
-    margin-top: 8px;
-    padding: 0;
-    border: none;
-    background: none;
-    color: var(--accent);
-    font-size: 12px;
-    font-weight: 600;
-    text-decoration: underline;
-    cursor: pointer;
-}
-
-.gs-autodetect-link:hover {
-    color: var(--accent-hover);
-}
-
-.gs-autodetect-link:disabled {
+.gs-autodetect-btn:disabled {
     opacity: 0.5;
     cursor: default;
 }
@@ -132,3 +125,49 @@
     border-color: var(--accent);
     background: #fff5f5;
 }
+
+.gs-name-preview {
+    display: block;
+    margin-top: 6px;
+    color: var(--fg-muted);
+    font-size: 12px;
+}
+
+.gs-name-preview.gs-warning-text {
+    color: var(--accent);
+    font-weight: 600;
+}
+
+/* ── Aba Identificação: botão "Puxar do GeoNetwork" ao lado do label Resumo ────── */
+.gs-pull-gn-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    margin-left: 8px;
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: normal;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.gs-pull-gn-btn:hover:not(:disabled) {
+    color: var(--accent-hover);
+}
+
+.gs-pull-gn-btn:disabled {
+    color: var(--fg-muted);
+    text-decoration: none;
+    cursor: default;
+}
+
+/* ── Aba Estilos: preview desabilitado (RF05/RF06 ainda não implementados) ─────── */
+.gs-coming-soon {
+    color: var(--fg-muted);
+    font-style: italic;
+    font-size: 13px;
+    margin: 0;
+}
+

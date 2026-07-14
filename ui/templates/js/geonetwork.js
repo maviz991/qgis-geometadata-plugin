@@ -63,6 +63,8 @@ function _initGnBridge() {
         var uidEl = document.getElementById('f-metadataId');
         if (uidEl) uidEl.value = uuid;
         if (typeof gnBridge !== 'undefined') gnBridge.clear_draft(); // save no DB/sidecar já é a fonte da verdade agora
+        _gnSyncUuid = uuid || null;
+        _gnSyncUuidLayerName = uuid ? _activeLayerName : null;
         setGnBadge('synced');
     });
 
@@ -222,7 +224,10 @@ function tryExportGeohab() {
     });
 }
 
-function trySaveMetadata() {
+// Chamado por trySaveMetadata() (app.js - dispatcher genérico do menu Arquivo >
+// Continuar Depois, que decide entre isso e _tryGsSaveDestination conforme o painel
+// aberto). Nome com _ na frente de propósito, pra não colidir com o dispatcher.
+function _tryGnSaveMetadata() {
     var data = collectFormData();
     if (!data) return;
     Modal.confirm('Deseja realmente salvar as alterações no banco de dados?', function () {
@@ -323,6 +328,9 @@ function _loadFormForLayer(sessionDraft) {
 // ─── Sincronização com o GeoNetwork (badge + busca manual + auto-check) ────────
 
 var _gnSyncUuid = null;
+var _gnSyncUuidLayerName = null; // qual camada esse uuid corresponde - usado pelo GS (geoserver.js) como
+                                  // dica de fallback quando a busca local (banco/sidecar) não acha nada,
+                                  // só quando bate com a camada ativa (evita puxar uuid de outra camada)
 var _gnSearchTimer = null;
 // Retrato (JSON) do formulário no momento exato em que o badge virou "Sincronizado" OU
 // "Não encontrado no Geohab" - comparado a cada input/change pra saber se o conteúdo
@@ -396,6 +404,7 @@ function _markGnModifiedIfNeeded() {
 
 function checkGnSync(uuid, dateStamp) {
     _gnSyncUuid = uuid || null;
+    _gnSyncUuidLayerName = uuid ? _activeLayerName : null;
     if (!uuid || typeof gnBridge === 'undefined') {
         setGnBadge('offline');
         return;

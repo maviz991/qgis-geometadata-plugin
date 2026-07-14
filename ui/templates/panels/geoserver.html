@@ -1,54 +1,122 @@
 <div class="geoserver-panel">
-    <div class="gs-panel-header">
-        <h1>Publicação de Camadas</h1>
-        <div id="gs-layer-card" class="gs-layer-status">
-            <span class="gs-status-text">Detectando camada ativa...</span>
+
+    <!-- ABAS -->
+    <div class="form-tabs">
+        <button class="tab-link active" onclick="showTab('gs-destino', this)">Destino</button>
+        <button class="tab-link" onclick="showTab('gs-identificacao', this)">Identificação</button>
+        <button class="tab-link" onclick="showTab('gs-estilos', this)">Estilos</button>
+    </div>
+
+    <!-- ══ ABA 1: DESTINO ══════════════════════════════ -->
+    <div id="tab-gs-destino" class="tab-content active">
+        <div class="form-grid">
+            <div class="form-group span-2">
+                <div id="gs-layer-card" class="gs-layer-status">
+                    <span class="gs-status-text">Detectando camada ativa...</span>
+                </div>
+            </div>
+
+            <div class="gs-destino-row span-2">
+                <div class="form-group">
+                    <label for="gs-workspace">Workspace</label>
+                    <div id="gs-workspace-wrap">
+                        <select id="gs-workspace" onchange="onGsWorkspaceChange(this.value)">
+                            <option value="">Carregando...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="gs-datastore">Datastore</label>
+                    <div id="gs-datastore-wrap">
+                        <select id="gs-datastore" disabled>
+                            <option value="">Selecione um workspace primeiro</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group gs-autodetect-group">
+                    <label>&nbsp;</label>
+                    <button type="button" class="btn-icon gs-autodetect-btn" onclick="autoDetectGsDatastore()"
+                        data-title="Não sabe o workspace/datastore certo da camada? Isso varre todos e procura onde a tabela está - pode demorar alguns segundos.">Detectar
+                        automaticamente</button>
+                </div>
+            </div>
+
+            <div class="form-group span-2">
+                <small id="gs-datastore-check" class="gs-name-preview"></small>
+                <small id="gs-autodetect-status" class="gs-name-preview"></small>
+                <div id="gs-autodetect-candidates" class="gs-autodetect-candidates" style="display:none"></div>
+            </div>
         </div>
     </div>
 
-    <div id="gs-publish-form" class="form-grid" style="display:none">
-        <div class="form-group">
-            <label for="gs-workspace">Workspace</label>
-            <div id="gs-workspace-wrap">
-                <select id="gs-workspace" onchange="onGsWorkspaceChange(this.value)">
-                    <option value="">Carregando...</option>
-                </select>
+    <!-- ══ ABA 2: IDENTIFICAÇÃO ══════════════════════════════ -->
+    <div id="tab-gs-identificacao" class="tab-content">
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="gs-layer-name">Nome da camada publicada <button class="help-btn"
+                        data-tip="Nome que a camada vai ter no GeoServer. É ajustado automaticamente para minúsculas, sem espaços/acentos e sem começar com número (exigência do GeoServer).">?</button></label>
+                <input id="gs-layer-name" type="text" placeholder="nome_da_camada"
+                    oninput="onGsLayerNameInput(this.value)">
+                <small id="gs-layer-name-preview" class="gs-name-preview"></small>
             </div>
-        </div>
 
-        <div class="form-group">
-            <label for="gs-datastore">Datastore</label>
-            <div id="gs-datastore-wrap">
-                <select id="gs-datastore" disabled>
-                    <option value="">Selecione um workspace primeiro</option>
-                </select>
+            <div class="form-group">
+                <label for="gs-layer-title">Título <button class="help-btn"
+                        data-tip="Nome de exibição da camada no GeoServer (livre, sem as regras de sanitização do campo Nome). Pré-preenchido com o título do metadado, se houver.">?</button></label>
+                <input id="gs-layer-title" type="text" placeholder="Título de exibição">
             </div>
-            <small id="gs-datastore-check" class="gs-name-preview"></small>
-            <button type="button" class="gs-autodetect-link" onclick="autoDetectGsDatastore()"
-                data-title="Não sabe o workspace/datastore certo da camada? Isso varre todos e procura onde a tabela está - pode demorar alguns segundos.">Não
-                sei o workspace/datastore - detectar automaticamente</button>
-            <small id="gs-autodetect-status" class="gs-name-preview"></small>
-            <div id="gs-autodetect-candidates" class="gs-autodetect-candidates" style="display:none"></div>
-        </div>
 
-        <div class="form-group">
-            <label for="gs-layer-name">Nome da camada publicada <button class="help-btn"
-                    data-tip="Nome que a camada vai ter no GeoServer. É ajustado automaticamente para minúsculas, sem espaços/acentos e sem começar com número (exigência do GeoServer).">?</button></label>
-            <input id="gs-layer-name" type="text" placeholder="nome_da_camada"
-                oninput="onGsLayerNameInput(this.value)">
-            <small id="gs-layer-name-preview" class="gs-name-preview"></small>
-        </div>
+            <div class="form-group span-2">
+                <label for="gs-layer-abstract">Resumo <button class="help-btn"
+                        data-tip="Descrição da camada. Pode ser puxado do metadado já publicado no GeoNetwork para esta camada, se houver.">?</button>
+                    <button type="button" id="gs-pull-gn-btn" class="gs-pull-gn-btn"
+                        onclick="pullGsAbstractKeywordsFromGn()" disabled>Puxar do GeoNetwork</button>
+                </label>
+                <textarea id="gs-layer-abstract" rows="4" placeholder="Resumo da camada..."></textarea>
+            </div>
 
-        <div class="form-group">
-            <label for="gs-layer-title">Título <button class="help-btn"
-                    data-tip="Nome de exibição da camada no GeoServer (livre, sem as regras de sanitização do campo Nome). Pré-preenchido com o título do metadado, se houver.">?</button></label>
-            <input id="gs-layer-title" type="text" placeholder="Título de exibição">
-        </div>
-
-        <div class="form-group span-2">
-            <button id="gs-publish-btn" class="btn btn-primary" onclick="confirmGsPublish()" disabled>
-                Publicar no GeoServer
-            </button>
+            <div class="form-group span-2">
+                <label>Palavras-chave <button class="help-btn"
+                        data-tip="Palavras-chave da camada. Podem ser puxadas do metadado no GeoNetwork (botão em Resumo) ou digitadas aqui.">?</button></label>
+                <div class="keyword-input-row">
+                    <input id="gs-kw-input" type="text" data-title="Pressione Enter após digitar cada palavra-chave."
+                        placeholder="Adicionar palavra-chave..."
+                        onkeydown="if(event.key==='Enter'){event.preventDefault();gsAddKeyword();}">
+                    <button class="btn-icon accent" onclick="gsAddKeyword()">+</button>
+                </div>
+                <div class="keyword-chips" id="gs-keyword-chips"></div>
+            </div>
         </div>
     </div>
+
+    <!-- ══ ABA 3: ESTILOS ══════════════════════════════ -->
+    <div id="tab-gs-estilos" class="tab-content">
+        <div class="form-grid">
+            <div class="form-group span-2">
+                <p class="gs-coming-soon">Publicação de estilos (SLD) ainda não implementada nesta versão do
+                    plugin — fica pra uma fase futura (ver requisitos_v2.md, Módulo B). Preview de como vai
+                    funcionar:</p>
+            </div>
+
+            <div class="form-group">
+                <label>Estilo principal</label>
+                <select disabled>
+                    <option>Em breve</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Estilos adicionais (SLD)</label>
+                <button type="button" class="btn-icon" disabled>Carregar arquivo .sld...</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sem botão de publicar aqui de propósito - esse painel é o "editor de camada"
+         (configurar destino), igual o Editor de Metadados não tem botão de publicar
+         dentro dele. Publicar é "Serviços > Publicar Camada" (tryPublishGeoServerLayer,
+         em geoserver.js) e salvar sem publicar é "Arquivo > Continuar Depois"
+         (trySaveMetadata em app.js, que chama saveGsDraftNow aqui). -->
 </div>

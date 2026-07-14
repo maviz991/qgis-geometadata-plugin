@@ -10,6 +10,10 @@ var _gsLastPublishWorkspace = null; // capturado em confirmGsPublish(), usado ao
 var _gsTableCheckState = null; // null = não checado/checando, true = tabela encontrada no datastore, false = não encontrada
 var _gsAutoDetectRunning = false;
 var _gsPendingAutoDatastore = null; // datastore a selecionar assim que a lista de datastores do workspace escolhido carregar
+var _gsPendingDraftWorkspace = null; // workspace a selecionar assim que a lista de workspaces carregar (rascunho ou destino salvo)
+var _gsDraftHasWorkspace = false; // true se o rascunho local já resolveu e tinha um workspace - evita o destino salvo (banco) pisar em cima
+var _gsKeywords = []; // estado das palavras-chave da aba Identificação (namespaced pra não colidir com `keywords` do editor GN, mesmo escopo global)
+var _gsDraftTimer = null;
 
 function _initGsBridge() {
     gsBridge.gs_workspaces_ready.connect(function (workspaces, error) {
@@ -33,9 +37,12 @@ function _initGsBridge() {
             Modal.alert(message || 'Falha ao publicar no GeoServer.', 'Erro', 'error');
             return;
         }
-        // Publicado - leva o usuário direto pra Distribuição já com WMS+WFS vinculados e a
-        // miniatura gerada (_applyPendingGsDistLayerIfAny, em geonetwork.js, roda assim
-        // que o formulário do editor terminar de carregar pra essa camada).
+        // Publicado - o destino já foi gravado no banco (GeoServerBridge._on_publish_done),
+        // então o rascunho local não faz mais sentido aqui.
+        gsBridge.clear_draft();
+        // Leva o usuário direto pra Distribuição já com WMS+WFS vinculados e a miniatura
+        // gerada (_applyPendingGsDistLayerIfAny, em geonetwork.js, roda assim que o
+        // formulário do editor terminar de carregar pra essa camada).
         if (wmsUrl && _gsLastPublishWorkspace) {
             window._pendingGsDistLayer = {
                 wms_url: wmsUrl,
@@ -46,32 +53,164 @@ function _initGsBridge() {
         }
         navigate('editor');
     });
+    gsBridge.gs_destination_saved.connect(function (dbOk) {
+        if (dbOk) {
+            Modal.alert('Workspace/datastore/nome/título/resumo/palavras-chave gravados no banco - você pode continuar preenchendo depois, mesmo sem publicar ainda.', 'Salvo', 'success');
+        } else {
+            Modal.alert('Rascunho salvo localmente nesta máquina, mas não deu pra gravar no banco agora (a coluna geoserver_publish_xml pode ainda não existir nesse ambiente).', 'Salvo (local)', 'info');
+        }
+    });
 }
 
 // Chamado por onPanelLoaded() (app.js) quando o painel "geoserver" acabou de carregar.
 function _onGeoServerPanelLoaded() {
     if (!document.getElementById('gs-layer-card')) return;
-    _loadGsLayerInfo();
+    _gsKeywords = [];
+    _renderGsKeywords();
+    var destinoBtn = document.querySelector('.tab-link[onclick*="gs-destino"]');
+    showTab('gs-destino', destinoBtn);
+    _wireGsDraftListeners();
     _loadGsWorkspaces();
+    // Rascunho local primeiro (rápido, arquivo local) - só depois dele resolver é que
+    // _loadGsLayerInfo() roda, pra "destino salvo no banco" (info.saved_*) só entrar como
+    // fallback quando o rascunho NÃO tinha workspace/datastore, nunca por cima dele.
+    _loadGsDraft(function () {
+        _loadGsLayerInfo();
+    });
+}
+
+// ─── Rascunho local (workspace/datastore/nome/título/resumo/palavras-chave) ────
+// Arquivo próprio do GS (gsBridge.save_draft/load_draft) - não usa o rascunho do editor
+// GN, que é sobre o metadado MGB, não sobre onde/como publicar no GeoServer.
+
+function _wireGsDraftListeners() {
+    var panelEl = document.querySelector('.geoserver-panel');
+    if (panelEl && !panelEl.hasAttribute('data-gs-draft-listener')) {
+        panelEl.addEventListener('input', _scheduleGsDraftSave);
+        panelEl.addEventListener('change', _scheduleGsDraftSave);
+        panelEl.setAttribute('data-gs-draft-listener', 'true');
+    }
+}
+
+function _scheduleGsDraftSave() {
+    clearTimeout(_gsDraftTimer);
+    _gsDraftTimer = setTimeout(_saveGsDraftNow, 1500);
+}
+
+// Chamado pelo debounce (1.5s) e também na hora, sem esperar, ao trocar de painel
+// (_onGsBeforePanelUnload) - evita perder até 1.5s de digitação numa troca rápida.
+function _saveGsDraftNow() {
+    clearTimeout(_gsDraftTimer);
+    if (!document.getElementById('gs-layer-card')) return; // painel não existe mais
+    var wsEl = document.getElementById('gs-workspace');
+    var dsEl = document.getElementById('gs-datastore');
+    var nameEl = document.getElementById('gs-layer-name');
+    var titleEl = document.getElementById('gs-layer-title');
+    var abstractEl = document.getElementById('gs-layer-abstract');
+    var d = {
+        workspace: wsEl ? wsEl.value : '',
+        datastore: dsEl ? dsEl.value : '',
+        published_name: nameEl ? nameEl.value.trim() : '',
+        title: titleEl ? titleEl.value.trim() : '',
+        abstract: abstractEl ? abstractEl.value.trim() : '',
+        keywords: _gsKeywords.slice()
+    };
+    var hasContent = d.workspace || d.datastore || d.published_name || d.title || d.abstract || d.keywords.length;
+    if (!hasContent) return; // não sobrescreve o arquivo com formulário vazio
+    gsBridge.save_draft(JSON.stringify(d));
+}
+
+// Chamado por loadPanel() (app.js) antes de trocar o HTML do painel - nome distinto de
+// _onBeforePanelUnload (GN) de propósito, mesmo escopo global (mesmo motivo de
+// _onGsActiveLayerChanged vs _onActiveLayerChanged, já resolvido antes nesta sessão).
+function _onGsBeforePanelUnload() {
+    if (document.getElementById('gs-layer-card')) {
+        _saveGsDraftNow();
+    }
+}
+
+function _loadGsDraft(callback) {
+    _gsDraftHasWorkspace = false;
+    if (typeof gsBridge === 'undefined') { if (callback) callback(); return; }
+    gsBridge.load_draft(function (draft) {
+        if (draft) {
+            var nameEl = document.getElementById('gs-layer-name');
+            if (nameEl && draft.published_name) {
+                nameEl.value = draft.published_name;
+                onGsLayerNameInput(draft.published_name);
+            }
+            var titleEl = document.getElementById('gs-layer-title');
+            if (titleEl && draft.title) titleEl.value = draft.title;
+            var abstractEl = document.getElementById('gs-layer-abstract');
+            if (abstractEl && draft.abstract) abstractEl.value = draft.abstract;
+            if (draft.keywords && draft.keywords.length) {
+                _gsKeywords = draft.keywords.slice();
+                _renderGsKeywords();
+            }
+            if (draft.workspace) {
+                _gsDraftHasWorkspace = true;
+                _gsQueueWorkspaceDatastore(draft.workspace, draft.datastore);
+            }
+        }
+        if (callback) callback();
+    });
+}
+
+// Seleciona workspace/datastore assim que possível: na hora, se a lista de workspaces já
+// carregou (clica no item do custom-select, disparando onGsWorkspaceChange normalmente);
+// senão enfileira em _gsPendingDraftWorkspace pra _renderGsWorkspaces() aplicar depois.
+// Usado tanto pelo rascunho local quanto pelo destino salvo no banco (info.saved_*).
+function _gsQueueWorkspaceDatastore(workspace, datastore) {
+    if (!workspace) return;
+    var wsSelect = document.getElementById('gs-workspace');
+    var alreadyPopulated = wsSelect && wsSelect.options.length > 1;
+    _gsPendingAutoDatastore = datastore || null;
+    if (alreadyPopulated) {
+        if (!_clickGsSuggestionItem('gs-workspace-wrap', workspace)) {
+            _gsPendingAutoDatastore = null;
+        }
+    } else {
+        _gsPendingDraftWorkspace = workspace;
+    }
 }
 
 // Chamado por app.js quando a camada ativa do QGIS muda (bridge.layer_changed). Nome
 // distinto de _onActiveLayerChanged (GN) de propósito - as duas funções coexistem no
 // mesmo escopo global e uma declaração igual sobrescreveria a outra silenciosamente.
 function _onGsActiveLayerChanged() {
-    if (document.getElementById('gs-layer-card')) {
+    if (!document.getElementById('gs-layer-card')) return;
+    // Rascunho/nome/título/resumo/palavras-chave são por camada - limpa antes de trocar,
+    // senão o que foi digitado pra camada anterior vazaria pra essa (mesmo espírito de
+    // resetEditorForm() no editor GN antes de _loadFormForLayer).
+    _gsKeywords = [];
+    _renderGsKeywords();
+    var nameEl = document.getElementById('gs-layer-name');
+    if (nameEl) { nameEl.value = ''; nameEl.dataset.sanitized = ''; }
+    var titleEl = document.getElementById('gs-layer-title');
+    if (titleEl) titleEl.value = '';
+    var abstractEl = document.getElementById('gs-layer-abstract');
+    if (abstractEl) abstractEl.value = '';
+    var preview = document.getElementById('gs-layer-name-preview');
+    if (preview) preview.textContent = '';
+    _clickGsSuggestionItem('gs-workspace-wrap', ''); // volta workspace/datastore pra "Selecione..."
+    _loadGsDraft(function () {
         _loadGsLayerInfo();
-    }
+    });
 }
 
 function _loadGsLayerInfo() {
     var card = document.getElementById('gs-layer-card');
-    var form = document.getElementById('gs-publish-form');
     if (!card) return;
     card.innerHTML = '<span class="gs-status-text">Detectando camada ativa...</span>';
-    if (form) form.style.display = 'none';
     _setGsTableCheck(null, ''); // camada mudou - qualquer checagem de tabela anterior não vale mais
-    gsBridge.get_active_layer_publish_info(function (info) {
+    _setGsPullGnButtonState(false);
+    // Dica de uuid do GN: usada como fallback quando a busca local (banco/sidecar) não
+    // encontra nada - ex.: tabela auxiliar do plugin ainda não existe nesse banco (ver
+    // docs_projeto/bugs.md, Bug 1). Só usa se o editor GN já confirmou sync pra ESSA
+    // mesma camada nesta sessão (_gnSyncUuidLayerName, em geonetwork.js) - senão manda
+    // vazio, pra não arriscar puxar o uuid de outra camada.
+    var uuidHint = (window._gnSyncUuidLayerName === _activeLayerName && window._gnSyncUuid) ? window._gnSyncUuid : '';
+    gsBridge.get_active_layer_publish_info(uuidHint, function (info) {
         _gsLayerInfo = info;
         _renderGsLayerCard(info);
     });
@@ -79,31 +218,39 @@ function _loadGsLayerInfo() {
 
 function _renderGsLayerCard(info) {
     var card = document.getElementById('gs-layer-card');
-    var form = document.getElementById('gs-publish-form');
     if (!card) return; // painel já foi trocado
 
     if (!info || !info.publishable) {
         card.innerHTML = '<span class="gs-status-text gs-warning-text">' + escHtml((info && info.reason) || 'Nenhuma camada ativa suportada.') + '</span>';
-        if (form) form.style.display = 'none';
+        _updateGsPublishButton();
         return;
     }
 
     card.innerHTML =
+        '<div class="gs-layer-detected-row">' +
         '<span class="gs-layer-badge">PostgreSQL</span>' +
-        '<span class="gs-layer-detected-name">' + escHtml(info.name) +
-        '<small>' + escHtml(info.schema) + '.' + escHtml(info.table) + '</small></span>';
+        '<div class="gs-layer-detected-info">' +
+        '<span class="gs-layer-detected-name">' + escHtml(info.name) + '</span>' +
+        '<small class="gs-layer-detected-schema">' + escHtml(info.schema) + '.' + escHtml(info.table) + '</small>' +
+        '</div></div>';
 
-    if (form) form.style.display = 'grid';
-
+    // "if vazio" - se o rascunho local (_loadGsDraft, chamado ANTES desta função) já
+    // preencheu, não mexe; senão cai pro destino salvo no banco (última publicação) e,
+    // faltando isso também, pro nome puro da camada/título do metadado.
     var nameEl = document.getElementById('gs-layer-name');
     if (nameEl && !nameEl.value) {
-        nameEl.value = info.name;
-        onGsLayerNameInput(info.name);
+        var defaultName = info.saved_published_name || info.name;
+        nameEl.value = defaultName;
+        onGsLayerNameInput(defaultName);
     }
     var titleEl = document.getElementById('gs-layer-title');
     if (titleEl && !titleEl.value) {
-        titleEl.value = info.title || info.name;
+        titleEl.value = info.saved_title || info.title || info.name;
     }
+    if (!_gsDraftHasWorkspace && info.saved_workspace) {
+        _gsQueueWorkspaceDatastore(info.saved_workspace, info.saved_datastore);
+    }
+    _setGsPullGnButtonState(!!(info.abstract || (info.keywords && info.keywords.length)));
     _updateGsPublishButton();
 }
 
@@ -128,6 +275,18 @@ function _renderGsWorkspaces(workspaces, error) {
     });
     wrap.innerHTML = '<select id="gs-workspace" onchange="onGsWorkspaceChange(this.value)">' + options + '</select>';
     initCustomSelects();
+
+    // Workspace pendente (rascunho local ou destino salvo, ver _gsQueueWorkspaceDatastore)
+    // que chegou antes da lista terminar de carregar - seleciona em vez de resetar pra vazio.
+    if (_gsPendingDraftWorkspace) {
+        var target = _gsPendingDraftWorkspace;
+        _gsPendingDraftWorkspace = null;
+        if ((workspaces || []).indexOf(target) !== -1) {
+            _clickGsSuggestionItem('gs-workspace-wrap', target);
+            return;
+        }
+        _gsPendingAutoDatastore = null; // workspace salvo não existe mais - datastore pendente também não faz sentido
+    }
     onGsWorkspaceChange('');
 }
 
@@ -240,33 +399,165 @@ function _updateGsPublishButton() {
     btn.disabled = !ok;
 }
 
-function confirmGsPublish() {
-    if (!_gsLayerInfo || !_gsLayerInfo.publishable) return;
+// ─── Resumo (puxar do GN) e palavras-chave (aba Identificação) ─────────────────
+
+function _setGsPullGnButtonState(hasData) {
+    var btn = document.getElementById('gs-pull-gn-btn');
+    if (!btn) return;
+    btn.disabled = !hasData;
+    btn.title = hasData ? '' : 'Nenhum resumo/palavra-chave encontrado (nem rascunho local, nem salvo, nem publicado no GeoNetwork) para esta camada.';
+}
+
+// Apesar do nome (mantido pelo botão "Puxar do GeoNetwork"), a fonte real é a que o
+// Python decidir que é a melhor disponível - rascunho local do editor GN (funciona
+// offline, sem login) > metadado salvo (banco/sidecar) > GeoNetwork publicado (ver
+// GeoServerBridge._load_layer_metadata). Cobre o fluxo de preencher tudo antes de logar.
+function pullGsAbstractKeywordsFromGn() {
+    if (!_gsLayerInfo) return;
+    var abstractEl = document.getElementById('gs-layer-abstract');
+    var titleEl = document.getElementById('gs-layer-title');
+    var hasSourceData = !!(_gsLayerInfo.abstract || (_gsLayerInfo.keywords && _gsLayerInfo.keywords.length));
+    if (!hasSourceData) {
+        Modal.alert('Nenhum metadado encontrado (rascunho local, salvo ou no GeoNetwork) para esta camada.', 'Aviso', 'warning');
+        return;
+    }
+    var hasCurrentContent = !!((abstractEl && abstractEl.value.trim()) || _gsKeywords.length);
+    var apply = function () {
+        if (abstractEl) abstractEl.value = _gsLayerInfo.abstract || '';
+        if (titleEl) titleEl.value = _gsLayerInfo.title || _gsLayerInfo.name || '';
+        _gsKeywords = (_gsLayerInfo.keywords || []).slice();
+        _renderGsKeywords();
+        // Preenchimento programático não dispara input/change (o que aciona o rascunho por
+        // debounce) - sem isso, o rascunho antigo (de antes do pull) ficava no arquivo e
+        // "revertia" o que acabou de ser puxado na próxima vez que o painel abrisse.
+        _saveGsDraftNow();
+    };
+    if (hasCurrentContent) {
+        Modal.confirm('Isso vai substituir o título/resumo/palavras-chave já preenchidos aqui pelos do GeoNetwork. Continuar?', apply, 'Puxar do GeoNetwork');
+    } else {
+        apply();
+    }
+}
+
+function gsAddKeyword() {
+    var inp = document.getElementById('gs-kw-input');
+    if (!inp) return;
+    var val = inp.value.trim();
+    if (!val) { inp.value = ''; return; }
+    val = val.charAt(0).toUpperCase() + val.slice(1);
+    if (_gsKeywords.indexOf(val) !== -1) { inp.value = ''; return; }
+    _gsKeywords.push(val);
+    inp.value = '';
+    _renderGsKeywords();
+    _scheduleGsDraftSave(); // clique no botão "+" não dispara input/change - agenda na mão
+}
+
+function gsRemoveKeyword(i) {
+    _gsKeywords.splice(i, 1);
+    _renderGsKeywords();
+    _scheduleGsDraftSave(); // clique no "×" do chip não dispara input/change - agenda na mão
+}
+
+function _renderGsKeywords() {
+    var box = document.getElementById('gs-keyword-chips');
+    if (!box) return;
+    box.innerHTML = _gsKeywords.map(function (kw, i) {
+        return '<span class="keyword-chip">' + escHtml(kw) +
+            '<button onclick="gsRemoveKeyword(' + i + ')" data-title="Remover">×</button></span>';
+    }).join('');
+}
+
+// Junta o que está de fato nos campos da tela agora (editáveis - podem ter sido
+// preenchidos via rascunho, "Puxar do GeoNetwork" ou digitados à mão). Usado tanto por
+// confirmGsPublish() quanto por saveGsDraftNow() ("Continuar Depois"), pra não duplicar
+// a leitura dos mesmos campos em dois lugares.
+function _gsCollectFormState() {
     var ws = document.getElementById('gs-workspace');
     var ds = document.getElementById('gs-datastore');
     var nameEl = document.getElementById('gs-layer-name');
-    if (!ws || !ws.value || !ds || !ds.value || !nameEl || !nameEl.value.trim()) return;
-
-    var workspace = ws.value;
-    var datastore = ds.value;
-    var publishedName = nameEl.dataset.sanitized || nameEl.value.trim();
     var titleEl = document.getElementById('gs-layer-title');
-    var title = (titleEl && titleEl.value.trim()) || publishedName;
-    // Resumo/palavras-chave: os mesmos valores que get_active_layer_publish_info() já
-    // calculou e devolveu (ver _renderGsLayerCard) - mandados explicitamente de volta em
-    // vez do Python buscar de novo, pra não ter duas buscas divergindo entre si.
-    var abstract = _gsLayerInfo.abstract || '';
-    var keywords = _gsLayerInfo.keywords || [];
+    var abstractEl = document.getElementById('gs-layer-abstract');
+    var publishedName = nameEl ? (nameEl.dataset.sanitized || nameEl.value.trim()) : '';
+    return {
+        workspace: ws ? ws.value : '',
+        datastore: ds ? ds.value : '',
+        published_name: publishedName,
+        title: (titleEl && titleEl.value.trim()) || publishedName,
+        abstract: (abstractEl && abstractEl.value.trim()) || '',
+        keywords: _gsKeywords.slice()
+    };
+}
+
+// Chamado por tryPublishGeoServerLayer() (Serviços > Publicar Camada, ver app.js/
+// main.html) - esse painel não tem mais botão próprio de publicar (é o "editor de
+// camada", igual o Editor de Metadados não tem botão de publicar dentro dele), então
+// valida e avisa por toast em vez de só desabilitar um botão que não existe mais.
+function confirmGsPublish() {
+    if (!_gsLayerInfo || !_gsLayerInfo.publishable) {
+        Modal.alert((_gsLayerInfo && _gsLayerInfo.reason) || 'Nenhuma camada publicável ativa no QGIS.', 'Aviso', 'warning');
+        return;
+    }
+    var d = _gsCollectFormState();
+    if (!d.workspace || !d.datastore) {
+        Modal.alert('Escolha o Workspace e o Datastore (aba Destino) antes de publicar.', 'Aviso', 'warning');
+        return;
+    }
+    if (!d.published_name) {
+        Modal.alert('Preencha o Nome da camada publicada (aba Identificação) antes de publicar.', 'Aviso', 'warning');
+        return;
+    }
+    if (_gsTableCheckState === false) {
+        Modal.alert('A tabela "' + escHtml(_gsLayerInfo.table) + '" não foi encontrada nesse datastore. Confira o Workspace/Datastore escolhidos (aba Destino) antes de publicar.', 'Aviso', 'warning');
+        return;
+    }
 
     Modal.confirm(
-        'Publicar a camada "' + escHtml(_gsLayerInfo.name) + '" como "' + escHtml(publishedName) +
-        '" no workspace "' + escHtml(workspace) + '" (datastore "' + escHtml(datastore) + '")?',
+        'Publicar a camada "' + escHtml(_gsLayerInfo.name) + '" como "' + escHtml(d.published_name) +
+        '" no workspace "' + escHtml(d.workspace) + '" (datastore "' + escHtml(d.datastore) + '")?',
         function () {
-            _gsLastPublishWorkspace = workspace;
+            _gsLastPublishWorkspace = d.workspace;
             _showActionLoading('Publicando no GeoServer...');
-            gsBridge.publish_layer(workspace, datastore, publishedName, title, abstract, keywords);
+            gsBridge.publish_layer(d.workspace, d.datastore, d.published_name, d.title, d.abstract, d.keywords);
         },
         'Confirmar Publicação'
+    );
+}
+
+// "Serviços > Publicar Camada" (main.html) - mesmo padrão de tryExportGeohab() (GN,
+// "Catálogo > Publicar Metadado"): só funciona com o painel já aberto; senão, avisa pra
+// abrir "Configurar Camada" primeiro em vez de navegar sozinho (usuário decide quando
+// quer ver a tela, igual o editor de metadado não abre nada sozinho).
+function tryPublishGeoServerLayer() {
+    if (!document.getElementById('gs-layer-card')) {
+        Modal.alert('Abra "Serviços > Configurar Camada" antes de publicar.', 'Ação Necessária', 'warning');
+        return;
+    }
+    confirmGsPublish();
+}
+
+// "Continuar Depois" do painel GeoServer: grava o destino atual no banco (geoserver_
+// publish_xml) SEM publicar de verdade - só exige o Workspace preenchido (bem menos
+// restritivo que confirmGsPublish(), que exige tudo + a checagem de tabela).
+function saveGsDraftNow() {
+    if (!_gsLayerInfo || !_gsLayerInfo.publishable) {
+        Modal.alert('Nenhuma camada publicável no painel GeoServer agora.', 'Aviso', 'warning');
+        return;
+    }
+    var d = _gsCollectFormState();
+    if (!d.workspace) {
+        Modal.alert('Escolha ao menos o Workspace antes de "Continuar Depois".', 'Aviso', 'warning');
+        return;
+    }
+    // Mesmo padrão de confirmação do editor GN (_tryGnSaveMetadata) - "Continuar Depois"
+    // sempre pergunta antes de gravar no banco, nos dois domínios.
+    Modal.confirm(
+        'Deseja realmente salvar o destino de publicação (workspace/datastore/nome/título/' +
+        'resumo/palavras-chave) no banco de dados? Isso não publica a camada no GeoServer ainda.',
+        function () {
+            _saveGsDraftNow(); // garante que o rascunho local (arquivo) também está com o mais recente
+            gsBridge.save_destination_now(d.workspace, d.datastore, d.published_name, d.title, d.abstract, d.keywords);
+        },
+        'Confirmar Salvamento'
     );
 }
 
@@ -279,7 +570,7 @@ function autoDetectGsDatastore() {
     if (_gsAutoDetectRunning) return;
     if (!_gsLayerInfo || !_gsLayerInfo.publishable) return;
     _gsAutoDetectRunning = true;
-    var btn = document.querySelector('.gs-autodetect-link');
+    var btn = document.querySelector('.gs-autodetect-btn');
     if (btn) btn.disabled = true;
     var candidates = document.getElementById('gs-autodetect-candidates');
     if (candidates) candidates.style.display = 'none';
@@ -294,7 +585,7 @@ function _setGsAutoDetectStatus(msg) {
 
 function _onGsAutoDetectDone(matches, error) {
     _gsAutoDetectRunning = false;
-    var btn = document.querySelector('.gs-autodetect-link');
+    var btn = document.querySelector('.gs-autodetect-btn');
     if (btn) btn.disabled = false;
 
     if (error) {

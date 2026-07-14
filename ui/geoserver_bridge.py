@@ -7,6 +7,8 @@ publicação de camadas/workspaces nas próximas fases - ver requisitos_v2.md).
 Exposto ao JS via QWebChannel como 'gsBridge'.
 """
 
+import os
+
 from qgis.PyQt.QtCore import QObject, pyqtSignal, pyqtSlot
 
 
@@ -22,6 +24,7 @@ class GeoServerBridge(QObject):
     gs_find_datastore_progress = pyqtSignal(str)  # mensagem de status da varredura
     gs_find_datastore_done = pyqtSignal(list, str)  # [{'workspace':..,'datastore':..}, ...], error
     gs_publish_done = pyqtSignal(bool, str, str, str, str)  # sucesso, mensagem, nome_publicado, wms_url, wfs_url
+    gs_destination_saved = pyqtSignal(bool)  # db_ok - "Continuar Depois" do painel GeoServer
 
     # Cache de camadas do GeoServer (carregado uma vez por sessão)
     _geoserver_layers_cache = None
@@ -107,13 +110,99 @@ class GeoServerBridge(QObject):
         iface = getattr(plugin, 'iface', None) or getattr(self._dialog, 'iface', None)
         return iface.activeLayer() if iface else None
 
-    def _load_layer_metadata(self, layer):
-        """Busca o metadado MGB da camada pra pré-preencher o Título e mandar Resumo/
-        Palavras-chave junto na publicação no GeoServer. Tenta o local (DB/sidecar)
-        primeiro pra pegar o metadata_uuid; se a camada já foi publicada no GeoNetwork,
-        busca o XML de lá também (fonte mais fresca/confiável - a cópia local pode estar
-        desatualizada ou incompleta) e usa esse como resultado final quando disponível."""
+    # ── Rascunho local (workspace/datastore/nome/título/resumo/palavras-chave) ─────
+    # Arquivo PRÓPRIO do GS (geoserver_publish_draft.json) - não usa o rascunho do
+    # editor GN (geometadata_form_draft.json) de propósito: workspace/datastore/nome-
+    # publicado não são campos do metadado MGB, misturar sujaria o rascunho do GN.
+    # Mesmo padrão de ui/geonetwork_bridge.py (_draft_path/_layer_key/_load_all_drafts).
+
+    def _draft_path(self) -> str:
         try:
+            from qgis.core import QgsApplication
+            base = QgsApplication.qgisSettingsDirPath()
+        except Exception:
+            base = os.path.expanduser('~')
+        return os.path.join(base, 'geoserver_publish_draft.json')
+
+    def _layer_key(self) -> str:
+        layer = self._active_layer()
+        if not layer:
+            return '__no_layer__'
+        return layer.source() or layer.id()
+
+    def _load_all_drafts(self) -> dict:
+        import json
+        path = self._draft_path()
+        if not os.path.exists(path):
+            return {}
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as exc:
+            print(f"GeoMetadata [gs _load_all_drafts]: {exc}")
+            return {}
+
+    def _save_all_drafts(self, drafts: dict):
+        import json
+        with open(self._draft_path(), 'w', encoding='utf-8') as f:
+            json.dump(drafts, f, ensure_ascii=False)
+
+    @pyqtSlot(str)
+    def save_draft(self, json_str: str):
+        """Persiste o rascunho do formulário de publicação sob a chave da camada ativa."""
+        import json
+        try:
+            data = json.loads(json_str)
+            drafts = self._load_all_drafts()
+            drafts[self._layer_key()] = data
+            self._save_all_drafts(drafts)
+        except Exception as exc:
+            print(f"GeoMetadata [gs save_draft]: {exc}")
+
+    @pyqtSlot(result='QVariant')
+    def load_draft(self):
+        """Retorna o rascunho de publicação da camada ativa, se existir."""
+        return self._load_all_drafts().get(self._layer_key())
+
+    @pyqtSlot()
+    def clear_draft(self):
+        """Remove só o rascunho da camada ativa - não mexe nos drafts de outras camadas."""
+        try:
+            drafts = self._load_all_drafts()
+            if drafts.pop(self._layer_key(), None) is not None:
+                self._save_all_drafts(drafts)
+        except Exception as exc:
+            print(f"GeoMetadata [gs clear_draft]: {exc}")
+
+    def _load_layer_metadata(self, layer, uuid_hint=''):
+        """Busca o metadado MGB da camada pra pré-preencher Título/Resumo/Palavras-chave
+        na aba Identificação do GS, na ordem que faz mais sentido pro usuário:
+
+        1. Rascunho do editor GN (arquivo local, sem precisar de login/rede) - cobre o
+           fluxo "preencher tudo offline, publicar depois": o usuário pode ter digitado
+           título/resumo/palavras-chave no editor sem nunca ter salvo ou logado, e isso já
+           está no draft (auto-save por debounce, ver _scheduleDraftSave em geonetwork.js).
+           É a fonte mais recente por definição (é literalmente o que está na tela), então
+           tem prioridade sobre tudo abaixo, mesmo sem repositório central pra rastrear.
+        2. Local (DB/sidecar, via PersistenceService) - metadado já salvo de verdade.
+        3. GeoNetwork - se (2) achou um metadata_uuid, busca de lá (mais fresco que uma
+           cópia local desatualizada). A busca local pode falhar mesmo pra camadas com
+           metadado publicado - a tabela auxiliar do plugin (public.qgis_geometadata_plugin)
+           pode não existir nesse banco ainda (condição conhecida, docs_projeto/bugs.md
+           Bug 1) - `uuid_hint` cobre esse caso: o JS manda o uuid que o editor GN já
+           confirmou pra essa mesma camada nesta sessão (window._gnSyncUuid, só usado se
+           bater com a camada ativa - ver geoserver.js)."""
+        try:
+            gn_bridge = getattr(self._dialog, 'gn_bridge', None)
+            if gn_bridge and layer:
+                try:
+                    layer_key = layer.source() or layer.id()
+                    draft = gn_bridge._load_all_drafts().get(layer_key)
+                    if draft and (draft.get('title') or draft.get('abstract') or draft.get('MD_Keywords')):
+                        return draft
+                except Exception as exc:
+                    print(f"GeoMetadata [_load_layer_metadata] draft: {exc}")
+
             ps = getattr(self._dialog, 'persistence_service', None)
             local = None
             if ps and layer:
@@ -122,7 +211,7 @@ class GeoServerBridge(QObject):
                     from ..core import xml_parser
                     local = xml_parser.parse_xml_to_dict(xml_content, is_string=True)
 
-            uuid = (local or {}).get('metadata_uuid')
+            uuid = (local or {}).get('metadata_uuid') or uuid_hint or None
             geonetwork_service = getattr(self._dialog, 'geonetwork_service', None)
             if uuid and geonetwork_service:
                 from ..core.plugin_config import config_loader
@@ -138,14 +227,21 @@ class GeoServerBridge(QObject):
             print(f"GeoMetadata [_load_layer_metadata]: {exc}")
             return None
 
-    @pyqtSlot(result='QVariant')
-    def get_active_layer_publish_info(self):
+    @pyqtSlot(str, result='QVariant')
+    def get_active_layer_publish_info(self, gn_uuid_hint=''):
         """Diz ao JS se a camada ativa do QGIS pode ser publicada no GeoServer (RF02) -
         só camadas PostGIS são suportadas, ver GeoServerService.get_active_layer_publish_info.
         Quando publicável, inclui 'title'/'abstract'/'keywords' pré-preenchidos a partir do
         metadado MGB salvo (se existir) - calculados aqui uma única vez e devolvidos pro JS,
         que manda esses mesmos valores de volta explicitamente em publish_layer() (em vez de
-        buscar de novo lá, o que já causou inconsistência entre as duas buscas)."""
+        buscar de novo lá, o que já causou inconsistência entre as duas buscas). gn_uuid_hint
+        é o fallback quando a busca local não acha o uuid sozinha (ver _load_layer_metadata).
+
+        Também inclui 'saved_workspace'/'saved_datastore'/'saved_published_name'/
+        'saved_title' - o destino usado na última publicação bem-sucedida dessa camada
+        (public.qgis_geoserver_publish, ver GeoServerService.load_publish_destination).
+        O JS só usa isso como fallback quando não há rascunho local (load_draft) - o
+        rascunho sempre reflete edição mais recente e vence."""
         geoserver_service = getattr(self._dialog, 'geoserver_service', None)
         if not geoserver_service:
             return {'publishable': False, 'reason': 'Serviço GeoServer não inicializado.'}
@@ -153,10 +249,16 @@ class GeoServerBridge(QObject):
             layer = self._active_layer()
             info = geoserver_service.get_active_layer_publish_info(layer)
             if info.get('publishable'):
-                md = self._load_layer_metadata(layer) or {}
+                md = self._load_layer_metadata(layer, gn_uuid_hint) or {}
                 info['title'] = md.get('title') or info.get('name') or ''
                 info['abstract'] = md.get('abstract') or ''
                 info['keywords'] = md.get('MD_Keywords') or []
+
+                saved = geoserver_service.load_publish_destination(layer) or {}
+                info['saved_workspace'] = saved.get('workspace') or ''
+                info['saved_datastore'] = saved.get('datastore') or ''
+                info['saved_published_name'] = saved.get('published_name') or ''
+                info['saved_title'] = saved.get('title') or ''
             return info
         except Exception as exc:
             return {'publishable': False, 'reason': str(exc)}
@@ -166,6 +268,27 @@ class GeoServerBridge(QObject):
         """RF04 - preview síncrono do nome sanitizado (só regex, sem I/O de rede)."""
         from ..core.geoserver_service import GeoServerService
         return GeoServerService.sanitize_layer_name(name)
+
+    @pyqtSlot(str, str, str, str, str, 'QVariant')
+    def save_destination_now(self, workspace, datastore, published_name, title, abstract, keywords):
+        """"Continuar Depois" do painel GeoServer: grava o destino atual (workspace/
+        datastore/nome/título/resumo/palavras-chave) em geoserver_publish_xml SEM publicar
+        de verdade no GeoServer - complementa o rascunho local (por máquina, só esse QGIS)
+        com uma cópia durável no banco, sem depender do usuário ter passado pelo
+        "Continuar Depois" do editor GN pra essa mesma promoção acontecer (ver
+        GeoMetadata_dialog._promote_gs_draft_to_db, que já faz isso automaticamente - esse
+        slot é o atalho explícito direto do painel GeoServer). Emite
+        gs_destination_saved(db_ok) pro JS avisar o usuário do resultado."""
+        geoserver_service = getattr(self._dialog, 'geoserver_service', None)
+        layer = self._active_layer()
+        if not geoserver_service or not layer:
+            self.gs_destination_saved.emit(False)
+            return
+        keywords = list(keywords) if keywords else []
+        ok = geoserver_service.save_publish_destination(
+            layer, workspace, datastore, published_name, title, abstract, keywords
+        )
+        self.gs_destination_saved.emit(ok)
 
     @pyqtSlot(str, str, str, str, str, 'QVariant')
     def publish_layer(self, workspace, datastore, published_name, title, abstract, keywords):
@@ -190,24 +313,35 @@ class GeoServerBridge(QObject):
 
         from ..core.plugin_config import config_loader
         from .geoserver_workers import _GsPublishWorker
+        publish_title = title or published_name
         self._publish_worker = _GsPublishWorker(
             geoserver_service, workspace, datastore, info['table'], published_name,
-            title or published_name, abstract, keywords, config_loader
+            publish_title, abstract, keywords, config_loader
         )
         self._publish_worker.done.connect(
-            lambda success, message, name: self._on_publish_done(success, message, name, workspace, config_loader)
+            lambda success, message, name: self._on_publish_done(
+                success, message, name, workspace, datastore, publish_title, abstract, keywords, layer, config_loader
+            )
         )
         self._publish_worker.start()
 
-    def _on_publish_done(self, success, message, published_name, workspace, config_loader_instance):
+    def _on_publish_done(self, success, message, published_name, workspace, datastore, title, abstract, keywords, layer, config_loader_instance):
         """Além de repassar o resultado, calcula as URLs WMS/WFS da camada recém-publicada -
         usadas pelo JS (geonetwork.js) pra vincular automaticamente os dois em Distribuição
-        e gerar a miniatura, sem o usuário ter que ir lá manualmente linkar de novo."""
+        e gerar a miniatura, sem o usuário ter que ir lá manualmente linkar de novo. Também
+        grava o destino usado (workspace/datastore/nome/título/resumo/palavras-chave) em
+        geoserver_publish_xml (public.qgis_geometadata_plugin), pra pré-preencher a próxima
+        vez mesmo sem rascunho local (ver GeoServerService.save_publish_destination)."""
         wms_url = wfs_url = ''
         if success:
             base_url = config_loader_instance.get_geoserver_url().rstrip('/')
             wms_url = f"{base_url}/{workspace}/wms?service=WMS"
             wfs_url = f"{base_url}/{workspace}/wfs?service=WFS"
+            geoserver_service = getattr(self._dialog, 'geoserver_service', None)
+            if geoserver_service:
+                geoserver_service.save_publish_destination(
+                    layer, workspace, datastore, published_name, title, abstract, keywords
+                )
         self.gs_publish_done.emit(success, message, published_name, wms_url, wfs_url)
 
     @pyqtSlot(str, result='QVariant')

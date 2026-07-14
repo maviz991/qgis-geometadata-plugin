@@ -833,6 +833,37 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             uuid = metadata_dict.get('metadata_uuid') or metadata_dict.get('metadataId') or ''
             self.gn_bridge.local_save_succeeded.emit(uuid)
 
+        # "Continuar Depois" (e o resave automático) também aproveitam pra promover um
+        # eventual rascunho de publicação no GeoServer (aba Destino/Identificação, ainda
+        # não publicado) pra dentro do banco - silencioso, sem toast próprio, pra não
+        # atrapalhar quem só quer salvar o metadado e seguir pro painel GeoServer depois.
+        if success and layer:
+            self._promote_gs_draft_to_db(layer)
+
+    def _promote_gs_draft_to_db(self, layer):
+        """Se existir um rascunho local de publicação no GeoServer (gsBridge.save_draft,
+        ver ui/geoserver_bridge.py) pra essa camada, grava ele em geoserver_publish_xml
+        (public.qgis_geometadata_plugin) - complementa o rascunho local (por máquina) com
+        uma cópia durável no banco, mesmo antes de a camada ser publicada de verdade."""
+        if not hasattr(self, 'gs_bridge') or not hasattr(self, 'geoserver_service'):
+            return
+        try:
+            layer_key = layer.source() or layer.id()
+            draft = self.gs_bridge._load_all_drafts().get(layer_key)
+            if not draft or not draft.get('workspace'):
+                return  # nada de útil pra promover ainda
+            self.geoserver_service.save_publish_destination(
+                layer,
+                draft.get('workspace') or '',
+                draft.get('datastore') or '',
+                draft.get('published_name') or '',
+                draft.get('title') or '',
+                draft.get('abstract') or '',
+                draft.get('keywords') or []
+            )
+        except Exception as exc:
+            print(f"GeoMetadata [_promote_gs_draft_to_db]: {exc}")
+
     def sanitize_title(self, value):
         """Remove caracteres especiais e normaliza espaços para uso como nome de arquivo."""
         if not value: return ""

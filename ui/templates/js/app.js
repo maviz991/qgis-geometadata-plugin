@@ -430,6 +430,9 @@ function navigate(panelId) {
 function loadPanel(panelId) {
     // Salva estado do editor antes de substituir o HTML (se o editor GN estiver aberto)
     if (typeof _onBeforePanelUnload === 'function') _onBeforePanelUnload();
+    // Idem pro painel GeoServer (rascunho de publicação) - hook com nome distinto de
+    // propósito, mesmo escopo global (ver _onGsActiveLayerChanged vs _onActiveLayerChanged).
+    if (typeof _onGsBeforePanelUnload === 'function') _onGsBeforePanelUnload();
     var container = document.getElementById("app-container");
     container.innerHTML = '<div class="loader">Carregando...</div>';
 
@@ -538,6 +541,25 @@ function _hideActionLoading() {
     clearTimeout(_actionLoadingTimer);
     var el = document.getElementById('action-loading');
     if (el) el.style.display = 'none';
+}
+
+// "Arquivo > Continuar Depois" (main.html) - um item de menu só, mas o que ele faz
+// depende de qual painel está aberto: editor de metadados (GN) ou publicação de camadas
+// (GS). Dispatcher genérico aqui em app.js pra não acoplar o menu a um domínio só -
+// delega pras implementações reais (_tryGnSaveMetadata em geonetwork.js,
+// saveGsDraftNow em geoserver.js), detectando o painel pelos mesmos marcadores de DOM
+// já usados em outros lugares (_requireEditorOpen usa #f-title; geoserver.js usa
+// #gs-layer-card).
+function trySaveMetadata() {
+    if (document.getElementById('f-title') && typeof _tryGnSaveMetadata === 'function') {
+        _tryGnSaveMetadata();
+        return;
+    }
+    if (document.getElementById('gs-layer-card') && typeof saveGsDraftNow === 'function') {
+        saveGsDraftNow();
+        return;
+    }
+    Modal.alert('Abra "Catálogo > Editor de Metadados" ou "Serviços > Publicar Camada" antes de "Continuar Depois".', 'Ação Necessária', 'warning');
 }
 
 function generateUUID() {
