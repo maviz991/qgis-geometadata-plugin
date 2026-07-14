@@ -310,7 +310,14 @@ function _loadGsLayerInfo(callback) {
     // mesma camada nesta sessão (_gnSyncUuidLayerName, em geonetwork.js) - senão manda
     // vazio, pra não arriscar puxar o uuid de outra camada.
     var uuidHint = (window._gnSyncUuidLayerName === _activeLayerName && window._gnSyncUuid) ? window._gnSyncUuid : '';
+    // get_active_layer_publish_info identifica a camada lendo iface.activeLayer() de novo
+    // do lado Python, no momento em que o slot roda - não pelo que estava ativo quando a
+    // chamada foi disparada. Trocar de camada rápido o bastante enquanto essa chamada
+    // ainda está em voo faz a resposta chegar depois já pra outra camada, aplicando o
+    // destino/metadado ERRADO no formulário (mesma corrida de _loadFormForLayer, geonetwork.js).
+    var _expectedLayer = _activeLayerName;
     gsBridge.get_active_layer_publish_info(uuidHint, function (info) {
+        if (_activeLayerName !== _expectedLayer) return; // camada trocou enquanto carregava - resposta obsoleta
         _gsLayerInfo = info;
         _renderGsLayerCard(info);
         if (callback) callback();
@@ -881,11 +888,28 @@ function onGsSyncBadgeClick() {
     Modal.alert(entry.message, entry.title, entry.type);
 }
 
-// Progresso dos campos "obrigatórios" pra publicar (Workspace/Datastore/Nome) - mesmo
-// componente circular do editor GN (updateFormProgress), só com os 3 campos do GS.
+// Progresso de preenchimento do painel GS - mesmo componente circular do editor GN
+// (updateFormProgress), cobrindo TODOS os campos editáveis das duas abas (Destino:
+// workspace/datastore/nome; Identificação: título/resumo/palavras-chave), não só os 3
+// obrigatórios pra publicar (workspace/datastore/nome, ver confirmGsPublish) - antes
+// título/resumo/palavras-chave não entravam na conta, então o círculo podia mostrar 100%
+// com esses campos vazios. Lê os valores BRUTOS do DOM (não _gsCollectFormState(), cujo
+// `title` cai pro published_name quando vazio - contaria como preenchido mesmo sem o
+// usuário ter digitado nada ali).
 function updateGsFormProgress() {
-    var d = _gsCollectFormState();
-    var required = [d.workspace, d.datastore, d.published_name];
+    var wsEl = document.getElementById('gs-workspace');
+    var dsEl = document.getElementById('gs-datastore');
+    var nameEl = document.getElementById('gs-layer-name');
+    var titleEl = document.getElementById('gs-layer-title');
+    var abstractEl = document.getElementById('gs-layer-abstract');
+    var required = [
+        wsEl && wsEl.value,
+        dsEl && dsEl.value,
+        nameEl && nameEl.value.trim(),
+        titleEl && titleEl.value.trim(),
+        abstractEl && abstractEl.value.trim(),
+        _gsKeywords.length > 0
+    ];
     var filledCount = required.filter(function (v) { return !!v; }).length;
     var pct = Math.round((filledCount / required.length) * 100);
 

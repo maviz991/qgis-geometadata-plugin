@@ -309,6 +309,14 @@ function _updateThumbnailPreview() {
 // Em todo caminho de saída (mesmo o "vazio", quando a camada não tem metadado nenhum
 // ainda) chama _applyPendingGsDistLayerIfAny() - garante que um vínculo GS pendente
 // (ver geoserver.js) seja aplicado exatamente uma vez, não importa qual ramo resolveu.
+//
+// gnBridge.load_draft()/load_layer_metadata() identificam a camada lendo
+// iface.activeLayer() DE NOVO do lado Python, no momento em que o slot roda - não pelo
+// que estava ativo quando a chamada foi disparada daqui. Trocar de camada rápido o
+// bastante enquanto uma dessas chamadas ainda está em voo faz a resposta chegar depois já
+// pra outra camada, aplicando o XML/rascunho ERRADO no formulário ("puxou um XML de algum
+// lugar" mesmo numa camada sem nada salvo). _expectedLayer trava a camada de quando a
+// chamada foi feita; se _activeLayerName já mudou quando a resposta chega, descarta.
 function _loadFormForLayer(sessionDraft) {
     if (sessionDraft) {
         populateForm(sessionDraft);
@@ -317,13 +325,16 @@ function _loadFormForLayer(sessionDraft) {
         return;
     }
     if (typeof gnBridge === 'undefined') { _applyPendingGsDistLayerIfAny(); return; }
+    var _expectedLayer = _activeLayerName;
     gnBridge.load_draft(function (draft) {
+        if (_activeLayerName !== _expectedLayer) return; // camada trocou enquanto carregava - resposta obsoleta
         if (draft) {
             populateForm(draft);
             checkGnSync(draft.metadata_uuid, draft.dateStamp || '');
             _applyPendingGsDistLayerIfAny();
         } else {
             gnBridge.load_layer_metadata(function (saved) {
+                if (_activeLayerName !== _expectedLayer) return; // idem
                 if (saved) populateForm(saved);
                 checkGnSync(saved && saved.metadata_uuid, (saved && saved.dateStamp) || '');
                 _applyPendingGsDistLayerIfAny();
@@ -505,7 +516,9 @@ function checkGnSync(uuid, dateStamp) {
     // draft nem save ainda), o nível banco ainda consegue achar um registro salvo pela
     // identidade da própria camada (ver check_gn_sync, ui/geonetwork_bridge.py).
     setGnBadge('checking');
+    var _expectedLayer = _activeLayerName;
     gnBridge.check_gn_sync(uuid || '', dateStamp || '', function (result) {
+        if (_activeLayerName !== _expectedLayer) return; // camada trocou enquanto verificava - resposta obsoleta
         setGnBadge(result);
     });
 }
