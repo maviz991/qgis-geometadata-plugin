@@ -475,6 +475,7 @@ function showTab(tabId, btn) {
 var _isLogged = false;
 
 function updateUserUI(isLogged, username) {
+    var wasLogged = _isLogged;
     _isLogged = !!isLogged;
     var btn = document.getElementById("login-btn");
     var badge = document.getElementById("user-info");
@@ -492,6 +493,15 @@ function updateUserUI(isLogged, username) {
     } else {
         btn.style.display = "block";
         badge.style.display = "none";
+    }
+
+    // Login/logout muda o NÍVEL (sys_/db_) de qualquer badge de sincronização já
+    // calculado (GN e GS) - sem esse gancho, o usuário loga e continua vendo "Sincronizado
+    // (DB)" até sair e voltar (revisitar) pro painel, porque nada mais recalcula o badge
+    // nesse meio tempo. Só dispara se o estado mudou de verdade (evita rechecagem à toa
+    // em eventuais auth_status redundantes).
+    if (wasLogged !== _isLogged && typeof _onAuthStateChangedForSync === 'function') {
+        _onAuthStateChangedForSync();
     }
 }
 
@@ -560,6 +570,22 @@ function trySaveMetadata() {
         return;
     }
     Modal.alert('Abra "Catálogo > Editor de Metadados" ou "Serviços > Publicar Camada" antes de "Continuar Depois".', 'Ação Necessária', 'warning');
+}
+
+// "Arquivo > Descartar Alterações" (main.html) - mesmo dispatcher genérico de
+// trySaveMetadata() acima: sem isso, o item chamava direto uma função só do GN
+// (tryResetForm em geonetwork.js), então no painel GeoServer ele só mostrava "abra o
+// editor de metadados" em vez de descartar as alterações da aba Destino/Identificação.
+function tryResetForm() {
+    if (document.getElementById('f-title') && typeof _tryGnResetForm === 'function') {
+        _tryGnResetForm();
+        return;
+    }
+    if (document.getElementById('gs-layer-card') && typeof tryGsResetForm === 'function') {
+        tryGsResetForm();
+        return;
+    }
+    Modal.alert('Abra "Catálogo > Editor de Metadados" ou "Serviços > Configurar Camada" antes de descartar alterações.', 'Ação Necessária', 'warning');
 }
 
 function generateUUID() {

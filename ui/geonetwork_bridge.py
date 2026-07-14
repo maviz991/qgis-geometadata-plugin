@@ -344,21 +344,57 @@ class GeoNetworkBridge(QObject):
 
     @pyqtSlot(str, str, result=str)
     def check_gn_sync(self, uuid: str, local_date_stamp: str) -> str:
-        """Compara o dateStamp local com o do GN. Retorna 'synced', 'update_available',
-        'not_found', 'offline' (sem sessão/uuid) ou 'error'."""
-        if not uuid:
-            return 'offline'
+        """Compara o formulário local contra a melhor fonte de verdade disponível AGORA,
+        em 3 níveis de conectividade (maior confiança primeiro) - o nível determina só o
+        PREFIXO do estado devolvido, não a lógica de comparação em si:
+
+        1. 'sys_*'     - logado no Geohab: busca ao vivo no GeoNetwork (fonte mais
+                          confiável, reflete o que está de fato publicado agora).
+        2. 'db_*'      - sem sessão, mas com camada ativa: compara contra a cópia
+                          persistida (banco/sidecar, via PersistenceService) - não é o
+                          Geohab ao vivo, mas é mais confiável que só o rascunho local.
+        3. 'offline_*' - nem sessão nem camada ativa pra identificar: só o rascunho local
+                          (arquivo, por máquina) é conhecido; nada aqui pra comparar contra.
+
+        O estado 'modified' de cada nível é decidido no JS (_markGnModifiedIfNeeded, ver
+        geonetwork.js) comparando o formulário atual contra o snapshot capturado no
+        momento em que este método respondeu 'synced'/'not_found' - aqui só devolvemos
+        esse baseline "limpo". 'checking'/'error' são estados universais (não têm nível)."""
+        plugin = getattr(self._dialog, 'plugin', None)
+        logged_in = bool(getattr(plugin, 'api_session', None))
+        geonetwork_service = getattr(self._dialog, 'geonetwork_service', None)
+
+        # Nível 1 - sistema (logado no Geohab)
+        if logged_in and uuid and geonetwork_service:
+            try:
+                remote = geonetwork_service.fetch_from_geonetwork(uuid, config_loader)
+                if not remote:
+                    return 'sys_not_found'
+                remote_date = remote.get('dateStamp') or ''
+                if remote_date and local_date_stamp and remote_date > local_date_stamp:
+                    return 'sys_update_available'
+                return 'sys_synced'
+            except Exception as e:
+                print(f"GeoMetadata [check_gn_sync] nível sistema: {e}")
+                return 'error'
+
+        # Nível 2 - banco/sidecar (sem sessão, mas com camada ativa pra comparar)
         try:
-            geonetwork_service = getattr(self._dialog, 'geonetwork_service', None)
-            if not geonetwork_service or not getattr(getattr(self._dialog, 'plugin', None), 'api_session', None):
-                return 'offline'
-            remote = geonetwork_service.fetch_from_geonetwork(uuid, config_loader)
-            if not remote:
-                return 'not_found'
-            remote_date = remote.get('dateStamp') or ''
-            if remote_date and local_date_stamp and remote_date > local_date_stamp:
-                return 'update_available'
-            return 'synced'
+            iface = getattr(plugin, 'iface', None) or getattr(self._dialog, 'iface', None)
+            layer = iface.activeLayer() if iface else None
+            ps = getattr(self._dialog, 'persistence_service', None)
+            if layer and ps:
+                xml_content = ps.load(layer)
+                if xml_content:
+                    from ..core import xml_parser
+                    saved = xml_parser.parse_xml_to_dict(xml_content, is_string=True) or {}
+                    saved_date = saved.get('dateStamp') or ''
+                    if saved_date and local_date_stamp and saved_date != local_date_stamp:
+                        return 'db_modified'
+                    return 'db_synced'
+                return 'db_not_found'
         except Exception as e:
-            print(f"GeoMetadata [check_gn_sync]: {e}")
-            return 'error'
+            print(f"GeoMetadata [check_gn_sync] nível banco: {e}")
+
+        # Nível 3 - offline (nenhuma camada ativa pra identificar - só o rascunho local vale)
+        return 'offline_saved'

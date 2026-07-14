@@ -130,6 +130,18 @@
     animation: gn-sync-pulse 1.2s ease-in-out infinite;
 }
 
+.gn-sync-badge.error {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.gn-sync-badge.error .gn-sync-dot {
+    background: #ef4444;
+}
+
+/* Bare "nada salvo em lugar nenhum ainda" - só usado pelo painel GeoServer (geoserver.js),
+   distinto de offline_saved/offline_modified (GN): lá sempre existe ALGO local pra
+   comparar (o rascunho); aqui, nem isso ainda. */
 .gn-sync-badge.offline {
     background: #f1f5f9;
     color: var(--fg-muted);
@@ -139,39 +151,89 @@
     background: #94a3b8;
 }
 
-.gn-sync-badge.not_found {
+/* ── Nível 1: offline (sem sessão nem banco, só o rascunho local) - cinza neutro,
+   mais claro que os níveis banco/sistema pra indicar visualmente a menor confiança. ── */
+.gn-sync-badge.offline_saved {
+    background: #f1f5f9;
+    color: var(--fg-muted);
+}
+
+.gn-sync-badge.offline_saved .gn-sync-dot {
+    background: #94a3b8;
+}
+
+.gn-sync-badge.offline_modified {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+.gn-sync-badge.offline_modified .gn-sync-dot {
+    background: #64748b;
+}
+
+/* ── Nível 2: banco/sidecar (sem sessão) - mesma família de cor do nível sistema
+   correspondente, só mais clara/dessaturada (menos confiança que uma checagem ao vivo). ── */
+.gn-sync-badge.db_not_found {
+    background: #faf5ff;
+    color: #a855f7;
+}
+
+.gn-sync-badge.db_not_found .gn-sync-dot {
+    background: #c084fc;
+}
+
+.gn-sync-badge.db_synced {
+    background: #f0fdf4;
+    color: #22c55e;
+}
+
+.gn-sync-badge.db_synced .gn-sync-dot {
+    background: #4ade80;
+}
+
+.gn-sync-badge.db_modified {
+    background: #eff6ff;
+    color: #3b82f6;
+}
+
+.gn-sync-badge.db_modified .gn-sync-dot {
+    background: #60a5fa;
+}
+
+/* ── Nível 3: sistema (logado no Geohab) - cores saturadas, maior confiança. ── */
+.gn-sync-badge.sys_not_found {
     background: #f3e8ff;
     color: #9333ea;
 }
 
-.gn-sync-badge.not_found .gn-sync-dot {
+.gn-sync-badge.sys_not_found .gn-sync-dot {
     background: #a855f7;
 }
 
-.gn-sync-badge.synced {
+.gn-sync-badge.sys_synced {
     background: #dcfce7;
     color: #16a34a;
 }
 
-.gn-sync-badge.synced .gn-sync-dot {
+.gn-sync-badge.sys_synced .gn-sync-dot {
     background: #22c55e;
 }
 
-.gn-sync-badge.update_available {
+.gn-sync-badge.sys_update_available {
     background: #fef3c7;
     color: #b45309;
 }
 
-.gn-sync-badge.update_available .gn-sync-dot {
+.gn-sync-badge.sys_update_available .gn-sync-dot {
     background: #f59e0b;
 }
 
-.gn-sync-badge.modified {
+.gn-sync-badge.sys_modified {
     background: #dbeafe;
     color: #1d4ed8;
 }
 
-.gn-sync-badge.modified .gn-sync-dot {
+.gn-sync-badge.sys_modified .gn-sync-dot {
     background: #3b82f6;
 }
 

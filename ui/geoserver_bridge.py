@@ -176,30 +176,30 @@ class GeoServerBridge(QObject):
 
     def _load_layer_metadata(self, layer, uuid_hint=''):
         """Busca o metadado MGB da camada pra pré-preencher Título/Resumo/Palavras-chave
-        na aba Identificação do GS, na ordem que faz mais sentido pro usuário:
+        na aba Identificação do GS. Prioridade de preenchimento (mesma regra usada pro
+        destino de publicação, ver GeoServerService.save_publish_destination/
+        get_active_layer_publish_info): 1) sistema online (GeoNetwork) 2) banco/sidecar
+        local (PersistenceService) 3) rascunho do editor GN (arquivo local) - nessa ordem,
+        estando logado ou não (a etapa 1 só "vence" quando dá certo; se não houver sessão
+        ou o GeoNetwork não responder, cai graciosamente pras etapas seguintes):
 
-        1. Rascunho do editor GN (arquivo local, sem precisar de login/rede) - cobre o
-           fluxo "preencher tudo offline, publicar depois": o usuário pode ter digitado
-           título/resumo/palavras-chave no editor sem nunca ter salvo ou logado, e isso já
-           está no draft (auto-save por debounce, ver _scheduleDraftSave em geonetwork.js).
-           É a fonte mais recente por definição (é literalmente o que está na tela), então
-           tem prioridade sobre tudo abaixo, mesmo sem repositório central pra rastrear.
-        2. Local (DB/sidecar, via PersistenceService) - metadado já salvo de verdade.
-        3. GeoNetwork - se (2) achou um metadata_uuid, busca de lá (mais fresco que uma
-           cópia local desatualizada). A busca local pode falhar mesmo pra camadas com
-           metadado publicado - a tabela auxiliar do plugin (public.qgis_geometadata_plugin)
-           pode não existir nesse banco ainda (condição conhecida, docs_projeto/bugs.md
-           Bug 1) - `uuid_hint` cobre esse caso: o JS manda o uuid que o editor GN já
-           confirmou pra essa mesma camada nesta sessão (window._gnSyncUuid, só usado se
-           bater com a camada ativa - ver geoserver.js)."""
+        1. GeoNetwork - se sabemos o metadata_uuid (achado no passo 2 abaixo, no rascunho,
+           ou recebido via `uuid_hint`), busca lá primeiro - é a fonte mais confiável
+           porque reflete o que está de fato publicado, e não uma cópia que pode ter
+           ficado desatualizada.
+        2. Local (DB/sidecar, via PersistenceService) - metadado já salvo de verdade nesse
+           banco, usado tanto pra descobrir o uuid (passo 1) quanto como conteúdo em si se
+           a busca online falhar (sem sessão, sem rede, etc.).
+        3. Rascunho do editor GN (arquivo local, por máquina) - só como último recurso:
+           cobre o fluxo "preencher tudo offline, nunca salvou nada ainda", mas não deve
+           pisar em cima de um metadado que já existe de verdade online ou no banco."""
         try:
             gn_bridge = getattr(self._dialog, 'gn_bridge', None)
+            draft = None
             if gn_bridge and layer:
                 try:
                     layer_key = layer.source() or layer.id()
                     draft = gn_bridge._load_all_drafts().get(layer_key)
-                    if draft and (draft.get('title') or draft.get('abstract') or draft.get('MD_Keywords')):
-                        return draft
                 except Exception as exc:
                     print(f"GeoMetadata [_load_layer_metadata] draft: {exc}")
 
@@ -211,7 +211,7 @@ class GeoServerBridge(QObject):
                     from ..core import xml_parser
                     local = xml_parser.parse_xml_to_dict(xml_content, is_string=True)
 
-            uuid = (local or {}).get('metadata_uuid') or uuid_hint or None
+            uuid = (local or {}).get('metadata_uuid') or (draft or {}).get('metadata_uuid') or uuid_hint or None
             geonetwork_service = getattr(self._dialog, 'geonetwork_service', None)
             if uuid and geonetwork_service:
                 from ..core.plugin_config import config_loader
@@ -222,7 +222,13 @@ class GeoServerBridge(QObject):
                 except Exception as exc:
                     print(f"GeoMetadata [_load_layer_metadata] fallback GeoNetwork falhou: {exc}")
 
-            return local
+            if local and (local.get('title') or local.get('abstract') or local.get('MD_Keywords')):
+                return local
+
+            if draft and (draft.get('title') or draft.get('abstract') or draft.get('MD_Keywords')):
+                return draft
+
+            return local or draft
         except Exception as exc:
             print(f"GeoMetadata [_load_layer_metadata]: {exc}")
             return None
@@ -238,10 +244,12 @@ class GeoServerBridge(QObject):
         é o fallback quando a busca local não acha o uuid sozinha (ver _load_layer_metadata).
 
         Também inclui 'saved_workspace'/'saved_datastore'/'saved_published_name'/
-        'saved_title' - o destino usado na última publicação bem-sucedida dessa camada
-        (public.qgis_geoserver_publish, ver GeoServerService.load_publish_destination).
-        O JS só usa isso como fallback quando não há rascunho local (load_draft) - o
-        rascunho sempre reflete edição mais recente e vence."""
+        'saved_title'/'saved_abstract'/'saved_keywords'/'saved_published' - o destino
+        usado na última publicação/salvamento de verdade dessa camada
+        (geoserver_publish_xml, ver GeoServerService.load_publish_destination). Prioridade
+        de preenchimento no JS: banco (isso aqui) > rascunho local (load_draft), estando
+        logado ou não - o rascunho só preenche o que o banco deixou vazio (camada nunca
+        salva/publicada de verdade ainda), nunca por cima de um valor que já veio daqui."""
         geoserver_service = getattr(self._dialog, 'geoserver_service', None)
         if not geoserver_service:
             return {'publishable': False, 'reason': 'Serviço GeoServer não inicializado.'}
@@ -259,6 +267,9 @@ class GeoServerBridge(QObject):
                 info['saved_datastore'] = saved.get('datastore') or ''
                 info['saved_published_name'] = saved.get('published_name') or ''
                 info['saved_title'] = saved.get('title') or ''
+                info['saved_abstract'] = saved.get('abstract') or ''
+                info['saved_keywords'] = saved.get('keywords') or []
+                info['saved_published'] = bool(saved.get('published'))
             return info
         except Exception as exc:
             return {'publishable': False, 'reason': str(exc)}
@@ -268,6 +279,43 @@ class GeoServerBridge(QObject):
         """RF04 - preview síncrono do nome sanitizado (só regex, sem I/O de rede)."""
         from ..core.geoserver_service import GeoServerService
         return GeoServerService.sanitize_layer_name(name)
+
+    @pyqtSlot(str, str, str, str, str, 'QVariant', result='QVariant')
+    def check_gs_sync(self, workspace, datastore, published_name, title, abstract, keywords):
+        """Compara o formulário atual contra o que está DE FATO publicado no GeoServer
+        agora (REST, ao vivo via GeoServerService.fetch_published_featuretype) - nível
+        'sistema' do badge combinado/painel GS (mesmo espírito de check_gn_sync, ver
+        geonetwork_bridge.py, só que aqui sempre compara contra o servidor, não tem um
+        nível intermediário como o dateStamp do GN). Só faz sentido chamar quando logado E
+        já existe destino conhecido (workspace/datastore/nome) - o nível 'banco' (sem
+        esse live-check) continua resolvido inteiramente no JS via info.saved_* (ver
+        get_active_layer_publish_info), sem depender deste método.
+
+        Retorna um dict {'state': 'sys_synced'|'sys_modified'|'sys_not_found'|'error', ...}
+        - quando encontrado (synced/modified), inclui também 'title'/'abstract'/'keywords'
+        com o conteúdo AO VIVO, pro JS poder usar como novo snapshot de comparação local
+        (ver _checkGsSyncOnline, geoserver.js) em vez de só o que está no banco."""
+        geoserver_service = getattr(self._dialog, 'geoserver_service', None)
+        if not geoserver_service or not workspace or not datastore or not published_name:
+            return {'state': 'error'}
+        try:
+            from ..core.plugin_config import config_loader
+            remote = geoserver_service.fetch_published_featuretype(workspace, datastore, published_name, config_loader)
+            if remote is None:
+                return {'state': 'sys_not_found'}
+            remote_kw = sorted((k or '').strip() for k in (remote.get('keywords') or []))
+            local_kw = sorted((k or '').strip() for k in (keywords or []))
+            matches = (
+                (remote.get('title') or '').strip() == (title or '').strip() and
+                (remote.get('abstract') or '').strip() == (abstract or '').strip() and
+                remote_kw == local_kw
+            )
+            result = {'state': 'sys_synced' if matches else 'sys_modified'}
+            result.update(remote)
+            return result
+        except Exception as exc:
+            print(f"GeoMetadata [check_gs_sync]: {exc}")
+            return {'state': 'error'}
 
     @pyqtSlot(str, str, str, str, str, 'QVariant')
     def save_destination_now(self, workspace, datastore, published_name, title, abstract, keywords):
@@ -340,7 +388,7 @@ class GeoServerBridge(QObject):
             geoserver_service = getattr(self._dialog, 'geoserver_service', None)
             if geoserver_service:
                 geoserver_service.save_publish_destination(
-                    layer, workspace, datastore, published_name, title, abstract, keywords
+                    layer, workspace, datastore, published_name, title, abstract, keywords, published=True
                 )
         self.gs_publish_done.emit(success, message, published_name, wms_url, wfs_url)
 

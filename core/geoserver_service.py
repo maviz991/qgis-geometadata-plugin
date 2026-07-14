@@ -84,7 +84,7 @@ class GeoServerService:
         """RF01 - lista os workspaces disponíveis no GeoServer."""
         api_session = self.plugin.api_session
         if not api_session:
-            raise Exception("Sessão da API não foi inicializada. Faça login primeiro.")
+            raise Exception("Sessão não foi inicializada. Faça login primeiro.")
 
         base_url = config_loader_instance.get_geoserver_url().rstrip('/')
         if not base_url:
@@ -105,7 +105,7 @@ class GeoServerService:
         """RF01 - lista os datastores de um workspace do GeoServer."""
         api_session = self.plugin.api_session
         if not api_session:
-            raise Exception("Sessão da API não foi inicializada. Faça login primeiro.")
+            raise Exception("Sessão não foi inicializada. Faça login primeiro.")
 
         base_url = config_loader_instance.get_geoserver_url().rstrip('/')
         if not base_url:
@@ -131,7 +131,7 @@ class GeoServerService:
         é diferente do schema onde a tabela vive de verdade no banco."""
         api_session = self.plugin.api_session
         if not api_session:
-            raise Exception("Sessão da API não foi inicializada. Faça login primeiro.")
+            raise Exception("Sessão não foi inicializada. Faça login primeiro.")
 
         base_url = config_loader_instance.get_geoserver_url().rstrip('/')
         if not base_url:
@@ -234,7 +234,7 @@ class GeoServerService:
         'keywords', quando fornecidos, vêm do metadado MGB já salvo pra camada."""
         api_session = self.plugin.api_session
         if not api_session:
-            raise Exception("Sessão da API não foi inicializada. Faça login primeiro.")
+            raise Exception("Sessão não foi inicializada. Faça login primeiro.")
 
         base_url = config_loader_instance.get_geoserver_url().rstrip('/')
         if not base_url:
@@ -264,8 +264,46 @@ class GeoServerService:
         except requests.exceptions.HTTPError:
             raise Exception(self.translate_gs_error(response.status_code, response.text or ''))
 
+    def fetch_published_featuretype(self, workspace, datastore, published_name, config_loader_instance):
+        """Busca o featuretype de VERDADE no GeoServer (REST, ao vivo) - é a fonte mais
+        confiável de 'o que está publicado agora', ao contrário do banco
+        (geoserver_publish_xml), que só guarda o que foi usado na ÚLTIMA publicação/
+        salvamento e pode divergir se o título/resumo foi editado e só salvo no banco
+        ("Continuar Depois") sem republicar de verdade (ver GeoServerBridge.check_gs_sync,
+        que usa isso pro nível 'sistema' do badge - mesmo espírito de
+        GeoNetworkService.fetch_from_geonetwork pro lado GN). Retorna None se o
+        featuretype não existir nesse workspace/datastore (nunca publicado de verdade, ou
+        removido de lá)."""
+        api_session = self.plugin.api_session
+        if not api_session:
+            raise Exception("Sessão não foi inicializada. Faça login primeiro.")
+
+        base_url = config_loader_instance.get_geoserver_url().rstrip('/')
+        if not base_url:
+            raise ValueError("A URL do GeoServer não está definida corretamente no config.json.")
+
+        response = api_session.get(
+            f"{base_url}/rest/workspaces/{workspace}/datastores/{datastore}/featuretypes/{published_name}.json",
+            headers={'Accept': 'application/json'},
+            timeout=15,
+            verify=False
+        )
+        if response.status_code == 404:
+            return None
+        response.raise_for_status()
+        data = response.json()
+        ft = data.get('featureType') or {}
+        keywords_raw = (ft.get('keywords') or {}).get('string') or []
+        if isinstance(keywords_raw, str):
+            keywords_raw = [keywords_raw]  # GeoServer devolve string solta (não array) quando só tem 1 item
+        return {
+            'title': ft.get('title') or '',
+            'abstract': ft.get('abstract') or '',
+            'keywords': keywords_raw,
+        }
+
     @staticmethod
-    def _build_publish_xml(workspace, datastore, published_name, title, abstract=None, keywords=None):
+    def _build_publish_xml(workspace, datastore, published_name, title, abstract=None, keywords=None, published=False):
         import xml.etree.ElementTree as ET
         root = ET.Element('geoserver_publish')
         ET.SubElement(root, 'workspace').text = workspace or ''
@@ -276,6 +314,10 @@ class GeoServerService:
         keywords_el = ET.SubElement(root, 'keywords')
         for kw in (keywords or []):
             ET.SubElement(keywords_el, 'keyword').text = kw
+        # Distingue "só salvo" (Continuar Depois - GeoServer não sabe disso ainda) de
+        # "publicado de verdade" (registro lógico confirmado na REST API) - sem isso o
+        # badge do JS não teria como diferenciar "Salvo" de "Sincronizado/Publicado".
+        ET.SubElement(root, 'published').text = 'true' if published else 'false'
         body = ET.tostring(root, encoding='unicode')
         return '<?xml version="1.0" encoding="UTF-8"?>\n' + body
 
@@ -298,10 +340,11 @@ class GeoServerService:
             'title': get('title'),
             'abstract': get('abstract'),
             'keywords': keywords,
+            'published': get('published') == 'true',
         }
 
     @staticmethod
-    def save_publish_destination(layer, workspace, datastore, published_name, title, abstract=None, keywords=None):
+    def save_publish_destination(layer, workspace, datastore, published_name, title, abstract=None, keywords=None, published=False):
         """Guarda no banco da própria camada, na mesma linha/tabela do metadado
         (public.qgis_geometadata_plugin, coluna geoserver_publish_xml) qual workspace/
         datastore/nome/título/resumo/palavras-chave foram usados na última publicação -
@@ -316,7 +359,14 @@ class GeoServerService:
         não existir nesse banco (mesma condição do Bug 1 documentado em docs_projeto/
         bugs.md) - é só bookkeeping, não pode derrubar uma publicação que já deu certo.
         Retorna True/False (não levanta exceção) - o botão "Continuar Depois" do painel
-        GeoServer usa isso pra avisar o usuário se a gravação no banco realmente aconteceu."""
+        GeoServer usa isso pra avisar o usuário se a gravação no banco realmente aconteceu.
+
+        `published`: True só quando essa gravação corresponde a uma publicação de verdade
+        na REST API do GeoServer (chamado por _on_publish_done); False pros demais
+        caminhos ("Continuar Depois", promoção de rascunho) - o registro fica salvo no
+        banco, mas o GeoServer ainda NÃO tem essa informação. O JS usa essa flag pra
+        diferenciar o badge "Salvo (não publicado)" de "Sincronizado" (ver geoserver.js,
+        _checkGsSyncNow) - evita o usuário achar que salvar no banco equivale a publicar."""
         if not psycopg2 or not layer:
             return False
         try:
@@ -326,7 +376,7 @@ class GeoServerService:
             return False
         try:
             cursor = conn.cursor()
-            xml_text = GeoServerService._build_publish_xml(workspace, datastore, published_name, title, abstract, keywords)
+            xml_text = GeoServerService._build_publish_xml(workspace, datastore, published_name, title, abstract, keywords, published)
             sql = """
                 INSERT INTO public.qgis_geometadata_plugin
                     (f_table_catalog, f_table_schema, f_table_name, geoserver_publish_xml)

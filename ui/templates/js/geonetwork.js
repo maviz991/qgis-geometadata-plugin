@@ -65,7 +65,7 @@ function _initGnBridge() {
         if (typeof gnBridge !== 'undefined') gnBridge.clear_draft(); // save no DB/sidecar já é a fonte da verdade agora
         _gnSyncUuid = uuid || null;
         _gnSyncUuidLayerName = uuid ? _activeLayerName : null;
-        setGnBadge('synced');
+        setGnBadge('sys_synced'); // publicar exige login - sempre nível sistema
     });
 
     // Save local (Continuar Depois) confirmado - recheca contra o GN na hora, sem
@@ -123,7 +123,9 @@ function _onActiveLayerChanged(name) {
         resetEditorForm();
         var badge = document.getElementById('gn-sync-badge');
         if (badge) badge.style.display = 'none';
+        _gsBadgeState = null;
         _loadFormForLayer(null);
+        checkGsPublishStatus();
     }
 }
 
@@ -156,6 +158,7 @@ function _onEditorPanelLoaded() {
     var _sessionDraft = _editorDraft;
     _editorDraft = null;
     setTimeout(function () { _loadFormForLayer(_sessionDraft); }, 60);
+    checkGsPublishStatus(); // status de publicação no GeoServer da camada ativa (ver geoserver.js)
 
     // Rastreio de progresso e auto-save por eventos de input/change
     setTimeout(updateFormProgress, 100);
@@ -236,7 +239,11 @@ function _tryGnSaveMetadata() {
     }, 'Confirmar Salvamento');
 }
 
-function tryResetForm() {
+// Chamado por tryResetForm() (app.js - dispatcher genérico do menu Arquivo > Descartar
+// Alterações, que decide entre isso e tryGsResetForm conforme o painel aberto). Nome com
+// _ na frente de propósito, pra não colidir com o dispatcher (mesmo motivo de
+// _tryGnSaveMetadata acima).
+function _tryGnResetForm() {
     if (!_requireEditorOpen('descartar as alterações')) return;
     Modal.confirm('Isso vai descartar as alterações não salvas deste formulário. Continuar?', function () {
         if (typeof gnBridge !== 'undefined') gnBridge.clear_draft();
@@ -338,26 +345,65 @@ var _gnSearchTimer = null;
 // edição manualmente (sem usar nenhum botão de Descartar/Publicar/Puxar). _gnSyncBaseline
 // guarda QUAL desses dois estados é o "limpo" a voltar quando o conteúdo bate de novo.
 var _gnSyncSnapshot = null;
-var _gnSyncBaseline = null; // 'synced' | 'not_found'
+var _gnSyncBaseline = null; // uma das chaves de _GN_MODIFIED_FOR abaixo
 
+// Cache do último resultado de verdade (Geohab/banco) por camada - reaproveitado quando o
+// usuário só troca de painel e volta pra ESSA MESMA camada, em vez de bater no Geohab/
+// banco de novo toda vez (isso que fazia a troca de painel parecer lenta - ver setGnBadge/
+// checkGnSync). Só expira depois de _GN_RECHECK_STALE_MS ou quando a camada muda de
+// verdade (a comparação de chave já cuida disso sozinha, ver checkGnSync).
+var _GN_RECHECK_STALE_MS = 60000;
+var _gnLastCheckedLayerKey = null;
+var _gnLastCheckedAt = 0;
+var _gnLastBadgeState = null;
+
+// Vocabulário de status compartilhado entre GN e GS (ver _GS_SYNC_LABELS, geoserver.js) -
+// 3 níveis de conectividade (prefixo do estado), maior confiança primeiro, + 2 estados
+// universais sem nível (checking/error). O nível não muda a lógica de comparação, só diz
+// QUAL fonte foi usada pra comparar - por isso "Modificado" tem uma mensagem diferente em
+// cada nível (ver _GN_SYNC_TOOLTIPS/onGnSyncBadgeClick), mesmo sendo sempre o mesmo
+// mecanismo de "diverge do snapshot" (_markGnModifiedIfNeeded):
+//   sys_*     - logado no Geohab, comparado contra a busca ao vivo no GeoNetwork.
+//   db_*      - sem sessão, comparado contra a cópia persistida (banco/sidecar).
+//   offline_* - sem sessão nem camada ativa pra identificar, só o rascunho local.
 var _GN_SYNC_LABELS = {
     checking: 'Verificando…',
-    offline: 'Offline',
-    synced: 'Sincronizado',
-    modified: 'Modificado',
-    update_available: 'Atualização disponível',
-    not_found: 'Não encontrado no Geohab',
-    error: 'Erro ao verificar'
+    error: 'Erro ao verificar',
+    offline_saved: 'Salvo (Offline)',
+    offline_modified: 'Modificado (Offline)',
+    db_not_found: 'Não Encontrado (DB)',
+    db_modified: 'Modificado (DB)',
+    db_synced: 'Sincronizado (DB)',
+    sys_not_found: 'Não Encontrado (Geohab)',
+    sys_update_available: 'Atualização disponível',
+    sys_modified: 'Modificado',
+    sys_synced: 'Sincronizado'
 };
 
 var _GN_SYNC_TOOLTIPS = {
-    checking: 'Verificando se este metadado está sincronizado com o Geohab...',
-    offline: 'Metadado ainda não publicado no Geohab. Use "Arquivo > Baixar Metadado" pra buscar um registro existente.',
-    synced: 'O formulário atual está sincronizado com o que está publicado no Geohab.',
-    modified: 'Editado localmente desde a última sincronização com o Geohab.',
-    update_available: 'Existe uma versão mais nova no Geohab. Clique pra puxar a atualização.',
-    not_found: 'Este metadado tem um UUID salvo localmente, mas não foi encontrado no Geohab (nunca publicado, ou removido de lá).',
-    error: 'Não foi possível verificar o status no Geohab agora.'
+    checking: 'Verificando se este metadado está sincronizado...',
+    error: 'Não foi possível verificar o status agora.',
+    offline_saved: 'Rascunho salvo localmente nesta máquina. Sem conexão com o banco de dados nem com o Geohab agora - não dá pra confirmar se bate com algum registro salvo.',
+    offline_modified: 'Editado localmente desde o último rascunho salvo nesta máquina. Sem conexão com o banco nem com o Geohab agora.',
+    db_not_found: 'Nenhum metadado salvo no banco de dados pra esta camada ainda (verificado sem login no Geohab).',
+    db_modified: 'Editado localmente desde a última vez que foi salvo no banco de dados (verificado sem login no Geohab).',
+    db_synced: 'O formulário atual bate com o que está salvo no banco de dados (verificado sem login no Geohab - o Geohab pode ter uma versão diferente).',
+    sys_not_found: 'Este metadado tem um UUID salvo localmente ou no banco, mas não foi encontrado no Geohab (nunca publicado, ou removido de lá).',
+    sys_update_available: 'Existe uma versão mais nova no Geohab. Clique pra puxar a atualização.',
+    sys_modified: 'Editado localmente desde a última sincronização com o Geohab.',
+    sys_synced: 'O formulário atual está sincronizado com o que está publicado no Geohab.'
+};
+
+// Baseline -> estado "modificado" correspondente, usado por _markGnModifiedIfNeeded pra
+// alternar só dentro do mesmo nível (nunca pula de db_synced pra sys_modified, por ex.).
+// checking/error/sys_update_available não têm baseline aqui - _markGnModifiedIfNeeded não
+// mexe neles (nada pra "divergir de", ver comentário na função).
+var _GN_MODIFIED_FOR = {
+    sys_synced: 'sys_modified',
+    sys_not_found: 'sys_modified',
+    db_synced: 'db_modified',
+    db_not_found: 'db_modified',
+    offline_saved: 'offline_modified'
 };
 
 function setGnBadge(state) {
@@ -366,9 +412,8 @@ function setGnBadge(state) {
     if (!badge || !label) return;
     badge.className = 'gn-sync-badge ' + state;
     badge.style.display = 'flex';
-    badge.dataset.title = _GN_SYNC_TOOLTIPS[state] || '';
-    label.textContent = _GN_SYNC_LABELS[state] || state;
-    if (state === 'synced' || state === 'not_found') {
+    _refreshGnBadgeLabel();
+    if (_GN_MODIFIED_FOR[state]) {
         var snap = collectFormData();
         if (snap) {
             _gnSyncSnapshot = JSON.stringify(snap);
@@ -376,21 +421,53 @@ function setGnBadge(state) {
         }
     }
 
+    // Guarda o último resultado de verdade (não 'checking') pra essa camada - reaproveitado
+    // por checkGnSync() se o usuário só trocar de painel e voltar, sem precisar bater no
+    // Geohab/banco de novo (ver comentário em _gnLastCheckedLayerKey).
+    if (state !== 'checking') {
+        _gnLastCheckedLayerKey = _activeLayerName;
+        _gnLastCheckedAt = Date.now();
+        _gnLastBadgeState = state;
+    }
+
     var banner = document.getElementById('gn-update-banner');
-    if (banner) banner.style.display = (state === 'update_available') ? 'flex' : 'none';
+    if (banner) banner.style.display = (state === 'sys_update_available') ? 'flex' : 'none';
+}
+
+// Reescreve o texto/tooltip do badge com base no estado GN atual (classe já aplicada em
+// setGnBadge). O RÓTULO visível fica só com o estado GN (curto, é um status, não uma
+// descrição) - o status GS (_gsBadgeState, ver checkGsPublishStatus mais abaixo) só entra
+// no TOOLTIP (hover) e no modal de clique (_gsStatusModalSuffix/onGnSyncBadgeClick), não
+// no texto sempre visível do badge. Ainda é o MESMO badge (#gn-sync-badge), não um segundo
+// componente - só que a informação combinada agora fica sob demanda, não empilhada no rótulo.
+function _refreshGnBadgeLabel() {
+    var badge = document.getElementById('gn-sync-badge');
+    var label = document.getElementById('gn-sync-label');
+    if (!badge || !label || badge.style.display === 'none') return;
+    var state = badge.className.replace('gn-sync-badge', '').trim();
+    if (!state) return;
+    var tooltip = _GN_SYNC_TOOLTIPS[state] || '';
+    if (_gsBadgeState) {
+        tooltip += (tooltip ? '\n\n' : '') + _GS_STATUS_LABELS[_gsBadgeState] + ': ' + _gsStatusTooltip(_gsBadgeState);
+    }
+    label.textContent = _GN_SYNC_LABELS[state] || state;
+    badge.dataset.title = tooltip;
 }
 
 // Chamado a cada input/change do formulário. Compara o conteúdo atual contra o retrato
-// do último ponto de partida conhecido (Sincronizado ou Não encontrado no Geohab): se
-// bater de novo, volta sozinho pro estado de origem (mesmo sem clicar em Descartar); se
-// divergir, vira "Modificado". Só alterna entre o baseline e "Modificado" - não interfere
-// em checking/offline/update_available.
+// do último ponto de partida conhecido (o baseline capturado em setGnBadge - synced ou
+// not_found, de QUALQUER nível): se bater de novo, volta sozinho pro estado de origem
+// (mesmo sem clicar em Descartar); se divergir, vira o "modificado" desse MESMO nível
+// (_GN_MODIFIED_FOR) - nunca pula de nível sozinho. Não interfere em checking/error/
+// sys_update_available (não têm baseline em _GN_MODIFIED_FOR).
 function _markGnModifiedIfNeeded() {
     if (_gnSyncSnapshot === null || _gnSyncBaseline === null) return;
     var badge = document.getElementById('gn-sync-badge');
     if (!badge) return;
+    var modifiedState = _GN_MODIFIED_FOR[_gnSyncBaseline];
+    if (!modifiedState) return;
     var isBaseline = badge.classList.contains(_gnSyncBaseline);
-    var isModified = badge.classList.contains('modified');
+    var isModified = badge.classList.contains(modifiedState);
     if (!isBaseline && !isModified) return;
     var current = collectFormData();
     if (!current) return;
@@ -398,45 +475,169 @@ function _markGnModifiedIfNeeded() {
     if (matches && isModified) {
         setGnBadge(_gnSyncBaseline);
     } else if (!matches && isBaseline) {
-        setGnBadge('modified');
+        setGnBadge(modifiedState);
     }
 }
 
 function checkGnSync(uuid, dateStamp) {
     _gnSyncUuid = uuid || null;
     _gnSyncUuidLayerName = uuid ? _activeLayerName : null;
-    if (!uuid || typeof gnBridge === 'undefined') {
-        setGnBadge('offline');
+
+    // Se já verificamos ESSA MESMA camada recentemente (< _GN_RECHECK_STALE_MS atrás),
+    // reaplica o resultado guardado na hora em vez de bater no Geohab/banco de novo - é o
+    // que fazia trocar de painel e voltar parecer lento, já que isso rodava do zero toda
+    // vez mesmo sem a camada ter mudado. Ações explícitas (salvar/publicar/puxar) já
+    // chamam setGnBadge diretamente com o resultado real, atualizando esse cache também.
+    if (_gnLastCheckedLayerKey === _activeLayerName && _gnLastBadgeState &&
+        (Date.now() - _gnLastCheckedAt) < _GN_RECHECK_STALE_MS) {
+        setGnBadge(_gnLastBadgeState);
+        return;
+    }
+
+    if (typeof gnBridge === 'undefined') {
+        setGnBadge('offline_saved');
         return;
     }
     // Sessão é checada de verdade do lado Python (check_gn_sync olha
-    // self._dialog.plugin.api_session ao vivo) - não usar _isLogged aqui, é só um
-    // cache de UI que pode ficar desatualizado logo após login/reconexão.
+    // self._dialog.plugin.api_session ao vivo) - não usar _isLogged aqui, é só um cache de
+    // UI que pode ficar desatualizado logo após login/reconexão. O NÍVEL (sistema/banco/
+    // offline) também é decidido lá - mesmo sem uuid conhecido aqui (camada nova, sem
+    // draft nem save ainda), o nível banco ainda consegue achar um registro salvo pela
+    // identidade da própria camada (ver check_gn_sync, ui/geonetwork_bridge.py).
     setGnBadge('checking');
-    gnBridge.check_gn_sync(uuid, dateStamp || '', function (result) {
+    gnBridge.check_gn_sync(uuid || '', dateStamp || '', function (result) {
         setGnBadge(result);
     });
 }
 
+// Sufixo com o status GS (_gsBadgeState) pra anexar no modal do badge combinado - mesmo
+// clique, mesmo badge, só acrescenta o parágrafo do GeoServer quando aplicável.
+function _gsStatusModalSuffix() {
+    if (!_gsBadgeState) return '';
+    return '<br><br><b>' + _GS_STATUS_LABELS[_gsBadgeState] + '</b><br>' + _gsStatusTooltip(_gsBadgeState);
+}
+
+// Título/tipo/mensagem do modal pra cada estado (ver _GN_SYNC_LABELS pro rótulo curto do
+// badge) - cada nível tem uma mensagem própria, mesmo quando o "resultado" (ex.:
+// Modificado) é conceitualmente parecido em mais de um nível, porque a orientação de
+// próximo passo muda com o que está disponível (login vs. banco vs. só rascunho).
+var _GN_SYNC_MODALS = {
+    error: { title: 'Erro ao verificar', type: 'error', message: 'Não foi possível verificar o status agora. Tente de novo em alguns instantes.' },
+    offline_saved: { title: 'Salvo (Offline)', type: 'info', message: 'Rascunho salvo localmente nesta máquina.<br><br>Sem conexão com o banco de dados nem com o Geohab agora - abra o editor com uma camada do banco ativa, ou faça login, pra confirmar contra um registro de verdade.' },
+    offline_modified: { title: 'Modificado (Offline)', type: 'warning', message: 'Editado localmente desde o último rascunho salvo nesta máquina.<br><br>Sem conexão com o banco nem com o Geohab agora pra salvar/publicar de verdade.' },
+    db_not_found: { title: 'Não Encontrado (DB)', type: 'warning', message: 'Nenhum metadado salvo no banco de dados pra esta camada ainda (verificado sem login no Geohab).<br><br>Use "Arquivo > Continuar Depois" pra salvar no banco, ou faça login pra publicar direto no Geohab.' },
+    db_modified: { title: 'Modificado (DB)', type: 'warning', message: 'Editado localmente desde a última vez que foi salvo no banco de dados (verificado sem login no Geohab).<br><br>Use "Arquivo > Continuar Depois" pra salvar, ou "Arquivo > Descartar Alterações" pra voltar ao último salvo.' },
+    db_synced: { title: 'Sincronizado (DB)', type: 'success', message: 'O formulário atual bate com o que está salvo no banco de dados.<br><br>Isso foi verificado sem login no Geohab - faça login pra confirmar se também bate com o que está publicado lá.' },
+    sys_not_found: { title: 'Não encontrado no Geohab', type: 'warning', message: 'Este metadado tem um UUID salvo localmente ou no banco, mas não foi encontrado no catálogo Geohab (nunca publicado, ou removido de lá).<br><br>Para publicar, use "Catálogo > Publicar Metadado".<br>Pra buscar um registro diferente já existente, use "Arquivo > Baixar Metadado" ou "Arquivo > Importar Metadado".' },
+    sys_update_available: { title: 'Atualização disponível', type: 'warning', message: 'Existe uma versão mais nova deste metadado no Geohab.<br><br>Clique em "Atualizar agora" no aviso acima do formulário pra puxar a atualização.' },
+    sys_modified: { title: 'Modificado', type: 'warning', message: 'Você tem alterações locais não publicadas.<br><br>Publique no Geohab ("Catálogo > Publicar Metadado") pra sincronizar, ou "Arquivo > Descartar Alterações" pra voltar ao último estado sincronizado.' },
+    sys_synced: { title: 'Sincronizado', type: 'success', message: 'Este metadado já está sincronizado com o Geohab.' }
+};
+
 function onGnSyncBadgeClick() {
     var badge = document.getElementById('gn-sync-badge');
     if (!badge) return;
-    if (badge.classList.contains('offline')) {
-        Modal.alert('Metadado ainda não publicado no Geohab.<br><br>Para publicar, use "Catálogo > Publicar Metadado"<br><br>Pra buscar um registro já existente, use:<br>- Geohab: "Arquivo > Baixar Metadado"<br>- Local: "Arquivo > Importar metadado".', 'Offline', 'info');
-    } else if (badge.classList.contains('update_available')) {
-        Modal.alert('Existe uma versão mais nova deste metadado no Geohab.<br><br>Clique em "Atualizar agora" no aviso acima do formulário pra puxar a atualização.', 'Atualização disponível', 'warning');
-    } else if (badge.classList.contains('synced')) {
-        Modal.alert('Este metadado já está sincronizado com o Geohab.', 'Sincronizado', 'success');
-    } else if (badge.classList.contains('modified')) {
-        Modal.alert('Você tem alterações locais não publicadas.<br><br>Publique no Geohab ("Catálogo > Publicar Metadado") pra sincronizar, ou "Arquivo > Descartar Alterações" pra voltar ao último estado sincronizado.', 'Modificado', 'warning');
-    } else if (badge.classList.contains('not_found')) {
-        Modal.alert('Este metadado tem um UUID salvo localmente ou no bando de dados, mas não foi encontrado no catálogo Geohab (nunca publicado, ou removido de lá).', 'Não encontrado no Geohab', 'warning');
-    }
+    var state = badge.className.replace('gn-sync-badge', '').trim();
+    var entry = _GN_SYNC_MODALS[state];
+    if (!entry) return; // checking - nada pra mostrar enquanto verifica
+    Modal.alert(entry.message + _gsStatusModalSuffix(), entry.title, entry.type);
 }
 
 function applyGnUpdate() {
     if (!_gnSyncUuid) return;
     pullGnRecord(_gnSyncUuid);
+}
+
+// ─── Status de publicação no GeoServer (fundido no MESMO badge #gn-sync-badge) ────
+// Não é um "sync" completo como o do GN (não há formulário GS aberto aqui pra comparar
+// contra "modificado") - só mostra se a camada ativa já foi publicada/salva no GeoServer,
+// reaproveitando gsBridge.get_active_layer_publish_info() (mesmo bridge/método que o
+// painel GeoServer usa, ver geoserver.js). _gsBadgeState guarda esse pedaço e
+// _refreshGnBadgeLabel() (acima) combina com o estado GN no texto/tooltip de um único
+// badge visual - não é um segundo badge, os dois status não conflitam entre si.
+var _gsBadgeState = null;
+
+// Mesmo esquema de cache por camada de _gnLastCheckedLayerKey (ver acima) - evita bater de
+// novo em get_active_layer_publish_info (banco, e potencialmente rede via
+// _load_layer_metadata) toda vez que o usuário só troca de painel e volta.
+var _gsLastCheckedLayerKey = null;
+var _gsLastCheckedAt = 0;
+var _gsLastBadgeState = null;
+var _gsLastBadgePublished = false; // idem _gsSyncIsPublished (geoserver.js) - só afeta o tooltip do estado _synced, ver _gsPublishTooltip
+
+// Mesmo vocabulário tier-qualificado de _GS_SYNC_LABELS (geoserver.js) - o nível (sys_/
+// db_) reflete só se há sessão ativa (_isLogged) no momento da checagem, já que
+// get_active_layer_publish_info lê o banco (geoserver_publish_xml) independente de login.
+// "Sincronizado" cobre publicado-de-verdade ou só salvo via "Continuar Depois" - mesmo
+// rótulo pros dois (ver _gsPublishTooltip, geoserver.js), a diferença fica só no tooltip.
+var _GS_STATUS_LABELS = {
+    db_not_found: 'GeoServer: Não Encontrado (DB)',
+    sys_not_found: 'GeoServer: Não Encontrado (Geohab)',
+    db_synced: 'GeoServer: Sincronizado (DB)',
+    sys_synced: 'GeoServer: Publicado'
+};
+
+var _GS_STATUS_TOOLTIPS = {
+    db_not_found: 'Essa camada ainda não foi publicada nem salva no GeoServer (verificado sem login no Geohab).',
+    sys_not_found: 'Essa camada ainda não foi publicada nem salva no GeoServer. Use "Serviços > Configurar Camada" pra começar.'
+    // db_synced/sys_synced não têm entrada fixa aqui - ver _gsStatusTooltip logo abaixo.
+};
+
+// Tooltip do estado GS pro estado atual - _synced é calculado na hora via
+// _gsPublishTooltip (geoserver.js, mesma função usada pelo badge do painel GS) porque o
+// texto muda conforme foi publicado de verdade ou só salvo no banco
+// (_gsLastBadgePublished); os demais estados usam a entrada fixa de _GS_STATUS_TOOLTIPS.
+function _gsStatusTooltip(state) {
+    if (state === 'sys_synced' || state === 'db_synced') {
+        return _gsPublishTooltip(state.split('_')[0], _gsLastBadgePublished);
+    }
+    return _GS_STATUS_TOOLTIPS[state] || '';
+}
+
+function checkGsPublishStatus() {
+    if (!document.getElementById('f-title')) return; // editor não está aberto
+
+    // Mesma lógica de cache de checkGnSync (acima) - se já verificamos essa camada
+    // recentemente, reaplica na hora em vez de bater no banco/GeoNetwork de novo.
+    if (_gsLastCheckedLayerKey === _activeLayerName &&
+        (Date.now() - _gsLastCheckedAt) < _GN_RECHECK_STALE_MS) {
+        _gsBadgeState = _gsLastBadgeState;
+        _refreshGnBadgeLabel();
+        return;
+    }
+
+    _gsBadgeState = null;
+    if (typeof gsBridge === 'undefined') { _refreshGnBadgeLabel(); return; }
+    gsBridge.get_active_layer_publish_info('', function (info) {
+        if (!document.getElementById('f-title')) return; // painel já trocou
+        var tierPrefix = _isLogged ? 'sys' : 'db';
+        _gsLastBadgePublished = !!(info && info.saved_published);
+        if (!info || !info.publishable) { _gsBadgeState = null; } // não é camada PostGIS - GS não se aplica
+        else if (!info.saved_workspace) { _gsBadgeState = tierPrefix + '_not_found'; }
+        else { _gsBadgeState = tierPrefix + '_synced'; }
+        _gsLastCheckedLayerKey = _activeLayerName;
+        _gsLastCheckedAt = Date.now();
+        _gsLastBadgeState = _gsBadgeState;
+        _refreshGnBadgeLabel();
+    });
+}
+
+// Chamado por updateUserUI (app.js) quando o login muda de verdade (login OU logout) - o
+// NÍVEL (sys_/db_) de qualquer badge já calculado depende de _isLogged, então invalida os
+// caches de "já verificado recentemente" (_gnLastCheckedLayerKey/_gsLastCheckedLayerKey,
+// ver checkGnSync/checkGsPublishStatus) e força uma checagem nova na hora, se o editor
+// estiver aberto - sem isso, o usuário loga mas o badge só reflete o Geohab depois de
+// sair e voltar (revisitar) pro painel. Coordena os dois lados (GN aqui + GS, ver
+// _onGsAuthStateChangedForSync em geoserver.js).
+function _onAuthStateChangedForSync() {
+    _gnLastCheckedLayerKey = null;
+    _gsLastCheckedLayerKey = null;
+    if (document.getElementById('f-title')) {
+        var data = collectFormData();
+        checkGnSync(_gnSyncUuid, (data && data.dateStamp) || '');
+        checkGsPublishStatus();
+    }
+    if (typeof _onGsAuthStateChangedForSync === 'function') _onGsAuthStateChangedForSync();
 }
 
 function dismissGnUpdateBanner() {

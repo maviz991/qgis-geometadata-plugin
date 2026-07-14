@@ -190,16 +190,29 @@ class GeoMetadata:
 
     def run(self):
         """Run method that performs all the real work"""
-        # Create the dialog (after translation) and keep reference
-        self.dlg = GeoMetadataDialog(iface=self.iface, 
-                                     plugin_instance=self, 
-                                     parent=self.iface.mainWindow())       
-        # show the dialog
-        self.dlg.show()
-        # Run the dialog event loop
-        result = self.dlg.exec_()
-        # See if OK was pressed
-        if result:
-            # Do something useful here - delete the line containing pass and
-            # substitute with your code.
-            pass
+        # _setup_in_progress evita abrir uma SEGUNDA instância do diálogo - a flag já
+        # existia (ver initGui, "Flag para evitar diálogos duplos") mas nunca era checada
+        # aqui. Sem essa guarda, um duplo-clique no ícone da toolbar (ou um clique que
+        # chega durante a janela entre show() e exec_()) reentra em run() e cria um
+        # SEGUNDO GeoMetadataDialog, com dois QDialog.exec_() aninhados antes do primeiro
+        # bloquear de verdade a aplicação - reentrância que já causou crash nativo (access
+        # violation) num diálogo baseado em QtWebEngine (stack trace com
+        # QToolButton::mouseReleaseEvent duplicado + QDialog::exec_() aninhado).
+        if self._setup_in_progress:
+            return
+        self._setup_in_progress = True
+        try:
+            # Create the dialog (after translation) and keep reference
+            self.dlg = GeoMetadataDialog(iface=self.iface,
+                                         plugin_instance=self,
+                                         parent=self.iface.mainWindow())
+            # Run the dialog event loop - exec_() já mostra o diálogo, um show() explícito
+            # antes só alargava a janela de corrida descrita acima sem necessidade.
+            result = self.dlg.exec_()
+            # See if OK was pressed
+            if result:
+                # Do something useful here - delete the line containing pass and
+                # substitute with your code.
+                pass
+        finally:
+            self._setup_in_progress = False

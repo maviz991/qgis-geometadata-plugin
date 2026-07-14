@@ -535,7 +535,7 @@ Ver `docs_projeto/bugs.md` (registro "conexão", 07/07/2026) para os tracebacks 
 ### Bugs Corrigidos
 
 1. **Crash ao mostrar erro de salvamento no DB.** `core/persistence_service.py:_show_message` usava `QtWidgets.QMessageBox.RichText`, que não existe (é `Qt.TextFormat`, não `QMessageBox`) - o `AttributeError` mascarava o erro real (`psycopg2.errors.UndefinedTable`, tabela `public.qgis_geometadata_plugin` ausente no banco de destino). Corrigido para `QtCore.Qt.RichText`. Adicionado `except psycopg2.errors.UndefinedTable` específico que orienta o usuário a abrir ticket no CDA solicitando a criação da tabela, em vez de mostrar o erro cru.
-2. **Sessão da API congelada no `MetadataService`.** `self.metadata_service = MetadataService(self.plugin.api_session)` capturava o valor da sessão na construção do diálogo (`GeoMetadata_dialog.py:270`), sempre antes do login acontecer. Login via SSO/admin (`ui/main_bridge.py`) atualiza `self.plugin.api_session`, mas o `MetadataService` nunca via essa atualização - resultando em "Sessão da API não foi inicializada" mesmo logado. Fix: `MetadataService` agora guarda referência ao `plugin` e lê `self.plugin.api_session` em tempo real dentro de `push_to_geonetwork`.
+2. **Sessão da API congelada no `MetadataService`.** `self.metadata_service = MetadataService(self.plugin.api_session)` capturava o valor da sessão na construção do diálogo (`GeoMetadata_dialog.py:270`), sempre antes do login acontecer. Login via SSO/admin (`ui/main_bridge.py`) atualiza `self.plugin.api_session`, mas o `MetadataService` nunca via essa atualização - resultando em "Sessão não foi inicializada" mesmo logado. Fix: `MetadataService` agora guarda referência ao `plugin` e lê `self.plugin.api_session` em tempo real dentro de `push_to_geonetwork`.
 3. **400 Bad Request ao republicar metadado com UUID já existente no GN.** Após o fix do item 2, publicar um metadado cujo `fileIdentifier` já existia no GN (ex.: importado manualmente durante o período em que o login estava quebrado) retornava 400, pois `PUT /srv/api/records` sem `uuidProcessing` usa o default `NOTHING` (rejeita duplicado). Fix: adicionado `uuidProcessing=OVERWRITE` na chamada. Também foi ligado o `translate_http_error` (existia em `metadata_service.py` mas nunca era chamado) ao tratamento de erro, para que um 400 residual de UUID duplicado apareça como mensagem amigável em vez do erro HTTP cru.
 
 ### Em aberto
@@ -764,12 +764,10 @@ Sequência de ajustes pequenos, todos no fluxo de busca do GN que puxa metadado 
 **Pergunta respondida no processo**: publicar no Geohab sempre atualiza a cópia local também (silenciosamente, via `save_metadata(is_automatic_resave=True)` dentro de `exportar_to_geo()`) - no banco se a camada ativa for Postgres/PostGIS, ou em arquivo sidecar `.xml` se for baseada em arquivo. Não é uma escolha do usuário, é automático conforme o tipo da camada.
 
 # Registro 17 - 13/07/2026
-**Planejamento do GS gerou novas issues**
-
-Fora de escopo
-RF03 (upload de arquivo/shapefile) — cortado por decisão de negócio, não só adiado: publicação só é aceita a partir de dado já no banco PostgreSQL. Um módulo futuro separado pode existir para levar camadas locais ao banco (aproveitando o DB Manager do QGIS), mas isso não faz parte deste plano.
-RF05/RF06 (SLD) — Fase 3 de requisitos_v2.md.
-RF07/RF08 (edição de XML externo) — Fase 4.
-RNF02 "barra de progresso" — como não há mais upload de arquivo, a única operação de rede é o POST featuretypes (rápido); o indicador indeterminado (_showActionLoading) já cobre bem esse caso, sem necessidade de progresso percentual.
-RNF04 (verify=False → certificado corporativo) — Fase 5, item de housekeeping separado.
-Verificação automática de que o datastore PostGIS escolhido realmente aponta pro mesmo banco/schema da camada QGIS — fica como limitação conhecida documentada no toast de erro caso o registro falhe (a REST API do GeoServer retorna 500/details nesse caso, cai no translate_gs_error genérico); não implemento verificação prévia comparando GET /datastores/{ds}.json com a URI da camada porque não é requisito explícito e adicionaria uma chamada REST extra por seleção de datastore.
+**Planejamento do GS gerou novas issues**: Fora de escopo:
+* RF03 (upload de arquivo/shapefile) — cortado por decisão de negócio, não só adiado: publicação só é aceita a partir de dado já no banco PostgreSQL. Um módulo futuro separado pode existir para levar camadas locais ao banco (aproveitando o DB Manager do QGIS), mas isso não faz parte deste plano.
+* RF05/RF06 (SLD) — Fase 3 de requisitos_v2.md.
+* RF07/RF08 (edição de XML externo) — Fase 4.
+* RNF02 "barra de progresso" — como não há mais upload de arquivo, a única operação de rede é o POST featuretypes (rápido); o indicador indeterminado (_showActionLoading) já cobre bem esse caso, sem necessidade de progresso percentual.
+* RNF04 (verify=False → certificado corporativo) — Fase 5, item de housekeeping separado.
+* Verificação automática de que o datastore PostGIS escolhido realmente aponta pro mesmo banco/schema da camada QGIS — fica como limitação conhecida documentada no toast de erro caso o registro falhe (a REST API do GeoServer retorna 500/details nesse caso, cai no translate_gs_error genérico); não implemento verificação prévia comparando GET /datastores/{ds}.json com a URI da camada porque não é requisito explícito e adicionaria uma chamada REST extra por seleção de datastore.

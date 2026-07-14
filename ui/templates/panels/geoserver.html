@@ -5,6 +5,18 @@
         <button class="tab-link active" onclick="showTab('gs-destino', this)">Destino</button>
         <button class="tab-link" onclick="showTab('gs-identificacao', this)">Identificação</button>
         <button class="tab-link" onclick="showTab('gs-estilos', this)">Estilos</button>
+
+        <div class="tabs-status-group">
+            <div id="gs-sync-badge" class="gn-sync-badge" style="display:none" onclick="onGsSyncBadgeClick()">
+                <span class="gn-sync-dot"></span>
+                <span class="gn-sync-label" id="gs-sync-label"></span>
+            </div>
+            <div class="progress-wrapper" data-title="Progresso de preenchimento dos campos obrigatórios (Workspace/Datastore/Nome)">
+                <div class="circular-progress" id="gs-progress-spinner" style="--progress: 0;">
+                    <span class="progress-value" id="gs-progress-text">0%</span>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- ══ ABA 1: DESTINO ══════════════════════════════ -->

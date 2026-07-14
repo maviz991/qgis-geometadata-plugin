@@ -1,4 +1,5 @@
 import json
+import time
 import requests
 import traceback
 from qgis.PyQt import QtWidgets
@@ -7,8 +8,11 @@ class GeoNetworkService:
     """
     Serviço que abstrai a comunicação com o GeoNetwork (API REST).
     """
+    _FETCH_CACHE_TTL = 5  # segundos - ver fetch_from_geonetwork
+
     def __init__(self, plugin):
         self.plugin = plugin
+        self._fetch_cache = {}  # uuid -> (timestamp, result)
 
     def push_to_geonetwork(self, xml_payload, config_loader_instance, uuid_processing='NOTHING'):
         """
@@ -19,7 +23,7 @@ class GeoNetworkService:
         """
         api_session = self.plugin.api_session
         if not api_session:
-            raise Exception("Sessão da API não foi inicializada. Faça login primeiro.")
+            raise Exception("Sessão não foi inicializada. Faça login primeiro.")
 
         gn_urls = config_loader_instance.get_geonetwork_url()
         geonetwork_api_url = gn_urls.get('records_url')
@@ -79,7 +83,19 @@ class GeoNetworkService:
         pra dict (mesmo formato usado por load_layer_metadata/import_xml_file).
         Retorna None se o registro não existir. Funciona sem login pra registros públicos
         (sessão anônima) - GN só rejeita (401/403) se o registro exigir autenticação.
+
+        Cacheia o resultado por alguns segundos (_FETCH_CACHE_TTL) - não é um cache de
+        dados "de verdade" (o registro pode mudar no Geohab a qualquer momento), só o
+        suficiente pra cobrir chamadas que pedem o MESMO uuid quase ao mesmo tempo: abrir o
+        editor de metadados dispara tanto check_gn_sync (GeoNetworkBridge) quanto
+        GeoServerBridge._load_layer_metadata, e as duas buscam esse registro de forma
+        independente - sem esse cache, cada abertura do painel batia duas vezes no Geohab
+        (rede síncrona na UI thread), sendo a segunda chamada sempre redundante.
         """
+        cached = self._fetch_cache.get(uuid)
+        if cached and (time.time() - cached[0]) < self._FETCH_CACHE_TTL:
+            return cached[1]
+
         api_session = self.plugin.api_session or requests.Session()
 
         records_url = config_loader_instance.get_geonetwork_url().get('records_url')
@@ -92,11 +108,14 @@ class GeoNetworkService:
             verify=False
         )
         if response.status_code == 404:
+            self._fetch_cache[uuid] = (time.time(), None)
             return None
         response.raise_for_status()
 
         from .xml_parser import parse_xml_to_dict
-        return parse_xml_to_dict(response.text, is_string=True)
+        result = parse_xml_to_dict(response.text, is_string=True)
+        self._fetch_cache[uuid] = (time.time(), result)
+        return result
 
     def translate_http_error(self, error_text):
         """Traduz mensagens comuns do GeoNetwork"""
