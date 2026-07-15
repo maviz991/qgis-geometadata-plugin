@@ -635,26 +635,28 @@ class GeoServerService:
     def translate_gs_error(status_code, text):
         """Traduz erros comuns da REST API do GeoServer (RN02)."""
         lower_text = (text or '').lower()
+        if status_code == 401 or 'unauthorized' in lower_text:
+            return '[GS-401] Falha de Autenticação — o plugin não conseguiu autenticar ou não tem acesso para realizar esta operação no GeoServer (Erro 401 Unauthorized).'
         if status_code == 403:
-            return 'Acesso Negado — você não possui permissão de escrita neste Workspace.'
+            return '[GS-403] Acesso Negado — você não possui permissão de escrita neste Workspace.'
         if status_code == 404:
-            return 'Workspace ou Datastore não encontrado.'
+            return '[GS-404] Workspace ou Datastore não encontrado.'
         if 'already exists' in lower_text and 'style' in lower_text:
-            return 'Já existe um estilo com esse nome neste workspace.'
+            return '[GS-409] Já existe um estilo com esse nome neste workspace.'
         if 'already exists' in lower_text:
-            return 'Já existe uma camada com esse nome neste datastore.'
+            return '[GS-409] Já existe uma camada com esse nome neste datastore.'
         if 'unable to parse' in lower_text or 'invalid style' in lower_text or 'error persisting' in lower_text:
             return (
-                'O GeoServer não conseguiu interpretar o SLD enviado. Se o estilo foi gerado '
+                '[GS-422] O GeoServer não conseguiu interpretar o SLD enviado. Se o estilo foi gerado '
                 'do QGIS, a simbologia da camada pode não ter equivalente SLD - simplifique o '
                 'estilo no QGIS ou use um arquivo .sld válido.'
             )
         if 'no attributes were specified' in lower_text:
             return (
-                'O GeoServer não encontrou colunas para esta tabela no datastore selecionado. '
+                '[GS-422] O GeoServer não encontrou colunas para esta tabela no datastore selecionado. '
                 'Causas mais comuns: (1) o Schema configurado nas Connection Parameters do '
                 'datastore no GeoServer é diferente do schema onde a tabela vive no banco '
                 '(veja o "schema.table" mostrado no card da camada), ou (2) a tabela não tem '
                 'chave primária (obrigatória para publicação).'
             )
-        return (text or f'Erro inesperado do GeoServer (status {status_code}).')[:400]
+        return f'[GS-{status_code or "000"}] {(text or "Erro inesperado do GeoServer.")[:400]}'

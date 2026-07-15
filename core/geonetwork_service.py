@@ -121,15 +121,15 @@ class GeoNetworkService:
         """Traduz mensagens comuns do GeoNetwork"""
         lower_error = error_text.lower()
         translations = {
-            "authentication failed": "Falha na autenticação.",
-            "unauthorized": "Acesso não autorizado.",
-            "forbidden": "Você não tem privilégios de revisor.",
-            "invalid credentials": "Credenciais inválidas.",
-            "validation failed": "Falha na validação do servidor.",
-            "already exist": "Já existe um metadado com este UUID no catálogo. Ao publicar novamente, escolha \"Sobrescrever\" ou \"Gerar UUID\" na tela de confirmação.",
-            "nullpointerexception": "Erro interno do servidor.",
+            "authentication failed": "[GN-401] Falha na autenticação.",
+            "unauthorized": "[GN-401] Acesso não autorizado.",
+            "forbidden": "[GN-403] Você não tem privilégios de revisor.",
+            "invalid credentials": "[GN-401] Credenciais inválidas.",
+            "validation failed": "[GN-422] Falha na validação do servidor.",
+            "already exist": "[GN-409] Já existe um metadado com este UUID no catálogo. Ao publicar novamente, escolha \"Sobrescrever\" ou \"Gerar UUID\" na tela de confirmação.",
+            "nullpointerexception": "[GN-500] Erro interno do servidor.",
         }
         for key, translation in translations.items():
             if key in lower_error:
                 return translation
-        return error_text[:400]
+        return f"[GN-000] {error_text[:400]}"

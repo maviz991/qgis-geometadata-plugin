@@ -771,3 +771,34 @@ Sequência de ajustes pequenos, todos no fluxo de busca do GN que puxa metadado 
 * RNF02 "barra de progresso" — como não há mais upload de arquivo, a única operação de rede é o POST featuretypes (rápido); o indicador indeterminado (_showActionLoading) já cobre bem esse caso, sem necessidade de progresso percentual.
 * RNF04 (verify=False → certificado corporativo) — Fase 5, item de housekeeping separado.
 * Verificação automática de que o datastore PostGIS escolhido realmente aponta pro mesmo banco/schema da camada QGIS — fica como limitação conhecida documentada no toast de erro caso o registro falhe (a REST API do GeoServer retorna 500/details nesse caso, cai no translate_gs_error genérico); não implemento verificação prévia comparando GET /datastores/{ds}.json com a URI da camada porque não é requisito explícito e adicionaria uma chamada REST extra por seleção de datastore.
+
+## Registro 18 - Implementação de Estilos Adicionais no GeoServer e Correção de Bugs REST API (15/07/2026)
+
+### Contexto
+O usuário solicitou que fosse implementada a funcionalidade para incluir Estilos Adicionais (além do estilo padrão) nas camadas publicadas via painel GeoServer do plugin, através de arquivos `.sld` locais ou estilos já existentes no próprio GS. 
+
+### O que foi feito
+1. **Integração na UI HTML (`geoserver.html` / `geoserver.js`)**: 
+   - Adicionada a seção "Estilos Adicionais" abaixo da configuração do Estilo Principal, com o uso de "chips" visuais que permitem criar/adicionar uma lista ilimitada de estilos.
+   - O array de estilos extras é empacotado durante `tryPublishGeoServerLayer()` e repassado pro Python dentro de `style_task`.
+2. **Checagem de Divergências ao vivo (Sync Badge)**: 
+   - O trabalhador `_GsSyncCheckWorker` no Python foi modificado para fazer um `GET /rest/layers/{ws}:{nome}.json` com o intuito de cruzar a lista de estilos adicionais da interface atual contra os estilos que o GeoServer confirma possuir na sua base.
+3. **Persistência de Metadados**: 
+   - Ao publicar ou salvar, o payload completo dos estilos adicionais (em formato JSON) agora é gravado na coluna `style_additional_json` da tabela auxiliar `geoserver_publish_xml`, permitindo o restauro transparente do estado ao fechar e abrir o QGIS.
+
+### Bugs Complexos Descobertos e Resolvidos
+Durante o processo de testes, o usuário percebeu dois problemas graves ("o add não sobe" e "KeyError: name") que apontaram falhas conceituais no código original de publicação e na tratativa da API REST. 
+
+**Bug 1: O "array solto no JSON" ignorado pelo GeoServer**
+* **Sintoma:** Os estilos adicionais selecionados não refletiam na camada publicada do GeoServer, apesar de não haver erro HTTP.
+* **Causa:** O payload usado no comando `PUT` estava gerando listas de 1 elemento quando só existia um estilo adicional: `{"styles": {"style": [{"name": "teste"}]}}`. O marshaller (XStream / JSON-lib) do GeoServer ignora silenciosamente o payload nesses casos.
+* **Solução:** Em `geoserver_service.py` (`apply_style`), adicionada a regra de fallback: `style_list if len(style_list) > 1 else style_list[0]`, envelopando listas unitárias em objetos isolados.
+
+**Bug 2: Atualizar Estilo estourando "KeyError: 'name'"**
+* **Sintoma:** Ao clicar na ação rápida "Atualizar Estilo", o plugin estilhaçava um traceback Python (`KeyError`).
+* **Causa:** A adaptação da estrutura `style_task` da interface separou as informações entre `default` e `additional`, mas o slot `_on_style_updated` (`geoserver_bridge.py`) continuava tentando acessar `style_task['name']` sem chave pai.
+* **Solução:** O método `_on_style_updated` foi refatorado para seguir o mesmo modelo do `_on_publish_done`, desmembrando corretamente o dict principal da lista de arrays para gravar os arquivos no banco local.
+
+**Bug 3: Badge com erro via AttributeError**
+* **Causa:** O `fetch_layer_styles` retornava uma lista de strings (`"ws:nome"`) em vez de um dicionário na variável `additional`, o que entrava em conflito com o `r_adds.get('name')` feito dentro do worker de sincronização.
+* **Solução:** Adequado o retorno do `fetch_layer_styles` para devolver `{'name': '...', 'style_workspace': '...'}` como exigido.

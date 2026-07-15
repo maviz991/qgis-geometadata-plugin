@@ -207,7 +207,11 @@ function _saveGsDraftNow() {
         style_file: _gsStyleFilePath,
         style_file_name: (_gsStyleFilePath && styleFileLabel) ? styleFileLabel.textContent : '',
         style_existing_name: styleExSep >= 0 ? styleExVal.slice(styleExSep + 1) : styleExVal,
-        style_existing_workspace: styleExSep >= 0 ? styleExVal.slice(0, styleExSep) : ''
+        style_existing_workspace: styleExSep >= 0 ? styleExVal.slice(0, styleExSep) : '',
+        // Estilos adicionais (chips) - sem isso, quem só adiciona um estilo adicional e
+        // navega pra outro painel (ou fecha o QGIS) antes de publicar/"Continuar Depois"
+        // perdia a lista inteira: _loadGsDraft não tinha de onde restaurá-la.
+        style_additional: _gsAdditionalStyles.slice()
     };
     // Estilo não entra em hasContent de propósito: a fonte default ('qgis') existe em
     // qualquer formulário recém-aberto - contaria como "conteúdo" e salvaria rascunho
@@ -262,6 +266,12 @@ function _loadGsDraft(callback) {
                     var fileLabel = document.getElementById('gs-style-file-label');
                     if (fileLabel && draft.style_file_name) fileLabel.textContent = draft.style_file_name;
                 }
+            }
+            // Estilos adicionais do rascunho - só entra se nada já veio do banco (mesmo
+            // "if vazio" usado pras palavras-chave logo acima).
+            if (!_gsAdditionalStyles.length && draft.style_additional && draft.style_additional.length) {
+                _gsAdditionalStyles = draft.style_additional.slice();
+                _renderGsAdditionalStyles();
             }
             // O rascunho pode ter preenchido campos que o banco deixou vazios (camada
             // nunca salva de verdade) - reavalia o badge (_gsSyncSnapshot já é o estado

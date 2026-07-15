@@ -335,7 +335,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             with open(contacts_path, 'r', encoding='utf-8') as f:
                 self.contatos_predefinidos = json.load(f)
         except Exception as e:
-            self.show_toast("Aviso", f"Erro ao carregar contatos: {e}", 'warning')
+            self.show_toast("Aviso", f"[SYS-002] Erro ao carregar contatos: {e}", 'warning')
 
     # --- Métodos de Construção e Configuração da UI (Estrutura) ---
     def _setup_main_window(self):
@@ -728,7 +728,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         """Gera o XML e permite salvar no disco manual."""
         if metadata_dict is None:
             if not hasattr(self, 'form_manager') or not self.form_manager:
-                self.show_toast('Atenção', 'Preencha o formulário em "Catálogo Geohab > Editar Metadados" antes de exportar.', 'warning')
+                self.show_toast('Atenção', '[UI-005] Preencha o formulário em "Catálogo Geohab > Editar Metadados" antes de exportar.', 'warning')
                 return
             if not self.form_manager.validate_form(): return
             metadata_dict = self.form_manager.collect_data()
@@ -754,7 +754,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
                     'success'
                 )
         except Exception as e:
-            self.show_toast('Erro', f'Falha ao exportar XML: {e}', 'error')
+            self.show_toast('Erro', f'[SYS-003] Falha ao exportar XML: {e}', 'error')
 
     def exportar_to_geo(self, metadata_dict=None):
         """Exporta para o GeoNetwork usando o GeoNetworkService. A escolha de processamento
@@ -762,13 +762,13 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         e chega aqui em metadata_dict['uuidProcessing']."""
         if metadata_dict is None:
             if not hasattr(self, 'form_manager') or not self.form_manager:
-                self.show_toast('Atenção', 'Preencha o formulário em "Catálogo Geohab > Editar Metadados" antes de publicar.', 'warning')
+                self.show_toast('Atenção', '[UI-006] Preencha o formulário em "Catálogo Geohab > Editar Metadados" antes de publicar.', 'warning')
                 return
             if not self.form_manager.validate_form(): return
             metadata_dict = self.form_manager.collect_data()
 
         if not self.plugin.api_session:
-            self.show_toast('Não Autenticado', 'Conecte ao Geohab primeiro.', 'warning')
+            self.show_toast('Não Autenticado', '[UI-007] Conecte ao Geohab primeiro.', 'warning')
             return
 
         metadata_dict = self._normalize_dates(metadata_dict)
@@ -779,7 +779,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             cdhu_data = self.contatos_predefinidos.get('cdhu', {})
             xml_payload = xml_generator.generate_xml(metadata_dict, cdhu_data)
         except Exception as e:
-            self.show_toast('Erro', f'Falha ao gerar XML: {e}', 'error')
+            self.show_toast('Erro', f'[SYS-004] Falha ao gerar XML: {e}', 'error')
             return
 
         # As duas chamadas de rede (publicar + buscar dateStamp de volta) rodam numa

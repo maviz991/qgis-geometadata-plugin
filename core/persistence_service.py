@@ -29,7 +29,7 @@ class PersistenceService:
         """
         if not layer:
             if not is_automatic_resave and parent_widget:
-                self._show_message("Nenhuma Camada Ativa", "Por favor, selecione uma camada no painel de camadas.", parent_widget, msg_type='warning')
+                self._show_message("Nenhuma Camada Ativa", "[UI-008] Por favor, selecione uma camada no painel de camadas.", parent_widget, msg_type='warning')
             return False
 
         if self._is_postgres_layer(layer):
@@ -110,12 +110,12 @@ class PersistenceService:
     def _save_to_db(self, layer, metadata_dict, cdhu_data, is_automatic_resave=False, parent_widget=None):
         if not self._check_auth_system(parent_widget): return False
         if not psycopg2:
-            self._show_message("Erro de Dependência", "A biblioteca psycopg2 não foi encontrada.", parent_widget, msg_type='error')
+            self._show_message("Erro de Dependência", "[SYS-005] A biblioteca psycopg2 não foi encontrada.", parent_widget, msg_type='error')
             return False
 
         conn_details = self._get_postgres_connection_details(layer)
         if not conn_details.get('f_table_name'):
-            self._show_message("Erro", "Não foi possível identificar a tabela da camada.", parent_widget, msg_type='warning')
+            self._show_message("Erro", "[UI-009] Não foi possível identificar a tabela da camada.", parent_widget, msg_type='warning')
             return False
             
         # A confirmação agora é feita pela interface HTML/JS antes de chamar este método.
@@ -133,7 +133,7 @@ class PersistenceService:
                     db_user = config.configMap().get('username')
                     db_password = config.configMap().get('password')
                 else:
-                    self._show_message("Erro de Auth", f"Não foi possível carregar config '{auth_cfg_id}'.", parent_widget, msg_type='error')
+                    self._show_message("Erro de Auth", f"[DB-001] Não foi possível carregar config '{auth_cfg_id}'.", parent_widget, msg_type='error')
                     return False
                                 
             xml_content = xml_generator.generate_xml(metadata_dict, cdhu_data)
@@ -176,7 +176,7 @@ class PersistenceService:
             return False
         except Exception as e:
             traceback.print_exc()
-            self._show_message("Erro DB", f"Não foi possível salvar:<br><br>{e}", parent_widget, msg_type='error')
+            self._show_message("Erro DB", f"[DB-002] Não foi possível salvar:<br><br>{e}", parent_widget, msg_type='error')
             return False
 
     def _save_to_sidecar_file(self, layer, metadata_dict, cdhu_data, is_automatic_resave=False, parent_widget=None):
@@ -184,7 +184,7 @@ class PersistenceService:
         if not metadata_path:
             if not is_automatic_resave:
                 layer_name = layer.name() if layer else "A camada"
-                self._show_message("Impossível salvar local", f"<p>A camada {layer_name} não está salva num arquivo.</p>", parent_widget, msg_type='warning')
+                self._show_message("Impossível salvar local", f"<p>[UI-010] A camada {layer_name} não está salva num arquivo.</p>", parent_widget, msg_type='warning')
             return False
 
         if not is_automatic_resave and parent_widget:
@@ -204,7 +204,7 @@ class PersistenceService:
             return True
         except Exception as e:
             traceback.print_exc()
-            self._show_message("Erro IO", f"Falha ao escrever XML:<br>{e}", parent_widget, msg_type='error')
+            self._show_message("Erro IO", f"[DB-003] Falha ao escrever XML:<br>{e}", parent_widget, msg_type='error')
             return False
 
     def _load_from_db(self, layer):

@@ -215,39 +215,51 @@ class _GsSyncCheckWorker(QThread):
                 remote_kw == local_kw
             )
             base.update(remote)
-            
-            # Checagem de estilos ao vivo
-            remote_styles = self._service.fetch_layer_styles(
-                self._workspace, self._published_name, self._config
-            )
+
+            # Checagem de estilos ao vivo - isolada em try/except próprio: uma falha aqui
+            # (timeout, layer ainda não exposta como resource /rest/layers logo após
+            # publicar, etc.) não pode derrubar a checagem inteira pra 'error' e descartar
+            # o resultado (já calculado acima) do match de título/resumo/palavras-chave.
+            remote_styles = None
+            try:
+                remote_styles = self._service.fetch_layer_styles(
+                    self._workspace, self._published_name, self._config
+                )
+            except Exception as style_exc:
+                print(f"GeoMetadata [_GsSyncCheckWorker] fetch_layer_styles: {style_exc}")
+
             styles_match = True
-            if remote_styles:
+            if remote_styles is not None:
                 base['remote_default_style'] = remote_styles.get('default_style')
                 base['remote_default_style_workspace'] = remote_styles.get('default_style_workspace')
                 base['remote_additional_styles'] = remote_styles.get('additional') or []
-            
-            if self._style_cfg:
-                from .geoserver_bridge import GeoServerBridge
-                d_src, d_nm, d_ws, adds_json = GeoServerBridge.derive_style_fields(self._style_cfg, self._workspace)
-                if d_src:
-                    r_def = remote_styles.get('default_style') or '' if remote_styles else ''
-                    if r_def != d_nm:
-                        styles_match = False
-                    
-                    if styles_match:
-                        import json
-                        adds = json.loads(adds_json) if adds_json else []
-                        r_adds = remote_styles.get('additional') or [] if remote_styles else []
-                        r_adds_list = [(a.get('name') or '', a.get('style_workspace') or '') for a in r_adds]
-                        local_adds_list = [(a.get('existing_name') or a.get('name') or '', a.get('existing_workspace') or self._workspace) for a in adds]
-                        
-                        if len(r_adds_list) != len(local_adds_list):
+
+                # Só compara quando conseguimos buscar o estado remoto de verdade - sem
+                # isso (fetch falhou ou a camada não existe como 'layer' resource),
+                # styles_match fica True (mesmo comportamento de antes dessa feature
+                # existir) em vez de acusar divergência por uma checagem que não rodou.
+                if self._style_cfg:
+                    from .geoserver_bridge import GeoServerBridge
+                    d_src, d_nm, d_ws, adds_json = GeoServerBridge.derive_style_fields(self._style_cfg, self._workspace)
+                    if d_src:
+                        r_def = remote_styles.get('default_style') or ''
+                        if r_def != d_nm:
                             styles_match = False
-                        else:
-                            for la in local_adds_list:
-                                if la not in r_adds_list:
-                                    styles_match = False
-                                    break
+
+                        if styles_match:
+                            import json
+                            adds = json.loads(adds_json) if adds_json else []
+                            r_adds = remote_styles.get('additional') or []
+                            r_adds_list = [(a.get('name') or '', a.get('style_workspace') or '') for a in r_adds]
+                            local_adds_list = [(a.get('existing_name') or a.get('name') or '', a.get('existing_workspace') or self._workspace) for a in adds]
+
+                            if len(r_adds_list) != len(local_adds_list):
+                                styles_match = False
+                            else:
+                                for la in local_adds_list:
+                                    if la not in r_adds_list:
+                                        styles_match = False
+                                        break
 
             base['state'] = 'sys_synced' if (matches and styles_match) else 'sys_modified'
             self.done.emit(base)

@@ -55,7 +55,7 @@ class GeoServerBridge(QObject):
         Emite gs_rest_configured(True, username) em caso de sucesso, (False, mensagem) em
         caso de falha (credenciais inválidas ou servidor inacessível)."""
         if not user or not password:
-            self.gs_rest_configured.emit(False, 'Usuário e senha são obrigatórios.')
+            self.gs_rest_configured.emit(False, '[UI-001] Usuário e senha são obrigatórios.')
             return
         from ..core.plugin_config import config_loader
         from .web_bridge import _AdminWorker
@@ -513,7 +513,7 @@ class GeoServerBridge(QObject):
         import json
         geoserver_service = getattr(self._dialog, 'geoserver_service', None)
         if not geoserver_service or not workspace or not published_name:
-            self.gs_style_updated.emit(False, 'Destino de publicação incompleto (workspace/nome).')
+            self.gs_style_updated.emit(False, '[UI-002] Destino de publicação incompleto (workspace/nome).')
             return
         try:
             style_cfg = json.loads(style_json) if style_json else {}
@@ -525,7 +525,7 @@ class GeoServerBridge(QObject):
             self.gs_style_updated.emit(False, error)
             return
         if not style_task:
-            self.gs_style_updated.emit(False, 'Escolha um estilo na aba Estilos antes de atualizar.')
+            self.gs_style_updated.emit(False, '[UI-003] Escolha um estilo na aba Estilos antes de atualizar.')
             return
         from ..core.plugin_config import config_loader
         from .geoserver_workers import _GsApplyStyleWorker
@@ -581,16 +581,24 @@ class GeoServerBridge(QObject):
         'error', 'workspace':, 'datastore':, 'published_name':, [+ 'title'/'abstract'/
         'keywords' ao vivo quando encontrado]} - o JS usa workspace/datastore/
         published_name pra confirmar que a resposta ainda corresponde à checagem que ele
-        espera (ver _onGsSyncChecked, geoserver.js)."""
+        espera (ver _onGsSyncChecked, geoserver.js). `style_json` é a configuração da aba
+        Estilos (mesmo formato de _prepare_style_task/derive_style_fields) - repassada pro
+        worker pra ele comparar o estilo padrão/adicionais contra o que está de fato
+        aplicado na camada (fetch_layer_styles)."""
+        import json
         geoserver_service = getattr(self._dialog, 'geoserver_service', None)
         if not geoserver_service or not workspace or not datastore or not published_name:
             self.gs_sync_checked.emit({'state': 'error'})
             return
+        try:
+            style_cfg = json.loads(style_json) if style_json else {}
+        except ValueError:
+            style_cfg = {}
         from ..core.plugin_config import config_loader
         from .geoserver_workers import _GsSyncCheckWorker
         keywords = list(keywords) if keywords else []
         self._sync_check_worker = _GsSyncCheckWorker(
-            geoserver_service, workspace, datastore, published_name, title, abstract, keywords, config_loader
+            geoserver_service, workspace, datastore, published_name, title, abstract, keywords, config_loader, style_cfg
         )
         self._sync_check_worker.done.connect(self.gs_sync_checked.emit)
         self._sync_check_worker.start()
@@ -638,13 +646,13 @@ class GeoServerBridge(QObject):
         import json
         geoserver_service = getattr(self._dialog, 'geoserver_service', None)
         if not geoserver_service:
-            self.gs_publish_done.emit(False, 'Serviço GeoServer não inicializado.', published_name, '', '')
+            self.gs_publish_done.emit(False, '[SYS-001] Serviço GeoServer não inicializado.', published_name, '', '')
             return
 
         layer = self._active_layer()
         info = geoserver_service.get_active_layer_publish_info(layer)
         if not info.get('publishable'):
-            self.gs_publish_done.emit(False, info.get('reason') or 'Camada não publicável.', published_name, '', '')
+            self.gs_publish_done.emit(False, info.get('reason') or '[UI-004] Camada não publicável.', published_name, '', '')
             return
 
         keywords = list(keywords) if keywords else []
