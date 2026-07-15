@@ -435,7 +435,7 @@ class GeoServerService:
         for s in (entries or []):
             s_name, s_ws = self._split_style_ref(s.get('name'), s.get('workspace'))
             if s_name:
-                additional.append((s_ws + ':' + s_name) if s_ws else s_name)
+                additional.append({'name': s_name, 'style_workspace': s_ws})
         return {'default_style': d_name, 'default_style_workspace': d_ws, 'additional': additional}
 
     def apply_style(self, layer_workspace, published_name, style_task, config_loader_instance):
@@ -469,9 +469,9 @@ class GeoServerService:
         if default:
             layer_payload['defaultStyle'] = _style_ref(default)
         if additional:
+            style_list = [_style_ref(e) for e in additional]
             layer_payload['styles'] = {
-                '@class': 'linked-hash-set',
-                'style': [_style_ref(e) for e in additional],
+                'style': style_list if len(style_list) > 1 else style_list[0]
             }
         if not layer_payload:
             return
