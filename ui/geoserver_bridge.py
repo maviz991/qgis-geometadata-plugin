@@ -546,10 +546,21 @@ class GeoServerBridge(QObject):
             geoserver_service = getattr(self._dialog, 'geoserver_service', None)
             saved = geoserver_service.load_publish_destination(layer) if geoserver_service else None
             if saved and saved.get('workspace'):
+                adds = []
+                adds_entries = style_task.get('additional') or []
+                import json
+                adds = [{'source': 'existing' if e.get('mode') == 'existing' else 'create',
+                         'existing_name': e['name'], 'existing_workspace': e.get('style_workspace','')} 
+                        if e.get('mode') == 'existing' 
+                        else {'source': 'file', 'name': e['name']} 
+                        for e in adds_entries]
+                
+                def_task = style_task.get('default') or {}
                 geoserver_service.save_publish_destination(
                     layer, saved['workspace'], saved['datastore'], saved['published_name'],
                     saved['title'], saved['abstract'], saved['keywords'], saved['published'],
-                    style_source, style_task['name'], style_task.get('style_workspace') or ''
+                    style_source, def_task.get('name') or '', def_task.get('style_workspace') or '',
+                    style_additional_json=json.dumps(adds) if adds else ''
                 )
         self.gs_style_updated.emit(ok, error or '')
 
