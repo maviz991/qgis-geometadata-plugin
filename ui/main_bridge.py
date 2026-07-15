@@ -169,6 +169,9 @@ class MainBridge(QObject):
         """Encerra a sessão do usuário."""
         self._dialog.plugin.api_session = None
         self._dialog.plugin.auth_username = None
+        # Limpa também credenciais REST do GeoServer ao sair
+        self._dialog.plugin.gs_rest_session = None
+        self._dialog.plugin.gs_rest_username = None
         self._dialog.update_ui_for_login_status()
 
     @pyqtSlot()

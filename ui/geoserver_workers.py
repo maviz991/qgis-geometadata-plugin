@@ -182,7 +182,7 @@ class _GsSyncCheckWorker(QThread):
     esperava a resposta."""
     done = pyqtSignal('QVariant')  # {'state': 'sys_synced'|'sys_modified'|'sys_not_found'|'error', 'workspace':, 'datastore':, 'published_name':, [+ 'title'/'abstract'/'keywords' ao vivo quando encontrado]}
 
-    def __init__(self, geoserver_service, workspace, datastore, published_name, title, abstract, keywords, config_loader_instance):
+    def __init__(self, geoserver_service, workspace, datastore, published_name, title, abstract, keywords, config_loader_instance, style_cfg=None):
         super().__init__()
         self._service = geoserver_service
         self._workspace = workspace
@@ -192,6 +192,7 @@ class _GsSyncCheckWorker(QThread):
         self._abstract = abstract
         self._keywords = keywords
         self._config = config_loader_instance
+        self._style_cfg = style_cfg
 
     def run(self):
         # workspace/datastore/published_name sempre presentes no resultado - o JS usa isso
@@ -213,8 +214,42 @@ class _GsSyncCheckWorker(QThread):
                 (remote.get('abstract') or '').strip() == (self._abstract or '').strip() and
                 remote_kw == local_kw
             )
-            base['state'] = 'sys_synced' if matches else 'sys_modified'
             base.update(remote)
+            
+            # Checagem de estilos ao vivo
+            remote_styles = self._service.fetch_layer_styles(
+                self._workspace, self._published_name, self._config
+            )
+            styles_match = True
+            if remote_styles:
+                base['remote_default_style'] = remote_styles.get('default_style')
+                base['remote_default_style_workspace'] = remote_styles.get('default_style_workspace')
+                base['remote_additional_styles'] = remote_styles.get('additional') or []
+            
+            if self._style_cfg:
+                from .geoserver_bridge import GeoServerBridge
+                d_src, d_nm, d_ws, adds_json = GeoServerBridge.derive_style_fields(self._style_cfg, self._workspace)
+                if d_src:
+                    r_def = remote_styles.get('default_style') or '' if remote_styles else ''
+                    if r_def != d_nm:
+                        styles_match = False
+                    
+                    if styles_match:
+                        import json
+                        adds = json.loads(adds_json) if adds_json else []
+                        r_adds = remote_styles.get('additional') or [] if remote_styles else []
+                        r_adds_list = [(a.get('name') or '', a.get('style_workspace') or '') for a in r_adds]
+                        local_adds_list = [(a.get('existing_name') or a.get('name') or '', a.get('existing_workspace') or self._workspace) for a in adds]
+                        
+                        if len(r_adds_list) != len(local_adds_list):
+                            styles_match = False
+                        else:
+                            for la in local_adds_list:
+                                if la not in r_adds_list:
+                                    styles_match = False
+                                    break
+
+            base['state'] = 'sys_synced' if (matches and styles_match) else 'sys_modified'
             self.done.emit(base)
         except Exception as exc:
             print(f"GeoMetadata [_GsSyncCheckWorker]: {exc}")

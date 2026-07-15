@@ -411,9 +411,7 @@ var _GN_SYNC_TOOLTIPS = {
 // mexe neles (nada pra "divergir de", ver comentário na função).
 var _GN_MODIFIED_FOR = {
     sys_synced: 'sys_modified',
-    sys_not_found: 'sys_modified',
     db_synced: 'db_modified',
-    db_not_found: 'db_modified',
     offline_saved: 'offline_modified'
 };
 

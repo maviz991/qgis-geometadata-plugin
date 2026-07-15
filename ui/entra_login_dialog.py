@@ -40,8 +40,14 @@ class _AuthWorker(QThread):
             if success:
                 self.auth_success.emit(self._provider)
             else:
-                error = self._provider.get_error()
-                self.auth_failed.emit(error or "Autenticação cancelada ou falhou.")
+                err = self._provider.get_error() or "Autenticação cancelada ou falhou."
+                if 'AADSTS65001' in err or 'AADSTS70011' in err:
+                    err = (
+                        'Permissão negada pelo Azure AD.\n\n'
+                        'O TI precisa configurar a App Registration do GeoOrchestra '
+                        'para autorizar o app do plugin como cliente delegado.'
+                    )
+                self.auth_failed.emit(err)
         except Exception as e:
             self.auth_failed.emit(str(e))
 

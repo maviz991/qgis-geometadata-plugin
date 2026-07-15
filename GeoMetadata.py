@@ -52,6 +52,14 @@ class GeoMetadata:
 
         self.api_session = None
         self.auth_username = None   # Armazena o username independente do método de auth
+        # Sessão separada EXCLUSIVAMENTE para a API REST do GeoServer - necessária quando
+        # o usuário está logado via EntraID (SSO), mas o Security Proxy do GeoOrchestra
+        # não aceita o Bearer token do Azure AD nas chamadas REST (aud incorreto). Nesses
+        # casos, o usuário pode configurar credenciais admin separadas para o GeoServer
+        # (armazenadas no QGIS Auth Manager) - o SSO continua válido para o GeoNetwork.
+        # Se None, as chamadas REST usam api_session como fallback (admin local funciona).
+        self.gs_rest_session = None
+        self.gs_rest_username = None  # username das credenciais admin do GeoServer REST
 
         if os.path.exists(locale_path):
             self.translator = QTranslator()

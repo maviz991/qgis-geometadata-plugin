@@ -80,11 +80,24 @@ class GeoServerService:
     def __init__(self, plugin):
         self.plugin = plugin
 
+    def _get_rest_session(self):
+        """Retorna a sessão correta para chamadas REST do GeoServer:
+        - gs_rest_session (credenciais admin Basic Auth): usada quando o usuário SSO
+          não consegue autenticar via Bearer token no GeoServer REST (AADSTS650057).
+        - api_session: fallback quando gs_rest_session não está configurada (admin local
+          funciona direto com Basic Auth via api_session).
+        Se nenhuma estiver disponível, levanta Exception."""
+        gs = getattr(self.plugin, 'gs_rest_session', None)
+        if gs:
+            return gs
+        api = getattr(self.plugin, 'api_session', None)
+        if api:
+            return api
+        raise Exception("Sessão não foi inicializada. Faça login primeiro.")
+
     def list_workspaces(self, config_loader_instance):
         """RF01 - lista os workspaces disponíveis no GeoServer."""
-        api_session = self.plugin.api_session
-        if not api_session:
-            raise Exception("Sessão não foi inicializada. Faça login primeiro.")
+        api_session = self._get_rest_session()
 
         base_url = config_loader_instance.get_geoserver_url().rstrip('/')
         if not base_url:
@@ -103,9 +116,7 @@ class GeoServerService:
 
     def list_datastores(self, workspace, config_loader_instance):
         """RF01 - lista os datastores de um workspace do GeoServer."""
-        api_session = self.plugin.api_session
-        if not api_session:
-            raise Exception("Sessão não foi inicializada. Faça login primeiro.")
+        api_session = self._get_rest_session()
 
         base_url = config_loader_instance.get_geoserver_url().rstrip('/')
         if not base_url:
@@ -129,9 +140,7 @@ class GeoServerService:
         ativa do QGIS realmente existe nesse workspace/datastore - evita o 400 'no
         attributes were specified' que acontece quando o Schema configurado no datastore
         é diferente do schema onde a tabela vive de verdade no banco."""
-        api_session = self.plugin.api_session
-        if not api_session:
-            raise Exception("Sessão não foi inicializada. Faça login primeiro.")
+        api_session = self._get_rest_session()
 
         base_url = config_loader_instance.get_geoserver_url().rstrip('/')
         if not base_url:
@@ -232,9 +241,7 @@ class GeoServerService:
         GeoServer como FeatureType, sem tráfego de dados espaciais. 'name'/'nativeName'
         seguem a sanitização RF04; 'title' é livre (sem essas regras); 'abstract' e
         'keywords', quando fornecidos, vêm do metadado MGB já salvo pra camada."""
-        api_session = self.plugin.api_session
-        if not api_session:
-            raise Exception("Sessão não foi inicializada. Faça login primeiro.")
+        api_session = self._get_rest_session()
 
         base_url = config_loader_instance.get_geoserver_url().rstrip('/')
         if not base_url:
@@ -274,9 +281,7 @@ class GeoServerService:
         GeoNetworkService.fetch_from_geonetwork pro lado GN). Retorna None se o
         featuretype não existir nesse workspace/datastore (nunca publicado de verdade, ou
         removido de lá)."""
-        api_session = self.plugin.api_session
-        if not api_session:
-            raise Exception("Sessão não foi inicializada. Faça login primeiro.")
+        api_session = self._get_rest_session()
 
         base_url = config_loader_instance.get_geoserver_url().rstrip('/')
         if not base_url:
@@ -309,9 +314,7 @@ class GeoServerService:
         (/rest/styles) + os do workspace de publicação (/rest/workspaces/{ws}/styles),
         já que os dois escopos podem ser usados como estilo padrão de uma camada desse
         workspace. Retorna [{'name':..., 'workspace': ''|ws}] - workspace vazio = global."""
-        api_session = self.plugin.api_session
-        if not api_session:
-            raise Exception("Sessão não foi inicializada. Faça login primeiro.")
+        api_session = self._get_rest_session()
 
         base_url = config_loader_instance.get_geoserver_url().rstrip('/')
         if not base_url:
@@ -342,7 +345,7 @@ class GeoServerService:
     def style_exists(self, workspace, style_name, config_loader_instance):
         """True se o estilo já existe (escopo do workspace quando `workspace` não-vazio,
         global caso contrário) - decide entre POST (criar) e PUT (atualizar) no upload_sld."""
-        api_session = self.plugin.api_session
+        api_session = self._get_rest_session()
         base_url = config_loader_instance.get_geoserver_url().rstrip('/')
         scope = f"workspaces/{workspace}/" if workspace else ''
         response = api_session.get(
@@ -369,9 +372,7 @@ class GeoServerService:
         """Cria (POST) ou atualiza (PUT) um estilo SLD no escopo do workspace. O corpo é
         o XML SLD cru - o GeoServer valida na hora e responde 400 com a causa quando o
         SLD é inválido (ex.: simbologia QGIS sem equivalente SLD)."""
-        api_session = self.plugin.api_session
-        if not api_session:
-            raise Exception("Sessão não foi inicializada. Faça login primeiro.")
+        api_session = self._get_rest_session()
 
         base_url = config_loader_instance.get_geoserver_url().rstrip('/')
         if not base_url:
@@ -411,9 +412,7 @@ class GeoServerService:
         que não sabe nada de estilo. Usado pelo nível 'sistema' do badge
         (_GsSyncCheckWorker). Retorna {'default_style': nome, 'default_style_workspace':
         ws, 'additional': ['ws:nome'|'nome', ...]} ou None se a camada não existir."""
-        api_session = self.plugin.api_session
-        if not api_session:
-            raise Exception("Sessão não foi inicializada. Faça login primeiro.")
+        api_session = self._get_rest_session()
 
         base_url = config_loader_instance.get_geoserver_url().rstrip('/')
         response = api_session.get(
@@ -450,9 +449,7 @@ class GeoServerService:
         thread (RNF02)."""
         if not style_task:
             return
-        api_session = self.plugin.api_session
-        if not api_session:
-            raise Exception("Sessão não foi inicializada. Faça login primeiro.")
+        api_session = self._get_rest_session()
 
         default = style_task.get('default')
         additional = style_task.get('additional') or []
@@ -494,7 +491,7 @@ class GeoServerService:
 
     @staticmethod
     def _build_publish_xml(workspace, datastore, published_name, title, abstract=None, keywords=None, published=False,
-                           style_source='', style_name='', style_workspace=''):
+                           style_source='', style_name='', style_workspace='', style_additional_json=''):
         import xml.etree.ElementTree as ET
         root = ET.Element('geoserver_publish')
         ET.SubElement(root, 'workspace').text = workspace or ''
@@ -515,6 +512,7 @@ class GeoServerService:
         ET.SubElement(root, 'style_source').text = style_source or ''
         ET.SubElement(root, 'style_name').text = style_name or ''
         ET.SubElement(root, 'style_workspace').text = style_workspace or ''
+        ET.SubElement(root, 'style_additional_json').text = style_additional_json or ''
         body = ET.tostring(root, encoding='unicode')
         return '<?xml version="1.0" encoding="UTF-8"?>\n' + body
 
@@ -541,11 +539,12 @@ class GeoServerService:
             'style_source': get('style_source'),
             'style_name': get('style_name'),
             'style_workspace': get('style_workspace'),
+            'style_additional_json': get('style_additional_json'),
         }
 
     @staticmethod
     def save_publish_destination(layer, workspace, datastore, published_name, title, abstract=None, keywords=None, published=False,
-                                 style_source='', style_name='', style_workspace=''):
+                                 style_source='', style_name='', style_workspace='', style_additional_json=''):
         """Guarda no banco da própria camada, na mesma linha/tabela do metadado
         (public.qgis_geometadata_plugin, coluna geoserver_publish_xml) qual workspace/
         datastore/nome/título/resumo/palavras-chave foram usados na última publicação -
@@ -578,7 +577,7 @@ class GeoServerService:
         try:
             cursor = conn.cursor()
             xml_text = GeoServerService._build_publish_xml(workspace, datastore, published_name, title, abstract, keywords, published,
-                                                           style_source, style_name, style_workspace)
+                                                           style_source, style_name, style_workspace, style_additional_json)
             sql = """
                 INSERT INTO public.qgis_geometadata_plugin
                     (f_table_catalog, f_table_schema, f_table_name, geoserver_publish_xml)

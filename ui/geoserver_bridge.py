@@ -28,6 +28,7 @@ class GeoServerBridge(QObject):
     gs_sync_checked = pyqtSignal('QVariant')  # resultado de check_gs_sync (ver _GsSyncCheckWorker)
     gs_styles_ready = pyqtSignal(list, str)  # [{'name':..., 'workspace': ''|ws}], error - ver list_styles
     gs_style_updated = pyqtSignal(bool, str)  # sucesso, erro - "Serviços > Atualizar Estilo" (ver update_style)
+    gs_rest_configured = pyqtSignal(bool, str)  # ok, username - resultado de configure_gs_rest_credentials
 
     # Cache de camadas do GeoServer (carregado uma vez por sessão)
     _geoserver_layers_cache = None
@@ -43,6 +44,54 @@ class GeoServerBridge(QObject):
         self._sync_check_worker = None
         self._styles_worker = None
         self._apply_style_worker = None
+        self._gs_rest_worker = None
+
+    @pyqtSlot(str, str)
+    def configure_gs_rest_credentials(self, user: str, password: str):
+        """Configura credenciais admin separadas exclusivamente para chamadas REST do
+        GeoServer - necessário quando o usuário está autenticado via EntraID (SSO), mas o
+        Bearer token Azure AD é rejeitado pela API REST do GeoOrchestra (401). Essas
+        credenciais ficam só em memória (não persistidas em disco), na sessão ativa.
+        Emite gs_rest_configured(True, username) em caso de sucesso, (False, mensagem) em
+        caso de falha (credenciais inválidas ou servidor inacessível)."""
+        if not user or not password:
+            self.gs_rest_configured.emit(False, 'Usuário e senha são obrigatórios.')
+            return
+        from ..core.plugin_config import config_loader
+        from .web_bridge import _AdminWorker
+        geoserver_url = config_loader.get_geoserver_url()
+        self._gs_rest_worker = _AdminWorker(user, password, geoserver_url)
+        self._gs_rest_worker.login_success.connect(self._on_gs_rest_ok)
+        self._gs_rest_worker.login_failed.connect(self._on_gs_rest_fail)
+        self._gs_rest_worker.start()
+
+    def _on_gs_rest_ok(self, session, username):
+        plugin = getattr(self._dialog, 'plugin', None)
+        if plugin:
+            plugin.gs_rest_session = session
+            plugin.gs_rest_username = username
+        self.gs_rest_configured.emit(True, username)
+
+    def _on_gs_rest_fail(self, msg):
+        self.gs_rest_configured.emit(False, msg)
+
+    @pyqtSlot(result='QVariant')
+    def get_gs_rest_status(self):
+        """Retorna o status das credenciais REST do GeoServer para o JS exibir no painel.
+        {'has_rest_creds': bool, 'username': str, 'is_sso': bool}"""
+        plugin = getattr(self._dialog, 'plugin', None)
+        gs_rest = getattr(plugin, 'gs_rest_session', None)
+        gs_user = getattr(plugin, 'gs_rest_username', None)
+        sso_session = getattr(plugin, 'api_session', None)
+        sso_user = getattr(plugin, 'auth_username', None)
+        # é usuário SSO quando: tem sessão api mas a sessão usa BearerTokenAuth
+        is_sso = bool(sso_session) and hasattr(getattr(sso_session, 'auth', None), '_provider')
+        return {
+            'has_rest_creds': bool(gs_rest),
+            'username': gs_user or '',
+            'is_sso': is_sso,
+            'sso_username': sso_user or ''
+        }
 
     @pyqtSlot()
     def list_workspaces(self):
@@ -369,56 +418,89 @@ class GeoServerBridge(QObject):
         SLD do QGIS (fonte 'qgis') usa a API do QGIS, e a leitura do arquivo (fonte
         'file') é local/rápida - só o tráfego REST vai pro worker. `style_cfg` vem do JS:
         {'source': ''|'qgis'|'file'|'existing', 'name':, 'file_path':, 'existing_name':,
-        'existing_workspace':}. Retorna (task|None, error) - (None, '') = sem estilo."""
+        'existing_workspace':, 'additional': [...]}. Retorna (task|None, error)."""
         from ..core.geoserver_service import GeoServerService
-        source = (style_cfg or {}).get('source') or ''
-        if not source or source == 'none':
-            return None, ''
-        if source == 'existing':
-            name = (style_cfg.get('existing_name') or '').strip()
+
+        def _prep_entry(cfg, is_default=False):
+            source = (cfg or {}).get('source') or ''
+            if not source or source == 'none':
+                return None, ''
+            if source == 'existing':
+                name = (cfg.get('existing_name') or '').strip()
+                if not name:
+                    return None, 'Escolha um estilo existente na aba Estilos antes de continuar.'
+                return {
+                    'mode': 'existing',
+                    'name': name,
+                    'style_workspace': (cfg.get('existing_workspace') or '').strip(),
+                    'sld_body': '',
+                }, ''
+            name = GeoServerService.sanitize_layer_name(cfg.get('name') or '')
             if not name:
-                return None, 'Escolha um estilo existente na aba Estilos antes de continuar.'
-            return {
-                'mode': 'existing',
-                'name': name,
-                'style_workspace': (style_cfg.get('existing_workspace') or '').strip(),
-                'sld_body': '',
-            }, ''
-        name = GeoServerService.sanitize_layer_name(style_cfg.get('name') or '')
-        if not name:
-            return None, 'Informe o nome do estilo na aba Estilos antes de continuar.'
-        if source == 'qgis':
-            body, error = self._export_active_layer_sld(layer)
-        elif source == 'file':
-            body, error = self._read_sld_file(style_cfg.get('file_path') or '')
-        else:
-            return None, f'Fonte de estilo desconhecida: {source}'
-        if error:
-            return None, error
-        return {'mode': 'create', 'name': name, 'style_workspace': workspace, 'sld_body': body}, ''
+                return None, 'Informe o nome do estilo na aba Estilos antes de continuar.'
+            if source == 'qgis':
+                if not is_default:
+                    return None, 'A fonte "qgis" (Estilo atual do QGIS) só pode ser usada no estilo padrão, não como adicional.'
+                body, error = self._export_active_layer_sld(layer)
+            elif source == 'file':
+                body, error = self._read_sld_file(cfg.get('file_path') or '')
+            else:
+                return None, f'Fonte de estilo desconhecida: {source}'
+            if error:
+                return None, error
+            return {'mode': 'create', 'name': name, 'style_workspace': workspace, 'sld_body': body}, ''
+
+        default_entry, def_err = _prep_entry(style_cfg, is_default=True)
+        if def_err:
+            return None, def_err
+
+        additional_entries = []
+        for a_cfg in (style_cfg.get('additional') or []):
+            a_entry, a_err = _prep_entry(a_cfg, is_default=False)
+            if a_err:
+                return None, f"Erro no estilo adicional '{a_cfg.get('name') or a_cfg.get('existing_name')}': {a_err}"
+            if a_entry:
+                additional_entries.append(a_entry)
+
+        if not default_entry and not additional_entries:
+            return None, ''
+
+        return {'default': default_entry, 'additional': additional_entries}, ''
 
     @staticmethod
     def derive_style_fields(style_cfg, workspace):
-        """Reduz a configuração da aba Estilos aos 3 campos persistidos em
-        geoserver_publish_xml (style_source/style_name/style_workspace) SEM exportar/ler
-        SLD nenhum - usado pelos caminhos que só GRAVAM a escolha no banco
-        (save_destination_now e GeoMetadata_dialog._promote_gs_draft_to_db), ao contrário
-        de _prepare_style_task, que monta a tarefa de aplicação de verdade. Escolha
-        incompleta (sem nome/estilo selecionado) vira ('', '', '') - salva como "sem estilo"."""
+        """Reduz a configuração da aba Estilos aos campos persistidos em geoserver_publish_xml
+        (style_source/name/workspace e style_additional_json). Retorna a tupla
+        (source, name, workspace, additional_json)."""
+        import json
         from ..core.geoserver_service import GeoServerService
-        source = (style_cfg or {}).get('source') or ''
-        if source == 'none':
-            source = ''
-        name = ws = ''
-        if source == 'existing':
-            name = (style_cfg.get('existing_name') or '').strip()
-            ws = (style_cfg.get('existing_workspace') or '').strip()
-        elif source:
-            name = GeoServerService.sanitize_layer_name(style_cfg.get('name') or '')
-            ws = workspace or ''
-        if not name:
-            return '', '', ''
-        return source, name, ws
+
+        def _extract(cfg):
+            src = (cfg or {}).get('source') or ''
+            if src == 'none': src = ''
+            nm = ws = ''
+            if src == 'existing':
+                nm = (cfg.get('existing_name') or '').strip()
+                ws = (cfg.get('existing_workspace') or '').strip()
+            elif src:
+                nm = GeoServerService.sanitize_layer_name(cfg.get('name') or '')
+                ws = workspace or ''
+            if not nm:
+                return '', '', ''
+            return src, nm, ws
+
+        d_src, d_nm, d_ws = _extract(style_cfg)
+        
+        adds = []
+        for a_cfg in (style_cfg.get('additional') or []):
+            a_src, a_nm, a_ws = _extract(a_cfg)
+            if a_nm:
+                # Na persistência JSON guardamos os campos do cfg pra UI conseguir reconstruir fácil
+                # (igual no snapshot)
+                adds.append(a_cfg)
+        adds_json = json.dumps(adds) if adds else ''
+
+        return d_src, d_nm, d_ws, adds_json
 
     @pyqtSlot(str, str, str)
     def update_style(self, workspace, published_name, style_json):
@@ -471,13 +553,11 @@ class GeoServerBridge(QObject):
                 )
         self.gs_style_updated.emit(ok, error or '')
 
-    @pyqtSlot(str, str, str, str, str, 'QVariant')
-    def check_gs_sync(self, workspace, datastore, published_name, title, abstract, keywords):
+    @pyqtSlot(str, str, str, str, str, 'QVariant', str)
+    def check_gs_sync(self, workspace, datastore, published_name, title, abstract, keywords, style_json=''):
         """Compara o formulário atual contra o que está DE FATO publicado no GeoServer
         agora (REST, ao vivo via GeoServerService.fetch_published_featuretype) - nível
         'sistema' do badge combinado/painel GS (mesmo espírito de check_gn_sync, ver
-        geonetwork_bridge.py, só que aqui sempre compara contra o servidor, não tem um
-        nível intermediário como o dateStamp do GN). Só faz sentido chamar quando logado E
         já existe destino conhecido (workspace/datastore/nome) - o nível 'banco' (sem
         esse live-check) continua resolvido inteiramente no JS via info.saved_* (ver
         get_active_layer_publish_info), sem depender deste método.
@@ -526,10 +606,11 @@ class GeoServerBridge(QObject):
             style_cfg = json.loads(style_json) if style_json else {}
         except ValueError:
             style_cfg = {}
-        style_source, style_name, style_workspace = self.derive_style_fields(style_cfg, workspace)
+        style_source, style_name, style_workspace, style_additional_json = self.derive_style_fields(style_cfg, workspace)
         ok = geoserver_service.save_publish_destination(
             layer, workspace, datastore, published_name, title, abstract, keywords,
-            style_source=style_source, style_name=style_name, style_workspace=style_workspace
+            style_source=style_source, style_name=style_name, style_workspace=style_workspace,
+            style_additional_json=style_additional_json
         )
         self.gs_destination_saved.emit(ok)
 
@@ -603,11 +684,25 @@ class GeoServerBridge(QObject):
             geoserver_service = getattr(self._dialog, 'geoserver_service', None)
             if geoserver_service:
                 style_ok = bool(style_task) and not message
+                
+                adds = []
+                if style_ok and style_task:
+                    adds_entries = style_task.get('additional') or []
+                    import json
+                    # Extraímos só source/name/workspace pra salvar json no banco,
+                    # recriando o formato da UI
+                    adds = [{'source': 'existing' if e.get('mode') == 'existing' else 'create',
+                             'existing_name': e['name'], 'existing_workspace': e.get('style_workspace','')} 
+                            if e.get('mode') == 'existing' 
+                            else {'source': 'file', 'name': e['name']} 
+                            for e in adds_entries]
+                
                 geoserver_service.save_publish_destination(
                     layer, workspace, datastore, published_name, title, abstract, keywords, published=True,
                     style_source=style_source if style_ok else '',
-                    style_name=style_task['name'] if style_ok else '',
-                    style_workspace=(style_task.get('style_workspace') or '') if style_ok else ''
+                    style_name=(style_task.get('default', {}).get('name') if style_task and style_task.get('default') else '') if style_ok else '',
+                    style_workspace=(style_task.get('default', {}).get('style_workspace') if style_task and style_task.get('default') else '') if style_ok else '',
+                    style_additional_json=json.dumps(adds) if adds else ''
                 )
         self.gs_publish_done.emit(success, message, published_name, wms_url, wfs_url)
 

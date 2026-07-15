@@ -854,11 +854,12 @@ class GeoMetadataDialog(QtWidgets.QDialog):
                 return  # nada de útil pra promover ainda
             # Estilo: promove só a ESCOLHA (fonte + nome), como os demais campos - nada é
             # exportado/enviado ao GeoServer aqui (ver GeoServerBridge.derive_style_fields).
-            style_source, style_name, style_workspace = self.gs_bridge.derive_style_fields({
+            style_source, style_name, style_workspace, style_additional_json = self.gs_bridge.derive_style_fields({
                 'source': draft.get('style_source') or '',
                 'name': draft.get('style_name') or draft.get('published_name') or '',
                 'existing_name': draft.get('style_existing_name') or '',
                 'existing_workspace': draft.get('style_existing_workspace') or '',
+                'additional': draft.get('style_additional') or []
             }, draft.get('workspace') or '')
             self.geoserver_service.save_publish_destination(
                 layer,
@@ -868,7 +869,8 @@ class GeoMetadataDialog(QtWidgets.QDialog):
                 draft.get('title') or '',
                 draft.get('abstract') or '',
                 draft.get('keywords') or [],
-                style_source=style_source, style_name=style_name, style_workspace=style_workspace
+                style_source=style_source, style_name=style_name, style_workspace=style_workspace,
+                style_additional_json=style_additional_json
             )
         except Exception as exc:
             print(f"GeoMetadata [_promote_gs_draft_to_db]: {exc}")

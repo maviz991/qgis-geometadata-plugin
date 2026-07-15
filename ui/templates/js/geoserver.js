@@ -482,6 +482,20 @@ function _renderGsLayerCard(info) {
             info.saved_style_name || '',
             info.saved_style_workspace || ''
         );
+        if (info.saved_style_additional_json) {
+            try {
+                _gsAdditionalStyles = JSON.parse(info.saved_style_additional_json);
+                _renderGsAdditionalStyles();
+            } catch (e) {
+                console.error('GeoMetadata [Estilos Adicionais] erro no parse: ', e);
+            }
+        } else {
+            _gsAdditionalStyles = [];
+            _renderGsAdditionalStyles();
+        }
+    } else {
+        _gsAdditionalStyles = [];
+        _renderGsAdditionalStyles();
     }
     _setGsPullGnButtonState(!!(info.abstract || (info.keywords && info.keywords.length)));
     _updateGsPublishButton();
@@ -945,12 +959,21 @@ function _renderGsStyleOptions(styles, error) {
         var label = s.workspace ? (s.workspace + ' : ' + s.name) : s.name;
         options += '<option value="' + escHtml(value) + '">' + escHtml(label) + '</option>';
     });
-    wrap.innerHTML = '<select id="gs-style-existing">' + options + '</select>';
+    
+    if (wrap) wrap.innerHTML = '<select id="gs-style-existing">' + options + '</select>';
+    var wrapAdd = document.getElementById('gs-add-style-existing-group');
+    if (wrapAdd) wrapAdd.innerHTML = '<select id="gs-add-style-existing" style="height: 32px;">' + options + '</select>';
+    
     initCustomSelects();
     if (_gsPendingExistingStyle) {
         var target = _gsPendingExistingStyle;
         _gsPendingExistingStyle = null;
         _clickGsSuggestionItem('gs-style-existing-wrap', target);
+    }
+    if (_gsPendingExistingAddStyle) {
+        var targetAdd = _gsPendingExistingAddStyle;
+        _gsPendingExistingAddStyle = null;
+        _clickGsSuggestionItem('gs-add-style-existing-group', targetAdd);
     }
     _gsSetExistingStatus((styles && styles.length) ? '' : 'Nenhum estilo cadastrado no GeoServer ainda.');
 }
@@ -1020,31 +1043,163 @@ function _gsResetStyleControls() {
     _gsApplyStyleChoice('qgis', '', '');
 }
 
+// --- Estilos Adicionais ---
+var _gsAdditionalStyles = [];
+var _gsAddStyleFilePath = null;
+var _gsPendingExistingAddStyle = null;
+
+function onGsAddStyleSourceChange(value) {
+    var fileGroup = document.getElementById('gs-add-style-file-group');
+    var existingGroup = document.getElementById('gs-add-style-existing-group');
+    if (fileGroup) fileGroup.style.display = (value === 'file') ? '' : 'none';
+    if (existingGroup) existingGroup.style.display = (value === 'existing') ? '' : 'none';
+    if (value === 'existing') _gsLoadAddStylesList();
+}
+
+function onGsAddStyleNameInput(name) {
+    var el = document.getElementById('gs-add-style-name');
+    if (!(name || '').trim()) {
+        if (el) el.dataset.sanitized = '';
+        return;
+    }
+    // Simplificando timeout pra não precisar variavel global isolada
+    setTimeout(function () {
+        if (typeof gsBridge !== 'undefined' && gsBridge.sanitize_layer_name) {
+            gsBridge.sanitize_layer_name(name, function (sanitized) {
+                if (el) el.dataset.sanitized = sanitized;
+            });
+        }
+    }, 200);
+}
+
+function pickGsAddSldFile() {
+    if (typeof gsBridge === 'undefined' || !gsBridge.pick_sld_file) return;
+    gsBridge.pick_sld_file(function (res) {
+        if (!res || res.cancelled) return;
+        if (!res.ok) {
+            Modal.alert(res.error || 'Arquivo SLD inválido.', 'Erro', 'error');
+            return;
+        }
+        _gsAddStyleFilePath = res.path;
+        var btn = document.getElementById('gs-add-style-file-btn');
+        if (btn) btn.textContent = res.filename;
+    });
+}
+
+function _gsLoadAddStylesList() {
+    var wrap = document.getElementById('gs-add-style-existing-group');
+    if (!wrap || typeof gsBridge === 'undefined' || !gsBridge.list_styles) return;
+    var current = document.getElementById('gs-add-style-existing');
+    if (current && current.value) _gsPendingExistingAddStyle = current.value;
+    
+    wrap.innerHTML = '<select id="gs-add-style-existing" style="height: 32px;"><option value="">Carregando estilos...</option></select>';
+    initCustomSelects();
+    
+    var wsEl = document.getElementById('gs-workspace');
+    gsBridge.list_styles(wsEl ? wsEl.value : '');
+}
+
+function gsAddAdditionalStyle() {
+    var srcEl = document.getElementById('gs-add-style-source');
+    var source = srcEl ? srcEl.value : '';
+    if (!source) return;
+
+    var styleObj = { source: source };
+
+    if (source === 'existing') {
+        var exEl = document.getElementById('gs-add-style-existing');
+        var v = (exEl && exEl.value) || '';
+        if (!v) {
+            Modal.alert('Selecione um estilo existente primeiro.', 'Aviso', 'warning');
+            return;
+        }
+        var sep = v.indexOf(':');
+        styleObj.existing_workspace = sep >= 0 ? v.slice(0, sep) : '';
+        styleObj.existing_name = sep >= 0 ? v.slice(sep + 1) : v;
+        styleObj.mode = 'existing';
+    } else if (source === 'file') {
+        if (!_gsAddStyleFilePath) {
+            Modal.alert('Selecione um arquivo .sld primeiro.', 'Aviso', 'warning');
+            return;
+        }
+        var nameEl = document.getElementById('gs-add-style-name');
+        var rawName = nameEl ? nameEl.value.trim() : '';
+        var name = (nameEl && nameEl.dataset.sanitized) ? nameEl.dataset.sanitized : rawName;
+        if (!name) {
+            Modal.alert('Informe o nome do estilo.', 'Aviso', 'warning');
+            return;
+        }
+        styleObj.file_path = _gsAddStyleFilePath;
+        styleObj.name = name;
+        styleObj.mode = 'create';
+    }
+    
+    var checkName = styleObj.name || styleObj.existing_name;
+    for (var i = 0; i < _gsAdditionalStyles.length; i++) {
+        var existing = _gsAdditionalStyles[i];
+        if ((existing.name || existing.existing_name) === checkName) {
+            Modal.alert('Um estilo com esse nome já foi adicionado.', 'Aviso', 'warning');
+            return;
+        }
+    }
+    
+    _gsAdditionalStyles.push(styleObj);
+    _renderGsAdditionalStyles();
+    _scheduleGsDraftSave();
+    
+    _gsAddStyleFilePath = null;
+    var btn = document.getElementById('gs-add-style-file-btn');
+    if (btn) btn.textContent = 'Escolher arquivo...';
+    var inpName = document.getElementById('gs-add-style-name');
+    if (inpName) { inpName.value = ''; inpName.dataset.sanitized = ''; }
+}
+
+function gsRemoveAdditionalStyle(idx) {
+    _gsAdditionalStyles.splice(idx, 1);
+    _renderGsAdditionalStyles();
+    _scheduleGsDraftSave();
+}
+
+function _renderGsAdditionalStyles() {
+    var box = document.getElementById('gs-additional-styles-chips');
+    if (!box) return;
+    box.innerHTML = _gsAdditionalStyles.map(function(s, i) {
+        var label = '';
+        if (s.source === 'existing') {
+            label = (s.existing_workspace ? s.existing_workspace + ':' : '') + s.existing_name;
+        } else {
+            label = s.name + ' (arquivo)';
+        }
+        return '<span class="keyword-chip">' + escHtml(label) +
+            '<button onclick="gsRemoveAdditionalStyle(' + i + ')" data-title="Remover">×</button></span>';
+    }).join('');
+}
+// ----------------------------
+
 // Configuração da aba Estilos no formato que o Python espera (_prepare_style_task/
 // derive_style_fields, ver geoserver_bridge.py) - serializada como JSON em
 // confirmGsPublish/saveGsDraftNow/tryUpdateGsStyle.
 function _gsCollectStyleConfig() {
     var srcEl = document.getElementById('gs-style-source');
     var src = srcEl ? srcEl.value : 'none';
-    if (!src || src === 'none') return { source: '' };
+    var cfg = { source: src, additional: _gsAdditionalStyles.slice() };
+    if (!src || src === 'none') {
+        cfg.source = '';
+        return cfg;
+    }
     if (src === 'existing') {
         var exEl = document.getElementById('gs-style-existing');
         var v = (exEl && exEl.value) || '';
         var sep = v.indexOf(':');
-        return {
-            source: 'existing',
-            existing_name: sep >= 0 ? v.slice(sep + 1) : v,
-            existing_workspace: sep >= 0 ? v.slice(0, sep) : ''
-        };
+        cfg.existing_name = sep >= 0 ? v.slice(sep + 1) : v;
+        cfg.existing_workspace = sep >= 0 ? v.slice(0, sep) : '';
+    } else {
+        var nameEl = document.getElementById('gs-style-name');
+        var raw = nameEl ? nameEl.value.trim() : '';
+        cfg.name = raw || _gsEffectiveStyleName();
+        cfg.file_path = (src === 'file') ? _gsStyleFilePath : '';
     }
-    var nameEl = document.getElementById('gs-style-name');
-    var raw = nameEl ? nameEl.value.trim() : '';
-    return {
-        source: src,
-        // vazio = mesmo nome da camada publicada (o Python sanitiza de novo por garantia)
-        name: raw || _gsEffectiveStyleName(),
-        file_path: (src === 'file') ? _gsStyleFilePath : ''
-    };
+    return cfg;
 }
 
 // Aviso RN04 (requisitos_v2.md): a conversão QGIS -> SLD é best-effort - simbologia
@@ -1145,7 +1300,8 @@ function _gsCollectFormState() {
         // (_checkGsSyncNow), então style_source/style_name sempre por último, na mesma
         // ordem de _gsSnapshotFromSaved/_onGsSyncChecked.
         style_source: styleSource,
-        style_name: _gsEffectiveStyleName()
+        style_name: _gsEffectiveStyleName(),
+        style_additional: _gsAdditionalStyles.slice()
     };
 }
 
@@ -1244,6 +1400,14 @@ function setGsBadge(state) {
 }
 
 function _gsSnapshotFromSaved(info) {
+    var adds = [];
+    if (info && info.saved_style_additional_json) {
+        try {
+            adds = JSON.parse(info.saved_style_additional_json);
+        } catch (e) {
+            console.error(e);
+        }
+    }
     return JSON.stringify({
         workspace: (info && info.saved_workspace) || '',
         datastore: (info && info.saved_datastore) || '',
@@ -1252,7 +1416,8 @@ function _gsSnapshotFromSaved(info) {
         abstract: (info && info.saved_abstract) || '',
         keywords: (info && info.saved_keywords) || [],
         style_source: (info && info.saved_style_source) || '',
-        style_name: (info && info.saved_style_name) || ''
+        style_name: (info && info.saved_style_name) || '',
+        style_additional: adds
     });
 }
 
@@ -1302,10 +1467,21 @@ function _checkGsSyncOnline(info) {
     var key = _activeLayerName + '|' + ws + '|' + ds + '|' + name;
     if (_gsOnlineLastCheckedKey === key && (Date.now() - _gsOnlineLastCheckedAt) < _GN_RECHECK_STALE_MS) return;
     _gsOnlineExpectedKey = key;
-    var d = document.getElementById('gs-layer-card') ? _gsCollectFormState() : {
-        title: info.saved_title || '', abstract: info.saved_abstract || '', keywords: info.saved_keywords || []
-    };
-    gsBridge.check_gs_sync(ws, ds, name, d.title, d.abstract, d.keywords);
+    var d, styleJson;
+    if (document.getElementById('gs-layer-card')) {
+        d = _gsCollectFormState();
+        styleJson = JSON.stringify(_gsCollectStyleConfig());
+    } else {
+        d = {
+            title: info.saved_title || '', abstract: info.saved_abstract || '', keywords: info.saved_keywords || []
+        };
+        var savedStyle = { source: info.saved_style_source || '', name: info.saved_style_name || '' };
+        if (info.saved_style_additional_json) {
+            try { savedStyle.additional = JSON.parse(info.saved_style_additional_json); } catch(e) {}
+        }
+        styleJson = JSON.stringify(savedStyle);
+    }
+    gsBridge.check_gs_sync(ws, ds, name, d.title, d.abstract, d.keywords, styleJson);
 }
 
 // Sinal gs_sync_checked (ver _initGsBridge) - resultado de check_gs_sync, chegando de
@@ -1352,7 +1528,8 @@ function _onGsSyncChecked(result) {
             _gsSyncSnapshot = JSON.stringify({
                 workspace: result.workspace, datastore: result.datastore, published_name: result.published_name,
                 title: result.title || '', abstract: result.abstract || '', keywords: result.keywords || [],
-                style_source: liveStyle.style_source, style_name: liveStyle.style_name
+                style_source: liveStyle.style_source, style_name: liveStyle.style_name,
+                style_additional: liveStyle.style_additional
             });
             _gsCaptureSnapshotRawNames();
             _gsSyncIsPublished = true;

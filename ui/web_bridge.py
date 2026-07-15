@@ -43,7 +43,18 @@ class _SsoWorker(QThread):
             if self._provider.authenticate_interactive():
                 self.auth_success.emit(self._provider)
             else:
-                self.auth_failed.emit(self._provider.get_error() or "Autenticação cancelada.")
+                err = self._provider.get_error() or 'Autenticação cancelada.'
+                # AADSTS65001: app não tem permissão para o scope do GeoOrchestra -
+                # o TI precisa expor o escopo na App Registration do GeoOrchestra
+                # e autorizar o app do plugin como cliente delegado.
+                if 'AADSTS65001' in err or 'AADSTS70011' in err:
+                    err = (
+                        'Permissão negada pelo Azure AD (AADSTS65001).\n\n'
+                        'O TI precisa configurar no Azure AD:\n'
+                        '→ App Registration "GeoOrchestra" > Expor uma API > '
+                        'adicionar escopo e autorizar o app do plugin como cliente.'
+                    )
+                self.auth_failed.emit(err)
         except Exception as e:
             self.auth_failed.emit(str(e))
 

@@ -108,7 +108,7 @@
         <div class="form-grid">
             <div class="form-group span-2">
                 <label for="gs-style-source">Estilo principal <button class="help-btn"
-                        data-tip="O estilo escolhido aqui vira o estilo padrão (default) da camada no GeoServer, aplicado junto com a publicação — ou depois, via 'Serviços > Atualizar Estilo'. Estilos adicionais ficam pra uma próxima versão.">?</button></label>
+                        data-tip="O estilo escolhido aqui vira o estilo padrão (default) da camada no GeoServer, aplicado junto com a publicação — ou depois, via 'Serviços > Atualizar Estilo'.">?</button></label>
                 <div id="gs-style-source-wrap">
                     <select id="gs-style-source" onchange="onGsStyleSourceChange(this.value)">
                         <option value="qgis" selected>Gerar do estilo atual do QGIS</option>
@@ -147,6 +147,41 @@
                     </select>
                 </div>
                 <small id="gs-style-existing-status" class="gs-name-preview"></small>
+            </div>
+
+            <hr class="span-2" style="margin: 15px 0; border: 0; border-top: 1px solid var(--border);">
+
+            <!-- ESTILOS ADICIONAIS -->
+            <div class="form-group span-2">
+                <label>Estilos adicionais <button class="help-btn" data-tip="Estilos alternativos que ficarão disponíveis na camada além do padrão. Escolha a fonte, preencha os dados e clique no + para adicionar à lista.">?</button></label>
+                
+                <div class="gs-destino-row" style="align-items: flex-end; margin-bottom: 8px; gap: 8px;">
+                    <div class="form-group" style="margin: 0; flex: 1;">
+                        <select id="gs-add-style-source" onchange="onGsAddStyleSourceChange(this.value)">
+                            <option value="file" selected>Carregar arquivo .sld local</option>
+                            <option value="existing">Usar estilo existente no GeoServer</option>
+                        </select>
+                    </div>
+
+                    <!-- Campos de File -->
+                    <div class="form-group" id="gs-add-style-file-group" style="margin: 0; flex: 2; position: relative;">
+                        <div style="display:flex; gap:8px;">
+                            <button type="button" class="btn-icon" onclick="pickGsAddSldFile()" style="flex:1; height: 32px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" id="gs-add-style-file-btn">Escolher arquivo...</button>
+                            <input id="gs-add-style-name" type="text" placeholder="Nome no servidor" style="flex:1; height: 32px;" oninput="onGsAddStyleNameInput(this.value)">
+                        </div>
+                    </div>
+
+                    <!-- Campos Existing -->
+                    <div class="form-group" id="gs-add-style-existing-group" style="display:none; margin: 0; flex: 2;">
+                        <select id="gs-add-style-existing" style="height: 32px;">
+                            <option value="">Selecione o estilo existente...</option>
+                        </select>
+                    </div>
+
+                    <button class="btn-icon accent" onclick="gsAddAdditionalStyle()" style="height: 32px; width: 32px; flex-shrink: 0;">+</button>
+                </div>
+                
+                <div class="keyword-chips" id="gs-additional-styles-chips" style="margin-top: 4px; min-height: 32px;"></div>
             </div>
         </div>
     </div>
