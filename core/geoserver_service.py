@@ -395,20 +395,94 @@ class GeoServerService:
         except requests.exceptions.HTTPError:
             raise Exception(self.translate_gs_error(response.status_code, response.text or ''))
 
-    def set_layer_default_style(self, layer_workspace, published_name, style_name, style_workspace, config_loader_instance):
-        """Define o estilo PADRÃO (defaultStyle) da camada publicada - estilos adicionais
-        ficam pra uma próxima versão. `style_workspace` vazio = estilo global."""
+    @staticmethod
+    def _split_style_ref(name, workspace=''):
+        """Normaliza uma referência de estilo vinda do GeoServer: o JSON de /rest/layers
+        às vezes traz o nome já prefixado ('ws:nome') e às vezes traz a chave 'workspace'
+        separada, dependendo da versão. Retorna (nome_puro, workspace)."""
+        name = name or ''
+        if not workspace and ':' in name:
+            workspace, name = name.split(':', 1)
+        return name, (workspace or '')
+
+    def fetch_layer_styles(self, layer_workspace, published_name, config_loader_instance):
+        """Busca o estilo PADRÃO e os ADICIONAIS da camada AO VIVO
+        (GET /rest/layers/{ws}:{nome}.json) - complementa fetch_published_featuretype,
+        que não sabe nada de estilo. Usado pelo nível 'sistema' do badge
+        (_GsSyncCheckWorker). Retorna {'default_style': nome, 'default_style_workspace':
+        ws, 'additional': ['ws:nome'|'nome', ...]} ou None se a camada não existir."""
         api_session = self.plugin.api_session
         if not api_session:
             raise Exception("Sessão não foi inicializada. Faça login primeiro.")
 
         base_url = config_loader_instance.get_geoserver_url().rstrip('/')
-        default_style = {'name': style_name}
-        if style_workspace:
-            default_style['workspace'] = style_workspace
+        response = api_session.get(
+            f"{base_url}/rest/layers/{layer_workspace}:{published_name}.json",
+            headers={'Accept': 'application/json'},
+            timeout=15,
+            verify=False
+        )
+        if response.status_code == 404:
+            return None
+        response.raise_for_status()
+        layer = (response.json() or {}).get('layer') or {}
+        default = layer.get('defaultStyle') or {}
+        d_name, d_ws = self._split_style_ref(default.get('name'), default.get('workspace'))
+        styles = layer.get('styles') or {}
+        entries = styles.get('style') if isinstance(styles, dict) else None
+        if isinstance(entries, dict):
+            entries = [entries]  # objeto solto (não array) quando só tem 1 item
+        additional = []
+        for s in (entries or []):
+            s_name, s_ws = self._split_style_ref(s.get('name'), s.get('workspace'))
+            if s_name:
+                additional.append((s_ws + ':' + s_name) if s_ws else s_name)
+        return {'default_style': d_name, 'default_style_workspace': d_ws, 'additional': additional}
+
+    def apply_style(self, layer_workspace, published_name, style_task, config_loader_instance):
+        """Executa a tarefa de estilo montada pelo bridge (_prepare_style_task):
+        `style_task` = {'default': {...}|None, 'additional': [{...}, ...]}. Sobe os SLDs
+        que têm corpo (gerados do QGIS/lidos de arquivo) e atualiza a camada num PUT
+        único (defaultStyle + lista styles). Lista de adicionais VAZIA não toca nos
+        adicionais que já existem no GeoServer (o PUT com 'styles' SUBSTITUI a lista
+        inteira - mandar [] apagaria adicionais configurados por fora do plugin).
+        Chamado pelos workers (_GsPublishWorker/_GsApplyStyleWorker) - nunca na UI
+        thread (RNF02)."""
+        if not style_task:
+            return
+        api_session = self.plugin.api_session
+        if not api_session:
+            raise Exception("Sessão não foi inicializada. Faça login primeiro.")
+
+        default = style_task.get('default')
+        additional = style_task.get('additional') or []
+
+        for entry in ([default] if default else []) + additional:
+            if entry.get('sld_body'):
+                self.upload_sld(entry['style_workspace'], entry['name'],
+                                entry['sld_body'], config_loader_instance)
+
+        def _style_ref(entry):
+            ref = {'name': entry['name']}
+            if entry.get('style_workspace'):
+                ref['workspace'] = entry['style_workspace']
+            return ref
+
+        layer_payload = {}
+        if default:
+            layer_payload['defaultStyle'] = _style_ref(default)
+        if additional:
+            layer_payload['styles'] = {
+                '@class': 'linked-hash-set',
+                'style': [_style_ref(e) for e in additional],
+            }
+        if not layer_payload:
+            return
+
+        base_url = config_loader_instance.get_geoserver_url().rstrip('/')
         response = api_session.put(
             f"{base_url}/rest/layers/{layer_workspace}:{published_name}.json",
-            json={'layer': {'defaultStyle': default_style}},
+            json={'layer': layer_payload},
             headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
             timeout=30,
             verify=False
@@ -417,22 +491,6 @@ class GeoServerService:
             response.raise_for_status()
         except requests.exceptions.HTTPError:
             raise Exception(self.translate_gs_error(response.status_code, response.text or ''))
-
-    def apply_style(self, layer_workspace, published_name, style_task, config_loader_instance):
-        """Executa a tarefa de estilo montada pelo bridge (_prepare_style_task): sobe o
-        SLD quando há corpo (modo 'create' - gerado do QGIS ou lido de arquivo) e define
-        o estilo como padrão da camada. Chamado pelos workers (_GsPublishWorker no fim da
-        publicação / _GsApplyStyleWorker no 'Atualizar Estilo') - nunca na UI thread (RNF02)."""
-        if not style_task:
-            return
-        if style_task.get('sld_body'):
-            self.upload_sld(style_task['style_workspace'], style_task['name'],
-                            style_task['sld_body'], config_loader_instance)
-        self.set_layer_default_style(
-            layer_workspace, published_name,
-            style_task['name'], style_task.get('style_workspace') or '',
-            config_loader_instance
-        )
 
     @staticmethod
     def _build_publish_xml(workspace, datastore, published_name, title, abstract=None, keywords=None, published=False,
