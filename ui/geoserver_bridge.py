@@ -23,9 +23,11 @@ class GeoServerBridge(QObject):
     gs_featuretypes_ready = pyqtSignal(list, str)  # nomes de tabela visíveis no datastore, error
     gs_find_datastore_progress = pyqtSignal(str)  # mensagem de status da varredura
     gs_find_datastore_done = pyqtSignal(list, str)  # [{'workspace':..,'datastore':..}, ...], error
-    gs_publish_done = pyqtSignal(bool, str, str, str, str)  # sucesso, mensagem, nome_publicado, wms_url, wfs_url
+    gs_publish_done = pyqtSignal(bool, str, str, str, str)  # sucesso, mensagem (erro OU aviso de estilo), nome_publicado, wms_url, wfs_url
     gs_destination_saved = pyqtSignal(bool)  # db_ok - "Continuar Depois" do painel GeoServer
     gs_sync_checked = pyqtSignal('QVariant')  # resultado de check_gs_sync (ver _GsSyncCheckWorker)
+    gs_styles_ready = pyqtSignal(list, str)  # [{'name':..., 'workspace': ''|ws}], error - ver list_styles
+    gs_style_updated = pyqtSignal(bool, str)  # sucesso, erro - "Serviços > Atualizar Estilo" (ver update_style)
 
     # Cache de camadas do GeoServer (carregado uma vez por sessão)
     _geoserver_layers_cache = None
@@ -39,6 +41,8 @@ class GeoServerBridge(QObject):
         self._find_datastore_worker = None
         self._publish_worker = None
         self._sync_check_worker = None
+        self._styles_worker = None
+        self._apply_style_worker = None
 
     @pyqtSlot()
     def list_workspaces(self):
@@ -272,6 +276,9 @@ class GeoServerBridge(QObject):
                 info['saved_abstract'] = saved.get('abstract') or ''
                 info['saved_keywords'] = saved.get('keywords') or []
                 info['saved_published'] = bool(saved.get('published'))
+                info['saved_style_source'] = saved.get('style_source') or ''
+                info['saved_style_name'] = saved.get('style_name') or ''
+                info['saved_style_workspace'] = saved.get('style_workspace') or ''
             return info
         except Exception as exc:
             return {'publishable': False, 'reason': str(exc)}
@@ -281,6 +288,188 @@ class GeoServerBridge(QObject):
         """RF04 - preview síncrono do nome sanitizado (só regex, sem I/O de rede)."""
         from ..core.geoserver_service import GeoServerService
         return GeoServerService.sanitize_layer_name(name)
+
+    # ── Estilos (SLD) ───────────────────────────────────────────────────────────
+
+    @pyqtSlot(str)
+    def list_styles(self, workspace):
+        """Lista os estilos disponíveis (globais + do workspace) em background e emite
+        gs_styles_ready(styles, error) - popula o select "Usar estilo existente" da aba
+        Estilos (ver GeoServerService.list_styles)."""
+        geoserver_service = getattr(self._dialog, 'geoserver_service', None)
+        if not geoserver_service:
+            self.gs_styles_ready.emit([], 'Serviço GeoServer não inicializado.')
+            return
+        from ..core.plugin_config import config_loader
+        from .geoserver_workers import _GsStylesWorker
+        self._styles_worker = _GsStylesWorker(geoserver_service, workspace, config_loader)
+        self._styles_worker.done.connect(self.gs_styles_ready.emit)
+        self._styles_worker.start()
+
+    @pyqtSlot(result='QVariant')
+    def pick_sld_file(self):
+        """Abre o QFileDialog nativo pro usuário escolher um arquivo .sld (aba Estilos,
+        fonte "arquivo"). Validação leve na hora (existe + parece um SLD), pro usuário
+        saber imediatamente se escolheu o arquivo errado - o conteúdo é relido na
+        publicação (_read_sld_file), não guardado aqui."""
+        from qgis.PyQt.QtWidgets import QFileDialog
+        path, _ = QFileDialog.getOpenFileName(
+            self._dialog, 'Escolher arquivo SLD', '', 'Estilos SLD (*.sld *.xml);;Todos os arquivos (*.*)'
+        )
+        if not path:
+            return {'ok': False, 'cancelled': True}
+        body, error = self._read_sld_file(path)
+        if error:
+            return {'ok': False, 'error': error}
+        return {'ok': True, 'path': path, 'filename': os.path.basename(path)}
+
+    @staticmethod
+    def _read_sld_file(path):
+        """Lê e valida (superficialmente) um arquivo SLD. Retorna (body, error)."""
+        if not path or not os.path.exists(path):
+            return None, 'Arquivo SLD não encontrado: ' + (path or '(vazio)')
+        try:
+            with open(path, 'r', encoding='utf-8', errors='replace') as f:
+                body = f.read()
+        except Exception as exc:
+            return None, f'Não foi possível ler o arquivo SLD: {exc}'
+        if 'StyledLayerDescriptor' not in body:
+            return None, 'O arquivo escolhido não parece ser um SLD válido (sem <StyledLayerDescriptor>).'
+        return body, ''
+
+    def _export_active_layer_sld(self, layer):
+        """Exporta a simbologia ATUAL da camada no QGIS como SLD (saveSldStyle). Precisa
+        rodar na UI thread (API do QGIS não é thread-safe) - por isso o bridge gera o
+        corpo AQUI, antes de despachar o worker, e o worker só faz o tráfego REST.
+        Retorna (body, error)."""
+        if not layer or not hasattr(layer, 'saveSldStyle'):
+            return None, 'A camada ativa não suporta exportação de estilo SLD.'
+        import tempfile
+        tmp_path = os.path.join(tempfile.gettempdir(), 'geometadata_sld_export.sld')
+        try:
+            result = layer.saveSldStyle(tmp_path)
+            # PyQGIS devolve (mensagem, ok) na maioria das versões; algumas só a mensagem.
+            ok = result[1] if isinstance(result, (tuple, list)) and len(result) > 1 else True
+            message = result[0] if isinstance(result, (tuple, list)) else str(result or '')
+            if not ok:
+                return None, 'O QGIS não conseguiu exportar o estilo desta camada como SLD: ' + (message or 'erro desconhecido.')
+            return self._read_sld_file(tmp_path)
+        except Exception as exc:
+            return None, f'Erro ao exportar o estilo da camada como SLD: {exc}'
+        finally:
+            try:
+                if os.path.exists(tmp_path):
+                    os.remove(tmp_path)
+            except OSError:
+                pass
+
+    def _prepare_style_task(self, style_cfg, layer, workspace):
+        """Transforma a configuração da aba Estilos (JS) na tarefa que os workers executam
+        (GeoServerService.apply_style). Roda na UI thread de propósito: a exportação do
+        SLD do QGIS (fonte 'qgis') usa a API do QGIS, e a leitura do arquivo (fonte
+        'file') é local/rápida - só o tráfego REST vai pro worker. `style_cfg` vem do JS:
+        {'source': ''|'qgis'|'file'|'existing', 'name':, 'file_path':, 'existing_name':,
+        'existing_workspace':}. Retorna (task|None, error) - (None, '') = sem estilo."""
+        from ..core.geoserver_service import GeoServerService
+        source = (style_cfg or {}).get('source') or ''
+        if not source or source == 'none':
+            return None, ''
+        if source == 'existing':
+            name = (style_cfg.get('existing_name') or '').strip()
+            if not name:
+                return None, 'Escolha um estilo existente na aba Estilos antes de continuar.'
+            return {
+                'mode': 'existing',
+                'name': name,
+                'style_workspace': (style_cfg.get('existing_workspace') or '').strip(),
+                'sld_body': '',
+            }, ''
+        name = GeoServerService.sanitize_layer_name(style_cfg.get('name') or '')
+        if not name:
+            return None, 'Informe o nome do estilo na aba Estilos antes de continuar.'
+        if source == 'qgis':
+            body, error = self._export_active_layer_sld(layer)
+        elif source == 'file':
+            body, error = self._read_sld_file(style_cfg.get('file_path') or '')
+        else:
+            return None, f'Fonte de estilo desconhecida: {source}'
+        if error:
+            return None, error
+        return {'mode': 'create', 'name': name, 'style_workspace': workspace, 'sld_body': body}, ''
+
+    @staticmethod
+    def derive_style_fields(style_cfg, workspace):
+        """Reduz a configuração da aba Estilos aos 3 campos persistidos em
+        geoserver_publish_xml (style_source/style_name/style_workspace) SEM exportar/ler
+        SLD nenhum - usado pelos caminhos que só GRAVAM a escolha no banco
+        (save_destination_now e GeoMetadata_dialog._promote_gs_draft_to_db), ao contrário
+        de _prepare_style_task, que monta a tarefa de aplicação de verdade. Escolha
+        incompleta (sem nome/estilo selecionado) vira ('', '', '') - salva como "sem estilo"."""
+        from ..core.geoserver_service import GeoServerService
+        source = (style_cfg or {}).get('source') or ''
+        if source == 'none':
+            source = ''
+        name = ws = ''
+        if source == 'existing':
+            name = (style_cfg.get('existing_name') or '').strip()
+            ws = (style_cfg.get('existing_workspace') or '').strip()
+        elif source:
+            name = GeoServerService.sanitize_layer_name(style_cfg.get('name') or '')
+            ws = workspace or ''
+        if not name:
+            return '', '', ''
+        return source, name, ws
+
+    @pyqtSlot(str, str, str)
+    def update_style(self, workspace, published_name, style_json):
+        """"Serviços > Atualizar Estilo": aplica o estilo da aba Estilos a uma camada JÁ
+        publicada, sem republicar o FeatureType (publicar de novo daria "já existe"). O
+        preparo (exportar SLD do QGIS/ler arquivo) roda aqui na UI thread; o tráfego REST
+        vai pro _GsApplyStyleWorker (RNF02). Emite gs_style_updated(ok, error) ao final -
+        em caso de sucesso, atualiza também os campos de estilo do registro em
+        geoserver_publish_xml (se houver), pro badge/pré-preenchimento refletirem."""
+        import json
+        geoserver_service = getattr(self._dialog, 'geoserver_service', None)
+        if not geoserver_service or not workspace or not published_name:
+            self.gs_style_updated.emit(False, 'Destino de publicação incompleto (workspace/nome).')
+            return
+        try:
+            style_cfg = json.loads(style_json) if style_json else {}
+        except ValueError:
+            style_cfg = {}
+        layer = self._active_layer()
+        style_task, error = self._prepare_style_task(style_cfg, layer, workspace)
+        if error:
+            self.gs_style_updated.emit(False, error)
+            return
+        if not style_task:
+            self.gs_style_updated.emit(False, 'Escolha um estilo na aba Estilos antes de atualizar.')
+            return
+        from ..core.plugin_config import config_loader
+        from .geoserver_workers import _GsApplyStyleWorker
+        self._apply_style_worker = _GsApplyStyleWorker(
+            geoserver_service, workspace, published_name, style_task, config_loader
+        )
+        self._apply_style_worker.done.connect(
+            lambda ok, err: self._on_style_updated(ok, err, layer, style_cfg.get('source') or '', style_task)
+        )
+        self._apply_style_worker.start()
+
+    def _on_style_updated(self, ok, error, layer, style_source, style_task):
+        """Persiste o estilo recém-aplicado no registro do banco (geoserver_publish_xml)
+        ANTES de avisar o JS - só quando já existe um registro pra essa camada (senão não
+        há workspace/datastore confiáveis pra criar um; o estilo foi aplicado do mesmo
+        jeito, só não fica pré-preenchido na próxima vez)."""
+        if ok and layer:
+            geoserver_service = getattr(self._dialog, 'geoserver_service', None)
+            saved = geoserver_service.load_publish_destination(layer) if geoserver_service else None
+            if saved and saved.get('workspace'):
+                geoserver_service.save_publish_destination(
+                    layer, saved['workspace'], saved['datastore'], saved['published_name'],
+                    saved['title'], saved['abstract'], saved['keywords'], saved['published'],
+                    style_source, style_task['name'], style_task.get('style_workspace') or ''
+                )
+        self.gs_style_updated.emit(ok, error or '')
 
     @pyqtSlot(str, str, str, str, str, 'QVariant')
     def check_gs_sync(self, workspace, datastore, published_name, title, abstract, keywords):
@@ -315,35 +504,46 @@ class GeoServerBridge(QObject):
         self._sync_check_worker.done.connect(self.gs_sync_checked.emit)
         self._sync_check_worker.start()
 
-    @pyqtSlot(str, str, str, str, str, 'QVariant')
-    def save_destination_now(self, workspace, datastore, published_name, title, abstract, keywords):
+    @pyqtSlot(str, str, str, str, str, 'QVariant', str)
+    def save_destination_now(self, workspace, datastore, published_name, title, abstract, keywords, style_json=''):
         """"Continuar Depois" do painel GeoServer: grava o destino atual (workspace/
-        datastore/nome/título/resumo/palavras-chave) em geoserver_publish_xml SEM publicar
-        de verdade no GeoServer - complementa o rascunho local (por máquina, só esse QGIS)
-        com uma cópia durável no banco, sem depender do usuário ter passado pelo
+        datastore/nome/título/resumo/palavras-chave/estilo) em geoserver_publish_xml SEM
+        publicar de verdade no GeoServer - complementa o rascunho local (por máquina, só
+        esse QGIS) com uma cópia durável no banco, sem depender do usuário ter passado pelo
         "Continuar Depois" do editor GN pra essa mesma promoção acontecer (ver
         GeoMetadata_dialog._promote_gs_draft_to_db, que já faz isso automaticamente - esse
-        slot é o atalho explícito direto do painel GeoServer). Emite
-        gs_destination_saved(db_ok) pro JS avisar o usuário do resultado."""
+        slot é o atalho explícito direto do painel GeoServer). O estilo aqui é só a ESCOLHA
+        (fonte + nome) - nada é exportado/enviado ao GeoServer, igual aos outros campos.
+        Emite gs_destination_saved(db_ok) pro JS avisar o usuário do resultado."""
+        import json
         geoserver_service = getattr(self._dialog, 'geoserver_service', None)
         layer = self._active_layer()
         if not geoserver_service or not layer:
             self.gs_destination_saved.emit(False)
             return
         keywords = list(keywords) if keywords else []
+        try:
+            style_cfg = json.loads(style_json) if style_json else {}
+        except ValueError:
+            style_cfg = {}
+        style_source, style_name, style_workspace = self.derive_style_fields(style_cfg, workspace)
         ok = geoserver_service.save_publish_destination(
-            layer, workspace, datastore, published_name, title, abstract, keywords
+            layer, workspace, datastore, published_name, title, abstract, keywords,
+            style_source=style_source, style_name=style_name, style_workspace=style_workspace
         )
         self.gs_destination_saved.emit(ok)
 
-    @pyqtSlot(str, str, str, str, str, 'QVariant')
-    def publish_layer(self, workspace, datastore, published_name, title, abstract, keywords):
+    @pyqtSlot(str, str, str, str, str, 'QVariant', str)
+    def publish_layer(self, workspace, datastore, published_name, title, abstract, keywords, style_json=''):
         """RF02 - publica (registra) a camada ativa do QGIS como FeatureType no
         workspace/datastore escolhidos. Reconsulta a camada ativa aqui (não confia em
         estado antigo vindo do JS) e dispara o worker em background (RNF02). title/
         abstract/keywords vêm explicitamente do JS (o mesmo valor que get_active_layer_
         publish_info já tinha calculado e mostrado na tela) - 'name'/'nativeName' seguem
-        a regra de sanitização (RF04), os demais são livres."""
+        a regra de sanitização (RF04), os demais são livres. `style_json` é a configuração
+        da aba Estilos (ver _prepare_style_task) - o preparo (exportar SLD do QGIS/ler
+        arquivo) acontece AQUI, na UI thread, e o worker só faz o tráfego REST."""
+        import json
         geoserver_service = getattr(self._dialog, 'geoserver_service', None)
         if not geoserver_service:
             self.gs_publish_done.emit(False, 'Serviço GeoServer não inicializado.', published_name, '', '')
@@ -357,27 +557,44 @@ class GeoServerBridge(QObject):
 
         keywords = list(keywords) if keywords else []
 
+        try:
+            style_cfg = json.loads(style_json) if style_json else {}
+        except ValueError:
+            style_cfg = {}
+        style_task, style_error = self._prepare_style_task(style_cfg, layer, workspace)
+        if style_error:
+            # Erro de PREPARO do estilo (arquivo sumiu, export do QGIS falhou) - barra a
+            # publicação antes de qualquer tráfego: o usuário pediu explicitamente um
+            # estilo, publicar sem ele e avisar depois seria pior que deixar corrigir já.
+            self.gs_publish_done.emit(False, style_error, published_name, '', '')
+            return
+
         from ..core.plugin_config import config_loader
         from .geoserver_workers import _GsPublishWorker
         publish_title = title or published_name
         self._publish_worker = _GsPublishWorker(
             geoserver_service, workspace, datastore, info['table'], published_name,
-            publish_title, abstract, keywords, config_loader
+            publish_title, abstract, keywords, config_loader, style_task
         )
         self._publish_worker.done.connect(
             lambda success, message, name: self._on_publish_done(
-                success, message, name, workspace, datastore, publish_title, abstract, keywords, layer, config_loader
+                success, message, name, workspace, datastore, publish_title, abstract, keywords, layer, config_loader,
+                style_cfg.get('source') or '', style_task
             )
         )
         self._publish_worker.start()
 
-    def _on_publish_done(self, success, message, published_name, workspace, datastore, title, abstract, keywords, layer, config_loader_instance):
+    def _on_publish_done(self, success, message, published_name, workspace, datastore, title, abstract, keywords, layer, config_loader_instance,
+                         style_source='', style_task=None):
         """Além de repassar o resultado, calcula as URLs WMS/WFS da camada recém-publicada -
         usadas pelo JS (geonetwork.js) pra vincular automaticamente os dois em Distribuição
         e gerar a miniatura, sem o usuário ter que ir lá manualmente linkar de novo. Também
-        grava o destino usado (workspace/datastore/nome/título/resumo/palavras-chave) em
-        geoserver_publish_xml (public.qgis_geometadata_plugin), pra pré-preencher a próxima
-        vez mesmo sem rascunho local (ver GeoServerService.save_publish_destination)."""
+        grava o destino usado (workspace/datastore/nome/título/resumo/palavras-chave/estilo)
+        em geoserver_publish_xml (public.qgis_geometadata_plugin), pra pré-preencher a
+        próxima vez mesmo sem rascunho local (ver GeoServerService.save_publish_destination).
+        Com sucesso mas `message` preenchida (aviso: o estilo falhou, ver _GsPublishWorker),
+        os campos de estilo ficam de FORA da gravação - o badge segue acusando a pendência
+        e o usuário pode reaplicar via "Serviços > Atualizar Estilo"."""
         wms_url = wfs_url = ''
         if success:
             base_url = config_loader_instance.get_geoserver_url().rstrip('/')
@@ -385,8 +602,12 @@ class GeoServerBridge(QObject):
             wfs_url = f"{base_url}/{workspace}/wfs?service=WFS"
             geoserver_service = getattr(self._dialog, 'geoserver_service', None)
             if geoserver_service:
+                style_ok = bool(style_task) and not message
                 geoserver_service.save_publish_destination(
-                    layer, workspace, datastore, published_name, title, abstract, keywords, published=True
+                    layer, workspace, datastore, published_name, title, abstract, keywords, published=True,
+                    style_source=style_source if style_ok else '',
+                    style_name=style_task['name'] if style_ok else '',
+                    style_workspace=(style_task.get('style_workspace') or '') if style_ok else ''
                 )
         self.gs_publish_done.emit(success, message, published_name, wms_url, wfs_url)
 

@@ -302,8 +302,141 @@ class GeoServerService:
             'keywords': keywords_raw,
         }
 
+    # ── Estilos (SLD) ───────────────────────────────────────────────────────────
+
+    def list_styles(self, workspace, config_loader_instance):
+        """Lista os estilos disponíveis pra associar a uma camada: os GLOBAIS
+        (/rest/styles) + os do workspace de publicação (/rest/workspaces/{ws}/styles),
+        já que os dois escopos podem ser usados como estilo padrão de uma camada desse
+        workspace. Retorna [{'name':..., 'workspace': ''|ws}] - workspace vazio = global."""
+        api_session = self.plugin.api_session
+        if not api_session:
+            raise Exception("Sessão não foi inicializada. Faça login primeiro.")
+
+        base_url = config_loader_instance.get_geoserver_url().rstrip('/')
+        if not base_url:
+            raise ValueError("A URL do GeoServer não está definida corretamente no config.json.")
+
+        styles = []
+
+        def _collect(url, ws_label):
+            response = api_session.get(url, headers={'Accept': 'application/json'}, timeout=15, verify=False)
+            if response.status_code == 404:
+                return  # workspace sem estilos próprios ainda - não é erro
+            response.raise_for_status()
+            data = response.json()
+            entries = data.get('styles')
+            # GeoServer devolve {"styles": ""} quando a lista está vazia (não um dict)
+            entries = entries.get('style') if isinstance(entries, dict) else None
+            if isinstance(entries, dict):
+                entries = [entries]  # e um objeto solto (não array) quando só tem 1 item
+            for s in (entries or []):
+                if s.get('name'):
+                    styles.append({'name': s['name'], 'workspace': ws_label})
+
+        _collect(f"{base_url}/rest/styles", '')
+        if workspace:
+            _collect(f"{base_url}/rest/workspaces/{workspace}/styles", workspace)
+        return styles
+
+    def style_exists(self, workspace, style_name, config_loader_instance):
+        """True se o estilo já existe (escopo do workspace quando `workspace` não-vazio,
+        global caso contrário) - decide entre POST (criar) e PUT (atualizar) no upload_sld."""
+        api_session = self.plugin.api_session
+        base_url = config_loader_instance.get_geoserver_url().rstrip('/')
+        scope = f"workspaces/{workspace}/" if workspace else ''
+        response = api_session.get(
+            f"{base_url}/rest/{scope}styles/{style_name}.json",
+            headers={'Accept': 'application/json'},
+            timeout=15,
+            verify=False
+        )
+        if response.status_code == 404:
+            return False
+        response.raise_for_status()
+        return True
+
     @staticmethod
-    def _build_publish_xml(workspace, datastore, published_name, title, abstract=None, keywords=None, published=False):
+    def _sld_content_type(sld_body):
+        """O GeoServer exige Content-Type diferente por versão do SLD: 1.0.0 =
+        application/vnd.ogc.sld+xml, 1.1.0 (o que o QGIS exporta via saveSldStyle) =
+        application/vnd.ogc.se+xml - mandar o tipo errado dá 400 'Unable to parse'."""
+        if 'version="1.1.0"' in (sld_body or '') or "version='1.1.0'" in (sld_body or ''):
+            return 'application/vnd.ogc.se+xml'
+        return 'application/vnd.ogc.sld+xml'
+
+    def upload_sld(self, workspace, style_name, sld_body, config_loader_instance):
+        """Cria (POST) ou atualiza (PUT) um estilo SLD no escopo do workspace. O corpo é
+        o XML SLD cru - o GeoServer valida na hora e responde 400 com a causa quando o
+        SLD é inválido (ex.: simbologia QGIS sem equivalente SLD)."""
+        api_session = self.plugin.api_session
+        if not api_session:
+            raise Exception("Sessão não foi inicializada. Faça login primeiro.")
+
+        base_url = config_loader_instance.get_geoserver_url().rstrip('/')
+        if not base_url:
+            raise ValueError("A URL do GeoServer não está definida corretamente no config.json.")
+
+        headers = {'Content-Type': self._sld_content_type(sld_body)}
+        body = (sld_body or '').encode('utf-8')
+        if self.style_exists(workspace, style_name, config_loader_instance):
+            response = api_session.put(
+                f"{base_url}/rest/workspaces/{workspace}/styles/{style_name}",
+                data=body, headers=headers, timeout=30, verify=False
+            )
+        else:
+            response = api_session.post(
+                f"{base_url}/rest/workspaces/{workspace}/styles",
+                params={'name': style_name},
+                data=body, headers=headers, timeout=30, verify=False
+            )
+        try:
+            response.raise_for_status()
+        except requests.exceptions.HTTPError:
+            raise Exception(self.translate_gs_error(response.status_code, response.text or ''))
+
+    def set_layer_default_style(self, layer_workspace, published_name, style_name, style_workspace, config_loader_instance):
+        """Define o estilo PADRÃO (defaultStyle) da camada publicada - estilos adicionais
+        ficam pra uma próxima versão. `style_workspace` vazio = estilo global."""
+        api_session = self.plugin.api_session
+        if not api_session:
+            raise Exception("Sessão não foi inicializada. Faça login primeiro.")
+
+        base_url = config_loader_instance.get_geoserver_url().rstrip('/')
+        default_style = {'name': style_name}
+        if style_workspace:
+            default_style['workspace'] = style_workspace
+        response = api_session.put(
+            f"{base_url}/rest/layers/{layer_workspace}:{published_name}.json",
+            json={'layer': {'defaultStyle': default_style}},
+            headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
+            timeout=30,
+            verify=False
+        )
+        try:
+            response.raise_for_status()
+        except requests.exceptions.HTTPError:
+            raise Exception(self.translate_gs_error(response.status_code, response.text or ''))
+
+    def apply_style(self, layer_workspace, published_name, style_task, config_loader_instance):
+        """Executa a tarefa de estilo montada pelo bridge (_prepare_style_task): sobe o
+        SLD quando há corpo (modo 'create' - gerado do QGIS ou lido de arquivo) e define
+        o estilo como padrão da camada. Chamado pelos workers (_GsPublishWorker no fim da
+        publicação / _GsApplyStyleWorker no 'Atualizar Estilo') - nunca na UI thread (RNF02)."""
+        if not style_task:
+            return
+        if style_task.get('sld_body'):
+            self.upload_sld(style_task['style_workspace'], style_task['name'],
+                            style_task['sld_body'], config_loader_instance)
+        self.set_layer_default_style(
+            layer_workspace, published_name,
+            style_task['name'], style_task.get('style_workspace') or '',
+            config_loader_instance
+        )
+
+    @staticmethod
+    def _build_publish_xml(workspace, datastore, published_name, title, abstract=None, keywords=None, published=False,
+                           style_source='', style_name='', style_workspace=''):
         import xml.etree.ElementTree as ET
         root = ET.Element('geoserver_publish')
         ET.SubElement(root, 'workspace').text = workspace or ''
@@ -318,6 +451,12 @@ class GeoServerService:
         # "publicado de verdade" (registro lógico confirmado na REST API) - sem isso o
         # badge do JS não teria como diferenciar "Salvo" de "Sincronizado/Publicado".
         ET.SubElement(root, 'published').text = 'true' if published else 'false'
+        # Estilo (SLD) usado na última publicação/salvamento: source = 'qgis'|'file'|
+        # 'existing' ('' = nunca definiu estilo pelo plugin - registros antigos caem aqui
+        # via _parse_publish_xml, que devolve '' pra tag ausente).
+        ET.SubElement(root, 'style_source').text = style_source or ''
+        ET.SubElement(root, 'style_name').text = style_name or ''
+        ET.SubElement(root, 'style_workspace').text = style_workspace or ''
         body = ET.tostring(root, encoding='unicode')
         return '<?xml version="1.0" encoding="UTF-8"?>\n' + body
 
@@ -341,10 +480,14 @@ class GeoServerService:
             'abstract': get('abstract'),
             'keywords': keywords,
             'published': get('published') == 'true',
+            'style_source': get('style_source'),
+            'style_name': get('style_name'),
+            'style_workspace': get('style_workspace'),
         }
 
     @staticmethod
-    def save_publish_destination(layer, workspace, datastore, published_name, title, abstract=None, keywords=None, published=False):
+    def save_publish_destination(layer, workspace, datastore, published_name, title, abstract=None, keywords=None, published=False,
+                                 style_source='', style_name='', style_workspace=''):
         """Guarda no banco da própria camada, na mesma linha/tabela do metadado
         (public.qgis_geometadata_plugin, coluna geoserver_publish_xml) qual workspace/
         datastore/nome/título/resumo/palavras-chave foram usados na última publicação -
@@ -376,7 +519,8 @@ class GeoServerService:
             return False
         try:
             cursor = conn.cursor()
-            xml_text = GeoServerService._build_publish_xml(workspace, datastore, published_name, title, abstract, keywords, published)
+            xml_text = GeoServerService._build_publish_xml(workspace, datastore, published_name, title, abstract, keywords, published,
+                                                           style_source, style_name, style_workspace)
             sql = """
                 INSERT INTO public.qgis_geometadata_plugin
                     (f_table_catalog, f_table_schema, f_table_name, geoserver_publish_xml)
@@ -438,8 +582,16 @@ class GeoServerService:
             return 'Acesso Negado — você não possui permissão de escrita neste Workspace.'
         if status_code == 404:
             return 'Workspace ou Datastore não encontrado.'
+        if 'already exists' in lower_text and 'style' in lower_text:
+            return 'Já existe um estilo com esse nome neste workspace.'
         if 'already exists' in lower_text:
             return 'Já existe uma camada com esse nome neste datastore.'
+        if 'unable to parse' in lower_text or 'invalid style' in lower_text or 'error persisting' in lower_text:
+            return (
+                'O GeoServer não conseguiu interpretar o SLD enviado. Se o estilo foi gerado '
+                'do QGIS, a simbologia da camada pode não ter equivalente SLD - simplifique o '
+                'estilo no QGIS ou use um arquivo .sld válido.'
+            )
         if 'no attributes were specified' in lower_text:
             return (
                 'O GeoServer não encontrou colunas para esta tabela no datastore selecionado. '

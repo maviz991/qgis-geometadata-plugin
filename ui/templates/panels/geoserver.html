@@ -107,21 +107,46 @@
     <div id="tab-gs-estilos" class="tab-content">
         <div class="form-grid">
             <div class="form-group span-2">
-                <p class="gs-coming-soon">Publicação de estilos (SLD) ainda não implementada nesta versão do
-                    plugin — fica pra uma fase futura (ver requisitos_v2.md, Módulo B). Preview de como vai
-                    funcionar:</p>
+                <label for="gs-style-source">Estilo principal <button class="help-btn"
+                        data-tip="O estilo escolhido aqui vira o estilo padrão (default) da camada no GeoServer, aplicado junto com a publicação — ou depois, via 'Serviços > Atualizar Estilo'. Estilos adicionais ficam pra uma próxima versão.">?</button></label>
+                <div id="gs-style-source-wrap">
+                    <select id="gs-style-source" onchange="onGsStyleSourceChange(this.value)">
+                        <option value="qgis" selected>Gerar do estilo atual do QGIS</option>
+                        <option value="file">Carregar arquivo .sld deste computador</option>
+                        <option value="existing">Usar um estilo já existente no GeoServer</option>
+                        <option value="none">Não definir (manter o padrão do GeoServer)</option>
+                    </select>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label>Estilo principal</label>
-                <select disabled>
-                    <option>Em breve</option>
-                </select>
+            <!-- Fonte 'qgis'/'file': o estilo será CRIADO/ATUALIZADO no workspace de
+                 publicação com esse nome (mesma sanitização RF04 do nome da camada). -->
+            <div class="form-group" id="gs-style-name-group">
+                <label for="gs-style-name">Nome do estilo no GeoServer <button class="help-btn"
+                        data-tip="Nome com que o estilo será criado (ou atualizado, se já existir) no workspace de publicação. Vazio = usa o mesmo nome da camada publicada. Mesmas regras do campo Nome: minúsculas, sem espaços/acentos.">?</button></label>
+                <input id="gs-style-name" type="text" placeholder="(igual ao nome da camada publicada)"
+                    oninput="onGsStyleNameInput(this.value)">
+                <small id="gs-style-name-preview" class="gs-name-preview"></small>
             </div>
 
-            <div class="form-group">
-                <label>Estilos adicionais (SLD)</label>
-                <button type="button" class="btn-icon" disabled>Carregar arquivo .sld...</button>
+            <!-- Fonte 'file': escolha do arquivo .sld local (QFileDialog nativo via bridge). -->
+            <div class="form-group" id="gs-style-file-group" style="display:none">
+                <label>Arquivo .sld</label>
+                <button type="button" class="btn-icon" onclick="pickGsSldFile()">Escolher arquivo...</button>
+                <small id="gs-style-file-label" class="gs-name-preview">Nenhum arquivo selecionado.</small>
+            </div>
+
+            <!-- Fonte 'existing': estilos globais + do workspace, carregados sob demanda
+                 (gsBridge.list_styles - exige login). -->
+            <div class="form-group" id="gs-style-existing-group" style="display:none">
+                <label for="gs-style-existing">Estilo existente <button class="help-btn"
+                        data-tip="Estilos já cadastrados no GeoServer: globais e os do workspace de publicação selecionado na aba Destino. A lista exige login no Geohab.">?</button></label>
+                <div id="gs-style-existing-wrap">
+                    <select id="gs-style-existing">
+                        <option value="">Selecione a fonte "estilo existente" para carregar...</option>
+                    </select>
+                </div>
+                <small id="gs-style-existing-status" class="gs-name-preview"></small>
             </div>
         </div>
     </div>

@@ -90,12 +90,16 @@ class _GsFindDatastoreWorker(QThread):
 
 
 class _GsPublishWorker(QThread):
-    """Registra uma tabela PostGIS já existente como FeatureType no GeoServer (RF02) —
-    única chamada de rede desse fluxo, isolada da UI thread (RNF02)."""
-    done = pyqtSignal(bool, str, str)  # sucesso, mensagem, nome_publicado
+    """Registra uma tabela PostGIS já existente como FeatureType no GeoServer (RF02) e,
+    quando há uma tarefa de estilo (style_task, ver GeoServerBridge._prepare_style_task),
+    sobe/associa o SLD como estilo padrão logo em seguida - tudo fora da UI thread (RNF02).
+    Falha no ESTILO não derruba a publicação (que já deu certo): emite sucesso=True com a
+    mensagem de aviso preenchida - o JS mostra o aviso e o bridge NÃO grava os campos de
+    estilo no banco (pro badge continuar acusando a pendência)."""
+    done = pyqtSignal(bool, str, str)  # sucesso, mensagem (erro OU aviso de estilo), nome_publicado
 
     def __init__(self, geoserver_service, workspace, datastore, native_table_name, published_name,
-                 title, abstract, keywords, config_loader_instance):
+                 title, abstract, keywords, config_loader_instance, style_task=None):
         super().__init__()
         self._service = geoserver_service
         self._workspace = workspace
@@ -106,6 +110,7 @@ class _GsPublishWorker(QThread):
         self._abstract = abstract
         self._keywords = keywords
         self._config = config_loader_instance
+        self._style_task = style_task
 
     def run(self):
         try:
@@ -113,9 +118,60 @@ class _GsPublishWorker(QThread):
                 self._workspace, self._datastore, self._native_table_name,
                 self._published_name, self._config, self._title, self._abstract, self._keywords
             )
-            self.done.emit(True, '', self._published_name)
         except Exception as exc:
             self.done.emit(False, str(exc), self._published_name)
+            return
+        style_warning = ''
+        if self._style_task:
+            try:
+                self._service.apply_style(self._workspace, self._published_name, self._style_task, self._config)
+            except Exception as exc:
+                style_warning = (
+                    'A camada foi publicada, mas o estilo não pôde ser aplicado: ' + str(exc) +
+                    '<br><br>Ajuste a aba Estilos e use "Serviços > Atualizar Estilo" pra tentar de novo.'
+                )
+        self.done.emit(True, style_warning, self._published_name)
+
+
+class _GsStylesWorker(QThread):
+    """Lista os estilos disponíveis (globais + do workspace) em background - popula o
+    select "Usar estilo existente" da aba Estilos (ver GeoServerService.list_styles)."""
+    done = pyqtSignal(list, str)  # [{'name':..., 'workspace': ''|ws}], error
+
+    def __init__(self, geoserver_service, workspace, config_loader_instance):
+        super().__init__()
+        self._service = geoserver_service
+        self._workspace = workspace
+        self._config = config_loader_instance
+
+    def run(self):
+        try:
+            styles = self._service.list_styles(self._workspace, self._config)
+            self.done.emit(styles, '')
+        except Exception as exc:
+            self.done.emit([], str(exc))
+
+
+class _GsApplyStyleWorker(QThread):
+    """Aplica um estilo a uma camada JÁ publicada ("Serviços > Atualizar Estilo") sem
+    republicar o FeatureType - upload do SLD (quando há corpo) + defaultStyle, fora da UI
+    thread (RNF02). Ver GeoServerService.apply_style."""
+    done = pyqtSignal(bool, str)  # sucesso, mensagem de erro
+
+    def __init__(self, geoserver_service, layer_workspace, published_name, style_task, config_loader_instance):
+        super().__init__()
+        self._service = geoserver_service
+        self._layer_workspace = layer_workspace
+        self._published_name = published_name
+        self._style_task = style_task
+        self._config = config_loader_instance
+
+    def run(self):
+        try:
+            self._service.apply_style(self._layer_workspace, self._published_name, self._style_task, self._config)
+            self.done.emit(True, '')
+        except Exception as exc:
+            self.done.emit(False, str(exc))
 
 
 class _GsSyncCheckWorker(QThread):

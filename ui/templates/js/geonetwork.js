@@ -392,17 +392,17 @@ var _GN_SYNC_LABELS = {
 };
 
 var _GN_SYNC_TOOLTIPS = {
-    checking: 'Verificando se este metadado está sincronizado...',
+    checking: 'Verificando sincronização...',
     error: 'Não foi possível verificar o status agora.',
-    offline_saved: 'Rascunho salvo localmente nesta máquina. Sem conexão com o banco de dados nem com o Geohab agora - não dá pra confirmar se bate com algum registro salvo.',
-    offline_modified: 'Editado localmente desde o último rascunho salvo nesta máquina. Sem conexão com o banco nem com o Geohab agora.',
-    db_not_found: 'Nenhum metadado salvo no banco de dados pra esta camada ainda (verificado sem login no Geohab).',
-    db_modified: 'Editado localmente desde a última vez que foi salvo no banco de dados (verificado sem login no Geohab).',
-    db_synced: 'O formulário atual bate com o que está salvo no banco de dados (verificado sem login no Geohab - o Geohab pode ter uma versão diferente).',
-    sys_not_found: 'Este metadado tem um UUID salvo localmente ou no banco, mas não foi encontrado no Geohab (nunca publicado, ou removido de lá).',
-    sys_update_available: 'Existe uma versão mais nova no Geohab. Clique pra puxar a atualização.',
-    sys_modified: 'Editado localmente desde a última sincronização com o Geohab.',
-    sys_synced: 'O formulário atual está sincronizado com o que está publicado no Geohab.'
+    offline_saved: 'Rascunho salvo só nesta máquina - sem conexão com banco ou Geohab pra confirmar.',
+    offline_modified: 'Editado desde o último rascunho local - sem conexão com banco ou Geohab agora.',
+    db_not_found: 'Nenhum metadado salvo no banco ainda (sem login no Geohab).',
+    db_modified: 'Editado desde o último salvamento no banco (sem login no Geohab).',
+    db_synced: 'Bate com o banco de dados (sem login no Geohab pra confirmar lá também).',
+    sys_not_found: 'UUID salvo, mas não encontrado no Geohab (nunca publicado ou removido de lá).',
+    sys_update_available: 'Existe uma versão mais nova no Geohab.',
+    sys_modified: 'Editado desde a última sincronização com o Geohab.',
+    sys_synced: 'Sincronizado com o que está publicado no Geohab.'
 };
 
 // Baseline -> estado "modificado" correspondente, usado por _markGnModifiedIfNeeded pra
@@ -528,14 +528,14 @@ function _gsStatusModalSuffix() {
 // próximo passo muda com o que está disponível (login vs. banco vs. só rascunho).
 var _GN_SYNC_MODALS = {
     error: { title: 'Erro ao verificar', type: 'error', message: 'Não foi possível verificar o status agora. Tente de novo em alguns instantes.' },
-    offline_saved: { title: 'Salvo (Offline)', type: 'info', message: 'Rascunho salvo localmente nesta máquina.<br><br>Sem conexão com o banco de dados nem com o Geohab agora - abra o editor com uma camada do banco ativa, ou faça login, pra confirmar contra um registro de verdade.' },
-    offline_modified: { title: 'Modificado (Offline)', type: 'warning', message: 'Editado localmente desde o último rascunho salvo nesta máquina.<br><br>Sem conexão com o banco nem com o Geohab agora pra salvar/publicar de verdade.' },
-    db_not_found: { title: 'Não Encontrado (DB)', type: 'warning', message: 'Nenhum metadado salvo no banco de dados pra esta camada ainda (verificado sem login no Geohab).<br><br>Use "Arquivo > Continuar Depois" pra salvar no banco, ou faça login pra publicar direto no Geohab.' },
-    db_modified: { title: 'Modificado (DB)', type: 'warning', message: 'Editado localmente desde a última vez que foi salvo no banco de dados (verificado sem login no Geohab).<br><br>Use "Arquivo > Continuar Depois" pra salvar, ou "Arquivo > Descartar Alterações" pra voltar ao último salvo.' },
-    db_synced: { title: 'Sincronizado (DB)', type: 'success', message: 'O formulário atual bate com o que está salvo no banco de dados.<br><br>Isso foi verificado sem login no Geohab - faça login pra confirmar se também bate com o que está publicado lá.' },
+    offline_saved: { title: 'Salvo (Offline)', type: 'info', message: 'Rascunho salvo localmente nesta máquina.<br><br>⚠️Sem conexão com o banco de dados nem com o Geohab agora - abra o editor com uma camada do banco ativa, ou faça login, pra confirmar contra um registro de verdade.' },
+    offline_modified: { title: 'Modificado (Offline)', type: 'warning', message: 'Editado localmente desde o último rascunho salvo nesta máquina.<br><br>⚠️Sem conexão com o banco nem com o Geohab.' },
+    db_not_found: { title: 'Não Encontrado (DB)', type: 'warning', message: 'Nenhum metadado salvo no banco de dados pra esta camada ainda.<br><br>⚠️ Verificado sem login no Geohab.<br>Faça login para verificação Online.<br><br>Use: <br>"Arquivo > Continuar Depois" pra salvar no banco, ou <br>"Arquivo > Publicar Metadado" pra publicar direto no Geohab.' },
+    db_modified: { title: 'Modificado (DB)', type: 'warning', message: 'O formulário atual foi editado localmente desde a última vez que foi salvo no banco de dados.<br><br>⚠️ Verificado sem login no Geohab.<br>Faça login para verificação Online.<br><br>Use:<br>"Arquivo > Continuar Depois" pra salvar, ou <br>"Arquivo > Descartar Alterações" pra voltar ao último salvo.' },
+    db_synced: { title: 'Sincronizado (DB)', type: 'success', message: 'O formulário atual bate com o que está salvo no banco de dados.<br><br>⚠️ Verificado sem login no Geohab.<br>Faça login para verificação Online.' },
     sys_not_found: { title: 'Não encontrado no Geohab', type: 'warning', message: 'Este metadado tem um UUID salvo localmente ou no banco, mas não foi encontrado no catálogo Geohab (nunca publicado, ou removido de lá).<br><br>Para publicar, use "Catálogo > Publicar Metadado".<br>Pra buscar um registro diferente já existente, use "Arquivo > Baixar Metadado" ou "Arquivo > Importar Metadado".' },
     sys_update_available: { title: 'Atualização disponível', type: 'warning', message: 'Existe uma versão mais nova deste metadado no Geohab.<br><br>Clique em "Atualizar agora" no aviso acima do formulário pra puxar a atualização.' },
-    sys_modified: { title: 'Modificado', type: 'warning', message: 'Você tem alterações locais não publicadas.<br><br>Publique no Geohab ("Catálogo > Publicar Metadado") pra sincronizar, ou "Arquivo > Descartar Alterações" pra voltar ao último estado sincronizado.' },
+    sys_modified: { title: 'Modificado', type: 'warning', message: 'Você tem alterações não salvas.<br><br>Use: <br>"Arquivo > Continuar Depois" pra salvar sem publicar, ou <br>"Arquivo > Publicar Metadado" para publicar no Geohab.' },
     sys_synced: { title: 'Sincronizado', type: 'success', message: 'Este metadado já está sincronizado com o Geohab.' }
 };
 
@@ -545,7 +545,7 @@ function onGnSyncBadgeClick() {
     var state = badge.className.replace('gn-sync-badge', '').trim();
     var entry = _GN_SYNC_MODALS[state];
     if (!entry) return; // checking - nada pra mostrar enquanto verifica
-    Modal.alert(entry.message + _gsStatusModalSuffix(), entry.title, entry.type);
+    Modal.alert(entry.message, entry.title, entry.type);
 }
 
 function applyGnUpdate() {
@@ -629,6 +629,15 @@ function checkGsPublishStatus() {
         _gsLastCheckedAt = Date.now();
         _gsLastBadgeState = _gsBadgeState;
         _refreshGnBadgeLabel();
+
+        // Nível sistema de verdade: o que foi calculado acima só diz se ALGUM destino foi
+        // salvo no banco (info.saved_workspace) - não confirma se o que está publicado DE
+        // FATO no GeoServer agora ainda bate com ele (usuário pode ter editado o resumo no
+        // painel GS e só "Continuar Depois", sem republicar - o banco bate mas o GeoServer
+        // ao vivo continua com o conteúdo antigo). Só logado dá pra confirmar isso (REST,
+        // ver check_gs_sync) - atualiza o badge combinado com o resultado quando chegar
+        // (_onGsSyncChecked, geoserver.js, cobre esse caso mesmo com o painel GS fechado).
+        if (typeof _checkGsSyncOnline === 'function') _checkGsSyncOnline(info);
     });
 }
 
