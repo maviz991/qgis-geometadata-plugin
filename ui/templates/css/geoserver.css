@@ -65,33 +65,23 @@
     font-size: 12px;
 }
 
-/* Workspace + Datastore + botão "Detectar automaticamente" na mesma linha, ocupando
-   a largura toda do grid (as duas colunas) - sem isso, .gs-destino-row cai só na
-   primeira coluna do .form-grid, sobrando metade da tela vazia à direita. */
+/* Workspace + Datastore em grid de 2 colunas. */
 .gs-destino-row {
     grid-column: 1 / -1;
-    display: flex;
-    align-items: flex-end;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 20px;
 }
 
-.gs-destino-row .form-group {
-    flex: 1;
-    min-width: 0;
-    margin-bottom: 0;
-}
-
-/* Grupo do botão "Detectar automaticamente": label vazio (&nbsp;) na mesma altura de
-   "WORKSPACE"/"DATASTORE" - sem isso o botão (sem label) ficava desalinhado com as
-   caixas dos dropdowns, mesmo com align-items:flex-end no row. */
-.gs-autodetect-group {
-    flex: 0 0 auto;
-}
-
+/* "Detectar automaticamente" no canto superior direito da ABA inteira (não da
+   linha Workspace/Datastore) - mesmo padrão de #gs-pull-gn-btn na aba
+   Identificação. .tab-content já é position:relative (geonetwork.css). */
 .gs-autodetect-btn {
-    flex-shrink: 0;
-    font-size: 14px;
-    padding: 9px 14px;
+    position: absolute;
+    top: 20px;
+    right: 28px;
+    font-size: 12px;
+    padding: 6px 12px;
     white-space: nowrap;
 }
 
@@ -137,54 +127,141 @@
     font-weight: 600;
 }
 
-/* ── Aba Identificação: botão "Puxar do GeoNetwork" ao lado do label Resumo ────── */
-.gs-pull-gn-btn {
-    background: none;
-    border: none;
-    padding: 0;
-    margin-left: 8px;
-    color: var(--accent);
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: none;
-    letter-spacing: normal;
-    text-decoration: underline;
-    cursor: pointer;
-}
-
-.gs-pull-gn-btn:hover:not(:disabled) {
-    color: var(--accent-hover);
-}
-
-.gs-pull-gn-btn:disabled {
+/* Retângulo de borda tracejada pras mensagens de status (checagem de tabela e
+   busca automática) - mesmo padrão já usado no GN pra caixas de destaque
+   (.manual-form-wrap/.extra-accordion, geonetwork.css). Escondido quando vazio
+   (:empty cobre #gs-datastore-check, que só tem texto; #gs-autodetect-box tem
+   spinner/lista dentro, então o show/hide dele é feito via JS). */
+#gs-datastore-check,
+#gs-autodetect-box {
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    background: #fafbfc;
+    padding: 10px 14px;
+    margin-top: 10px;
+    font-size: 12px;
     color: var(--fg-muted);
-    text-decoration: none;
+}
+
+#gs-datastore-check:empty {
+    display: none;
+}
+
+#gs-datastore-check.gs-warning-text {
+    color: var(--accent);
+    font-weight: 600;
+    border-color: var(--accent);
+}
+
+/* Spinner circular inline - mesmo estilo do .search-spinner (GN), mas com
+   @keyframes rotação pura (spin-simple, styles.css) por não estar posicionado
+   em absolute/top:50% como o do GN (esse spin do GN embute um translateY). */
+.gs-mini-spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin-right: 6px;
+    vertical-align: middle;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin-simple 0.7s linear infinite;
+}
+
+/* ── Aba Identificação: "Puxar do Metadado" no canto superior direito da ABA
+   inteira (não de um campo específico - preenche Título+Resumo+Palavras-chave
+   juntos, então não faz sentido "pertencer" só ao Título). .tab-content já é
+   position:relative (geonetwork.css), então o botão só precisa de
+   position:absolute - fica fora do form-grid, não participa do fluxo/altura
+   de nenhuma linha e não sobrepõe nenhum campo. */
+#gs-pull-gn-btn {
+    position: absolute;
+    top: 20px;
+    right: 28px;
+    font-size: 12px;
+    padding: 5px 12px;
+}
+
+#gs-pull-gn-btn:disabled {
+    opacity: 0.5;
     cursor: default;
 }
 
-/* ── Aba Estilos: linha "fonte + campos + botão +" dos Estilos Adicionais ──────────
-   Classe própria (não reaproveita .gs-destino-row, que é da aba Destino) porque essa
-   linha precisa de campos COMPACTOS (32px, pra caber fonte+arquivo/nome+"+" numa linha
-   só) - os selects customizados (.custom-select-trigger) têm 9px/12px de padding por
-   padrão (~38-40px de altura), o que deixava o dropdown de fonte mais alto que o botão
-   "Escolher arquivo.../Nome no servidor" ao lado (que já usam height:32px inline),
-   dando uma linha com altura desalinhada/desnivelada. */
+/* ── Aba Estilos: linha "botão Escolher arquivo... + campo Nome" ────────────────
+   Usada tanto no Estilo Principal (#gs-style-name-group, 2 itens: botão+input,
+   sem o +) quanto nos Estilos Adicionais (#gs-add-style-file-group, 3 itens:
+   botão+input+botão "+" - com o modificador .gs-addstyle-row--plus, que abre a
+   3ª coluna só quando ela realmente é usada). align-items:stretch (não end) -
+   tentar igualar botão e input só no padding não bate exato (métricas internas
+   de <button> vs <input> diferem um pouco no Chromium mesmo com padding/
+   font-size iguais); com stretch, o item mais alto dita a altura da linha e os
+   outros esticam pra bater exato, sem precisar acertar padding na mão. */
 .gs-addstyle-row {
     grid-column: 1 / -1;
-    display: flex;
-    align-items: flex-end;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: stretch;
     gap: 8px;
     margin-bottom: 8px;
 }
 
-.gs-addstyle-row .form-group {
+.gs-addstyle-row.gs-addstyle-row--plus {
+    grid-template-columns: 1fr 1fr 32px;
+}
+
+#gs-style-file-btn,
+#gs-add-style-file-btn {
+    grid-column: 1;
+}
+
+#gs-style-name,
+#gs-add-style-name {
+    grid-column: 2;
+}
+
+/* Fonte 'qgis' (só existe no Estilo Principal): botão "Escolher arquivo..."
+   escondido - o input de nome ocupa a linha toda em vez de ficar preso na
+   2ª coluna (metade direita). Classe alternada por onGsStyleSourceChange. */
+.gs-addstyle-row--solo #gs-style-name {
+    grid-column: 1 / -1;
+}
+
+.gs-addstyle-row .btn-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.gs-addstyle-row .btn-icon.accent {
+    grid-column: 3;
+    padding: 0;
+    font-size: 18px;
+}
+
+/* Linha "Estilo existente + botão +" dos Estilos Adicionais - select na altura
+   NATURAL do .custom-select-trigger (mesma de "Estilo existente" do Estilo
+   Principal, que não tem +), com o botão + esticando (align-items:stretch)
+   pra acompanhar, igual ao mesmo princípio usado em .gs-addstyle-row acima. */
+.gs-existing-plus-row {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+}
+
+.gs-existing-plus-row>div {
+    flex: 1;
     min-width: 0;
 }
 
-.gs-addstyle-row .custom-select-trigger {
-    height: 32px;
-    padding-top: 0;
-    padding-bottom: 0;
+.gs-existing-plus-row .btn-icon.accent {
+    flex-shrink: 0;
+    width: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-size: 18px;
 }
 
 /* ── Aba Estilos: preview desabilitado (RF05/RF06 ainda não implementados) ─────── */

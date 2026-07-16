@@ -730,8 +730,8 @@ function _renderGsTableCheck(names, error) {
     var found = (names || []).some(function (n) { return (n || '').toLowerCase() === table; });
     _setGsTableCheck(found,
         found
-            ? 'Tabela "' + _gsLayerInfo.table + '" encontrada neste datastore.'
-            : 'Tabela "' + _gsLayerInfo.table + '" não foi encontrada neste datastore. Confira se escolheu o workspace/datastore certo antes de publicar.'
+            ? 'Tabela "' + _gsLayerInfo.table + '" encontrada no Workspace e Datastore acima.'
+            : 'Tabela "' + _gsLayerInfo.table + '" não foi encontrada no Workspace e Datastore acima. Confira se escolheu o workspace/datastore certo antes de publicar.'
     );
 }
 
@@ -909,6 +909,11 @@ function onGsStyleSourceChange(value) {
     if (fileBtn) fileBtn.style.display = (value === 'file') ? '' : 'none';
     if (existingGroup) existingGroup.style.display = (value === 'existing') ? '' : 'none';
     if (value === 'existing') _gsLoadStylesList();
+    // Fonte 'qgis': botão "Escolher arquivo..." escondido - sem essa classe o
+    // input de nome fica preso na 2ª coluna do grid (mesma posição de quando o
+    // botão aparece), ocupando só metade da linha em vez da largura toda.
+    var row = fileBtn ? fileBtn.closest('.gs-addstyle-row') : null;
+    if (row) row.classList.toggle('gs-addstyle-row--solo', value !== 'file');
 }
 
 // Mesmo padrão de onGsLayerNameInput (RF04): sanitização assíncrona com debounce +
@@ -1020,11 +1025,11 @@ function _renderGsStyleOptions(styles, error) {
         var label = s.workspace ? (s.workspace + ' : ' + s.name) : s.name;
         options += '<option value="' + escHtml(value) + '">' + escHtml(label) + '</option>';
     });
-    
+
     if (wrap) wrap.innerHTML = '<select id="gs-style-existing">' + options + '</select>';
-    var wrapAdd = document.getElementById('gs-add-style-existing-group');
-    if (wrapAdd) wrapAdd.innerHTML = '<select id="gs-add-style-existing" style="height: 32px;">' + options + '</select>';
-    
+    var wrapAdd = document.getElementById('gs-add-style-existing-wrap');
+    if (wrapAdd) wrapAdd.innerHTML = '<select id="gs-add-style-existing">' + options + '</select>';
+
     initCustomSelects();
     if (_gsPendingExistingStyle) {
         var target = _gsPendingExistingStyle;
@@ -1044,7 +1049,7 @@ function _renderGsStyleOptions(styles, error) {
     if (_gsPendingExistingAddStyle) {
         var targetAdd = _gsPendingExistingAddStyle;
         _gsPendingExistingAddStyle = null;
-        _clickGsSuggestionItem('gs-add-style-existing-group', targetAdd);
+        _clickGsSuggestionItem('gs-add-style-existing-wrap', targetAdd);
     }
     _gsSetExistingStatus((styles && styles.length) ? '' : 'Nenhum estilo cadastrado no GeoServer ainda.');
 }
@@ -1158,14 +1163,14 @@ function pickGsAddSldFile() {
 }
 
 function _gsLoadAddStylesList() {
-    var wrap = document.getElementById('gs-add-style-existing-group');
+    var wrap = document.getElementById('gs-add-style-existing-wrap');
     if (!wrap || typeof gsBridge === 'undefined' || !gsBridge.list_styles) return;
     var current = document.getElementById('gs-add-style-existing');
     if (current && current.value) _gsPendingExistingAddStyle = current.value;
-    
-    wrap.innerHTML = '<select id="gs-add-style-existing" style="height: 32px;"><option value="">Carregando estilos...</option></select>';
+
+    wrap.innerHTML = '<select id="gs-add-style-existing"><option value="">Carregando estilos...</option></select>';
     initCustomSelects();
-    
+
     var wsEl = document.getElementById('gs-workspace');
     gsBridge.list_styles(wsEl ? wsEl.value : '');
 }
@@ -1204,7 +1209,7 @@ function gsAddAdditionalStyle() {
         styleObj.name = name;
         styleObj.mode = 'create';
     }
-    
+
     var checkName = styleObj.name || styleObj.existing_name;
     for (var i = 0; i < _gsAdditionalStyles.length; i++) {
         var existing = _gsAdditionalStyles[i];
@@ -1213,11 +1218,11 @@ function gsAddAdditionalStyle() {
             return;
         }
     }
-    
+
     _gsAdditionalStyles.push(styleObj);
     _renderGsAdditionalStyles();
     _scheduleGsDraftSave();
-    
+
     _gsAddStyleFilePath = null;
     var btn = document.getElementById('gs-add-style-file-btn');
     if (btn) btn.textContent = 'Escolher arquivo...';
@@ -1234,7 +1239,7 @@ function gsRemoveAdditionalStyle(idx) {
 function _renderGsAdditionalStyles() {
     var box = document.getElementById('gs-additional-styles-chips');
     if (!box) return;
-    box.innerHTML = _gsAdditionalStyles.map(function(s, i) {
+    box.innerHTML = _gsAdditionalStyles.map(function (s, i) {
         var label = '';
         if (s.source === 'existing') {
             label = (s.existing_workspace ? s.existing_workspace + ':' : '') + s.existing_name;
@@ -1637,7 +1642,7 @@ function _checkGsSyncOnline(info) {
         };
         var savedStyle = { source: info.saved_style_source || '', name: info.saved_style_name || '' };
         if (info.saved_style_additional_json) {
-            try { savedStyle.additional = JSON.parse(info.saved_style_additional_json); } catch(e) {}
+            try { savedStyle.additional = JSON.parse(info.saved_style_additional_json); } catch (e) { }
         }
         styleJson = JSON.stringify(savedStyle);
     }
@@ -1930,19 +1935,42 @@ function autoDetectGsDatastore() {
     if (btn) btn.disabled = true;
     var candidates = document.getElementById('gs-autodetect-candidates');
     if (candidates) candidates.style.display = 'none';
+    _setGsAutoDetectSpinner(true);
     _setGsAutoDetectStatus('Procurando em todos os workspaces/datastores... isso pode demorar alguns segundos.');
     gsBridge.find_datastore_for_active_layer();
+}
+
+function _setGsAutoDetectSpinner(show) {
+    var spinner = document.getElementById('gs-autodetect-spinner');
+    if (spinner) spinner.style.display = show ? '' : 'none';
+    _updateGsAutodetectBoxVisibility();
 }
 
 function _setGsAutoDetectStatus(msg) {
     var el = document.getElementById('gs-autodetect-status');
     if (el) el.textContent = msg || '';
+    _updateGsAutodetectBoxVisibility();
+}
+
+// Caixa de status (borda tracejada) só aparece quando há algo pra mostrar -
+// spinner rodando, texto de status, ou lista de candidatos.
+function _updateGsAutodetectBoxVisibility() {
+    var box = document.getElementById('gs-autodetect-box');
+    if (!box) return;
+    var spinner = document.getElementById('gs-autodetect-spinner');
+    var status = document.getElementById('gs-autodetect-status');
+    var candidates = document.getElementById('gs-autodetect-candidates');
+    var spinnerOn = spinner && spinner.style.display !== 'none';
+    var hasStatus = status && status.textContent.trim();
+    var hasCandidates = candidates && candidates.style.display !== 'none';
+    box.style.display = (spinnerOn || hasStatus || hasCandidates) ? '' : 'none';
 }
 
 function _onGsAutoDetectDone(matches, error) {
     _gsAutoDetectRunning = false;
     var btn = document.querySelector('.gs-autodetect-btn');
     if (btn) btn.disabled = false;
+    _setGsAutoDetectSpinner(false);
 
     if (error) {
         _setGsAutoDetectStatus('');
@@ -1954,7 +1982,7 @@ function _onGsAutoDetectDone(matches, error) {
         return;
     }
     if (matches.length === 1) {
-        _setGsAutoDetectStatus('Encontrado: ' + matches[0].workspace + ' / ' + matches[0].datastore + '. Selecionando...');
+        _setGsAutoDetectStatus('Encontrado em: ' + matches[0].workspace + ' + ' + matches[0].datastore);
         _selectGsWorkspaceDatastore(matches[0].workspace, matches[0].datastore);
         return;
     }
@@ -1971,6 +1999,7 @@ function _renderGsAutoDetectCandidates(matches) {
     }).join('');
     wrap.style.display = 'flex';
     wrap._gsCandidates = matches; // guarda a lista original (não confiar em reparse do HTML)
+    _updateGsAutodetectBoxVisibility();
 }
 
 function _pickGsAutoDetectCandidate(idx) {
@@ -1978,6 +2007,7 @@ function _pickGsAutoDetectCandidate(idx) {
     var m = wrap && wrap._gsCandidates && wrap._gsCandidates[idx];
     if (!m) return;
     wrap.style.display = 'none';
+    _updateGsAutodetectBoxVisibility();
     _setGsAutoDetectStatus('Selecionando ' + m.workspace + ' / ' + m.datastore + '...');
     _selectGsWorkspaceDatastore(m.workspace, m.datastore);
 }

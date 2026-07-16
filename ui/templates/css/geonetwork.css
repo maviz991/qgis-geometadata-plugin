@@ -336,7 +336,11 @@
     flex-direction: column;
 }
 
-.form-group.span-2 {
+/* .span-2 sozinho (não só .form-group.span-2) - precisa valer também pra
+   elementos que não são form-group, ex.: <hr class="span-2"> usado como
+   separador de seção dentro do grid (senão o hr some/desaparece na coluna
+   errada, com metade da largura, por não pegar grid-column: span 2). */
+.span-2 {
     grid-column: span 2;
 }
 

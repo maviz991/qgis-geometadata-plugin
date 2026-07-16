@@ -25,7 +25,7 @@ import requests
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-from qgis.PyQt.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QStackedWidget
+from qgis.PyQt.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QStackedWidget
 from qgis.PyQt.QtCore import Qt, QUrl, QTimer, pyqtSignal
 from qgis.PyQt.QtGui import QPainter, QPen, QColor
 
@@ -90,6 +90,51 @@ class _SpinnerWidget(QWidget):
         painter.drawArc(rect, -self._angle * 16, 90 * 16)
 
 
+class _ChevronBackButton(QWidget):
+    """Botão "‹ Voltar" com o chevron maior que o texto. Rich text (font-size
+    inline em QLabel) não deu contraste suficiente - isso usa dois QLabel
+    separados com QFont.setPointSize() explícito (mais confiável/determinístico
+    que CSS font-size dentro de texto rico), lado a lado num container clicável."""
+
+    clicked = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setObjectName("ChevronBackButton")
+        self.setCursor(Qt.PointingHandCursor)
+        self.setAttribute(Qt.WA_Hover, True)
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(12, 2, 16, 2)
+        layout.setSpacing(2)
+
+        chevron = QLabel("❮")
+        chevron_font = chevron.font()
+        chevron_font.setPointSize(chevron_font.pointSize() + 2)
+        chevron.setFont(chevron_font)
+        layout.addWidget(chevron)
+
+        text = QLabel("Voltar")
+        text_font = text.font()
+        text_font.setPointSize(text_font.pointSize() + 1)
+        text.setFont(text_font)
+        layout.addWidget(text)
+
+        self.setStyleSheet(
+            "#ChevronBackButton {"
+            "  border-radius: 10px; border: 1px solid rgba(0,0,0,0.25);"
+            "  background: rgba(255,255,255,0.92);"
+            "}"
+            "#ChevronBackButton QLabel { color: #363636; background: transparent; }"
+            "#ChevronBackButton:hover { background: #363636; border-color: #363636; }"
+            "#ChevronBackButton:hover QLabel { color: white; }"
+        )
+
+    def mousePressEvent(self, event):
+        self.clicked.emit()
+        super().mousePressEvent(event)
+
+
 class GatewaySSOWidget(QWidget):
     """
     Widget de login SSO via sessão do gateway geOrchestra, pra ser trocado no
@@ -127,35 +172,23 @@ class GatewaySSOWidget(QWidget):
 
     def _build_ui(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 8)
-        layout.setSpacing(6)
-
-        header = QHBoxLayout()
-        header.setContentsMargins(12, 8, 12, 0)
-        self._status_label = QLabel("Aguardando login...")
-        header.addWidget(self._status_label)
-        header.addStretch()
-        btn_cancel = QPushButton("Cancelar")
-        btn_cancel.setCursor(Qt.PointingHandCursor)
-        btn_cancel.setStyleSheet(
-            "QPushButton {"
-            "  padding: 4px 14px; border-radius: 4px;"
-            "  border: 1px solid rgba(0,0,0,0.2); background: transparent;"
-            "}"
-            "QPushButton:hover { background: rgba(229,34,45,0.1); border-color: #e5222d; color: #e5222d; }"
-        )
-        btn_cancel.clicked.connect(self._on_cancel)
-        header.addWidget(btn_cancel)
-        layout.addLayout(header)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
 
         # Profile isolado (não persiste em disco) - evita misturar cookies
         # dessa tentativa de login com o resto da UI do plugin.
         self._profile = QWebEngineProfile(self)
         self._profile.cookieStore().cookieAdded.connect(self._on_cookie_added)
+        # QWebEngineView embutida não herda o idioma do sistema como o navegador
+        # padrão faz (Accept-Language) - sem isso a página do Azure AD vem em
+        # inglês mesmo com o Windows/navegador em pt-BR.
+        try:
+            self._profile.setHttpAcceptLanguage("pt-BR,pt;q=0.9,en;q=0.8")
+        except AttributeError:
+            pass
 
         self._view = QWebEngineView(self)
         self._view.setPage(_InsecurePage(self._profile, self._view))
-        self._view.loadStarted.connect(lambda: self._status_label.setText("Carregando..."))
         self._view.loadFinished.connect(self._on_load_finished)
         self._view.urlChanged.connect(self._on_url_changed)
 
@@ -176,6 +209,27 @@ class GatewaySSOWidget(QWidget):
         self._browser_stack.addWidget(self._view)
         self._browser_stack.addWidget(self._finishing_widget)
         layout.addWidget(self._browser_stack)
+
+        # Sem barra de header dedicada - Voltar flutua por cima do navegador
+        # embutido (reposicionado em _position_overlays/resizeEvent). Sem label
+        # de status - mensagens de diagnóstico vão só pro console do Python.
+        self._btn_cancel = _ChevronBackButton(self)
+        self._btn_cancel.clicked.connect(self._on_cancel)
+
+        self._position_overlays()
+        self._btn_cancel.raise_()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._position_overlays()
+
+    def _position_overlays(self):
+        margin = 10
+        self._btn_cancel.adjustSize()
+        self._btn_cancel.move(self.width() - self._btn_cancel.width() - margin, margin)
+
+    def _set_status(self, text: str):
+        print(f"GeoMetadata [GatewaySSOWidget] status: {text}")
 
     # ------------------------------------------------------------------
     # Fluxo de login
@@ -206,7 +260,7 @@ class GatewaySSOWidget(QWidget):
             return
         if not ok:
             print(f"GeoMetadata [GatewaySSOWidget] falha ao carregar: {self._view.url().toString()}")
-            self._status_label.setText("Falha ao carregar a página de login.")
+            self._set_status("Falha ao carregar a página de login.")
             return
         current_host = self._view.url().host()
         # Só faz sentido validar depois de termos saído pro Azure AD e voltado -
@@ -215,7 +269,7 @@ class GatewaySSOWidget(QWidget):
         if not self._left_for_idp or current_host != self._base_host:
             return
         self._browser_stack.setCurrentWidget(self._finishing_widget)
-        self._status_label.setText("Validando sessão...")
+        self._set_status("Validando sessão...")
         self._try_verify()
 
     def _try_verify(self):
@@ -249,12 +303,12 @@ class GatewaySSOWidget(QWidget):
                 self._done = True
                 self.login_succeeded.emit(session, str(username))
                 return
-            self._status_label.setText(
+            self._set_status(
                 f"Sessão ainda não confirmada (HTTP {resp.status_code}) - tentando de novo..."
             )
         except requests.exceptions.RequestException as exc:
             print(f"GeoMetadata [GatewaySSOWidget] erro ao verificar sessão: {exc}")
-            self._status_label.setText(f"Erro ao verificar sessão: {exc}")
+            self._set_status(f"Erro ao verificar sessão: {exc}")
         finally:
             self._verifying = False
         # Ainda pode ser um hop intermediário do redirect, ou o cookie de sessão
@@ -263,7 +317,7 @@ class GatewaySSOWidget(QWidget):
         # pra não martelar o servidor pra sempre se for uma falha genuína.
         self._retry_count += 1
         if self._retry_count > 15:
-            self._status_label.setText(
+            self._set_status(
                 "Não foi possível confirmar o login (veja o console do Python)."
             )
             return
