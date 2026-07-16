@@ -25,8 +25,9 @@ import requests
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-from qgis.PyQt.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
-from qgis.PyQt.QtCore import QUrl, QTimer, pyqtSignal
+from qgis.PyQt.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QStackedWidget
+from qgis.PyQt.QtCore import Qt, QUrl, QTimer, pyqtSignal
+from qgis.PyQt.QtGui import QPainter, QPen, QColor
 
 try:
     from qgis.PyQt.QtWebEngineWidgets import QWebEngineView, QWebEngineProfile, QWebEnginePage
@@ -49,6 +50,44 @@ class _InsecurePage(QWebEnginePage):
         except AttributeError:
             pass
         return True
+
+
+class _SpinnerWidget(QWidget):
+    """Spinner circular nativo - mesmo estilo visual do spinner CSS usado no
+    resto do plugin (anel cinza com segmento vermelho de accent girando, ver
+    .search-spinner em ui/templates/css/geonetwork.css: border cinza +
+    border-top-color #e5222d, animação de rotação)."""
+
+    _RING_COLOR   = QColor("#bfc3c9")
+    _ACCENT_COLOR = QColor("#e5222d")
+
+    def __init__(self, parent=None, diameter=36):
+        super().__init__(parent)
+        self.setFixedSize(diameter, diameter)
+        self._angle = 0
+        self._timer = QTimer(self)
+        self._timer.timeout.connect(self._rotate)
+        self._timer.start(16)
+
+    def _rotate(self):
+        self._angle = (self._angle + 8) % 360
+        self.update()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        pen_width = max(2, self.width() // 12)
+        rect = self.rect().adjusted(pen_width, pen_width, -pen_width, -pen_width)
+
+        pen = QPen(self._RING_COLOR)
+        pen.setWidth(pen_width)
+        pen.setCapStyle(Qt.RoundCap)
+        painter.setPen(pen)
+        painter.drawArc(rect, 0, 360 * 16)
+
+        pen.setColor(self._ACCENT_COLOR)
+        painter.setPen(pen)
+        painter.drawArc(rect, -self._angle * 16, 90 * 16)
 
 
 class GatewaySSOWidget(QWidget):
@@ -97,6 +136,14 @@ class GatewaySSOWidget(QWidget):
         header.addWidget(self._status_label)
         header.addStretch()
         btn_cancel = QPushButton("Cancelar")
+        btn_cancel.setCursor(Qt.PointingHandCursor)
+        btn_cancel.setStyleSheet(
+            "QPushButton {"
+            "  padding: 4px 14px; border-radius: 4px;"
+            "  border: 1px solid rgba(0,0,0,0.2); background: transparent;"
+            "}"
+            "QPushButton:hover { background: rgba(229,34,45,0.1); border-color: #e5222d; color: #e5222d; }"
+        )
         btn_cancel.clicked.connect(self._on_cancel)
         header.addWidget(btn_cancel)
         layout.addLayout(header)
@@ -111,7 +158,24 @@ class GatewaySSOWidget(QWidget):
         self._view.loadStarted.connect(lambda: self._status_label.setText("Carregando..."))
         self._view.loadFinished.connect(self._on_load_finished)
         self._view.urlChanged.connect(self._on_url_changed)
-        layout.addWidget(self._view)
+
+        # Assim que voltamos pro domínio do gateway (login concluído no Azure AD),
+        # a QWebEngineView chega a renderizar a página do próprio sistema Geohab por
+        # um instante antes da gente confirmar a sessão e voltar pra UI do plugin -
+        # esse "flash" é escondido trocando pra esse placeholder nesse meio-tempo.
+        self._finishing_widget = QWidget()
+        finishing_layout = QVBoxLayout(self._finishing_widget)
+        finishing_layout.setAlignment(Qt.AlignCenter)
+        finishing_layout.setSpacing(14)
+        finishing_layout.addWidget(_SpinnerWidget(diameter=36), alignment=Qt.AlignCenter)
+        finishing_text = QLabel("Finalizando login...")
+        finishing_text.setAlignment(Qt.AlignCenter)
+        finishing_layout.addWidget(finishing_text)
+
+        self._browser_stack = QStackedWidget()
+        self._browser_stack.addWidget(self._view)
+        self._browser_stack.addWidget(self._finishing_widget)
+        layout.addWidget(self._browser_stack)
 
     # ------------------------------------------------------------------
     # Fluxo de login
@@ -131,6 +195,11 @@ class GatewaySSOWidget(QWidget):
     def _on_url_changed(self, url: QUrl):
         if url.host() and url.host() != self._base_host:
             self._left_for_idp = True
+        elif self._left_for_idp:
+            # Voltamos pro domínio do gateway - esconde a view ANTES dela
+            # renderizar a página do sistema (troca no urlChanged, não no
+            # loadFinished, pra pegar antes do primeiro paint).
+            self._browser_stack.setCurrentWidget(self._finishing_widget)
 
     def _on_load_finished(self, ok: bool):
         if self._done or self._verifying:
@@ -145,6 +214,7 @@ class GatewaySSOWidget(QWidget):
         # acontece no host do gateway, antes do redirect pra Microsoft.
         if not self._left_for_idp or current_host != self._base_host:
             return
+        self._browser_stack.setCurrentWidget(self._finishing_widget)
         self._status_label.setText("Validando sessão...")
         self._try_verify()
 
