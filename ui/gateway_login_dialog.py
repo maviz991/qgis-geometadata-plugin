@@ -236,8 +236,11 @@ class GatewaySSOWidget(QWidget):
                   f"cookies={list(session.cookies.keys())}")
             if resp.status_code == 200 and 'json' in content_type:
                 data = resp.json() or {}
+                # GeoNetwork separa nome/sobrenome em campos distintos (name/surname) -
+                # junta os dois pra exibir o nome completo em vez de só o primeiro nome.
+                full_name = f"{data.get('name') or ''} {data.get('surname') or ''}".strip()
                 username = (
-                    data.get('name')
+                    full_name
                     or data.get('username')
                     or data.get('email')
                     or data.get('id')
