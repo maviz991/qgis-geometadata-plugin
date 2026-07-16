@@ -19,6 +19,12 @@
         </div>
     </div>
 
+    <div id="gs-update-banner" class="gn-update-banner" style="display:none">
+        <span>O formulário atual é diferente do que está publicado no GeoServer - clique para trazer os dados do servidor.</span>
+        <button class="btn-icon accent" onclick="applyGsLayerUpdate()">Atualizar agora</button>
+        <button class="gn-update-banner-close" onclick="dismissGsUpdateBanner()">&times;</button>
+    </div>
+
     <!-- ══ ABA 1: DESTINO ══════════════════════════════ -->
     <div id="tab-gs-destino" class="tab-content active">
         <div class="form-grid">
@@ -120,25 +126,30 @@
             </div>
 
             <!-- Fonte 'qgis'/'file': o estilo será CRIADO/ATUALIZADO no workspace de
-                 publicação com esse nome (mesma sanitização RF04 do nome da camada). -->
-            <div class="form-group" id="gs-style-name-group">
+                 publicação com esse nome (mesma sanitização RF04 do nome da camada).
+                 span-2: sem isso, cada grupo ocupa só 1 coluna da grade (sobra metade da
+                 tela vazia) e o <hr class="span-2"> logo abaixo fica espremido/deslocado
+                 em vez de vir numa linha própria de largura cheia.
+                 O botão "Escolher arquivo..." (fonte 'file') mora AQUI, ao lado do nome,
+                 mesmo layout campo+botão numa linha só de .gs-addstyle-row usado em
+                 Estilos Adicionais (mesmo o nome do estilo sendo um só campo, usado tanto
+                 pra 'qgis' quanto pra 'file' - por isso o botão fica escondido/mostrado
+                 por onGsStyleSourceChange, não um grupo à parte). -->
+            <div class="form-group span-2" id="gs-style-name-group">
                 <label for="gs-style-name">Nome do estilo no GeoServer <button class="help-btn"
                         data-tip="Nome com que o estilo será criado (ou atualizado, se já existir) no workspace de publicação. Vazio = usa o mesmo nome da camada publicada. Mesmas regras do campo Nome: minúsculas, sem espaços/acentos.">?</button></label>
-                <input id="gs-style-name" type="text" placeholder="(igual ao nome da camada publicada)"
-                    oninput="onGsStyleNameInput(this.value)">
+                <div class="gs-addstyle-row" style="margin-bottom: 0;">
+                    <button type="button" class="btn-icon" id="gs-style-file-btn" onclick="pickGsSldFile()"
+                        style="display:none; flex: 1; height: 32px;">Escolher arquivo...</button>
+                    <input id="gs-style-name" type="text" placeholder="(igual ao nome da camada publicada)"
+                        style="flex: 1; height: 32px;" oninput="onGsStyleNameInput(this.value)">
+                </div>
                 <small id="gs-style-name-preview" class="gs-name-preview"></small>
-            </div>
-
-            <!-- Fonte 'file': escolha do arquivo .sld local (QFileDialog nativo via bridge). -->
-            <div class="form-group" id="gs-style-file-group" style="display:none">
-                <label>Arquivo .sld</label>
-                <button type="button" class="btn-icon" onclick="pickGsSldFile()">Escolher arquivo...</button>
-                <small id="gs-style-file-label" class="gs-name-preview">Nenhum arquivo selecionado.</small>
             </div>
 
             <!-- Fonte 'existing': estilos globais + do workspace, carregados sob demanda
                  (gsBridge.list_styles - exige login). -->
-            <div class="form-group" id="gs-style-existing-group" style="display:none">
+            <div class="form-group span-2" id="gs-style-existing-group" style="display:none">
                 <label for="gs-style-existing">Estilo existente <button class="help-btn"
                         data-tip="Estilos já cadastrados no GeoServer: globais e os do workspace de publicação selecionado na aba Destino. A lista exige login no Geohab.">?</button></label>
                 <div id="gs-style-existing-wrap">
@@ -154,8 +165,11 @@
             <!-- ESTILOS ADICIONAIS -->
             <div class="form-group span-2">
                 <label>Estilos adicionais <button class="help-btn" data-tip="Estilos alternativos que ficarão disponíveis na camada além do padrão. Escolha a fonte, preencha os dados e clique no + para adicionar à lista.">?</button></label>
-                
-                <div class="gs-destino-row" style="align-items: flex-end; margin-bottom: 8px; gap: 8px;">
+
+                <!-- gs-addstyle-row (não .gs-destino-row - essa linha precisa de campos
+                     compactos de 32px, diferente da linha workspace/datastore da aba
+                     Destino, que usa a altura padrão dos selects) -->
+                <div class="gs-addstyle-row">
                     <div class="form-group" style="margin: 0; flex: 1;">
                         <select id="gs-add-style-source" onchange="onGsAddStyleSourceChange(this.value)">
                             <option value="file" selected>Carregar arquivo .sld local</option>
@@ -180,7 +194,7 @@
 
                     <button class="btn-icon accent" onclick="gsAddAdditionalStyle()" style="height: 32px; width: 32px; flex-shrink: 0;">+</button>
                 </div>
-                
+
                 <div class="keyword-chips" id="gs-additional-styles-chips" style="margin-top: 4px; min-height: 32px;"></div>
             </div>
         </div>

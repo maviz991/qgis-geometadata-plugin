@@ -98,9 +98,20 @@ class GeoNetworkService:
 
         api_session = self.plugin.api_session or requests.Session()
 
-        records_url = config_loader_instance.get_geonetwork_url().get('records_url')
+        gn_urls = config_loader_instance.get_geonetwork_url()
+        records_url = gn_urls.get('records_url')
+        catalog_url = gn_urls.get('catalog_url')
         if not records_url:
             raise ValueError("A URL do GeoNetwork não está definida corretamente no config.json.")
+
+        # Mesmo "aquecimento" de sessão feito em push_to_geonetwork: sem essa primeira
+        # visita ao catálogo, o GN nunca estabelece sua sessão interna (JSESSIONID/
+        # XSRF-TOKEN) a partir da credencial do gateway (Basic Auth ou Bearer SSO), e
+        # rejeita com 403 registros que exigem autenticação mesmo com token válido.
+        if catalog_url and not any(
+            c.name == 'XSRF-TOKEN' and 'geonetwork' in c.path for c in api_session.cookies
+        ):
+            api_session.get(catalog_url, verify=False)
 
         response = api_session.get(
             f"{records_url}/{uuid}/formatters/xml",

@@ -162,6 +162,31 @@
     cursor: default;
 }
 
+/* ── Aba Estilos: linha "fonte + campos + botão +" dos Estilos Adicionais ──────────
+   Classe própria (não reaproveita .gs-destino-row, que é da aba Destino) porque essa
+   linha precisa de campos COMPACTOS (32px, pra caber fonte+arquivo/nome+"+" numa linha
+   só) - os selects customizados (.custom-select-trigger) têm 9px/12px de padding por
+   padrão (~38-40px de altura), o que deixava o dropdown de fonte mais alto que o botão
+   "Escolher arquivo.../Nome no servidor" ao lado (que já usam height:32px inline),
+   dando uma linha com altura desalinhada/desnivelada. */
+.gs-addstyle-row {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.gs-addstyle-row .form-group {
+    min-width: 0;
+}
+
+.gs-addstyle-row .custom-select-trigger {
+    height: 32px;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
 /* ── Aba Estilos: preview desabilitado (RF05/RF06 ainda não implementados) ─────── */
 .gs-coming-soon {
     color: var(--fg-muted);

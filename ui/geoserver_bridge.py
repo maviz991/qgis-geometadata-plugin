@@ -28,6 +28,7 @@ class GeoServerBridge(QObject):
     gs_sync_checked = pyqtSignal('QVariant')  # resultado de check_gs_sync (ver _GsSyncCheckWorker)
     gs_styles_ready = pyqtSignal(list, str)  # [{'name':..., 'workspace': ''|ws}], error - ver list_styles
     gs_style_updated = pyqtSignal(bool, str)  # sucesso, erro - "Serviços > Atualizar Estilo" (ver update_style)
+    gs_layer_pulled = pyqtSignal(bool, 'QVariant', str)  # sucesso, dados, erro - "Serviços > Atualizar Camada" (ver pull_layer_from_server)
     gs_rest_configured = pyqtSignal(bool, str)  # ok, username - resultado de configure_gs_rest_credentials
 
     # Cache de camadas do GeoServer (carregado uma vez por sessão)
@@ -45,6 +46,7 @@ class GeoServerBridge(QObject):
         self._styles_worker = None
         self._apply_style_worker = None
         self._gs_rest_worker = None
+        self._pull_layer_worker = None
 
     @pyqtSlot(str, str)
     def configure_gs_rest_credentials(self, user: str, password: str):
@@ -502,14 +504,18 @@ class GeoServerBridge(QObject):
 
         return d_src, d_nm, d_ws, adds_json
 
-    @pyqtSlot(str, str, str)
-    def update_style(self, workspace, published_name, style_json):
+    @pyqtSlot(str, str, str, str, str, 'QVariant', str)
+    def update_style(self, workspace, datastore, published_name, title, abstract, keywords, style_json):
         """"Serviços > Atualizar Estilo": aplica o estilo da aba Estilos a uma camada JÁ
         publicada, sem republicar o FeatureType (publicar de novo daria "já existe"). O
         preparo (exportar SLD do QGIS/ler arquivo) roda aqui na UI thread; o tráfego REST
         vai pro _GsApplyStyleWorker (RNF02). Emite gs_style_updated(ok, error) ao final -
-        em caso de sucesso, atualiza também os campos de estilo do registro em
-        geoserver_publish_xml (se houver), pro badge/pré-preenchimento refletirem."""
+        em caso de sucesso, grava a escolha (fonte/nome/adicionais) em geoserver_publish_xml
+        usando o workspace/datastore/título/resumo/palavras-chave ATUAIS do formulário -
+        não só quando já existia um registro salvo pra essa camada, pra permitir que um
+        técnico em OUTRA máquina recupere a mesma escolha de estilo via banco mesmo numa
+        camada publicada originalmente fora do plugin (sem "Continuar Depois"/"Publicar"
+        prévios)."""
         import json
         geoserver_service = getattr(self._dialog, 'geoserver_service', None)
         if not geoserver_service or not workspace or not published_name:
@@ -527,42 +533,99 @@ class GeoServerBridge(QObject):
         if not style_task:
             self.gs_style_updated.emit(False, '[UI-003] Escolha um estilo na aba Estilos antes de atualizar.')
             return
+        keywords = list(keywords) if keywords else []
         from ..core.plugin_config import config_loader
         from .geoserver_workers import _GsApplyStyleWorker
         self._apply_style_worker = _GsApplyStyleWorker(
             geoserver_service, workspace, published_name, style_task, config_loader
         )
         self._apply_style_worker.done.connect(
-            lambda ok, err: self._on_style_updated(ok, err, layer, style_cfg.get('source') or '', style_task)
+            lambda ok, err: self._on_style_updated(
+                ok, err, layer, workspace, datastore, published_name, title, abstract, keywords,
+                style_cfg.get('source') or '', style_task
+            )
         )
         self._apply_style_worker.start()
 
-    def _on_style_updated(self, ok, error, layer, style_source, style_task):
+    def _on_style_updated(self, ok, error, layer, workspace, datastore, published_name, title, abstract, keywords, style_source, style_task):
         """Persiste o estilo recém-aplicado no registro do banco (geoserver_publish_xml)
-        ANTES de avisar o JS - só quando já existe um registro pra essa camada (senão não
-        há workspace/datastore confiáveis pra criar um; o estilo foi aplicado do mesmo
-        jeito, só não fica pré-preenchido na próxima vez)."""
+        ANTES de avisar o JS - com o destino/título/resumo/palavras-chave ATUAIS do
+        formulário (não um registro pré-existente), pra sempre gravar mesmo na primeira
+        vez que o plugin toca essa camada (ver update_style acima)."""
         if ok and layer:
             geoserver_service = getattr(self._dialog, 'geoserver_service', None)
-            saved = geoserver_service.load_publish_destination(layer) if geoserver_service else None
-            if saved and saved.get('workspace'):
-                adds = []
-                adds_entries = style_task.get('additional') or []
+            if geoserver_service:
+                adds_entries = (style_task or {}).get('additional') or []
                 import json
                 adds = [{'source': 'existing' if e.get('mode') == 'existing' else 'create',
-                         'existing_name': e['name'], 'existing_workspace': e.get('style_workspace','')} 
-                        if e.get('mode') == 'existing' 
-                        else {'source': 'file', 'name': e['name']} 
+                         'existing_name': e['name'], 'existing_workspace': e.get('style_workspace','')}
+                        if e.get('mode') == 'existing'
+                        else {'source': 'file', 'name': e['name']}
                         for e in adds_entries]
-                
-                def_task = style_task.get('default') or {}
+
+                def_task = (style_task or {}).get('default') or {}
                 geoserver_service.save_publish_destination(
-                    layer, saved['workspace'], saved['datastore'], saved['published_name'],
-                    saved['title'], saved['abstract'], saved['keywords'], saved['published'],
-                    style_source, def_task.get('name') or '', def_task.get('style_workspace') or '',
+                    layer, workspace, datastore, published_name, title, abstract, keywords, published=True,
+                    style_source=style_source, style_name=def_task.get('name') or '',
+                    style_workspace=def_task.get('style_workspace') or '',
                     style_additional_json=json.dumps(adds) if adds else ''
                 )
         self.gs_style_updated.emit(ok, error or '')
+
+    @pyqtSlot(str, str, str)
+    def pull_layer_from_server(self, workspace, datastore, published_name):
+        """"Serviços > Atualizar Camada" (banner "Atualização disponível", como o GN) -
+        PULL, não push: busca o que está DE FATO publicado no GeoServer agora (título/
+        resumo/palavras-chave + estilo padrão/adicionais, só leitura - ver
+        _GsPullLayerWorker) e devolve pro JS aplicar no formulário local, sobrescrevendo o
+        que estava digitado. Complementa "Publicar Camada" (cria) e "Atualizar Estilo"
+        (push deliberado de um estilo escolhido) - esse aqui existe pro caso oposto:
+        quando o formulário/banco LOCAL está desatualizado em relação ao que foi
+        publicado de verdade (ex.: outro técnico publicou por cima depois que você só
+        salvou um destino no banco) - empurrar o local sobrescreveria o trabalho de quem
+        publicou por último, então a direção certa é trazer o servidor pra cá. Emite
+        gs_layer_pulled(ok, dados, error); em caso de sucesso, grava os dados PUXADOS em
+        geoserver_publish_xml (a fonte de verdade agora é o que o servidor tinha), pra um
+        técnico em outra máquina recuperar o estado correto via banco."""
+        geoserver_service = getattr(self._dialog, 'geoserver_service', None)
+        if not geoserver_service or not workspace or not datastore or not published_name:
+            self.gs_layer_pulled.emit(False, {}, '[UI-004] Destino de publicação incompleto (workspace/datastore/nome).')
+            return
+        layer = self._active_layer()
+        from ..core.plugin_config import config_loader
+        from .geoserver_workers import _GsPullLayerWorker
+        self._pull_layer_worker = _GsPullLayerWorker(
+            geoserver_service, workspace, datastore, published_name, config_loader
+        )
+        self._pull_layer_worker.done.connect(
+            lambda ok, data, err: self._on_layer_pulled(ok, data, err, layer, workspace, datastore, published_name)
+        )
+        self._pull_layer_worker.start()
+
+    def _on_layer_pulled(self, ok, data, error, layer, workspace, datastore, published_name):
+        """Persiste no banco o que acabou de vir do GeoServer (título/resumo/palavras-
+        chave/estilo) - a partir de agora ESSE é o estado correto/salvo, não mais o que
+        estava só no formulário local (ver pull_layer_from_server acima)."""
+        if ok and layer:
+            geoserver_service = getattr(self._dialog, 'geoserver_service', None)
+            if geoserver_service:
+                import json
+                additional_styles = data.get('additional_styles') or []
+                adds = [
+                    {'source': 'existing', 'existing_name': a.get('name') or '', 'existing_workspace': a.get('style_workspace') or ''}
+                    for a in additional_styles if a.get('name')
+                ]
+                default_style = data.get('default_style') or ''
+                geoserver_service.save_publish_destination(
+                    layer, workspace, datastore, published_name,
+                    data.get('title') or published_name, data.get('abstract') or '', data.get('keywords') or [],
+                    published=True,
+                    style_source='existing' if default_style else '',
+                    style_name=default_style,
+                    style_workspace=data.get('default_style_workspace') or '',
+                    style_additional_json=json.dumps(adds) if adds else ''
+                )
+        self.gs_layer_pulled.emit(ok, data or {}, error or '')
 
     @pyqtSlot(str, str, str, str, str, 'QVariant', str)
     def check_gs_sync(self, workspace, datastore, published_name, title, abstract, keywords, style_json=''):

@@ -110,6 +110,12 @@ function _initGsBridge() {
     gsBridge.gs_style_updated.connect(function (success, error) {
         _hideActionLoading();
         if (!success) {
+            // Força uma checagem AO VIVO na hora - se a falha foi porque a camada não
+            // existe de verdade nesse destino (ver _gs_augment_404, geoserver_workers.py),
+            // o badge corrige sozinho pra "Não Encontrado" em vez de ficar preso em
+            // "Modificado" até o próximo login/reabertura do painel (a checagem ao vivo,
+            // normalmente, só roda nesses dois momentos - ver _checkGsSyncOnline).
+            _gsForceLiveRecheck();
             Modal.alert(error || 'Falha ao aplicar o estilo no GeoServer.', 'Erro', 'error');
             return;
         }
@@ -130,6 +136,49 @@ function _initGsBridge() {
             _checkGsSyncNow();
         } catch (e) { /* sem snapshot ainda (null) - nada a realinhar */ }
         Modal.alert('Estilo aplicado como padrão da camada no GeoServer.', 'Estilo Atualizado', 'success');
+    });
+    // "Serviços > Atualizar Camada" / banner "Atualização disponível" (ver
+    // pullGsLayerFromServer) - PULL: busca o que está DE FATO publicado no GeoServer e
+    // substitui o formulário local por isso.
+    gsBridge.gs_layer_pulled.connect(function (success, data, error) {
+        _hideActionLoading();
+        if (!success) {
+            // Idem gs_style_updated acima - reverifica ao vivo na hora em vez de esperar
+            // o próximo login/reabertura do painel.
+            _gsForceLiveRecheck();
+            Modal.alert(error || 'Falha ao buscar os dados publicados no GeoServer.', 'Erro', 'error');
+            return;
+        }
+        var titleEl = document.getElementById('gs-layer-title');
+        var abstractEl = document.getElementById('gs-layer-abstract');
+        if (titleEl) titleEl.value = data.title || '';
+        if (abstractEl) abstractEl.value = data.abstract || '';
+        _gsKeywords = (data.keywords || []).slice();
+        _renderGsKeywords();
+        // Estilo: só sabemos o NOME do estilo ao vivo (não o corpo SLD), então vira fonte
+        // 'existing' - mesmo raciocínio de _on_layer_pulled (bridge). '_gsApplyStyleChoice'
+        // com source 'existing'/'none' sempre sobrescreve (sem "if vazio"), o que é o que
+        // queremos aqui (usuário já confirmou que quer trazer o servidor por cima).
+        if (data.default_style) {
+            _gsApplyStyleChoice('existing', data.default_style, data.default_style_workspace || '');
+        } else {
+            _gsApplyStyleChoice('none', '', '');
+        }
+        _gsAdditionalStyles = (data.additional_styles || []).map(function (s) {
+            return { source: 'existing', mode: 'existing', existing_name: s.name || '', existing_workspace: s.style_workspace || '' };
+        });
+        _renderGsAdditionalStyles();
+        // Preenchimento programático não dispara input/change (o que aciona o rascunho
+        // por debounce) - salva na hora, mesmo motivo de pullGsAbstractKeywordsFromGn.
+        _saveGsDraftNow();
+        _gsSyncHasRecord = true;
+        _gsSyncSnapshot = JSON.stringify(_gsCollectFormState());
+        _gsCaptureSnapshotRawNames();
+        _gsSyncIsPublished = true;
+        setGsBadge((_isLogged ? 'sys' : 'db') + '_synced');
+        _gsLastCheckedLayerKey = null; // idem publish_done/destination_saved - invalida o cache do badge combinado do editor
+        updateGsFormProgress();
+        Modal.alert('Formulário atualizado com o que está publicado no GeoServer agora.', 'Camada Atualizada', 'success');
     });
 }
 
@@ -190,7 +239,7 @@ function _saveGsDraftNow() {
     var styleSrcEl = document.getElementById('gs-style-source');
     var styleNameEl = document.getElementById('gs-style-name');
     var styleExEl = document.getElementById('gs-style-existing');
-    var styleFileLabel = document.getElementById('gs-style-file-label');
+    var styleFileBtn = document.getElementById('gs-style-file-btn');
     var styleExVal = (styleExEl && styleExEl.value) || '';
     var styleExSep = styleExVal.indexOf(':');
     var d = {
@@ -205,7 +254,7 @@ function _saveGsDraftNow() {
         style_source: styleSrcEl ? styleSrcEl.value : '',
         style_name: styleNameEl ? styleNameEl.value.trim() : '',
         style_file: _gsStyleFilePath,
-        style_file_name: (_gsStyleFilePath && styleFileLabel) ? styleFileLabel.textContent : '',
+        style_file_name: (_gsStyleFilePath && styleFileBtn) ? styleFileBtn.textContent : '',
         style_existing_name: styleExSep >= 0 ? styleExVal.slice(styleExSep + 1) : styleExVal,
         style_existing_workspace: styleExSep >= 0 ? styleExVal.slice(0, styleExSep) : '',
         // Estilos adicionais (chips) - sem isso, quem só adiciona um estilo adicional e
@@ -263,8 +312,8 @@ function _loadGsDraft(callback) {
                 );
                 if (draft.style_source === 'file' && draft.style_file) {
                     _gsStyleFilePath = draft.style_file;
-                    var fileLabel = document.getElementById('gs-style-file-label');
-                    if (fileLabel && draft.style_file_name) fileLabel.textContent = draft.style_file_name;
+                    var fileBtn = document.getElementById('gs-style-file-btn');
+                    if (fileBtn && draft.style_file_name) fileBtn.textContent = draft.style_file_name;
                 }
             }
             // Estilos adicionais do rascunho - só entra se nada já veio do banco (mesmo
@@ -354,6 +403,7 @@ function _onGsActiveLayerChanged() {
     if (preview) preview.textContent = '';
     var badge = document.getElementById('gs-sync-badge');
     if (badge) badge.style.display = 'none';
+    dismissGsUpdateBanner(); // camada mudou - o banner da camada anterior não vale mais aqui
     _gsSyncSnapshot = null;
     _gsSyncSnapshotRawName = '';
     _gsSyncSnapshotRawStyleName = '';
@@ -406,6 +456,7 @@ function _loadGsLayerInfo(callback) {
     _setGsPullGnButtonState(false);
     var badge = document.getElementById('gs-sync-badge');
     if (badge) badge.style.display = 'none';
+    dismissGsUpdateBanner();
     _gsSyncSnapshot = null;
     _gsSyncSnapshotRawName = '';
     _gsSyncSnapshotRawStyleName = '';
@@ -852,10 +903,10 @@ function _renderGsKeywords() {
 
 function onGsStyleSourceChange(value) {
     var nameGroup = document.getElementById('gs-style-name-group');
-    var fileGroup = document.getElementById('gs-style-file-group');
+    var fileBtn = document.getElementById('gs-style-file-btn');
     var existingGroup = document.getElementById('gs-style-existing-group');
     if (nameGroup) nameGroup.style.display = (value === 'qgis' || value === 'file') ? '' : 'none';
-    if (fileGroup) fileGroup.style.display = (value === 'file') ? '' : 'none';
+    if (fileBtn) fileBtn.style.display = (value === 'file') ? '' : 'none';
     if (existingGroup) existingGroup.style.display = (value === 'existing') ? '' : 'none';
     if (value === 'existing') _gsLoadStylesList();
 }
@@ -915,8 +966,8 @@ function pickGsSldFile() {
             return;
         }
         _gsStyleFilePath = res.path;
-        var label = document.getElementById('gs-style-file-label');
-        if (label) label.textContent = res.filename;
+        var btn = document.getElementById('gs-style-file-btn');
+        if (btn) btn.textContent = res.filename;
         // Escolha via QFileDialog não dispara input/change no painel - agenda na mão
         // (mesmo motivo de gsAddKeyword/gsRemoveKeyword).
         _gsOnFieldChanged();
@@ -978,7 +1029,17 @@ function _renderGsStyleOptions(styles, error) {
     if (_gsPendingExistingStyle) {
         var target = _gsPendingExistingStyle;
         _gsPendingExistingStyle = null;
-        _clickGsSuggestionItem('gs-style-existing-wrap', target);
+        if (!_clickGsSuggestionItem('gs-style-existing-wrap', target)) {
+            // O estilo conhecido não apareceu na lista recém-buscada (ex.: essa recarga
+            // rodou com um workspace diferente do que o estilo está associado, timing
+            // entre a checagem de login e a seleção de workspace, ou o estilo foi mesmo
+            // removido/renomeado) - preserva o valor conhecido como opção própria em vez
+            // de deixar a seleção sumir silenciosamente (mesmo padrão do branch de erro
+            // logo acima). Sem isso, a seleção que estava correta (vinda do banco) se
+            // perdia sempre que essa lista recarregava depois (ex.: ao logar).
+            var sep = target.indexOf(':');
+            _gsSeedExistingStyle(sep >= 0 ? target.slice(sep + 1) : target, sep >= 0 ? target.slice(0, sep) : '');
+        }
     }
     if (_gsPendingExistingAddStyle) {
         var targetAdd = _gsPendingExistingAddStyle;
@@ -1038,8 +1099,8 @@ function _gsApplyStyleChoice(source, name, styleWorkspace) {
 function _gsResetStyleControls() {
     _gsStyleFilePath = '';
     _gsPendingExistingStyle = null;
-    var fileLabel = document.getElementById('gs-style-file-label');
-    if (fileLabel) fileLabel.textContent = 'Nenhum arquivo selecionado.';
+    var fileBtn = document.getElementById('gs-style-file-btn');
+    if (fileBtn) fileBtn.textContent = 'Escolher arquivo...';
     var nameEl = document.getElementById('gs-style-name');
     if (nameEl) { nameEl.value = ''; nameEl.dataset.sanitized = ''; }
     var preview = document.getElementById('gs-style-name-preview');
@@ -1261,6 +1322,22 @@ function tryUpdateGsStyle() {
         Modal.alert('Preencha o Workspace (aba Destino) e o Nome da camada publicada (aba Identificação) antes de atualizar o estilo.', 'Aviso', 'warning');
         return;
     }
+    // Essa ação faz um PUT usando o Nome da camada publicada como identificador da
+    // camada JÁ existente no GeoServer - se o campo foi alterado desde a última
+    // publicação/salvamento conhecida, o PUT tentaria achar uma camada com o nome NOVO
+    // (que não existe) em vez de atualizar a que já existe com o nome ANTIGO, e o
+    // GeoServer devolve 404 (confuso: "a camada existe", só que com outro nome).
+    var knownName = _gsLayerInfo.saved_published_name || _gsLayerInfo.name;
+    if (knownName && d.published_name !== knownName) {
+        Modal.alert(
+            'O "Nome da camada publicada" foi alterado ("' + escHtml(knownName) + '" → "' + escHtml(d.published_name) +
+            '"). Essa ação atualiza o estilo de uma camada JÁ publicada pelo nome ATUAL no GeoServer - renomear não é ' +
+            'suportado por aqui.<br><br>Desfaça a alteração nesse campo (aba Identificação) antes de atualizar o estilo, ' +
+            'ou publique como uma camada nova em "Serviços > Publicar Camada".',
+            'Nome Alterado', 'warning'
+        );
+        return;
+    }
     var style = _gsCollectStyleConfig();
     if (!style.source) {
         Modal.alert('Escolha um estilo na aba Estilos antes de atualizar - a fonte "Não definir" não tem o que aplicar.', 'Aviso', 'warning');
@@ -1278,9 +1355,54 @@ function tryUpdateGsStyle() {
         _gsStyleBestEffortNote(style),
         function () {
             _showActionLoading('Aplicando estilo no GeoServer...');
-            gsBridge.update_style(d.workspace, d.published_name, JSON.stringify(style));
+            gsBridge.update_style(d.workspace, d.datastore, d.published_name, d.title, d.abstract, d.keywords, JSON.stringify(style));
         },
         'Atualizar Estilo'
+    );
+}
+
+// "Serviços > Atualizar Camada" / banner "Atualização disponível" (ver setGsBadge) -
+// análogo, do lado GeoServer, do "Atualizar agora" do editor GN: PULL, não push. Busca
+// o que está DE FATO publicado no GeoServer agora (título/resumo/palavras-chave +
+// estilo padrão/adicionais) e substitui o formulário local por isso. Existe pro caso em
+// que o formulário/banco LOCAL ficou pra trás em relação ao que foi publicado de
+// verdade - ex.: um técnico salvou só o destino no banco ("Continuar Depois") e outro
+// técnico, em outra máquina, completou e publicou depois; ao reabrir essa camada, o
+// primeiro técnico veria "Modificado" e, se essa ação empurrasse o formulário LOCAL
+// (desatualizado) pro servidor, sobrescreveria o trabalho de quem publicou por último.
+// Por isso a direção certa é trazer o servidor pra cá, não o contrário.
+function pullGsLayerFromServer() {
+    if (!document.getElementById('gs-layer-card')) {
+        Modal.alert('Abra "Serviços > Configurar Camada" antes de atualizar a camada.', 'Ação Necessária', 'warning');
+        return;
+    }
+    // Diferente do menu (sempre disponível) e do banner (gated por _isLogged em
+    // setGsBadge, mas só reavaliado quando o badge recomputa), essa checagem aqui cobre
+    // as duas entradas - a busca no GeoServer (fetch_published_featuretype/
+    // fetch_layer_styles) exige sessão ativa; sem isso, o clique só falharia com
+    // "Sessão não foi inicializada" vindo do Python.
+    if (!_isLogged) {
+        Modal.alert('Faça login no Geohab antes de atualizar a camada - essa ação busca os dados direto do GeoServer.', 'Login Necessário', 'warning');
+        return;
+    }
+    if (!_gsLayerInfo || !_gsLayerInfo.publishable) {
+        Modal.alert((_gsLayerInfo && _gsLayerInfo.reason) || 'Nenhuma camada publicável ativa no QGIS.', 'Aviso', 'warning');
+        return;
+    }
+    var d = _gsCollectFormState();
+    if (!d.workspace || !d.datastore || !d.published_name) {
+        Modal.alert('Preencha Workspace/Datastore (aba Destino) e o Nome da camada publicada (aba Identificação) antes de atualizar.', 'Aviso', 'warning');
+        return;
+    }
+    Modal.confirm(
+        'Isso vai substituir título/resumo/palavras-chave/estilo do formulário atual pelo que está DE FATO publicado agora em "' +
+        escHtml(d.workspace) + ':' + escHtml(d.published_name) + '" no GeoServer.<br><br>' +
+        'Alterações locais não salvas nesses campos serão perdidas. Continuar?',
+        function () {
+            _showActionLoading('Buscando dados publicados no GeoServer...');
+            gsBridge.pull_layer_from_server(d.workspace, d.datastore, d.published_name);
+        },
+        'Atualizar Camada'
     );
 }
 
@@ -1407,6 +1529,34 @@ function setGsBadge(state) {
         ? _gsPublishTooltip(state.split('_')[0], _gsSyncIsPublished)
         : (_GS_SYNC_TOOLTIPS[state] || '');
     label.textContent = _GS_SYNC_LABELS[state] || state;
+
+    // Banner "Atualização disponível" (mesmo padrão visual de #gn-update-banner no editor
+    // GN, classe .gn-update-banner reaproveitada - CSS já é global à página) - só faz
+    // sentido quando: (1) a camada JÁ está publicada de verdade (_gsSyncIsPublished) -
+    // sem isso não há nada pra buscar no GeoServer, o caminho certo é "Publicar Camada"
+    // (já indicado no modal do badge, ver _GS_SYNC_MODALS); (2) o estado é
+    // especificamente 'sys_modified', não 'db_modified' - "Atualizar Camada" (pull) exige
+    // sessão ativa (fetch_published_featuretype/fetch_layer_styles chamam
+    // _get_rest_session()), e 'db_modified' significa "ainda sem login" (ver
+    // _checkGsSyncNow) - mostrar o banner nesse estado deixava o botão clicável só pra
+    // falhar com "Sessão não foi inicializada" na hora.
+    var updateBanner = document.getElementById('gs-update-banner');
+    if (updateBanner) {
+        var showBanner = (state === 'sys_modified') && _gsSyncIsPublished;
+        updateBanner.style.display = showBanner ? 'flex' : 'none';
+    }
+}
+
+// Botão "Atualizar agora" do banner (ver setGsBadge) - reusa a mesma ação e confirmação
+// do menu "Serviços > Atualizar Camada", só entrando por um atalho visível direto no
+// painel quando a divergência já foi detectada.
+function applyGsLayerUpdate() {
+    pullGsLayerFromServer();
+}
+
+function dismissGsUpdateBanner() {
+    var banner = document.getElementById('gs-update-banner');
+    if (banner) banner.style.display = 'none';
 }
 
 function _gsSnapshotFromSaved(info) {
@@ -1492,6 +1642,19 @@ function _checkGsSyncOnline(info) {
         styleJson = JSON.stringify(savedStyle);
     }
     gsBridge.check_gs_sync(ws, ds, name, d.title, d.abstract, d.keywords, styleJson);
+}
+
+// Força uma nova checagem AO VIVO agora, ignorando o cache de 60s (_gsOnlineLastCheckedKey/
+// _GN_RECHECK_STALE_MS) - normalmente a checagem ao vivo só roda quando o painel/camada
+// carrega ou quando o login muda (ver _onGsAuthStateChangedForSync), então o badge podia
+// ficar preso num "Modificado" desatualizado até um desses dois momentos acontecerem de
+// novo. Chamada depois de uma falha em "Atualizar Camada"/"Atualizar Estilo" (ver
+// _initGsBridge) - se a falha foi porque o destino salvo não existe mais de verdade no
+// GeoServer, o badge corrige sozinho pra "Não Encontrado" na hora, em vez do usuário só
+// descobrir isso pelo texto de erro da chamada REST.
+function _gsForceLiveRecheck() {
+    _gsOnlineLastCheckedKey = null;
+    _checkGsSyncOnline(_gsLayerInfo);
 }
 
 // Sinal gs_sync_checked (ver _initGsBridge) - resultado de check_gs_sync, chegando de

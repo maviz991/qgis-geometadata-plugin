@@ -1,0 +1,82 @@
+georchestra:
+  gateway:
+    security:
+      oauth2:
+        enabled: true
+      oidc:
+        config:
+          provider:
+            entraid:
+              # Novos usuários provisionados via EntraID entram como pendentes
+              # e aguardam aprovação de administrador no Console antes de ter acesso ativo.
+              moderatedSignup: true
+              # EntraID não envia preferred_username no /userinfo; usamos email como
+              # identificador. searchEmail=true faz o gateway buscar usuários por email
+              # no LDAP, compatível com ldapUserSearchFilter=(mail={0}) e garante que
+              # usuários pendentes (ou=pendingusers) sejam encontrados após criação.
+              searchEmail: true
+      header-authentication:
+        # Enable pre-authentication from reverse proxy (Apache)
+        enabled: true
+      # Do not auto-create users in LDAP (terras_user must exist)
+      createNonExistingUsersInLDAP: true
+      extended-enabled: true
+      # Enable RabbitMQ events for Console notifications
+      enableRabbitmqEvents: true
+      ldap:
+        default:
+          enabled: true
+          extended: true
+          url: ldap://${ldapHost:localhost}:${ldapPort:389}/
+          baseDn: ${ldapBaseDn:dc=georchestra,dc=org}
+          adminDn: ${ldapAdminDn:cn=admin,dc=georchestra,dc=org"}
+          adminPassword: ${ldapAdminPassword:secret}
+          users:
+            rdn: ${ldapUsersRdn:ou=users}
+            searchFilter: ${ldapUserSearchFilter:(uid={0})}
+            pendingUsersSearchBaseDN: ou=pendingusers
+            protectedUsers: geoserver_privileged_user
+          roles:
+            rdn: ${ldapRolesRdn:ou=roles}
+            searchFilter: ${ldapRolesSearchFilter:(member={0})}
+          orgs:
+            rdn: ${ldapOrgsRdn:ou=orgs}
+            protectedRoles: ADMINISTRATOR, GN_.*, ORGADMIN, REFERENT, USER, SUPERUSER
+
+# Spring Security OAuth2 Client Configuration - Microsoft EntraID
+#
+# Identity resolution: EntraID's preferred_username is a UPN (user@domain.com).
+# The LDAP searchFilter defaults to (uid={0}), which will NOT match UPN-format values
+# because LDAP uid attributes are typically short identifiers (e.g., jdoe).
+# REQUIRED: set the ldapUserSearchFilter env var to (mail={0}) in the deployment
+# environment so that LDAP lookup matches by email address instead of uid.
+# Example: ldapUserSearchFilter=(mail={0})
+#
+# Why EntraID group claims are NOT requested:
+# - LDAP is the authoritative source for geOrchestra roles; groups are managed
+#   via geOrchestra Console, not the IdP.
+#
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          entraid:
+            provider: entraid
+            client-id: ${AZURE_CLIENT_ID}
+            client-secret: ${ENTRAID_CLIENT_SECRET}
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/entraid"
+            scope:
+              - openid
+              - profile
+              - email
+            client-name: Microsoft EntraID CDHU
+
+        provider:
+          entraid:
+            issuer-uri: https://login.microsoftonline.com/${AZURE_TENANT_ID}/v2.0
+            # preferred_username is present in the EntraID ID token but NOT in the
+            # /userinfo endpoint response. Using 'email' instead — always present
+            # when the 'email' scope is requested, and consistent with ldapUserSearchFilter=(mail={0}).
+            user-name-attribute: email

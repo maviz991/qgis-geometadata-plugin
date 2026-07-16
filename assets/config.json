@@ -3,8 +3,8 @@
     "geoserver_url": "https://geo-d.cdhu.sp.gov.br/geoserver",
     "cda_url": "https://cda.cdhu.sp.gov.br/marketplace/formcreator/front/formdisplay.php?id=36",
     "entra_id": {
-        "client_id": "5b35e805-c93d-43d7-8442-ba5cd353a2eb",
+        "client_id": "7c2986cc-e83a-4e64-94eb-68c1d53671a2",
         "tenant_id": "db7bf049-33c1-41b0-93d1-bbc94b70d699",
-        "scopes": ["User.Read"]
+        "scopes": ["api://628b0752-6a3c-4c61-b7d4-11137486bf3a/access_as_user"]
     }
 }

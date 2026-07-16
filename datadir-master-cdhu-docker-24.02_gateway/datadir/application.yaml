@@ -1,0 +1,85 @@
+# Spring-boot/cloud application configuration.
+#
+# Here you can override the spring configuration provided by the Gateway
+# by default.
+#
+# See here for the default provided configuration:
+# https://github.com/georchestra/georchestra-gateway/blob/main/gateway/src/main/resources/application.yml
+
+server:
+  forward-headers-strategy: FRAMEWORK
+  reactive:
+    session:
+      timeout: 1440m # 24h
+      cookie:
+        # Critical for iframe authentication from external applications
+        same-site: "none"   # Allow cross-origin iframe usage
+        secure: true        # Required when same-site=none (HTTPS only)
+        http-only: true     # Prevent XSS access to session cookie
+
+spring:
+  thymeleaf:
+    prefix: file:${georchestra.datadir}/gateway/templates/
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOriginPatterns: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            allowCredentials: true
+            maxAge: 3600
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║ CORS CONFIGURATION - CRITICAL: DO NOT ENABLE                              ║
+# ╠═══════════════════════════════════════════════════════════════════════════╣
+# ║ CORS headers are handled EXCLUSIVELY by Apache reverse proxy.             ║
+# ║                                                                            ║
+# ║ Enabling CORS here causes DUPLICATE HEADERS:                              ║
+# ║   - Gateway adds: Access-Control-Allow-Headers                            ║
+# ║   - Apache adds: Access-Control-Allow-Headers                             ║
+# ║   - Result: Browser rejects response (duplicate headers violate CORS)     ║
+# ║                                                                            ║
+# ║ Reference Documentation:                                                  ║
+# ║   - docs-cdhu/infrastructure-cors.md                                      ║
+# ║   - openspec/changes/fix-duplicate-cors-headers/                          ║
+# ║                                                                            ║
+# ║ Last disabled: 2025-11-03 (commit 38dfead)                                ║
+# ║ Re-enabled (BUG): 2025-11-04 (commit 735c479) - caused regression         ║
+# ║ Re-disabled: 2025-11-12 - fixing duplicate headers regression             ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+#      globalcors:
+#        cors-configurations:
+#          '[/**]':
+#            allowedOriginPatterns: "*"
+#            allowedMethods:
+#              - GET
+#              - POST
+#              - PUT
+#              - DELETE
+#              - OPTIONS
+#            allowedHeaders: "*"
+#            allowCredentials: true
+#            maxAge: 3600
+      filter:
+        secure-headers:
+          referrer-policy: strict-origin
+          frame-options: null  # Disable X-Frame-Options (using CSP instead)
+          content-security-policy: |
+            frame-ancestors
+              'self'
+              https://app-dev.cdhu.sp.gov.br
+              http://apphml.cdhu.sp.gov.br
+              https://appdev.cdhu.sp.gov.br
+              https://app.cdhu.sp.gov.br
+              https://apps.cdhu.sp.gov.br;
+
+logging:
+  level:
+    org.springframework.security.oauth2: DEBUG
+    org.springframework.web.reactive.function.client: DEBUG

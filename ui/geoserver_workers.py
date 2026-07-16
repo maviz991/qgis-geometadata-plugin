@@ -9,6 +9,24 @@ bloquear a UI do QGIS (RNF02 de requisitos_v2.md).
 from qgis.PyQt.QtCore import QThread, pyqtSignal
 
 
+def _gs_augment_404(exc):
+    """Acrescenta uma dica acionável quando o erro de uma ação de "Atualizar" (Camada ou
+    Estilo - as duas só fazem sentido numa camada JÁ publicada, via PUT) vem de um 404
+    ([GS-404], ver GeoServerService.translate_gs_error): nesse contexto específico, "não
+    encontrado" quase sempre significa que a camada não existe de fato nesse Workspace/
+    Datastore no GeoServer (nunca foi publicada, ou foi removida/renomeada desde a última
+    vez) - não um erro genérico de configuração. Não mexe no texto de outros erros."""
+    message = str(exc)
+    if '[GS-404]' in message:
+        message += (
+            '<br><br>Isso costuma significar que essa camada não existe de fato nesse '
+            'Workspace/Datastore no GeoServer agora (nunca foi publicada, ou foi removida/'
+            'renomeada desde a última vez). Confira a aba Destino e use "Serviços > '
+            'Publicar Camada" se for o caso.'
+        )
+    return message
+
+
 class _GsWorkspacesWorker(QThread):
     """Lista os workspaces do GeoServer em background (RF01)."""
     done = pyqtSignal(list, str)  # workspaces, error
@@ -133,6 +151,53 @@ class _GsPublishWorker(QThread):
         self.done.emit(True, style_warning, self._published_name)
 
 
+class _GsPullLayerWorker(QThread):
+    """"Serviços > Atualizar Camada" (banner "Atualização disponível", como o GN) - PULL,
+    não push: busca o que está DE FATO publicado no GeoServer agora (título/resumo/
+    palavras-chave via fetch_published_featuretype, estilo padrão/adicionais via
+    fetch_layer_styles - as duas só leitura, já usadas pelo badge) e devolve pro bridge
+    aplicar no formulário local. Existe porque, num fluxo com mais de um técnico na mesma
+    camada, "diferente do servidor" pode significar que ALGUÉM MAIS publicou depois de
+    você - nesse caso empurrar o formulário local (desatualizado) sobrescreveria o
+    trabalho de quem publicou por último. Ver GeoServerService.fetch_published_featuretype/
+    fetch_layer_styles."""
+    done = pyqtSignal(bool, 'QVariant', str)  # sucesso, dados (title/abstract/keywords/default_style/...), erro
+
+    def __init__(self, geoserver_service, workspace, datastore, published_name, config_loader_instance):
+        super().__init__()
+        self._service = geoserver_service
+        self._workspace = workspace
+        self._datastore = datastore
+        self._published_name = published_name
+        self._config = config_loader_instance
+
+    def run(self):
+        try:
+            remote = self._service.fetch_published_featuretype(
+                self._workspace, self._datastore, self._published_name, self._config
+            )
+            if remote is None:
+                self.done.emit(False, {}, (
+                    '[GS-404] Essa camada não foi encontrada nesse Workspace/Datastore no '
+                    'GeoServer agora - pode nunca ter sido publicada, ou ter sido removida/'
+                    'renomeada. Confira a aba Destino e use "Serviços > Publicar Camada" se for o caso.'
+                ))
+                return
+            # Estilo isolado em try/except próprio - mesmo raciocínio de _GsSyncCheckWorker:
+            # uma falha aqui não pode jogar fora o título/resumo/palavras-chave já obtidos.
+            styles = None
+            try:
+                styles = self._service.fetch_layer_styles(self._workspace, self._published_name, self._config)
+            except Exception as style_exc:
+                print(f"GeoMetadata [_GsPullLayerWorker] fetch_layer_styles: {style_exc}")
+            remote['default_style'] = (styles or {}).get('default_style') or ''
+            remote['default_style_workspace'] = (styles or {}).get('default_style_workspace') or ''
+            remote['additional_styles'] = (styles or {}).get('additional') or []
+            self.done.emit(True, remote, '')
+        except Exception as exc:
+            self.done.emit(False, {}, str(exc))
+
+
 class _GsStylesWorker(QThread):
     """Lista os estilos disponíveis (globais + do workspace) em background - popula o
     select "Usar estilo existente" da aba Estilos (ver GeoServerService.list_styles)."""
@@ -171,7 +236,7 @@ class _GsApplyStyleWorker(QThread):
             self._service.apply_style(self._layer_workspace, self._published_name, self._style_task, self._config)
             self.done.emit(True, '')
         except Exception as exc:
-            self.done.emit(False, str(exc))
+            self.done.emit(False, _gs_augment_404(exc))
 
 
 class _GsSyncCheckWorker(QThread):
