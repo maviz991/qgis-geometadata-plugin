@@ -378,7 +378,11 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         template_path = os.path.join(os.path.dirname(__file__), "ui", "templates", "main.html")
         self.web_view.load(QUrl.fromLocalFile(template_path))
 
-        layout.addWidget(self.web_view)
+        # QStackedWidget em vez de adicionar o web_view direto: permite trocar o
+        # conteúdo da MESMA janela (ex: login SSO embutido) sem abrir popup separado.
+        self.content_stack = QStackedWidget()
+        self.content_stack.addWidget(self.web_view)
+        layout.addWidget(self.content_stack)
 
     def _setup_connections_and_logic(self):
         """Conecta os sinais lógicos e inicializa o status."""

@@ -1,6 +1,7 @@
 # plugin_config.py
 import json
 import os
+from urllib.parse import urlparse
 
 class PluginConfig:
     _instance = None
@@ -50,6 +51,14 @@ class PluginConfig:
 
     def get_geoserver_url(self):
         return self.config.get("geoserver_url", "")
+
+    def get_gateway_base_url(self) -> str:
+        """ Retorna scheme+host do gateway georchestra (GeoServer e GeoNetwork
+        compartilham o mesmo host), usado pro login via sessão do gateway. """
+        parsed = urlparse(self.get_geoserver_url())
+        if not parsed.scheme or not parsed.netloc:
+            return ""
+        return f"{parsed.scheme}://{parsed.netloc}"
 
     def get_cda_url(self):
         """ URL do formulário de chamado do CDA. Único lugar a alterar se o link mudar. """

@@ -126,13 +126,18 @@ def missing_packages() -> List[str]:
     Retorna lista de pacotes pip que precisam ser instalados.
     """
     pkgs: List[str] = []
-    
-    if not is_msal_available():
-        pkgs.append("msal")
-        print("GeoMetadata: msal está FALTANDO.")
-    else:
-        print("GeoMetadata: msal detectado com SUCESSO.")
-        
+
+    # msal não é mais necessário: o login SSO passou a usar a sessão do próprio
+    # gateway georchestra (QWebEngineView embutida + cookie), não Bearer JWT
+    # direto do Azure AD - ver ui/gateway_login_dialog.py. Deixado comentado (não
+    # removido) pro caso do Geohab um dia passar a aceitar Bearer de terceiros
+    # (Resource Server), quando esse fluxo via msal voltaria a fazer sentido.
+    # if not is_msal_available():
+    #     pkgs.append("msal")
+    #     print("GeoMetadata: msal está FALTANDO.")
+    # else:
+    #     print("GeoMetadata: msal detectado com SUCESSO.")
+
     available, error = is_webengine_available()
     if not available:
         # Só consideramos falta real se o erro for explicitamente de módulo inexistente
@@ -174,6 +179,6 @@ def check_and_run_setup(parent=None):
 
 # Rótulos amigáveis exibidos na SetupDialog
 PACKAGE_LABELS = {
-    "msal":          "Login corporativo",
+    # "msal":        "Login corporativo",  # ver comentário em missing_packages()
     "PyQtWebEngine": "Interface visual nativa",
 }

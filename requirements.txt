@@ -16,9 +16,12 @@
 #   qgis.core, qgis.gui, qgis.PyQt.*
 # =============================================================
 
-# --- Autenticação Microsoft Entra ID (v2.0 - NOVO) ---
-# Usado em: entra_auth_provider.py
-msal>=1.28.0
+# --- Autenticação Microsoft Entra ID (v2.0) ---
+# Usado em: entra_auth_provider.py - NÃO usado mais no fluxo de login ativo
+# (login SSO passou a usar a sessão do gateway georchestra via QWebEngineView,
+# não Bearer JWT direto do Azure AD - ver ui/gateway_login_dialog.py).
+# Deixado comentado pro caso do Geohab um dia aceitar Bearer de terceiros.
+# msal>=1.28.0
 
 # --- HTTP - Comunicação com GeoNetwork/GeoServer ---
 # Usado em: GeoMetadata_dialog.py, unified_login_dialog.py,

@@ -33,7 +33,7 @@ class MainBridge(QObject):
         super().__init__(parent)
         self._dialog = dialog
         self._form_manager = getattr(dialog, 'form_manager', None)
-        self._sso_worker = None
+        self._sso_widget = None
         self._adm_worker = None
         try:
             plugin = getattr(dialog, 'plugin', None)
@@ -108,37 +108,49 @@ class MainBridge(QObject):
 
     @pyqtSlot()
     def start_login(self):
-        """Inicia autenticação SSO corporativa sem abrir diálogo Qt separado."""
+        """Inicia autenticação SSO corporativa via sessão do gateway georchestra.
+
+        O gateway só aceita login via navegador (OAuth2 Client + sessão/cookie) -
+        não valida Bearer JWT obtido direto do Azure AD. Por isso trocamos o
+        conteúdo da janela (content_stack) por uma QWebEngineView embutida
+        apontando pro /oauth2/authorization/entraid do próprio gateway, deixamos
+        o redirect completo rodar e capturamos o cookie de sessão resultante
+        (ver GatewaySSOWidget) - sem abrir nenhuma janela separada."""
         try:
-            from ..core.env_checker import check_and_run_setup
-            if not check_and_run_setup(parent=self._dialog):
-                self.login_error.emit("Dependência MSAL não encontrada. Configure o ambiente primeiro.")
-                return
             from ..core.plugin_config import config_loader
-            from ..core.entra_auth_provider import EntraAuthProvider
-            from .web_bridge import _SsoWorker
-            entra_cfg = config_loader.get_entra_id_config()
-            provider  = EntraAuthProvider(
-                client_id=entra_cfg.get("client_id", ""),
-                tenant_id=entra_cfg.get("tenant_id", ""),
-                scopes=entra_cfg.get("scopes", ["User.Read"])
-            )
-            self.login_loading.emit("Aguardando autenticação no navegador...")
-            self._sso_worker = _SsoWorker(provider)
-            self._sso_worker.auth_success.connect(self._on_sso_success)
-            self._sso_worker.auth_failed.connect(self._on_sso_failed)
-            self._sso_worker.start()
+            from .gateway_login_dialog import GatewaySSOWidget
+            base_url = config_loader.get_gateway_base_url()
+            if not base_url:
+                self.login_error.emit("URL do GeoServer não está definida no config.json.")
+                return
+            verify_url = f"{config_loader.get_geonetwork_base_url().rstrip('/')}/srv/api/me"
+
+            self.login_loading.emit("Aguardando login no navegador...")
+            stack = self._dialog.content_stack
+            self._sso_widget = GatewaySSOWidget(base_url, verify_url, parent=stack)
+            self._sso_widget.login_succeeded.connect(self._on_gateway_login_succeeded)
+            self._sso_widget.login_failed.connect(self._on_gateway_login_failed)
+            stack.addWidget(self._sso_widget)
+            stack.setCurrentWidget(self._sso_widget)
         except Exception as e:
             self.login_error.emit(str(e))
 
-    def _on_sso_success(self, provider):
-        session = provider.get_session()
-        username = provider.get_username() or "Usuário CDHU"
+    def _leave_sso_widget(self):
+        stack = self._dialog.content_stack
+        stack.setCurrentWidget(self._dialog.web_view)
+        if self._sso_widget is not None:
+            stack.removeWidget(self._sso_widget)
+            self._sso_widget.deleteLater()
+            self._sso_widget = None
+
+    def _on_gateway_login_succeeded(self, session, username):
+        self._leave_sso_widget()
         self._dialog.plugin.api_session = session
         self._dialog.plugin.auth_username = username
         self._dialog.update_ui_for_login_status()
 
-    def _on_sso_failed(self, msg):
+    def _on_gateway_login_failed(self, msg):
+        self._leave_sso_widget()
         self.login_error.emit(msg)
 
     @pyqtSlot(str, str)
