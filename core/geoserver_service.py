@@ -399,11 +399,16 @@ class GeoServerService:
     @staticmethod
     def _split_style_ref(name, workspace=''):
         """Normaliza uma referência de estilo vinda do GeoServer: o JSON de /rest/layers
-        às vezes traz o nome já prefixado ('ws:nome') e às vezes traz a chave 'workspace'
-        separada, dependendo da versão. Retorna (nome_puro, workspace)."""
+        pode trazer o nome já prefixado ('ws:nome') E AINDA ASSIM trazer a chave
+        'workspace' separada preenchida (dependendo da versão) - por isso sempre tira o
+        prefixo do nome quando presente, independente de já ter vindo um workspace
+        separado. Sem isso, os dois se somavam e o prefixo dobrava ('ws:ws:nome') no
+        nome exibido pra estilos adicionais depois de 'Atualizar Camada'. Retorna
+        (nome_puro, workspace)."""
         name = name or ''
-        if not workspace and ':' in name:
-            workspace, name = name.split(':', 1)
+        if ':' in name:
+            split_ws, name = name.split(':', 1)
+            workspace = workspace or split_ws
         return name, (workspace or '')
 
     def fetch_layer_styles(self, layer_workspace, published_name, config_loader_instance):

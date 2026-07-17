@@ -10,6 +10,45 @@
     width: 100%;
 }
 
+/* ── Aba Identificação: cadeado de Nome/Título (trava depois de publicado de
+   verdade) - mesmo tamanho/posição do .help-btn ao lado, só sem borda (o
+   emoji 🔒/🔓 já tem peso visual suficiente). Conteúdo (🔒/🔓) setado via JS
+   (_gsApplyFieldLockState), não hardcoded aqui, porque alterna com o estado. */
+.gs-lock-btn {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    font-size: 11px;
+    line-height: 1;
+    cursor: pointer;
+    vertical-align: middle;
+    opacity: 0.7;
+}
+
+.gs-lock-btn:hover {
+    opacity: 1;
+}
+
+/* Link inline dentro de uma mensagem de aviso (.gs-warning-text) - ex.: "Usar
+   nome da tabela" dentro do aviso de nome divergente. */
+.gs-inline-link {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    color: inherit;
+    font: inherit;
+    font-weight: 700;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
 /* ── Aba Destino: card da camada + linha workspace/datastore/detectar ──────────── */
 .gs-layer-status {
     display: flex;
@@ -73,18 +112,8 @@
     gap: 20px;
 }
 
-/* "Detectar automaticamente" no canto superior direito da ABA inteira (não da
-   linha Workspace/Datastore) - mesmo padrão de #gs-pull-gn-btn na aba
-   Identificação. .tab-content já é position:relative (geonetwork.css). */
-.gs-autodetect-btn {
-    position: absolute;
-    top: 20px;
-    right: 28px;
-    font-size: 12px;
-    padding: 6px 12px;
-    white-space: nowrap;
-}
-
+/* Posição/tamanho vêm de .tab-header-actions (geonetwork.css) - só o
+   comportamento de desabilitado é específico daqui. */
 .gs-autodetect-btn:disabled {
     opacity: 0.5;
     cursor: default;
@@ -127,13 +156,13 @@
     font-weight: 600;
 }
 
-/* Retângulo de borda tracejada pras mensagens de status (checagem de tabela e
-   busca automática) - mesmo padrão já usado no GN pra caixas de destaque
-   (.manual-form-wrap/.extra-accordion, geonetwork.css). Escondido quando vazio
-   (:empty cobre #gs-datastore-check, que só tem texto; #gs-autodetect-box tem
-   spinner/lista dentro, então o show/hide dele é feito via JS). */
-#gs-datastore-check,
-#gs-autodetect-box {
+/* Retângulo de borda tracejada pras mensagens de status (checagem de tabela,
+   busca automática, aviso de nome divergente da tabela) - mesmo padrão já
+   usado no GN pra caixas de destaque (.manual-form-wrap/.extra-accordion,
+   geonetwork.css). Classe reutilizável (não mais por ID) - já são 3 usos.
+   Escondido quando vazio (:empty cobre os que só têm texto; os que têm
+   spinner/lista/botão dentro têm o show/hide feito via JS). */
+.gs-status-box {
     border: 1px dashed var(--border);
     border-radius: 8px;
     background: #fafbfc;
@@ -143,14 +172,32 @@
     color: var(--fg-muted);
 }
 
-#gs-datastore-check:empty {
+.gs-status-box:empty {
     display: none;
 }
 
-#gs-datastore-check.gs-warning-text {
+/* <small> tem font-size menor por padrão do navegador (~80% do herdado) -
+   #gs-datastore-check (que é a própria <small>) escapa disso porque o
+   font-size:12px do .gs-status-box acima é aplicado direto nela;
+   #gs-autodetect-status é uma <small> ANINHADA dentro de #gs-autodetect-box
+   (um <div>), então precisa do próprio font-size explícito pra não ficar
+   menor que o texto do outro retângulo. */
+#gs-autodetect-status {
+    font-size: 12px;
+}
+
+.gs-status-box.gs-warning-text {
     color: var(--accent);
     font-weight: 600;
     border-color: var(--accent);
+}
+
+/* Botão dentro da caixa de aviso (ex.: "Usar nome da tabela") - compacto,
+   mesmo tamanho dos outros botões .btn-icon.accent do painel. */
+.gs-status-box .btn-icon {
+    margin-left: 6px;
+    font-size: 11px;
+    padding: 3px 10px;
 }
 
 /* Spinner circular inline - mesmo estilo do .search-spinner (GN), mas com
@@ -168,20 +215,8 @@
     animation: spin-simple 0.7s linear infinite;
 }
 
-/* ── Aba Identificação: "Puxar do Metadado" no canto superior direito da ABA
-   inteira (não de um campo específico - preenche Título+Resumo+Palavras-chave
-   juntos, então não faz sentido "pertencer" só ao Título). .tab-content já é
-   position:relative (geonetwork.css), então o botão só precisa de
-   position:absolute - fica fora do form-grid, não participa do fluxo/altura
-   de nenhuma linha e não sobrepõe nenhum campo. */
-#gs-pull-gn-btn {
-    position: absolute;
-    top: 20px;
-    right: 28px;
-    font-size: 12px;
-    padding: 5px 12px;
-}
-
+/* Posição/tamanho vêm de .tab-header-actions (geonetwork.css) - só o
+   comportamento de desabilitado é específico daqui. */
 #gs-pull-gn-btn:disabled {
     opacity: 0.5;
     cursor: default;

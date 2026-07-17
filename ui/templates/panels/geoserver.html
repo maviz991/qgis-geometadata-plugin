@@ -29,13 +29,14 @@
 
     <!-- ══ ABA 1: DESTINO ══════════════════════════════ -->
     <div id="tab-gs-destino" class="tab-content active">
-        <!-- Fora do form-grid de propósito, mesmo padrão do "Puxar do Metadado" na aba
-             Identificação: fica fixo no canto superior direito da aba inteira (não de
-             um campo específico), sem sobrepor nada - .tab-content já é
-             position:relative (geonetwork.css). -->
-        <button type="button" class="btn-icon accent gs-autodetect-btn" onclick="autoDetectGsDatastore()"
-            data-title="Não sabe o workspace/datastore certo da camada? Isso varre todos e procura onde a tabela está - pode demorar alguns segundos.">Detectar
-            automaticamente</button>
+        <!-- .tab-header-actions (geonetwork.css) - mesmo padrão do "Capturar da camada"
+             no editor GN: fica fixo no canto superior direito da aba inteira, sem
+             sobrepor nada. -->
+        <div class="tab-header-actions">
+            <button type="button" class="btn-icon accent gs-autodetect-btn" onclick="autoDetectGsDatastore()"
+                data-title="Não sabe o workspace/datastore certo da camada? Isso varre todos e procura onde a tabela está - pode demorar alguns segundos.">Detectar
+                automaticamente</button>
+        </div>
 
         <div class="form-grid">
             <div class="form-group span-2">
@@ -67,8 +68,8 @@
             </div>
 
             <div class="form-group span-2">
-                <small id="gs-datastore-check"></small>
-                <div id="gs-autodetect-box" style="display:none">
+                <small id="gs-datastore-check" class="gs-status-box"></small>
+                <div id="gs-autodetect-box" class="gs-status-box" style="display:none">
                     <span id="gs-autodetect-spinner" class="gs-mini-spinner" style="display:none"></span>
                     <small id="gs-autodetect-status"></small>
                     <div id="gs-autodetect-candidates" class="gs-autodetect-candidates" style="display:none"></div>
@@ -79,26 +80,39 @@
 
     <!-- ══ ABA 2: IDENTIFICAÇÃO ══════════════════════════════ -->
     <div id="tab-gs-identificacao" class="tab-content">
-        <!-- Fora do form-grid de propósito: fica fixo no canto superior direito da aba
-             inteira (não de um campo específico), já que preenche Título+Resumo+
-             Palavras-chave juntos - não sobrepõe nenhum campo (posicionado relativo ao
-             .tab-content, que já é position:relative). -->
-        <button type="button" id="gs-pull-gn-btn" class="btn-icon accent"
-            onclick="pullGsAbstractKeywordsFromGn()" disabled
-            data-title="Preenche Título, Resumo e Palavras-chave a partir do metadado já existente pra esta camada (rascunho local, salvo no banco, ou publicado no GeoNetwork), se houver.">Puxar do Metadado</button>
+        <!-- .tab-header-actions (geonetwork.css) - mesmo padrão do "Capturar da camada"
+             no editor GN: fica fixo no canto superior direito da aba inteira (não de um
+             campo específico, já que preenche Título+Resumo+Palavras-chave juntos). -->
+        <div class="tab-header-actions">
+            <button type="button" id="gs-pull-gn-btn" class="btn-icon accent"
+                onclick="pullGsAbstractKeywordsFromGn()" disabled
+                data-title="Preenche Título, Resumo e Palavras-chave a partir do metadado já existente pra esta camada (rascunho local, salvo no banco, ou publicado no GeoNetwork), se houver.">Puxar do Metadado</button>
+        </div>
 
         <div class="form-grid">
             <div class="form-group">
                 <label for="gs-layer-name">Nome da camada publicada <span class="req">*</span> <button class="help-btn"
-                        data-tip="Nome que a camada vai ter no Geohab. É ajustado automaticamente para minúsculas, sem espaços/acentos e sem começar com número (exigência do GeoServer).">?</button></label>
+                        data-tip="Nome que a camada vai ter no Geohab. Precisa ser IDÊNTICO ao nome da tabela no banco de dados - é assim que o GeoServer localiza os dados. Ajustado automaticamente para minúsculas, sem espaços/acentos e sem começar com número (exigência do GeoServer).">?</button>
+                    <button type="button" id="gs-layer-name-lock" class="gs-lock-btn"
+                        onclick="_gsToggleFieldLock('gs-layer-name')" style="display:none"></button>
+                </label>
                 <input id="gs-layer-name" type="text" placeholder="nome_da_camada"
                     oninput="onGsLayerNameInput(this.value)">
                 <small id="gs-layer-name-preview" class="gs-name-preview"></small>
+                <div id="gs-layer-name-mismatch" class="gs-status-box gs-warning-text" style="display:none">
+                    Diferente do nome da tabela no banco.
+                    <button type="button" class="btn-icon accent" onclick="_gsUseTableNameForLayerName()"
+                        data-title="O GeoServer localiza os dados pelo nome exato da tabela no banco - preenche o campo com esse valor automaticamente.">Usar
+                        nome da tabela</button>
+                </div>
             </div>
 
             <div class="form-group">
                 <label for="gs-layer-title">Título <button class="help-btn"
-                        data-tip="Nome de exibição da camada no Geohab (livre, sem as regras de sanitização do campo Nome). Pré-preenchido com o título do metadado, se houver.">?</button></label>
+                        data-tip="Nome de exibição da camada no Geohab (livre, sem as regras de sanitização do campo Nome). Pré-preenchido com o título do metadado, se houver.">?</button>
+                    <button type="button" id="gs-layer-title-lock" class="gs-lock-btn"
+                        onclick="_gsToggleFieldLock('gs-layer-title')" style="display:none"></button>
+                </label>
                 <input id="gs-layer-title" type="text" placeholder="Título de exibição">
             </div>
 

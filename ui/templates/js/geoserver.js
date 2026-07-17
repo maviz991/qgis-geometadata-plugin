@@ -58,6 +58,7 @@ function _initGsBridge() {
         _gsSyncSnapshot = JSON.stringify(snapObj);
         _gsCaptureSnapshotRawNames();
         _gsSyncIsPublished = true; // publicação de verdade - GeoServer já tem isso
+        _gsApplyFieldLockState();
         if (message) {
             _checkGsSyncNow();
             Modal.alert(message, 'Publicado com Ressalvas', 'warning');
@@ -87,6 +88,7 @@ function _initGsBridge() {
             _gsSyncSnapshot = JSON.stringify(_gsCollectFormState());
             _gsCaptureSnapshotRawNames();
             _gsSyncIsPublished = false; // "Continuar Depois" salva no banco, mas o GeoServer ainda não sabe disso
+            _gsApplyFieldLockState();
             var tierPrefix = _isLogged ? 'sys' : 'db';
             setGsBadge(tierPrefix + '_synced');
             _gsLastCheckedLayerKey = null; // idem publish_done acima - invalida o cache do badge combinado do editor
@@ -451,6 +453,7 @@ function tryGsResetForm() {
 function _loadGsLayerInfo(callback) {
     var card = document.getElementById('gs-layer-card');
     if (!card) return;
+    _gsFieldLockOverride = {}; // camada mudou - override de desbloqueio da camada anterior não vale mais
     card.innerHTML = '<span class="gs-status-text">Detectando camada ativa...</span>';
     _setGsTableCheck(null, ''); // camada mudou - qualquer checagem de tabela anterior não vale mais
     _setGsPullGnButtonState(false);
@@ -503,12 +506,13 @@ function _renderGsLayerCard(info) {
 
     // Prioridade: banco (info.saved_*, última publicação/salvamento de verdade) primeiro -
     // esta função roda ANTES de _loadGsDraft(), que só entra depois preenchendo o que
-    // ainda sobrar vazio. Faltando também o banco, cai pro nome puro da camada/título do
-    // metadado (info.title, que já veio do GN online quando disponível - ver
-    // GeoServerBridge._load_layer_metadata).
+    // ainda sobrar vazio. Faltando isso, cai pro nome REAL da tabela no banco (info.table)
+    // - não pro nome da camada no QGIS (info.name), que pode ter sido renomeada localmente
+    // e não bater com a tabela de verdade. O Nome publicado precisa ser idêntico ao nome
+    // da tabela (é assim que o GeoServer localiza os dados) - ver confirmGsPublish.
     var nameEl = document.getElementById('gs-layer-name');
     if (nameEl && !nameEl.value) {
-        var defaultName = info.saved_published_name || info.name;
+        var defaultName = info.saved_published_name || info.table || info.name;
         nameEl.value = defaultName;
         onGsLayerNameInput(defaultName);
     }
@@ -575,6 +579,7 @@ function _renderGsLayerCard(info) {
     _gsSyncSnapshot = _gsSyncHasRecord ? _gsSnapshotFromSaved(info) : JSON.stringify(_gsCollectFormState());
     _gsCaptureSnapshotRawNames();
     _gsSyncIsPublished = !!info.saved_published;
+    _gsApplyFieldLockState();
     _checkGsSyncNow();
     updateGsFormProgress();
 
@@ -730,8 +735,8 @@ function _renderGsTableCheck(names, error) {
     var found = (names || []).some(function (n) { return (n || '').toLowerCase() === table; });
     _setGsTableCheck(found,
         found
-            ? 'Tabela "' + _gsLayerInfo.table + '" encontrada no Workspace e Datastore acima.'
-            : 'Tabela "' + _gsLayerInfo.table + '" não foi encontrada no Workspace e Datastore acima. Confira se escolheu o workspace/datastore certo antes de publicar.'
+            ? 'Tabela "' + _gsLayerInfo.table + '" encontrada no Workspace + Datastore acima.'
+            : 'Tabela "' + _gsLayerInfo.table + '" não foi encontrada no Workspace + Datastore acima. Confira se escolheu o workspace/datastore certo antes de publicar.'
     );
 }
 
@@ -740,7 +745,7 @@ function _setGsTableCheck(state, message) {
     var el = document.getElementById('gs-datastore-check');
     if (el) {
         el.textContent = message;
-        el.className = 'gs-name-preview' + (state === false ? ' gs-warning-text' : '');
+        el.className = 'gs-status-box' + (state === false ? ' gs-warning-text' : '');
     }
     _updateGsPublishButton();
 }
@@ -755,8 +760,76 @@ function onGsLayerNameInput(name) {
             if (nameEl) nameEl.dataset.sanitized = sanitized;
             _updateGsPublishButton();
             _gsResyncSnapshotNameIfUnchanged();
+            _gsUpdateNameMismatchWarning();
         });
     }, 200);
+}
+
+// ─── Nome da camada publicada: precisa bater com o nome da tabela ──────────────
+// O GeoServer localiza os dados pelo nome da tabela no datastore - se o Nome
+// publicado divergir (mesmo por causa da sanitização, ex.: tabela começa com
+// número ou tem acento), a camada publica "vazia"/sem encontrar a tabela certa.
+// Ver confirmGsPublish (bloqueia publicar) e _gsToggleFieldLock/_gsApplyFieldLockState
+// (trava o campo depois de publicado de verdade).
+
+function _gsUpdateNameMismatchWarning() {
+    var el = document.getElementById('gs-layer-name');
+    var warn = document.getElementById('gs-layer-name-mismatch');
+    if (!el || !warn) return;
+    var table = _gsLayerInfo && _gsLayerInfo.table;
+    var current = el.dataset.sanitized || el.value.trim();
+    var mismatch = !!table && !el.readOnly && !!current && current !== table;
+    warn.style.display = mismatch ? '' : 'none';
+}
+
+function _gsUseTableNameForLayerName() {
+    var el = document.getElementById('gs-layer-name');
+    var table = _gsLayerInfo && _gsLayerInfo.table;
+    if (!el || !table) return;
+    el.value = table;
+    onGsLayerNameInput(table);
+}
+
+// ─── Cadeado de Nome/Título - trava depois que a camada foi publicada de
+// verdade (_gsSyncIsPublished), pra evitar edição acidental. Mudar o Nome
+// depois de publicado não RENOMEIA o FeatureType existente no GeoServer - cria
+// uma referência nova (mesma lógica de _gsCollectFormState/confirmGsPublish,
+// que sempre trata o Nome atual como alvo de publish/update), deixando a
+// publicação antiga órfã (WMS/WFS antigos param de funcionar). Por isso o
+// desbloqueio pede confirmação explícita em vez de só destravar direto.
+var _gsFieldLockOverride = {}; // fieldId -> true quando o usuário confirmou destravar nesta sessão/camada
+
+function _gsToggleFieldLock(fieldId) {
+    var el = document.getElementById(fieldId);
+    if (!el || !el.readOnly) return; // só faz sentido a partir do estado travado
+    var isName = fieldId === 'gs-layer-name';
+    var msg = isName
+        ? 'O Nome da camada publicada precisa ser idêntico ao nome da tabela no banco de dados. Mudar esse valor NÃO renomeia a camada já publicada no GeoServer - cria uma referência nova, deixando a publicação atual (WMS/WFS já em uso) órfã. Tem certeza que quer editar mesmo assim?'
+        : 'Esse título já está publicado no Geohab. Mudar aqui só atualiza de verdade lá na próxima publicação/atualização da camada. Quer editar mesmo assim?';
+    Modal.confirm(msg, function () {
+        _gsFieldLockOverride[fieldId] = true;
+        _gsApplyFieldLockState();
+    }, 'Editar campo bloqueado');
+}
+
+function _gsApplyFieldLockState() {
+    var shouldLock = !!_gsSyncIsPublished;
+    ['gs-layer-name', 'gs-layer-title'].forEach(function (fieldId) {
+        var el = document.getElementById(fieldId);
+        var lockBtn = document.getElementById(fieldId + '-lock');
+        if (!el) return;
+        var locked = shouldLock && !_gsFieldLockOverride[fieldId];
+        el.readOnly = locked;
+        if (lockBtn) {
+            // Só mostra o ícone quando já existe publicação de verdade - antes disso o
+            // campo é sempre livre e o cadeado não tem propósito nenhum ali.
+            lockBtn.style.display = shouldLock ? '' : 'none';
+            lockBtn.textContent = locked ? '🔒' : '🔓';
+            lockBtn.style.cursor = locked ? 'pointer' : 'default';
+            lockBtn.disabled = !locked;
+        }
+    });
+    _gsUpdateNameMismatchWarning();
 }
 
 function _gsRawNameNow() {
@@ -1720,6 +1793,7 @@ function _onGsSyncChecked(result) {
             setGsBadge('sys_not_found');
         }
         updateGsFormProgress();
+        _gsApplyFieldLockState();
     }
 
     // Badge combinado do editor GN (_gsBadgeState, ver checkGsPublishStatus/geonetwork.js) -
@@ -1859,6 +1933,18 @@ function confirmGsPublish() {
         Modal.alert('Preencha o Nome da camada publicada (aba Identificação) antes de publicar.', 'Aviso', 'warning');
         return;
     }
+    // O Nome publicado precisa ser IDÊNTICO ao nome da tabela no banco - é assim que o
+    // GeoServer localiza os dados (ver register_postgis_featuretype, nativeName vs name).
+    // Divergir aqui publica uma camada "vazia"/sem achar a tabela certa.
+    if (_gsLayerInfo.table && d.published_name !== _gsLayerInfo.table) {
+        Modal.alert(
+            'O Nome da camada publicada ("' + escHtml(d.published_name) + '") precisa ser idêntico ao nome ' +
+            'da tabela no banco ("' + escHtml(_gsLayerInfo.table) + '") - é assim que o GeoServer localiza os ' +
+            'dados. Ajuste o campo (aba Identificação, botão "Usar nome da tabela") antes de publicar.',
+            'Aviso', 'warning'
+        );
+        return;
+    }
     if (_gsTableCheckState === false) {
         Modal.alert('A tabela "' + escHtml(_gsLayerInfo.table) + '" não foi encontrada nesse datastore. Confira o Workspace/Datastore escolhidos (aba Destino) antes de publicar.', 'Aviso', 'warning');
         return;
@@ -1978,7 +2064,7 @@ function _onGsAutoDetectDone(matches, error) {
         return;
     }
     if (!matches || !matches.length) {
-        _setGsAutoDetectStatus('Tabela "' + ((_gsLayerInfo && _gsLayerInfo.table) || '') + '" não foi encontrada em nenhum workspace/datastore visível no GeoServer.');
+        _setGsAutoDetectStatus('Tabela "' + ((_gsLayerInfo && _gsLayerInfo.table) || '') + '" não foi encontrada em nenhum Workspace/Datastore visível no Geohab.');
         return;
     }
     if (matches.length === 1) {
@@ -1986,7 +2072,7 @@ function _onGsAutoDetectDone(matches, error) {
         _selectGsWorkspaceDatastore(matches[0].workspace, matches[0].datastore);
         return;
     }
-    _setGsAutoDetectStatus('Encontrado em ' + matches.length + ' datastores diferentes - escolha um:');
+    _setGsAutoDetectStatus('Encontrado em: ' + matches.length + ' datastores diferentes - escolha um:');
     _renderGsAutoDetectCandidates(matches);
 }
 
