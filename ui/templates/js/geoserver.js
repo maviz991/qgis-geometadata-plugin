@@ -510,7 +510,17 @@ function _loadGsLayerInfo(callback) {
     var card = document.getElementById('gs-layer-card');
     if (!card) return;
     _gsFieldLockOverride = {}; // camada mudou - override de desbloqueio da camada anterior não vale mais
-    card.innerHTML = '<span class="gs-status-text">Detectando camada ativa...</span>';
+    // Esqueleto no formato final (badge + nome + schema.tabela, mesma estrutura que
+    // _renderGsLayerCard monta quando os dados chegam) em vez de texto "Detectando..." -
+    // mesmo raciocínio de _applyGsSkeleton (já ocupa o espaço da UI, sem salto de layout
+    // quando o resultado chega).
+    card.innerHTML =
+        '<div class="gs-layer-detected-row">' +
+        '<span class="gs-layer-badge skeleton-field" style="width:78px;">&nbsp;</span>' +
+        '<div class="gs-layer-detected-info">' +
+        '<span class="gs-layer-detected-name skeleton-field" style="display:inline-block;width:170px;">&nbsp;</span>' +
+        '<small class="gs-layer-detected-schema skeleton-field" style="display:inline-block;width:130px;">&nbsp;</small>' +
+        '</div></div>';
     _setGsTableCheck(null, ''); // camada mudou - qualquer checagem de tabela anterior não vale mais
     _setGsPullGnButtonState(false);
     var badge = document.getElementById('gs-sync-badge');

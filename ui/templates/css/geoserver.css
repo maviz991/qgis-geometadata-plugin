@@ -87,6 +87,14 @@
     letter-spacing: 0.04em;
 }
 
+/* .skeleton-field (styles.css) força border-radius: 6px !important pensando em campos
+   retangulares (input/textarea) - sobrescrevia o formato pílula do badge acima durante o
+   esqueleto de carregamento (_loadGsLayerInfo). Seletor mais específico pra recuperar o
+   999px só aqui, sem mexer na regra genérica usada em outros lugares. */
+.gs-layer-badge.skeleton-field {
+    border-radius: 999px !important;
+}
+
 .gs-layer-detected-info {
     display: flex;
     flex-direction: column;
