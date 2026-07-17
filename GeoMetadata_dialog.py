@@ -362,6 +362,11 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.web_view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         if QWebEnginePage is not None:
             self.web_view.setPage(_ExternalLinkPage(self.web_view))
+        # Fundo da página (mesma cor de --bg em styles.css) em vez do branco padrão do
+        # QWebEnginePage - sem isso, o instante entre a QWebEngineView aparecer e o primeiro
+        # paint do HTML (main.html + CSS ainda carregando) mostrava um "flash" branco puro
+        # antes do overlay de carregamento (mesmo --bg) aparecer.
+        self.web_view.page().setBackgroundColor(QColor("#f8fafc"))
 
         # Configura o QWebChannel para comunicação - três bridges por domínio
         # (genérico, GeoNetwork, GeoServer), cada um exposto ao JS com seu próprio nome.

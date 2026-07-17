@@ -30,6 +30,7 @@ class GeoServerBridge(QObject):
     gs_style_updated = pyqtSignal(bool, str)  # sucesso, erro - "Serviços > Atualizar Estilo" (ver update_style)
     gs_layer_pulled = pyqtSignal(bool, 'QVariant', str)  # sucesso, dados, erro - "Serviços > Atualizar Camada" (ver pull_layer_from_server)
     gs_rest_configured = pyqtSignal(bool, str)  # ok, username - resultado de configure_gs_rest_credentials
+    gs_layer_info_ready = pyqtSignal('QVariant')  # resultado de get_active_layer_publish_info (ver _GsActiveLayerInfoWorker)
 
     # Cache de camadas do GeoServer (carregado uma vez por sessão)
     _geoserver_layers_cache = None
@@ -42,7 +43,16 @@ class GeoServerBridge(QObject):
         self._featuretypes_worker = None
         self._find_datastore_worker = None
         self._publish_worker = None
-        self._sync_check_worker = None
+        # Lista (não slot único) - check_gs_sync pode ser chamado de novo (troca de camada,
+        # retry) antes do worker anterior terminar; guardar só a última instância sobrescrevia
+        # a referência Python da QThread em voo, o PyQt descartava o objeto órfão e o sinal
+        # 'done' dela nunca chegava a emitir gs_sync_checked - o badge ficava preso até a
+        # próxima revisita/checagem sem concorrência. Ver check_gs_sync.
+        self._sync_check_workers = []
+        # Idem - get_active_layer_publish_info pode ser chamado de novo (troca rápida de
+        # camada, ou pelo badge combinado do editor GN, checkGsPublishStatus) antes do
+        # worker anterior terminar. Ver _GsActiveLayerInfoWorker/get_active_layer_publish_info.
+        self._layer_info_workers = []
         self._styles_worker = None
         self._apply_style_worker = None
         self._gs_rest_worker = None
@@ -231,108 +241,115 @@ class GeoServerBridge(QObject):
         except Exception as exc:
             print(f"GeoMetadata [gs clear_draft]: {exc}")
 
-    def _load_layer_metadata(self, layer, uuid_hint=''):
-        """Busca o metadado MGB da camada pra pré-preencher Título/Resumo/Palavras-chave
-        na aba Identificação do GS. Prioridade de preenchimento (mesma regra usada pro
-        destino de publicação, ver GeoServerService.save_publish_destination/
-        get_active_layer_publish_info): 1) sistema online (GeoNetwork) 2) banco/sidecar
-        local (PersistenceService) 3) rascunho do editor GN (arquivo local) - nessa ordem,
-        estando logado ou não (a etapa 1 só "vence" quando dá certo; se não houver sessão
-        ou o GeoNetwork não responder, cai graciosamente pras etapas seguintes):
+    def _resolve_uuid_hint_and_draft(self, layer):
+        """Parte RÁPIDA (arquivo local, API do QGIS) do que antes era _load_layer_metadata -
+        roda na main thread ANTES de disparar _GsActiveLayerInfoWorker (banco/GeoNetwork,
+        em background). Retorna (draft, uuid_hint_efetivo) - o hint já embute o uuid do
+        rascunho, na mesma prioridade de antes (banco > rascunho > hint recebido do JS,
+        ver _merge_layer_metadata/_on_layer_info_ready)."""
+        gn_bridge = getattr(self._dialog, 'gn_bridge', None)
+        draft = None
+        if gn_bridge and layer:
+            try:
+                layer_key = layer.source() or layer.id()
+                draft = gn_bridge._load_all_drafts().get(layer_key)
+            except Exception as exc:
+                print(f"GeoMetadata [get_active_layer_publish_info] draft: {exc}")
+        return draft
 
-        1. GeoNetwork - se sabemos o metadata_uuid (achado no passo 2 abaixo, no rascunho,
-           ou recebido via `uuid_hint`), busca lá primeiro - é a fonte mais confiável
-           porque reflete o que está de fato publicado, e não uma cópia que pode ter
-           ficado desatualizada.
-        2. Local (DB/sidecar, via PersistenceService) - metadado já salvo de verdade nesse
-           banco, usado tanto pra descobrir o uuid (passo 1) quanto como conteúdo em si se
-           a busca online falhar (sem sessão, sem rede, etc.).
-        3. Rascunho do editor GN (arquivo local, por máquina) - só como último recurso:
-           cobre o fluxo "preencher tudo offline, nunca salvou nada ainda", mas não deve
-           pisar em cima de um metadado que já existe de verdade online ou no banco."""
-        try:
-            gn_bridge = getattr(self._dialog, 'gn_bridge', None)
-            draft = None
-            if gn_bridge and layer:
-                try:
-                    layer_key = layer.source() or layer.id()
-                    draft = gn_bridge._load_all_drafts().get(layer_key)
-                except Exception as exc:
-                    print(f"GeoMetadata [_load_layer_metadata] draft: {exc}")
+    @staticmethod
+    def _merge_layer_metadata(draft, local_metadata, gn_remote):
+        """Mesma prioridade de preenchimento que _load_layer_metadata tinha: 1) GeoNetwork
+        online (mais confiável, reflete o que está de fato publicado) 2) banco/sidecar
+        local (PersistenceService, via fetch_saved_records) 3) rascunho do editor GN
+        (arquivo local, só como último recurso - não deve pisar em cima de um metadado que
+        já existe de verdade online ou no banco)."""
+        if gn_remote:
+            return gn_remote
+        if local_metadata and (local_metadata.get('title') or local_metadata.get('abstract') or local_metadata.get('MD_Keywords')):
+            return local_metadata
+        if draft and (draft.get('title') or draft.get('abstract') or draft.get('MD_Keywords')):
+            return draft
+        return local_metadata or draft or {}
 
-            ps = getattr(self._dialog, 'persistence_service', None)
-            local = None
-            if ps and layer:
-                xml_content = ps.load(layer)
-                if xml_content:
-                    from ..core import xml_parser
-                    local = xml_parser.parse_xml_to_dict(xml_content, is_string=True)
-
-            uuid = (local or {}).get('metadata_uuid') or (draft or {}).get('metadata_uuid') or uuid_hint or None
-            geonetwork_service = getattr(self._dialog, 'geonetwork_service', None)
-            if uuid and geonetwork_service:
-                from ..core.plugin_config import config_loader
-                try:
-                    remote = geonetwork_service.fetch_from_geonetwork(uuid, config_loader)
-                    if remote:
-                        return remote
-                except Exception as exc:
-                    print(f"GeoMetadata [_load_layer_metadata] fallback GeoNetwork falhou: {exc}")
-
-            if local and (local.get('title') or local.get('abstract') or local.get('MD_Keywords')):
-                return local
-
-            if draft and (draft.get('title') or draft.get('abstract') or draft.get('MD_Keywords')):
-                return draft
-
-            return local or draft
-        except Exception as exc:
-            print(f"GeoMetadata [_load_layer_metadata]: {exc}")
-            return None
-
-    @pyqtSlot(str, result='QVariant')
+    @pyqtSlot(str)
     def get_active_layer_publish_info(self, gn_uuid_hint=''):
-        """Diz ao JS se a camada ativa do QGIS pode ser publicada no GeoServer (RF02) -
-        só camadas PostGIS são suportadas, ver GeoServerService.get_active_layer_publish_info.
-        Quando publicável, inclui 'title'/'abstract'/'keywords' pré-preenchidos a partir do
-        metadado MGB salvo (se existir) - calculados aqui uma única vez e devolvidos pro JS,
-        que manda esses mesmos valores de volta explicitamente em publish_layer() (em vez de
-        buscar de novo lá, o que já causou inconsistência entre as duas buscas). gn_uuid_hint
-        é o fallback quando a busca local não acha o uuid sozinha (ver _load_layer_metadata).
+        """Diz ao JS (via sinal gs_layer_info_ready, não retorno direto - ver abaixo) se a
+        camada ativa do QGIS pode ser publicada no GeoServer (RF02) - só camadas PostGIS
+        são suportadas, ver GeoServerService.get_active_layer_publish_info. Quando
+        publicável, inclui 'title'/'abstract'/'keywords' pré-preenchidos a partir do
+        metadado MGB salvo (se existir) e 'saved_workspace'/'saved_datastore'/
+        'saved_published_name'/'saved_title'/'saved_abstract'/'saved_keywords'/
+        'saved_published'/'saved_style_*' - o destino usado na última publicação/
+        salvamento de verdade dessa camada (geoserver_publish_xml). Prioridade de
+        preenchimento no JS: banco (isso aqui) > rascunho local (load_draft), estando
+        logado ou não - o rascunho só preenche o que o banco deixou vazio.
 
-        Também inclui 'saved_workspace'/'saved_datastore'/'saved_published_name'/
-        'saved_title'/'saved_abstract'/'saved_keywords'/'saved_published' - o destino
-        usado na última publicação/salvamento de verdade dessa camada
-        (geoserver_publish_xml, ver GeoServerService.load_publish_destination). Prioridade
-        de preenchimento no JS: banco (isso aqui) > rascunho local (load_draft), estando
-        logado ou não - o rascunho só preenche o que o banco deixou vazio (camada nunca
-        salva/publicada de verdade ainda), nunca por cima de um valor que já veio daqui."""
+        Roda em background (QThread, RNF02 - ver _GsActiveLayerInfoWorker) e emite
+        gs_layer_info_ready(info) quando terminar, em vez de retornar direto: a busca (até
+        duas conexões psycopg2 + potencialmente uma chamada REST ao GeoNetwork) era toda
+        síncrona aqui antes, travando a UI inteira (Qt event loop, inclusive o compositor
+        da QWebEngineView) toda vez que o painel GS abria ou a camada ativa mudava, sem
+        short-circuit nenhum (diferente do editor GN, que só cai pro banco quando não há
+        rascunho local - ver geonetwork_bridge.load_draft). Só a parte que toca API do
+        QGIS (camada ativa, layer.source(), auth manager, rascunho local) roda aqui, na
+        main thread - o resto (rede) vai pro worker."""
         geoserver_service = getattr(self._dialog, 'geoserver_service', None)
         if not geoserver_service:
-            return {'publishable': False, 'reason': 'Serviço GeoServer não inicializado.'}
+            self.gs_layer_info_ready.emit({'publishable': False, 'reason': 'Serviço GeoServer não inicializado.'})
+            return
         try:
             layer = self._active_layer()
             info = geoserver_service.get_active_layer_publish_info(layer)
-            if info.get('publishable'):
-                md = self._load_layer_metadata(layer, gn_uuid_hint) or {}
-                info['title'] = md.get('title') or info.get('name') or ''
-                info['abstract'] = md.get('abstract') or ''
-                info['keywords'] = md.get('MD_Keywords') or []
+            if not info.get('publishable'):
+                self.gs_layer_info_ready.emit(info)
+                return
 
-                saved = geoserver_service.load_publish_destination(layer) or {}
-                info['saved_workspace'] = saved.get('workspace') or ''
-                info['saved_datastore'] = saved.get('datastore') or ''
-                info['saved_published_name'] = saved.get('published_name') or ''
-                info['saved_title'] = saved.get('title') or ''
-                info['saved_abstract'] = saved.get('abstract') or ''
-                info['saved_keywords'] = saved.get('keywords') or []
-                info['saved_published'] = bool(saved.get('published'))
-                info['saved_style_source'] = saved.get('style_source') or ''
-                info['saved_style_name'] = saved.get('style_name') or ''
-                info['saved_style_workspace'] = saved.get('style_workspace') or ''
-            return info
+            draft = self._resolve_uuid_hint_and_draft(layer)
+            effective_hint = (draft or {}).get('metadata_uuid') or gn_uuid_hint or None
+
+            from ..core.geoserver_service import resolve_layer_db_params
+            conn_params, details = resolve_layer_db_params(layer)
+            from ..core.plugin_config import config_loader
+            from .geoserver_workers import _GsActiveLayerInfoWorker
+            geonetwork_service = getattr(self._dialog, 'geonetwork_service', None)
+
+            worker = _GsActiveLayerInfoWorker(
+                conn_params, details.get('f_table_catalog'), details.get('f_table_schema'), details.get('f_table_name'),
+                effective_hint, geonetwork_service, config_loader
+            )
+            self._layer_info_workers.append(worker)
+            worker.done.connect(
+                lambda result, w=worker, base_info=info, draft=draft: self._on_layer_info_ready(result, w, base_info, draft)
+            )
+            worker.start()
         except Exception as exc:
-            return {'publishable': False, 'reason': str(exc)}
+            self.gs_layer_info_ready.emit({'publishable': False, 'reason': str(exc)})
+
+    def _on_layer_info_ready(self, result, worker, base_info, draft):
+        """Handler do _GsActiveLayerInfoWorker.done (ver get_active_layer_publish_info) -
+        junta o que veio do worker (banco + GeoNetwork) com o `info` base (já calculado na
+        main thread) e finalmente emite gs_layer_info_ready pro JS."""
+        if worker in self._layer_info_workers:
+            self._layer_info_workers.remove(worker)
+        info = dict(base_info)
+        md = self._merge_layer_metadata(draft, result.get('local_metadata'), result.get('gn_remote'))
+        info['title'] = md.get('title') or info.get('name') or ''
+        info['abstract'] = md.get('abstract') or ''
+        info['keywords'] = md.get('MD_Keywords') or []
+
+        saved = result.get('saved_destination') or {}
+        info['saved_workspace'] = saved.get('workspace') or ''
+        info['saved_datastore'] = saved.get('datastore') or ''
+        info['saved_published_name'] = saved.get('published_name') or ''
+        info['saved_title'] = saved.get('title') or ''
+        info['saved_abstract'] = saved.get('abstract') or ''
+        info['saved_keywords'] = saved.get('keywords') or []
+        info['saved_published'] = bool(saved.get('published'))
+        info['saved_style_source'] = saved.get('style_source') or ''
+        info['saved_style_name'] = saved.get('style_name') or ''
+        info['saved_style_workspace'] = saved.get('style_workspace') or ''
+        self.gs_layer_info_ready.emit(info)
 
     @pyqtSlot(str, result=str)
     def sanitize_layer_name(self, name):
@@ -651,7 +668,13 @@ class GeoServerBridge(QObject):
         import json
         geoserver_service = getattr(self._dialog, 'geoserver_service', None)
         if not geoserver_service or not workspace or not datastore or not published_name:
-            self.gs_sync_checked.emit({'state': 'error'})
+            # workspace/datastore/published_name inclusos mesmo no erro - o JS usa esses três
+            # campos pra casar a resposta com a checagem que esperava (_onGsSyncChecked,
+            # geoserver.js); sem eles a resposta parecia "de outra camada" e era descartada
+            # em silêncio, deixando o badge preso em "verificando" pra sempre.
+            self.gs_sync_checked.emit({
+                'state': 'error', 'workspace': workspace, 'datastore': datastore, 'published_name': published_name
+            })
             return
         try:
             style_cfg = json.loads(style_json) if style_json else {}
@@ -660,11 +683,13 @@ class GeoServerBridge(QObject):
         from ..core.plugin_config import config_loader
         from .geoserver_workers import _GsSyncCheckWorker
         keywords = list(keywords) if keywords else []
-        self._sync_check_worker = _GsSyncCheckWorker(
+        worker = _GsSyncCheckWorker(
             geoserver_service, workspace, datastore, published_name, title, abstract, keywords, config_loader, style_cfg
         )
-        self._sync_check_worker.done.connect(self.gs_sync_checked.emit)
-        self._sync_check_worker.start()
+        self._sync_check_workers.append(worker)
+        worker.done.connect(self.gs_sync_checked.emit)
+        worker.done.connect(lambda _r, w=worker: self._sync_check_workers.remove(w) if w in self._sync_check_workers else None)
+        worker.start()
 
     @pyqtSlot(str, str, str, str, str, 'QVariant', str)
     def save_destination_now(self, workspace, datastore, published_name, title, abstract, keywords, style_json=''):

@@ -423,23 +423,43 @@ document.addEventListener('click', function (e) {
 // ─── Navegação ────────────────────────────────────────────────────────────────
 
 function navigate(panelId) {
+    // 1. Executa os hooks de saída ANTES de trocar o DOM - collectFormData() e
+    //    _saveGsDraftNow() ainda encontram os campos do painel atual aqui.
+    if (typeof _onBeforePanelUnload === 'function') _onBeforePanelUnload();
+    if (typeof _onGsBeforePanelUnload === 'function') _onGsBeforePanelUnload();
+    // 2. Mostra o spinner IMEDIATAMENTE (antes do round-trip Python) para
+    //    eliminar o freeze entre o clique no menu e o nav_changed chegar.
+    var container = document.getElementById('app-container');
+    if (container) _showPanelLoading(container);
+    // 3. Chama o Python; nav_changed dispara loadPanel quando estiver pronto.
     bridge.navigate(panelId);
-    // nav_changed signal already triggers loadPanel - não chamar duas vezes
 }
 
 function loadPanel(panelId) {
-    // Salva estado do editor antes de substituir o HTML (se o editor GN estiver aberto)
+    // Os hooks de saída já foram chamados em navigate() se a navegação veio de
+    // lá (DOM já substituído pelo spinner, então getElementById retorna null e
+    // eles viram no-op). Ficam aqui como proteção para chamadas diretas via
+    // nav_changed sem passar por navigate() (ex.: Python navega programaticamente).
     if (typeof _onBeforePanelUnload === 'function') _onBeforePanelUnload();
-    // Idem pro painel GeoServer (rascunho de publicação) - hook com nome distinto de
-    // propósito, mesmo escopo global (ver _onGsActiveLayerChanged vs _onActiveLayerChanged).
     if (typeof _onGsBeforePanelUnload === 'function') _onGsBeforePanelUnload();
-    var container = document.getElementById("app-container");
-    container.innerHTML = '<div class="loader">Carregando...</div>';
+    var container = document.getElementById('app-container');
+    // Garante o spinner mesmo quando loadPanel é chamado sem navigate() antes.
+    _showPanelLoading(container);
 
     bridge.load_panel_html(panelId, function (html) {
         container.innerHTML = html;
         onPanelLoaded(panelId);
     });
+}
+
+// Insere o overlay de carregamento com spinner circular (mesmo visual do
+// _SpinnerWidget Qt em gateway_login_dialog.py) no container do painel.
+function _showPanelLoading(container) {
+    container.innerHTML =
+        '<div class="panel-loading-overlay">' +
+        '<div class="panel-loading-spinner"></div>' +
+        '<span class="panel-loading-msg">Carregando...</span>' +
+        '</div>';
 }
 
 function onPanelLoaded(panelId) {

@@ -19,6 +19,21 @@ var _gsStyleFilePath = ''; // caminho do .sld escolhido (fonte 'file' da aba Est
 var _gsStyleNameTimer = null; // debounce da sanitização do nome do estilo (mesmo padrão de _gsNameTimer)
 var _gsPendingExistingStyle = null; // valor ('ws:nome' ou 'nome') a selecionar quando a lista de estilos existentes carregar - mesmo padrão de _gsPendingDraftWorkspace
 var _gsDbHasStyle = false; // true se o banco já resolveu o estilo (info.saved_style_source) - evita o rascunho local pisar em cima (prioridade: banco > rascunho, igual _gsDbHasWorkspace)
+var _gsLayerInfoInFlightLayer = null; // nome da camada com um get_active_layer_publish_info já pedido, ainda sem resposta - ver _requestGsLayerInfo
+var _gsLayerInfoPending = []; // [{expectedLayer, onReady}] - quem pediu get_active_layer_publish_info e ainda espera resposta (ver gs_layer_info_ready, _initGsBridge)
+
+// Pede get_active_layer_publish_info de forma assíncrona (resultado chega pelo sinal
+// gs_layer_info_ready, ver _initGsBridge) - dois lugares no app chamam essa mesma info
+// (_loadGsLayerInfo aqui e checkGsPublishStatus, geonetwork.js), por isso um registro de
+// pendências em vez de currying um callback só por cima do bridge. Evita disparar uma
+// SEGUNDA chamada ao Python (e portanto uma segunda ida ao banco) enquanto já existe uma
+// em voo pedida pra essa MESMA camada - a resposta única atende os dois pedidos.
+function _requestGsLayerInfo(uuidHint, expectedLayer, onReady) {
+    _gsLayerInfoPending.push({ expectedLayer: expectedLayer, onReady: onReady });
+    if (_gsLayerInfoInFlightLayer === expectedLayer) return;
+    _gsLayerInfoInFlightLayer = expectedLayer;
+    gsBridge.get_active_layer_publish_info(uuidHint || '');
+}
 
 function _initGsBridge() {
     gsBridge.gs_workspaces_ready.connect(function (workspaces, error) {
@@ -59,6 +74,7 @@ function _initGsBridge() {
         _gsCaptureSnapshotRawNames();
         _gsSyncIsPublished = true; // publicação de verdade - GeoServer já tem isso
         _gsApplyFieldLockState();
+        _gsInvalidatePendingLiveCheck(); // ver definição - descarta checagem ao vivo desatualizada de antes da publicação
         if (message) {
             _checkGsSyncNow();
             Modal.alert(message, 'Publicado com Ressalvas', 'warning');
@@ -89,6 +105,7 @@ function _initGsBridge() {
             _gsCaptureSnapshotRawNames();
             _gsSyncIsPublished = false; // "Continuar Depois" salva no banco, mas o GeoServer ainda não sabe disso
             _gsApplyFieldLockState();
+            _gsInvalidatePendingLiveCheck(); // ver definição - descarta checagem ao vivo desatualizada de antes do salvamento
             var tierPrefix = _isLogged ? 'sys' : 'db';
             setGsBadge(tierPrefix + '_synced');
             _gsLastCheckedLayerKey = null; // idem publish_done acima - invalida o cache do badge combinado do editor
@@ -102,6 +119,21 @@ function _initGsBridge() {
     // sinal, não por callback direto, já que a chamada de rede não pode travar a UI.
     gsBridge.gs_sync_checked.connect(function (result) {
         _onGsSyncChecked(result);
+    });
+    // Resultado de get_active_layer_publish_info (banco + potencialmente GeoNetwork, ver
+    // _GsActiveLayerInfoWorker) - mesmo motivo do check_gs_sync acima, roda em background
+    // agora (antes era síncrono e travava a UI toda vez que o painel GS abria ou a camada
+    // mudava). Ver _requestGsLayerInfo - dois lugares pedem essa info (_loadGsLayerInfo,
+    // aqui, e checkGsPublishStatus, geonetwork.js), por isso um registro de pendências em
+    // vez de um callback só.
+    gsBridge.gs_layer_info_ready.connect(function (info) {
+        _gsLayerInfoInFlightLayer = null;
+        var pending = _gsLayerInfoPending;
+        _gsLayerInfoPending = [];
+        pending.forEach(function (entry) {
+            if (_activeLayerName !== entry.expectedLayer) return; // camada trocou enquanto carregava - resposta obsoleta pra esse pedido
+            entry.onReady(info);
+        });
     });
     // Lista de estilos existentes (aba Estilos, fonte 'existing') - ver _gsLoadStylesList.
     gsBridge.gs_styles_ready.connect(function (styles, error) {
@@ -129,6 +161,7 @@ function _initGsBridge() {
             _gsLayerInfo.saved_style_source = appliedStyle.style_source;
             _gsLayerInfo.saved_style_name = appliedStyle.style_name;
         }
+        _gsInvalidatePendingLiveCheck(); // ver definição - descarta checagem ao vivo desatualizada de antes de aplicar o estilo
         try {
             var snap = JSON.parse(_gsSyncSnapshot);
             var cur = _gsCollectFormState();
@@ -177,6 +210,7 @@ function _initGsBridge() {
         _gsSyncSnapshot = JSON.stringify(_gsCollectFormState());
         _gsCaptureSnapshotRawNames();
         _gsSyncIsPublished = true;
+        _gsInvalidatePendingLiveCheck(); // ver definição - senão uma checagem em voo de ANTES do pull chega depois com "Modificado" desatualizado e o banner "Atualização disponível" reaparece
         setGsBadge((_isLogged ? 'sys' : 'db') + '_synced');
         _gsLastCheckedLayerKey = null; // idem publish_done/destination_saved - invalida o cache do badge combinado do editor
         updateGsFormProgress();
@@ -187,6 +221,11 @@ function _initGsBridge() {
 // Chamado por onPanelLoaded() (app.js) quando o painel "geoserver" acabou de carregar.
 function _onGeoServerPanelLoaded() {
     if (!document.getElementById('gs-layer-card')) return;
+    // Skeleton também no carregamento inicial do painel, não só na troca de camada ativa
+    // (_onGsActiveLayerChanged) - mesmo raciocínio de _onEditorPanelLoaded (geonetwork.js).
+    // _renderGsLayerCard (via _loadGsLayerInfo mais abaixo) remove assim que os dados
+    // chegarem, incondicionalmente, mesmo pra camada não publicável.
+    _applyGsSkeleton();
     _gsKeywords = [];
     _renderGsKeywords();
     // Estado de estilo é por camada/painel - o HTML recém-carregado já está nos defaults
@@ -390,6 +429,7 @@ function _gsApplyKnownWorkspaceDatastore(workspace, datastore) {
 // mesmo escopo global e uma declaração igual sobrescreveria a outra silenciosamente.
 function _onGsActiveLayerChanged() {
     if (!document.getElementById('gs-layer-card')) return;
+    _applyGsSkeleton();                    // feedback visual imediato na troca de camada
     // Rascunho/nome/título/resumo/palavras-chave são por camada - limpa antes de trocar,
     // senão o que foi digitado pra camada anterior vazaria pra essa (mesmo espírito de
     // resetEditorForm() no editor GN antes de _loadFormForLayer).
@@ -413,6 +453,22 @@ function _onGsActiveLayerChanged() {
     _gsResetStyleControls(); // estilo também é por camada
     _loadGsLayerInfo(function () {
         _loadGsDraft();
+    });
+}
+
+// Aplica shimmer animado nos campos de texto do painel GeoServer enquanto os dados carregam.
+function _applyGsSkeleton() {
+    ['gs-layer-name', 'gs-layer-title', 'gs-layer-abstract'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.classList.add('skeleton-field');
+    });
+}
+
+// Remove o skeleton quando os dados reais começam a ser preenchidos.
+function _removeGsSkeleton() {
+    ['gs-layer-name', 'gs-layer-title', 'gs-layer-abstract'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.classList.remove('skeleton-field');
     });
 }
 
@@ -477,9 +533,7 @@ function _loadGsLayerInfo(callback) {
     // chamada foi disparada. Trocar de camada rápido o bastante enquanto essa chamada
     // ainda está em voo faz a resposta chegar depois já pra outra camada, aplicando o
     // destino/metadado ERRADO no formulário (mesma corrida de _loadFormForLayer, geonetwork.js).
-    var _expectedLayer = _activeLayerName;
-    gsBridge.get_active_layer_publish_info(uuidHint, function (info) {
-        if (_activeLayerName !== _expectedLayer) return; // camada trocou enquanto carregava - resposta obsoleta
+    _requestGsLayerInfo(uuidHint, _activeLayerName, function (info) {
         _gsLayerInfo = info;
         _renderGsLayerCard(info);
         if (callback) callback();
@@ -489,6 +543,7 @@ function _loadGsLayerInfo(callback) {
 function _renderGsLayerCard(info) {
     var card = document.getElementById('gs-layer-card');
     if (!card) return; // painel já foi trocado
+    _removeGsSkeleton(); // remove skeleton antes de preencher os dados reais
 
     if (!info || !info.publishable) {
         card.innerHTML = '<span class="gs-status-text gs-warning-text">' + escHtml((info && info.reason) || 'Nenhuma camada ativa suportada.') + '</span>';
@@ -623,7 +678,11 @@ function _renderGsWorkspaces(workspaces, error) {
         } else {
             wrap.innerHTML = '<select id="gs-workspace"><option value="">Erro ao carregar workspaces</option></select>';
         }
-        Modal.alert(error, 'Erro', 'error');
+        // Sem toast aqui de propósito - list_workspaces() já falha (sem sessão) toda vez
+        // que o painel GS abre deslogado, então isso disparava um Modal.alert automático
+        // (não motivado por clique nenhum do usuário) a cada visita. O dropdown já avisa
+        // "Erro ao carregar workspaces" (ou preserva o destino conhecido, ver acima) - é
+        // aviso suficiente pra um estado que só se resolve fazendo login.
         return;
     }
     var options = '<option value="">Selecione um workspace...</option>';
@@ -1532,6 +1591,7 @@ var _gsSyncHasRecord = false; // true = existe algo salvo no banco (info.saved_w
 var _gsOnlineLastCheckedKey = null; // ver _checkGsSyncOnline - cache por camada+destino, mesmo padrão de _gnLastCheckedLayerKey (geonetwork.js)
 var _gsOnlineLastCheckedAt = 0;
 var _gsOnlineExpectedKey = null; // key (camada+destino) da última checagem AO VIVO disparada - ver _checkGsSyncOnline/_onGsSyncChecked
+var _gsOnlineInFlightKey = null; // key com uma checagem AO VIVO já pedida ao Python, ainda sem resposta - evita disparar check_gs_sync de novo pra mesma key antes da primeira voltar (duas em voo faziam o worker mais velho no Python perder a referência e nunca emitir, ou uma resposta desatualizada chegar por último e sobrescrever o badge com estado errado) - ver _checkGsSyncOnline/_onGsSyncChecked
 
 // Vocabulário de status compartilhado com o GN (ver _GN_SYNC_LABELS, geonetwork.js) - o
 // nível (sys_/db_) reflete só se há sessão ativa (_isLogged) no momento da checagem, já
@@ -1704,7 +1764,9 @@ function _checkGsSyncOnline(info) {
     var ws = info.saved_workspace, ds = info.saved_datastore, name = info.saved_published_name;
     var key = _activeLayerName + '|' + ws + '|' + ds + '|' + name;
     if (_gsOnlineLastCheckedKey === key && (Date.now() - _gsOnlineLastCheckedAt) < _GN_RECHECK_STALE_MS) return;
+    if (_gsOnlineInFlightKey === key) return; // já pedido, esperando resposta - ver _gsOnlineInFlightKey
     _gsOnlineExpectedKey = key;
+    _gsOnlineInFlightKey = key;
     var d, styleJson;
     if (document.getElementById('gs-layer-card')) {
         d = _gsCollectFormState();
@@ -1735,6 +1797,22 @@ function _gsForceLiveRecheck() {
     _checkGsSyncOnline(_gsLayerInfo);
 }
 
+// Chamada por publish/"Continuar Depois"/pull/atualizar estilo (ver _initGsBridge) assim
+// que qualquer uma dessas ações CONFIRMA um estado novo de verdade (setGsBadge('..._synced')
+// logo em seguida) - descarta qualquer checagem AO VIVO (check_gs_sync) que já estava em
+// voo ANTES da ação terminar. Sem isso, uma resposta atrasada (pedida um pouco antes,
+// ainda refletindo o estado ANTIGO) podia chegar DEPOIS e sobrescrever o badge recém-
+// confirmado com "Modificado" - é o banner "Atualização disponível" reaparecendo logo
+// depois de um pull que acabou de sincronizar tudo. Só zera _gsOnlineExpectedKey
+// (_onGsSyncChecked descarta por key não bater, ver ali) - o cache de 60s
+// (_gsOnlineLastCheckedKey) tem que zerar junto, senão fica com o timestamp de uma
+// checagem que nunca vai ser aceita, e a próxima tentativa de verdade é pulada por
+// "já verificado recentemente".
+function _gsInvalidatePendingLiveCheck() {
+    _gsOnlineExpectedKey = null;
+    _gsOnlineLastCheckedKey = null;
+}
+
 // Sinal gs_sync_checked (ver _initGsBridge) - resultado de check_gs_sync, chegando de
 // forma assíncrona (não como retorno/callback direto de uma chamada). Valida contra
 // _gsOnlineExpectedKey (camada+destino no momento em que _checkGsSyncOnline disparou a
@@ -1747,6 +1825,7 @@ function _onGsSyncChecked(result) {
     if (!result) return;
     var state = result.state;
     var key = _activeLayerName + '|' + result.workspace + '|' + result.datastore + '|' + result.published_name;
+    if (_gsOnlineInFlightKey === key) _gsOnlineInFlightKey = null; // libera a key ANTES do check de obsolescência abaixo - senão uma resposta descartada por ser antiga travava novas checagens pra essa key pra sempre
     if (key !== _gsOnlineExpectedKey) return; // resposta obsoleta ou não solicitada por essa checagem
 
     if (state && state !== 'error') {

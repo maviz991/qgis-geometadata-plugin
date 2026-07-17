@@ -120,6 +120,7 @@ function _onBeforePanelUnload() {
 function _onActiveLayerChanged(name) {
     dismissGnUpdateBanner();
     if (document.getElementById('f-title')) {
+        _applyGnSkeleton();                // feedback visual imediato na troca de camada
         resetEditorForm();
         var badge = document.getElementById('gn-sync-badge');
         if (badge) badge.style.display = 'none';
@@ -129,8 +130,30 @@ function _onActiveLayerChanged(name) {
     }
 }
 
+// Aplica shimmer animado nos campos do editor enquanto os dados da nova camada carregam.
+function _applyGnSkeleton() {
+    document.querySelectorAll('[id^="f-"]').forEach(function (el) {
+        var tag = el.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
+            el.classList.add('skeleton-field');
+        }
+    });
+}
+
+// Remove o skeleton antes de preencher os dados reais.
+function _removeGnSkeleton() {
+    document.querySelectorAll('.skeleton-field').forEach(function (el) {
+        el.classList.remove('skeleton-field');
+    });
+}
+
 // Chamado por onPanelLoaded() (app.js) quando o painel "editor" acabou de carregar.
 function _onEditorPanelLoaded() {
+    // Skeleton também no carregamento inicial do painel, não só na troca de camada ativa
+    // (_onActiveLayerChanged) - senão o shimmer nunca aparecia no fluxo mais comum (abrir
+    // o Editor pelo menu), só quando o usuário trocava de camada com o painel JÁ aberto.
+    // _loadFormForLayer (chamado mais abaixo) remove assim que os dados chegarem.
+    _applyGnSkeleton();
     // Se tem um vínculo GS pendente (recém-publicado no GeoServer, ver geoserver.js), já
     // abre direto na aba Distribuição - evita o "flash" de Identificação seguido de troca
     // de aba alguns instantes depois, que dava a impressão de ter ido pra home do editor.
@@ -324,7 +347,7 @@ function _loadFormForLayer(sessionDraft) {
         _applyPendingGsDistLayerIfAny();
         return;
     }
-    if (typeof gnBridge === 'undefined') { _applyPendingGsDistLayerIfAny(); return; }
+    if (typeof gnBridge === 'undefined') { _removeGnSkeleton(); _applyPendingGsDistLayerIfAny(); return; }
     var _expectedLayer = _activeLayerName;
     gnBridge.load_draft(function (draft) {
         if (_activeLayerName !== _expectedLayer) return; // camada trocou enquanto carregava - resposta obsoleta
@@ -335,7 +358,13 @@ function _loadFormForLayer(sessionDraft) {
         } else {
             gnBridge.load_layer_metadata(function (saved) {
                 if (_activeLayerName !== _expectedLayer) return; // idem
-                if (saved) populateForm(saved);
+                // saved vem vazio pra camada nunca documentada (sem rascunho nem XML salvo) -
+                // populateForm(data) não roda nesse caso (guarda "if (!data) return" logo no
+                // topo), e é ELA quem remove o skeleton (ver _applyGnSkeleton/_onActiveLayerChanged);
+                // sem esse else os campos ficavam com o shimmer preso pra sempre (color:
+                // transparent + pointer-events:none - formulário inteiro travado) numa camada
+                // nova, o caso mais comum de todos.
+                if (saved) { populateForm(saved); } else { _removeGnSkeleton(); }
                 checkGnSync(saved && saved.metadata_uuid, (saved && saved.dateStamp) || '');
                 _applyPendingGsDistLayerIfAny();
             });
@@ -616,7 +645,12 @@ function checkGsPublishStatus() {
 
     _gsBadgeState = null;
     if (typeof gsBridge === 'undefined') { _refreshGnBadgeLabel(); return; }
-    gsBridge.get_active_layer_publish_info('', function (info) {
+    // Assíncrono agora (ver _requestGsLayerInfo/geoserver.js) - resultado chega pelo sinal
+    // gs_layer_info_ready, não por callback direto (a busca no Python pode envolver banco
+    // + GeoNetwork, RNF02). _activeLayerName como expectedLayer cobre a troca de camada
+    // enquanto a busca está em voo - antes esse guard não existia aqui (só o "painel ainda
+    // aberto" abaixo), então a resposta de uma camada podia acabar aplicada em outra.
+    _requestGsLayerInfo('', _activeLayerName, function (info) {
         if (!document.getElementById('f-title')) return; // painel já trocou
         var tierPrefix = _isLogged ? 'sys' : 'db';
         _gsLastBadgePublished = !!(info && info.saved_published);
@@ -975,6 +1009,7 @@ function showValidationError(missing) {
 
 function populateForm(data) {
     if (!data) return;
+    _removeGnSkeleton(); // remove skeleton antes de preencher (pode ter sido ativado por troca de camada)
     var SIMPLE_FIELDS = [
         "title", "dateType", "date", "edition", "date_edition",
         "abstract", "purpose", "credit", "status_codeListValue",

@@ -330,4 +330,60 @@ class _GsSyncCheckWorker(QThread):
             self.done.emit(base)
         except Exception as exc:
             print(f"GeoMetadata [_GsSyncCheckWorker]: {exc}")
-            self.done.emit({'state': 'error'})
+            # base (workspace/datastore/published_name) preservado mesmo no erro - ver
+            # comentário equivalente em GeoServerBridge.check_gs_sync sobre a resposta
+            # precisar bater a key esperada em _onGsSyncChecked (geoserver.js).
+            base['state'] = 'error'
+            self.done.emit(base)
+
+
+class _GsActiveLayerInfoWorker(QThread):
+    """Busca em background o que está salvo no banco pra camada ativa (metadado MGB +
+    destino de publicação GS, GeoServerService.fetch_saved_records) e, se achar um uuid,
+    o metadado AO VIVO no GeoNetwork - usado por GeoServerBridge.get_active_layer_publish_info.
+    Antes essa busca rodava toda inteira, síncrona, dentro do próprio pyqtSlot (duas
+    conexões psycopg2 + potencialmente uma chamada REST ao GeoNetwork, todas bloqueantes) -
+    travava a UI inteira (Qt event loop, inclusive o compositor da QWebEngineView) toda vez
+    que o painel GS abria ou a camada ativa mudava, sem exceção (RNF02 - mesmo motivo de
+    _GsSyncCheckWorker). Só recebe dados já resolvidos na main thread (conn_params via
+    resolve_layer_db_params, uuid_hint já combinando draft+hint) - nada aqui toca a API do
+    QGIS (QgsVectorLayer etc.), que não é thread-safe."""
+    done = pyqtSignal('QVariant')  # {'local_metadata': dict|None, 'saved_destination': dict|None, 'gn_remote': dict|None}
+
+    def __init__(self, conn_params, f_table_catalog, f_table_schema, f_table_name,
+                 uuid_hint, geonetwork_service, config_loader_instance):
+        super().__init__()
+        self._conn_params = conn_params
+        self._f_table_catalog = f_table_catalog
+        self._f_table_schema = f_table_schema
+        self._f_table_name = f_table_name
+        self._uuid_hint = uuid_hint
+        self._geonetwork_service = geonetwork_service
+        self._config = config_loader_instance
+
+    def run(self):
+        from ..core.geoserver_service import GeoServerService
+        local_metadata, saved_destination = None, None
+        try:
+            local_metadata, saved_destination = GeoServerService.fetch_saved_records(
+                self._conn_params, self._f_table_catalog, self._f_table_schema, self._f_table_name
+            )
+        except Exception as exc:
+            print(f"GeoMetadata [_GsActiveLayerInfoWorker] banco: {exc}")
+
+        # Mesma prioridade de uuid de antes (_load_layer_metadata): metadata_uuid do banco
+        # primeiro, senão o hint (que já embute o do rascunho local, resolvido na main
+        # thread antes de disparar esse worker - ver get_active_layer_publish_info).
+        gn_remote = None
+        uuid = (local_metadata or {}).get('metadata_uuid') or self._uuid_hint or None
+        if uuid and self._geonetwork_service:
+            try:
+                gn_remote = self._geonetwork_service.fetch_from_geonetwork(uuid, self._config)
+            except Exception as exc:
+                print(f"GeoMetadata [_GsActiveLayerInfoWorker] GeoNetwork: {exc}")
+
+        self.done.emit({
+            'local_metadata': local_metadata,
+            'saved_destination': saved_destination,
+            'gn_remote': gn_remote,
+        })

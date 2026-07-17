@@ -219,6 +219,59 @@ body {
     font-style: italic;
 }
 
+/* ── Panel loading overlay — spinner circular (mesmo visual do _SpinnerWidget
+   Qt em gateway_login_dialog.py: anel cinza #bfc3c9 + segmento vermelho
+   #e5222d girando, mesmo par de cores do .search-spinner em geonetwork.css) ─ */
+.panel-loading-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 500;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    pointer-events: none;
+}
+
+.panel-loading-spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid #bfc3c9;
+    border-top-color: #e5222d;
+    border-radius: 50%;
+    animation: panelSpinnerRotate 0.75s linear infinite;
+    flex-shrink: 0;
+}
+
+.panel-loading-msg {
+    font-size: 12px;
+    color: var(--fg-muted);
+    letter-spacing: 0.02em;
+}
+
+@keyframes panelSpinnerRotate {
+    to { transform: rotate(360deg); }
+}
+
+/* ── Skeleton shimmer para campos na troca de camada ──────────────────────── */
+.skeleton-field {
+    color: transparent !important;
+    background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%) !important;
+    background-size: 200% 100% !important;
+    animation: skeletonShimmer 1.2s ease-in-out infinite !important;
+    border-color: #e2e8f0 !important;
+    border-radius: 6px !important;
+    pointer-events: none !important;
+    user-select: none !important;
+}
+
+@keyframes skeletonShimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
 /* FOOTER */
 .footer {
     height: 32px;

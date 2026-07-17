@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Geohab Plugin</title>
-    <link rel="stylesheet" href="css/styles.css?v=8">
+    <link rel="stylesheet" href="css/styles.css?v=10">
     <link rel="stylesheet" href="css/modals.css?v=7">
     <link rel="stylesheet" href="css/geonetwork.css?v=8">
     <link rel="stylesheet" href="css/geoserver.css?v=13">
@@ -16,7 +16,7 @@
     <!-- HEADER / NAVBAR -->
     <header class="navbar">
         <div class="nav-left">
-            <button id="logo-btn" class="logo-link" onclick="bridge.navigate('home')">
+            <button id="logo-btn" class="logo-link" onclick="navigate('home')">
                 <img src="../../img/cdhu-logo-white.svg" alt="CDHU" class="logo-img">
             </button>
 
@@ -60,7 +60,7 @@
                     </svg>
                 </button>
                 <div class="dropdown-content">
-                    <a href="#" onclick="bridge.navigate('geoserver')">Configurar Camada</a>
+                    <a href="#" onclick="navigate('geoserver')">Configurar Camada</a>
                     <a href="#" onclick="tryPublishGeoServerLayer()">Publicar Camada</a>
                     <a href="#" onclick="pullGsLayerFromServer()">Atualizar Camada</a>
                     <a href="#" onclick="tryUpdateGsStyle()">Atualizar Estilo</a>
@@ -100,8 +100,13 @@
 
     <!-- CONTEÚDO DINÂMICO (PAINÉIS) -->
     <main id="app-container">
-        <!-- O conteúdo será injetado aqui via JS -->
-        <div class="loader">Carregando interface...</div>
+        <!-- O conteúdo será injetado aqui via JS - mesmo overlay de _showPanelLoading()
+             (app.js), pra não trocar de visual entre a inicialização e as navegações
+             seguintes (que já usam o spinner circular desde a primeira troca de painel). -->
+        <div class="panel-loading-overlay">
+            <div class="panel-loading-spinner"></div>
+            <span class="panel-loading-msg">Carregando interface...</span>
+        </div>
     </main>
 
     <!-- FOOTER -->
@@ -113,9 +118,9 @@
 
     <!-- SCRIPTS -->
     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
-    <script src="js/app.js?v=6"></script>
-    <script src="js/geonetwork.js?v=17"></script>
-    <script src="js/geoserver.js?v=45"></script>
+    <script src="js/app.js?v=10"></script>
+    <script src="js/geonetwork.js?v=20"></script>
+    <script src="js/geoserver.js?v=48"></script>
 </body>
 
 </html>

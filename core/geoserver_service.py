@@ -38,16 +38,14 @@ def parse_postgres_uri(source):
     return details
 
 
-def connect_to_layer_db(layer):
-    """Abre uma conexão psycopg2 direta com o banco da própria camada PostGIS (mesma
-    lógica de auth de core/persistence_service.py's _save_to_db/_load_from_db, mas
-    extraída aqui pra não duplicar uma terceira vez em save_publish_destination/
-    load_publish_destination abaixo - não mexe no persistence_service.py existente pra
-    não arriscar o caminho de salvar metadado, que já funciona em produção). Não precisa
-    de login no GeoServer/GeoNetwork - só a credencial da camada já configurada no QGIS."""
-    if not psycopg2:
-        raise Exception("A biblioteca psycopg2 não foi encontrada.")
-
+def resolve_layer_db_params(layer):
+    """Resolve os parâmetros de conexão (dict puro, sem I/O de rede ainda) e os detalhes
+    da tabela pra essa camada PostGIS - extraído de connect_to_layer_db pra poder rodar em
+    background (QThread, ver _GsActiveLayerInfoWorker/geoserver_workers.py): só ESSA parte
+    (layer.source(), QgsApplication.authManager()) toca API do QGIS, que só pode ser usada
+    na main thread. O psycopg2.connect() em si (rede) não - por isso fica separado, pra
+    quem quiser rodar a conexão de verdade em background só precisar chamar essa função
+    antes (na main thread) e levar o dict resultante pro worker."""
     details = parse_postgres_uri(layer.source())
     db_user = details.get('user')
     db_password = details.get('password')
@@ -63,13 +61,27 @@ def connect_to_layer_db(layer):
         else:
             raise Exception(f"Não foi possível carregar a configuração de autenticação '{auth_cfg_id}'.")
 
-    return psycopg2.connect(
-        dbname=details.get('dbname'),
-        user=db_user,
-        password=db_password,
-        host=details.get('host'),
-        port=details.get('port', 5432)
-    ), details
+    params = {
+        'dbname': details.get('dbname'),
+        'user': db_user,
+        'password': db_password,
+        'host': details.get('host'),
+        'port': details.get('port', 5432),
+    }
+    return params, details
+
+
+def connect_to_layer_db(layer):
+    """Abre uma conexão psycopg2 direta com o banco da própria camada PostGIS (mesma
+    lógica de auth de core/persistence_service.py's _save_to_db/_load_from_db, mas
+    extraída aqui pra não duplicar uma terceira vez em save_publish_destination/
+    load_publish_destination abaixo - não mexe no persistence_service.py existente pra
+    não arriscar o caminho de salvar metadado, que já funciona em produção). Não precisa
+    de login no GeoServer/GeoNetwork - só a credencial da camada já configurada no QGIS."""
+    if not psycopg2:
+        raise Exception("A biblioteca psycopg2 não foi encontrada.")
+    params, details = resolve_layer_db_params(layer)
+    return psycopg2.connect(**params), details
 
 
 class GeoServerService:
@@ -605,36 +617,66 @@ class GeoServerService:
             conn.close()
 
     @staticmethod
-    def load_publish_destination(layer):
-        """Lê o último workspace/datastore/nome/título publicados pra essa camada (ver
-        save_publish_destination). Retorna None se não houver registro/coluna ainda."""
-        if not psycopg2 or not layer:
-            return None
+    def fetch_saved_records(conn_params, f_table_catalog, f_table_schema, f_table_name):
+        """Busca de uma vez só (UMA conexão) o metadado MGB salvo (metadata_xml) e o
+        destino de publicação salvo (geoserver_publish_xml) - as duas colunas vivem na
+        MESMA linha da MESMA tabela (public.qgis_geometadata_plugin); antes eram duas
+        conexões psycopg2 separadas (get_active_layer_publish_info abria uma pra cada),
+        dobrando à toa o custo de rede. Recebe os parâmetros de conexão já resolvidos
+        (ver resolve_layer_db_params) - thread-safe, pra rodar em background (QThread,
+        RNF02 - ver _GsActiveLayerInfoWorker/geoserver_workers.py): psycopg2.connect()
+        bloqueava a thread principal do Qt (inclusive o compositor da QWebEngineView, que
+        reusa o mesmo event loop) toda vez que o painel GS abria ou a camada ativa mudava,
+        sem short-circuit nenhum (diferente do editor GN, que só cai pro banco quando não
+        há rascunho local - ver geonetwork_bridge.load_draft).
+
+        As duas colunas são checadas em SELECTs separados (mesmo `cursor`/conexão) em vez
+        de um só com as duas - um banco só com uma das colunas provisionada (migração
+        parcial) faria o SELECT combinado falhar inteiro, perdendo a coluna que EXISTE
+        junto com a que não existe. Retorna (local_metadata: dict|None, saved_destination:
+        dict|None)."""
+        if not psycopg2:
+            return None, None
         try:
-            conn, details = connect_to_layer_db(layer)
+            conn = psycopg2.connect(**conn_params)
         except Exception as exc:
-            print(f"GeoMetadata [load_publish_destination] conexão: {exc}")
-            return None
-        result = None
+            print(f"GeoMetadata [fetch_saved_records] conexão: {exc}")
+            return None, None
+        local_metadata, saved_destination = None, None
         try:
             cursor = conn.cursor()
-            sql = """
-                SELECT geoserver_publish_xml
-                FROM public.qgis_geometadata_plugin
-                WHERE f_table_catalog = %s AND f_table_schema = %s AND f_table_name = %s;
-            """
-            cursor.execute(sql, (details.get('f_table_catalog'), details['f_table_schema'], details['f_table_name']))
-            row = cursor.fetchone()
-            if row:
-                result = GeoServerService._parse_publish_xml(row[0])
+            try:
+                cursor.execute(
+                    "SELECT metadata_xml FROM public.qgis_geometadata_plugin "
+                    "WHERE f_table_catalog = %s AND f_table_schema = %s AND f_table_name = %s;",
+                    (f_table_catalog, f_table_schema, f_table_name)
+                )
+                row = cursor.fetchone()
+                if row and row[0]:
+                    from . import xml_parser
+                    local_metadata = xml_parser.parse_xml_to_dict(row[0], is_string=True)
+            except psycopg2.errors.UndefinedColumn:
+                # rollback obrigatório - sem isso a transação fica "abortada" e o segundo
+                # SELECT (geoserver_publish_xml) falha em cadeia mesmo que a coluna DELE exista.
+                conn.rollback()
+
+            try:
+                cursor.execute(
+                    "SELECT geoserver_publish_xml FROM public.qgis_geometadata_plugin "
+                    "WHERE f_table_catalog = %s AND f_table_schema = %s AND f_table_name = %s;",
+                    (f_table_catalog, f_table_schema, f_table_name)
+                )
+                row = cursor.fetchone()
+                if row and row[0]:
+                    saved_destination = GeoServerService._parse_publish_xml(row[0])
+            except psycopg2.errors.UndefinedColumn:
+                conn.rollback()
             cursor.close()
-        except psycopg2.errors.UndefinedColumn:
-            pass  # coluna ainda não provisionada nesse banco - condição conhecida, sem traceback
         except Exception as exc:
-            print(f"GeoMetadata [load_publish_destination]: {exc}")
+            print(f"GeoMetadata [fetch_saved_records]: {exc}")
         finally:
             conn.close()
-        return result
+        return local_metadata, saved_destination
 
     @staticmethod
     def translate_gs_error(status_code, text):

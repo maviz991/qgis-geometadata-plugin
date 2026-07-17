@@ -26,7 +26,7 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 from qgis.PyQt.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QStackedWidget
-from qgis.PyQt.QtCore import Qt, QUrl, QTimer, pyqtSignal
+from qgis.PyQt.QtCore import Qt, QUrl, QTimer, QThread, pyqtSignal
 from qgis.PyQt.QtGui import QPainter, QPen, QColor
 
 try:
@@ -88,6 +88,46 @@ class _SpinnerWidget(QWidget):
         pen.setColor(self._ACCENT_COLOR)
         painter.setPen(pen)
         painter.drawArc(rect, -self._angle * 16, 90 * 16)
+
+
+class _VerifySessionWorker(QThread):
+    """Confere a sessão do gateway em background (mesmo padrão RNF02 de
+    _GsSyncCheckWorker, ui/geoserver_workers.py) - a chamada requests.get aqui
+    rodava direto em GatewaySSOWidget._try_verify, na thread principal do Qt,
+    bloqueando o event loop inteiro (inclusive o QTimer que anima
+    _SpinnerWidget - por isso ele "travava" durante cada tentativa) pelos até
+    10s do timeout, repetido a cada 1.5s de retry."""
+    done = pyqtSignal(object)  # dict: {'ok': bool, 'status':, 'content_type':, 'cookies':, 'data':, 'session':} ou {'ok': False, 'error':}
+
+    def __init__(self, verify_url, cookies_snapshot, parent=None):
+        super().__init__(parent)
+        self._verify_url = verify_url
+        self._cookies = cookies_snapshot  # cópia feita na thread principal antes do start() - ver _try_verify
+
+    def run(self):
+        try:
+            session = requests.Session()
+            session.verify = False
+            for (name, domain, path), value in self._cookies.items():
+                session.cookies.set(name, value, domain=domain, path=path or '/')
+
+            resp = session.get(
+                self._verify_url, timeout=10,
+                headers={'Accept': 'application/json'}
+            )
+            content_type = resp.headers.get('Content-Type', '')
+            result = {
+                'ok': True, 'status': resp.status_code, 'content_type': content_type,
+                'cookies': list(session.cookies.keys()), 'session': session, 'data': None
+            }
+            if resp.status_code == 200 and 'json' in content_type:
+                try:
+                    result['data'] = resp.json() or {}
+                except ValueError:
+                    pass
+            self.done.emit(result)
+        except requests.exceptions.RequestException as exc:
+            self.done.emit({'ok': False, 'error': str(exc)})
 
 
 class _ChevronBackButton(QWidget):
@@ -161,6 +201,7 @@ class GatewaySSOWidget(QWidget):
         self._verifying     = False
         self._done           = False
         self._retry_count    = 0
+        self._verify_worker  = None
         self._cookies = {}  # (name, domain, path) -> value
 
         self._build_ui()
@@ -273,23 +314,29 @@ class GatewaySSOWidget(QWidget):
         self._try_verify()
 
     def _try_verify(self):
+        # A requisição em si roda em _VerifySessionWorker (QThread) - rodar direto aqui
+        # (como antes) travava o event loop do Qt inteiro pelos até 10s do timeout,
+        # inclusive o QTimer que anima _SpinnerWidget (por isso ele "travava" durante
+        # cada tentativa - não era só a QWebEngineView que ficava sem resposta). Passa
+        # uma CÓPIA de self._cookies (não a referência) - _on_cookie_added continua
+        # rodando na thread principal enquanto o worker roda, e dict não é thread-safe
+        # pra leitura concorrente com escrita.
         self._verifying = True
-        try:
-            session = requests.Session()
-            session.verify = False
-            for (name, domain, path), value in self._cookies.items():
-                session.cookies.set(name, value, domain=domain, path=path or '/')
+        self._verify_worker = _VerifySessionWorker(self._verify_url, dict(self._cookies), self)
+        self._verify_worker.done.connect(self._on_verify_result)
+        self._verify_worker.start()
 
-            resp = session.get(
-                self._verify_url, timeout=10,
-                headers={'Accept': 'application/json'}
-            )
-            content_type = resp.headers.get('Content-Type', '')
+    def _on_verify_result(self, result):
+        self._verifying = False
+        if self._done:
+            return  # cancelado (_on_cancel) enquanto o worker estava em voo - ignora a resposta atrasada
+        if result.get('ok'):
+            status = result.get('status')
             print(f"GeoMetadata [GatewaySSOWidget] verify {self._verify_url} -> "
-                  f"status={resp.status_code} content-type={content_type} "
-                  f"cookies={list(session.cookies.keys())}")
-            if resp.status_code == 200 and 'json' in content_type:
-                data = resp.json() or {}
+                  f"status={status} content-type={result.get('content_type')} "
+                  f"cookies={result.get('cookies')}")
+            data = result.get('data')
+            if status == 200 and data is not None:
                 # GeoNetwork separa nome/sobrenome em campos distintos (name/surname) -
                 # junta os dois pra exibir o nome completo em vez de só o primeiro nome.
                 full_name = f"{data.get('name') or ''} {data.get('surname') or ''}".strip()
@@ -301,16 +348,12 @@ class GatewaySSOWidget(QWidget):
                     or "Usuário CDHU"
                 )
                 self._done = True
-                self.login_succeeded.emit(session, str(username))
+                self.login_succeeded.emit(result.get('session'), str(username))
                 return
-            self._set_status(
-                f"Sessão ainda não confirmada (HTTP {resp.status_code}) - tentando de novo..."
-            )
-        except requests.exceptions.RequestException as exc:
-            print(f"GeoMetadata [GatewaySSOWidget] erro ao verificar sessão: {exc}")
-            self._set_status(f"Erro ao verificar sessão: {exc}")
-        finally:
-            self._verifying = False
+            self._set_status(f"Sessão ainda não confirmada (HTTP {status}) - tentando de novo...")
+        else:
+            print(f"GeoMetadata [GatewaySSOWidget] erro ao verificar sessão: {result.get('error')}")
+            self._set_status(f"Erro ao verificar sessão: {result.get('error')}")
         # Ainda pode ser um hop intermediário do redirect, ou o cookie de sessão
         # ter chegado um instante depois do load - tenta de novo em 1.5s em vez de
         # ficar parado esperando outro loadFinished que pode não vir mais. Limitado
