@@ -143,7 +143,7 @@
         <div class="contacts-toolbar">
             <div class="search-wrap">
                 <input id="contact-search" type="text" placeholder="Buscar organização no catálogo Geohab..."
-                    oninput="suggestContacts(this.value)" onkeydown="if(event.key==='Escape') closeSuggestions()">
+                    oninput="suggestContacts(this.value)" onkeydown="_onContactSearchKeydown(event)">
                 <div id="search-suggestions" class="search-suggestions"></div>
             </div>
             <button class="btn-icon accent" onclick="toggleManualForm()">+ Manual</button>
@@ -642,7 +642,7 @@
         <div class="contacts-toolbar">
             <div class="search-wrap">
                 <input id="proc-search" type="text" placeholder="Buscar processador no catálogo Geohab..."
-                    oninput="suggestFor('proc', this.value)" onkeydown="if(event.key==='Escape') closeFor('proc')">
+                    oninput="suggestFor('proc', this.value)" onkeydown="_onForSearchKeydown('proc', event)">
                 <div id="proc-suggestions" class="search-suggestions"></div>
             </div>
             <button class="btn-icon accent" onclick="toggleSectionManual('proc')">+ Manual</button>
@@ -1074,7 +1074,7 @@
         <div class="contacts-toolbar">
             <div class="search-wrap">
                 <input id="meta-search" type="text" placeholder="Buscar autor no catálogo Geohab..."
-                    oninput="suggestFor('meta', this.value)" onkeydown="if(event.key==='Escape') closeFor('meta')">
+                    oninput="suggestFor('meta', this.value)" onkeydown="_onForSearchKeydown('meta', event)">
                 <div id="meta-suggestions" class="search-suggestions"></div>
             </div>
             <button class="btn-icon accent" onclick="toggleSectionManual('meta')">+ Manual</button>

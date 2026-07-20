@@ -1955,6 +1955,7 @@ var _suggestionResults = [];
 var _localResults = [];
 var _gnResults = [];
 var _gnLoading = { 'main': false, 'proc': false, 'meta': false };
+var _suggestionActiveIdx = -1; // índice destacado (teclado) na lista atual de _suggestionResults
 
 var _GN_LOADING_ROW = '<div class="suggestion-loading"><span class="suggestion-spinner"></span>Buscando no Catálogo Online…</div>';
 
@@ -1990,9 +1991,18 @@ function _checkCdhuWarning(arr, bannerId, reqPos) {
 
 function _renderContactSuggestions(q) {
     var combined = _gnResults.concat(_localResults.filter(function (r) {
-        return !_gnResults.some(function (g) { return g.email && g.email === r.email; });
+        // Sempre exclui duplicata por email já presente no catálogo online.
+        if (_gnResults.some(function (g) { return g.email && g.email === r.email; })) return false;
+        // Logado: o catálogo online (_gnResults) já é a fonte de verdade - "Catálogo
+        // Offline" (preset local em assets/contacts.json, não é contato salvo pelo
+        // usuário) só faz sentido como fallback pra quando NÃO dá pra buscar ao vivo.
+        // "Meus Contatos" (_source === 'user') continua aparecendo mesmo logado - não é
+        // um preset, é algo que o próprio usuário salvou.
+        if (_isLogged && r._source !== 'user') return false;
+        return true;
     }));
     _suggestionResults = combined;
+    _suggestionActiveIdx = -1; // lista mudou (nova digitação/resposta) - sem item destacado até o usuário usar as setas
     var box = document.getElementById('search-suggestions');
     if (!box) return;
     var html = '';
@@ -2013,12 +2023,54 @@ function _renderContactSuggestions(q) {
                 right = '<span class="sugg-badge-local">Catálogo Offline</span>';
             }
             var dataKey = r._key ? ' data-user-key="' + escHtml(r._key) + '"' : '';
-            return '<div class="suggestion-item" onclick="pickSuggestion(' + i + ')"' + dataKey + '>' + label + '<span class="sugg-right">' + right + '</span></div>';
+            return '<div class="suggestion-item" onclick="pickSuggestion(' + i + ')" data-index="' + i + '"' + dataKey + '>' + label + '<span class="sugg-right">' + right + '</span></div>';
         }).join('');
     }
     if (_gnLoading['main']) html += _GN_LOADING_ROW;
     box.innerHTML = html;
     box.style.display = 'block';
+}
+
+// Navegação por teclado na busca de contatos (mesmo espírito do campo de busca dos
+// custom-selects, ver initCustomSelects/app.js) - ArrowUp/Down destaca um item da lista
+// atual (_suggestionResults), Enter escolhe o destacado, Escape/Tab fecham a sugestão
+// (Tab sem preventDefault, deixando o navegador avançar o foco normalmente em seguida).
+function _onContactSearchKeydown(e) {
+    if (e.key === 'Escape') {
+        closeSuggestions();
+        return;
+    }
+    if (e.key === 'Tab') {
+        closeSuggestions();
+        return;
+    }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        if (!_suggestionResults.length) return;
+        e.preventDefault();
+        if (e.key === 'ArrowDown') {
+            _suggestionActiveIdx = _suggestionActiveIdx + 1 < _suggestionResults.length ? _suggestionActiveIdx + 1 : _suggestionResults.length - 1;
+        } else {
+            _suggestionActiveIdx = _suggestionActiveIdx - 1 >= 0 ? _suggestionActiveIdx - 1 : 0;
+        }
+        _updateSuggestionActiveClass();
+        return;
+    }
+    if (e.key === 'Enter') {
+        if (_suggestionActiveIdx < 0) return; // nenhum destacado ainda (usuário não usou as setas) - Enter não faz nada, evita escolher "o primeiro" sem querer
+        e.preventDefault();
+        pickSuggestion(_suggestionActiveIdx);
+    }
+}
+
+function _updateSuggestionActiveClass() {
+    var box = document.getElementById('search-suggestions');
+    if (!box) return;
+    box.querySelectorAll('.suggestion-item').forEach(function (el) {
+        var idx = parseInt(el.getAttribute('data-index'), 10);
+        var active = idx === _suggestionActiveIdx;
+        el.classList.toggle('active', active);
+        if (active) el.scrollIntoView({ block: 'nearest' });
+    });
 }
 
 function suggestContacts(q) {
@@ -2065,6 +2117,7 @@ function closeSuggestions() {
     _suggestionResults = [];
     _localResults = [];
     _gnResults = [];
+    _suggestionActiveIdx = -1;
 }
 
 // ─── Formulário manual ─────────────────────────────────────────────────────────
@@ -2085,6 +2138,7 @@ var _metaSugg = [];
 var _procGnSugg = [];
 var _metaGnSugg = [];
 var _gnTimers = {};
+var _suggestionActiveIdxFor = { proc: -1, meta: -1 }; // mesmo espírito de _suggestionActiveIdx (busca principal), mas por seção
 
 function _sArr(key) { return key === 'proc' ? procContacts : metaContacts; }
 function _sSugg(key) { return key === 'proc' ? _procSugg : _metaSugg; }
@@ -2096,9 +2150,14 @@ function _setSuggGn(key, v) { if (key === 'proc') _procGnSugg = v; else _metaGnS
 function _renderForSuggestions(key, q) {
     var gnList = _getGnSugg(key);
     var combined = gnList.concat(_sSugg(key).filter(function (r) {
-        return !gnList.some(function (g) { return g.email && g.email === r.email; });
+        // Mesma regra de _renderContactSuggestions (busca principal) - logado, o preset
+        // local ("Catálogo Offline") só é fallback; "Meus Contatos" continua aparecendo.
+        if (gnList.some(function (g) { return g.email && g.email === r.email; })) return false;
+        if (_isLogged && r._source !== 'user') return false;
+        return true;
     }));
     _setSugg(key, combined);
+    _suggestionActiveIdxFor[key] = -1;
     var box = document.getElementById(key + '-suggestions');
     if (!box) return;
     var html = '';
@@ -2119,12 +2178,53 @@ function _renderForSuggestions(key, q) {
                 right = '<span class="sugg-badge-local">Catálogo Offline</span>';
             }
             var dataKey = r._key ? ' data-user-key="' + escHtml(r._key) + '"' : '';
-            return '<div class="suggestion-item" onclick="pickFor(\'' + key + '\',' + i + ')"' + dataKey + '>' + label + '<span class="sugg-right">' + right + '</span></div>';
+            return '<div class="suggestion-item" onclick="pickFor(\'' + key + '\',' + i + ')" data-index="' + i + '"' + dataKey + '>' + label + '<span class="sugg-right">' + right + '</span></div>';
         }).join('');
     }
     if (_gnLoading[key]) html += _GN_LOADING_ROW;
     box.innerHTML = html;
     box.style.display = 'block';
+}
+
+// Navegação por teclado nas buscas de contato "paramétricas" (Qualidade/Metadado) - mesmo
+// espírito de _onContactSearchKeydown (busca principal).
+function _onForSearchKeydown(key, e) {
+    if (e.key === 'Escape' || e.key === 'Tab') {
+        closeFor(key);
+        return;
+    }
+    var sugg = _sSugg(key);
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        if (!sugg.length) return;
+        e.preventDefault();
+        var cur = _suggestionActiveIdxFor[key];
+        if (e.key === 'ArrowDown') {
+            cur = cur + 1 < sugg.length ? cur + 1 : sugg.length - 1;
+        } else {
+            cur = cur - 1 >= 0 ? cur - 1 : 0;
+        }
+        _suggestionActiveIdxFor[key] = cur;
+        _updateForSuggestionActiveClass(key);
+        return;
+    }
+    if (e.key === 'Enter') {
+        var idx = _suggestionActiveIdxFor[key];
+        if (idx < 0) return;
+        e.preventDefault();
+        pickFor(key, idx);
+    }
+}
+
+function _updateForSuggestionActiveClass(key) {
+    var box = document.getElementById(key + '-suggestions');
+    if (!box) return;
+    var activeIdx = _suggestionActiveIdxFor[key];
+    box.querySelectorAll('.suggestion-item').forEach(function (el) {
+        var idx = parseInt(el.getAttribute('data-index'), 10);
+        var active = idx === activeIdx;
+        el.classList.toggle('active', active);
+        if (active) el.scrollIntoView({ block: 'nearest' });
+    });
 }
 
 function suggestFor(key, q) {
@@ -2170,6 +2270,7 @@ function closeFor(key) {
     _gnLoading[key] = false;
     _setSugg(key, []);
     _setSuggGn(key, []);
+    _suggestionActiveIdxFor[key] = -1;
 }
 
 function removeFrom(key, idx) {

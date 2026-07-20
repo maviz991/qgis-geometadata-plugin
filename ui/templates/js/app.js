@@ -820,17 +820,29 @@ function initCustomSelects() {
         var dropdown = document.createElement('div');
         dropdown.className = 'search-suggestions custom-select-dropdown';
 
-        // Campo de busca (filtro ao vivo) - mesmo espírito da busca de contatos do
-        // editor GN, só embutido no dropdown em vez de um modal separado. Substitui o
-        // antigo "digitar pra pular pro item" (só saltava pro primeiro que COMEÇAVA com
-        // o texto, sem filtrar a lista) - útil pra selects com poucas opções, mas listas
-        // longas (workspaces, estilos existentes) precisavam de filtro de verdade.
-        var searchInput = document.createElement('input');
-        searchInput.type = 'text';
-        searchInput.className = 'custom-select-search';
-        searchInput.placeholder = 'Buscar...';
-        searchInput.autocomplete = 'off';
-        dropdown.appendChild(searchInput);
+        // Campo de busca (filtro ao vivo) - só faz sentido em listas compridas
+        // (workspaces, estilos existentes, que podem ter dezenas de itens); num select de
+        // poucas opções fixas (ex.: "Estilo principal", 4 itens) só ocupa espaço à toa.
+        // SEARCH_THRESHOLD decide isso pelo Nº de opções, não por select específico - se
+        // um select curto crescer (ou um comprido encolher) o comportamento se ajusta
+        // sozinho, sem precisar marcar cada `<select>` manualmente.
+        var SEARCH_THRESHOLD = 6;
+        var needsSearch = select.options.length > SEARCH_THRESHOLD;
+
+        // Mesmo espírito da busca de contatos do editor GN, só embutido no dropdown em
+        // vez de um modal separado. Substitui, pras listas compridas, o antigo "digitar
+        // pra pular pro item" (só saltava pro primeiro que COMEÇAVA com o texto, sem
+        // filtrar a lista) - esse "type to jump" simples continua valendo pros selects
+        // curtos (ver o keydown do wrapper mais abaixo).
+        var searchInput = null;
+        if (needsSearch) {
+            searchInput = document.createElement('input');
+            searchInput.type = 'text';
+            searchInput.className = 'custom-select-search';
+            searchInput.placeholder = 'Buscar...';
+            searchInput.autocomplete = 'off';
+            dropdown.appendChild(searchInput);
+        }
 
         var itemsWrap = document.createElement('div');
         itemsWrap.className = 'custom-select-items';
@@ -908,11 +920,13 @@ function initCustomSelects() {
             dropdown.style.display = 'flex'; // não 'block' - .custom-select-dropdown é column flex (ver CSS)
             wrapper.classList.add('open');
             isOpen = true;
-            searchInput.value = '';
-            _filterItems('');
-            // setTimeout - o dropdown acabou de virar display:block nesta mesma chamada;
-            // sem adiar um tick, o foco não "pega" de forma confiável em todo navegador.
-            setTimeout(function () { searchInput.focus(); }, 0);
+            if (searchInput) {
+                searchInput.value = '';
+                _filterItems('');
+                // setTimeout - o dropdown acabou de virar display:flex nesta mesma chamada;
+                // sem adiar um tick, o foco não "pega" de forma confiável em todo navegador.
+                setTimeout(function () { searchInput.focus(); }, 0);
+            }
 
             // Scroll to active item
             var activeItem = itemsWrap.querySelector('.suggestion-item.active');
@@ -955,49 +969,57 @@ function initCustomSelects() {
             }
         });
 
-        searchInput.addEventListener('input', function () {
-            _filterItems(searchInput.value);
-        });
+        if (searchInput) {
+            searchInput.addEventListener('input', function () {
+                _filterItems(searchInput.value);
+            });
 
-        // Navegação por teclado DENTRO do campo de busca (dropdown já aberto, foco nele).
-        // stopPropagation só nas teclas tratadas AQUI (Escape/setas/Enter) - Tab passa
-        // direto (sem stopPropagation nem preventDefault) pro handler do wrapper (abaixo),
-        // que fecha o dropdown e deixa o navegador avançar o foco normalmente. Engolir Tab
-        // aqui também deixava o dropdown aberto e o foco pulava pro próximo elemento
-        // focável da PÁGINA inteira (não do formulário), em vez do próximo campo lógico.
-        searchInput.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') {
-                e.stopPropagation();
-                closeDropdown();
-                wrapper.focus();
-                return;
-            }
-            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-                e.stopPropagation();
-                e.preventDefault();
-                var items = _visibleItems();
-                if (!items.length) return;
-                var activeIdx = items.findIndex(function (item) { return item.classList.contains('active'); });
-                var nextIdx;
-                if (e.key === 'ArrowDown') nextIdx = activeIdx + 1 < items.length ? activeIdx + 1 : items.length - 1;
-                else nextIdx = activeIdx - 1 >= 0 ? activeIdx - 1 : 0;
-                if (activeIdx >= 0) items[activeIdx].classList.remove('active');
-                items[nextIdx].classList.add('active');
-                items[nextIdx].scrollIntoView({ block: 'nearest' });
-                return;
-            }
-            if (e.key === 'Enter') {
-                e.stopPropagation();
-                e.preventDefault();
-                var active = itemsWrap.querySelector('.suggestion-item.active');
-                if (active && active.style.display !== 'none' && !active.classList.contains('custom-select-empty')) {
-                    active.click();
+            // Navegação por teclado DENTRO do campo de busca (dropdown já aberto, foco
+            // nele). stopPropagation só nas teclas tratadas AQUI (Escape/setas/Enter) -
+            // Tab passa direto (sem stopPropagation nem preventDefault) pro handler do
+            // wrapper (abaixo), que fecha o dropdown e deixa o navegador avançar o foco
+            // normalmente. Engolir Tab aqui também deixava o dropdown aberto e o foco
+            // pulava pro próximo elemento focável da PÁGINA inteira (não do formulário),
+            // em vez do próximo campo lógico.
+            searchInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') {
+                    e.stopPropagation();
+                    closeDropdown();
+                    wrapper.focus();
+                    return;
                 }
-            }
-        });
+                if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    var items = _visibleItems();
+                    if (!items.length) return;
+                    var activeIdx = items.findIndex(function (item) { return item.classList.contains('active'); });
+                    var nextIdx;
+                    if (e.key === 'ArrowDown') nextIdx = activeIdx + 1 < items.length ? activeIdx + 1 : items.length - 1;
+                    else nextIdx = activeIdx - 1 >= 0 ? activeIdx - 1 : 0;
+                    if (activeIdx >= 0) items[activeIdx].classList.remove('active');
+                    items[nextIdx].classList.add('active');
+                    items[nextIdx].scrollIntoView({ block: 'nearest' });
+                    return;
+                }
+                if (e.key === 'Enter') {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    var active = itemsWrap.querySelector('.suggestion-item.active');
+                    if (active && active.style.display !== 'none' && !active.classList.contains('custom-select-empty')) {
+                        active.click();
+                    }
+                }
+            });
+        }
 
-        // Teclado no wrapper (trigger fechado) - abre o dropdown; a digitação em si (uma
-        // vez aberto) é tratada pelo listener do campo de busca acima, que já tem o foco.
+        // Teclado no wrapper (trigger fechado) - abre o dropdown. Com campo de busca
+        // (lista comprida), a digitação em si (uma vez aberto) é tratada pelo listener do
+        // campo acima, que já tem o foco. Sem campo de busca (lista curta, ~4 itens fixos
+        // tipo "Estilo principal"), mantém o comportamento antigo de "digitar pra pular
+        // pro item que começa com o texto" (searchString com reset por timeout).
+        var jumpSearchString = '';
+        var jumpSearchTimeout = null;
         wrapper.addEventListener('keydown', function (e) {
             if (e.key === 'Tab') {
                 closeDropdown();
@@ -1010,8 +1032,23 @@ function initCustomSelects() {
             } else if (e.key.length === 1) {
                 e.preventDefault();
                 openDropdown();
-                searchInput.value = e.key;
-                _filterItems(e.key);
+                if (searchInput) {
+                    searchInput.value = e.key;
+                    _filterItems(e.key);
+                } else {
+                    jumpSearchString += e.key.toLowerCase();
+                    clearTimeout(jumpSearchTimeout);
+                    jumpSearchTimeout = setTimeout(function () { jumpSearchString = ''; }, 1000);
+                    var items = _visibleItems();
+                    var matchIdx = items.findIndex(function (item) {
+                        return item.textContent.trim().toLowerCase().startsWith(jumpSearchString);
+                    });
+                    if (matchIdx >= 0) {
+                        items.forEach(function (el) { el.classList.remove('active'); });
+                        items[matchIdx].classList.add('active');
+                        items[matchIdx].scrollIntoView({ block: 'nearest' });
+                    }
+                }
             }
         });
 
