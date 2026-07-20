@@ -673,13 +673,51 @@ body {
     left: 0;
     width: 100%;
     z-index: 1000;
-    display: none;
+    display: none; /* vira 'flex' via JS (openDropdown) quando aberto - ver .custom-select-items abaixo */
+    flex-direction: column;
     max-height: 250px;
-    overflow-y: auto;
     background: white;
     border: 1px solid var(--border);
     border-radius: 6px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    /* overflow:hidden (não mais overflow-y:auto) - quem rola agora é só
+       .custom-select-items, por baixo do campo de busca. Isso também recorta a barra de
+       rolagem pro cantinho arredondado do próprio dropdown, em vez do campo de busca ter
+       que competir com um arredondamento próprio (ver comentário dele, abaixo). */
+    overflow: hidden;
+}
+
+/* Campo de busca (filtro ao vivo) no topo do dropdown - FORA da área que rola
+   (.custom-select-items), como item de flex de tamanho fixo (flex: 0 0 auto) em vez de
+   position:sticky - o sticky não funcionava de forma confiável no motor Chromium/Qt
+   embutido no QGIS (o campo rolava junto com a lista, como se fosse só mais um item, em
+   vez de ficar fixo no topo). Mesmo espírito do campo de busca de contatos do editor GN,
+   só que embutido no dropdown em vez de um modal separado. */
+.custom-select-search {
+    flex: 0 0 auto;
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--fg);
+    background: white;
+}
+
+.custom-select-search:focus {
+    outline: none;
+}
+
+/* Só essa parte rola (a lista de opções) - o campo de busca acima fica sempre visível,
+   fora do container com overflow. min-height:0 é necessário aqui: sem isso, um item flex
+   não encolhe abaixo da altura do próprio conteúdo (gotcha clássico de flexbox), e a
+   lista nunca ativaria o scroll, só estufaria o dropdown inteiro pra além do max-height
+   do pai. */
+.custom-select-items {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
 }
 
 /* Dropdown items - override shared suggestion-item colors */

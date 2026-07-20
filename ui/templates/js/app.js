@@ -820,6 +820,22 @@ function initCustomSelects() {
         var dropdown = document.createElement('div');
         dropdown.className = 'search-suggestions custom-select-dropdown';
 
+        // Campo de busca (filtro ao vivo) - mesmo espírito da busca de contatos do
+        // editor GN, só embutido no dropdown em vez de um modal separado. Substitui o
+        // antigo "digitar pra pular pro item" (só saltava pro primeiro que COMEÇAVA com
+        // o texto, sem filtrar a lista) - útil pra selects com poucas opções, mas listas
+        // longas (workspaces, estilos existentes) precisavam de filtro de verdade.
+        var searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.className = 'custom-select-search';
+        searchInput.placeholder = 'Buscar...';
+        searchInput.autocomplete = 'off';
+        dropdown.appendChild(searchInput);
+
+        var itemsWrap = document.createElement('div');
+        itemsWrap.className = 'custom-select-items';
+        dropdown.appendChild(itemsWrap);
+
         // Populate options
         var optionsHtml = '';
         var selectedText = '- Selecione -';
@@ -834,7 +850,7 @@ function initCustomSelects() {
         });
 
         valueSpan.textContent = selectedText;
-        dropdown.innerHTML = optionsHtml;
+        itemsWrap.innerHTML = optionsHtml;
         wrapper.appendChild(dropdown);
 
         select.parentNode.insertBefore(wrapper, select.nextSibling);
@@ -848,6 +864,39 @@ function initCustomSelects() {
             isOpen = false;
         }
 
+        // Itens realmente navegáveis (visíveis pelo filtro atual, sem contar a linha de
+        // "Nenhum resultado").
+        function _visibleItems() {
+            return Array.from(itemsWrap.querySelectorAll('.suggestion-item:not(.custom-select-empty)'))
+                .filter(function (el) { return el.style.display !== 'none'; });
+        }
+
+        // Filtra os itens por substring (case-insensitive, em qualquer posição do texto -
+        // não só prefixo) e mostra/esconde a mensagem de "Nenhum resultado" conforme sobra
+        // ou não algum item visível.
+        function _filterItems(query) {
+            var q = (query || '').trim().toLowerCase();
+            var anyVisible = false;
+            itemsWrap.querySelectorAll('.suggestion-item:not(.custom-select-empty)').forEach(function (el) {
+                var match = !q || el.textContent.trim().toLowerCase().indexOf(q) !== -1;
+                el.style.display = match ? '' : 'none';
+                if (match) anyVisible = true;
+            });
+            var emptyMsg = itemsWrap.querySelector('.custom-select-empty');
+            if (!anyVisible) {
+                if (!emptyMsg) {
+                    emptyMsg = document.createElement('div');
+                    emptyMsg.className = 'suggestion-item custom-select-empty';
+                    emptyMsg.style.cursor = 'default';
+                    emptyMsg.style.color = 'var(--fg-muted)';
+                    emptyMsg.textContent = 'Nenhum resultado.';
+                    itemsWrap.appendChild(emptyMsg);
+                }
+            } else if (emptyMsg) {
+                emptyMsg.remove();
+            }
+        }
+
         function openDropdown() {
             // Close others
             document.querySelectorAll('.custom-select.open').forEach(function (el) {
@@ -856,12 +905,17 @@ function initCustomSelects() {
                     el.classList.remove('open');
                 }
             });
-            dropdown.style.display = 'block';
+            dropdown.style.display = 'flex'; // não 'block' - .custom-select-dropdown é column flex (ver CSS)
             wrapper.classList.add('open');
             isOpen = true;
+            searchInput.value = '';
+            _filterItems('');
+            // setTimeout - o dropdown acabou de virar display:block nesta mesma chamada;
+            // sem adiar um tick, o foco não "pega" de forma confiável em todo navegador.
+            setTimeout(function () { searchInput.focus(); }, 0);
 
             // Scroll to active item
-            var activeItem = dropdown.querySelector('.suggestion-item.active');
+            var activeItem = itemsWrap.querySelector('.suggestion-item.active');
             if (activeItem) {
                 activeItem.scrollIntoView({ block: 'nearest' });
             }
@@ -877,14 +931,14 @@ function initCustomSelects() {
         dropdown.addEventListener('click', function (e) {
             e.stopPropagation();
             var item = e.target.closest('.suggestion-item');
-            if (!item) return;
+            if (!item || item.classList.contains('custom-select-empty')) return;
 
             var idx = item.getAttribute('data-index');
             select.selectedIndex = idx;
             valueSpan.textContent = item.textContent;
 
             // Update active class
-            dropdown.querySelectorAll('.suggestion-item').forEach(function (el) { el.classList.remove('active'); });
+            itemsWrap.querySelectorAll('.suggestion-item').forEach(function (el) { el.classList.remove('active'); });
             item.classList.add('active');
 
             closeDropdown();
@@ -901,66 +955,63 @@ function initCustomSelects() {
             }
         });
 
-        // Keyboard navigation
-        var searchString = '';
-        var searchTimeout = null;
+        searchInput.addEventListener('input', function () {
+            _filterItems(searchInput.value);
+        });
 
+        // Navegação por teclado DENTRO do campo de busca (dropdown já aberto, foco nele).
+        // stopPropagation só nas teclas tratadas AQUI (Escape/setas/Enter) - Tab passa
+        // direto (sem stopPropagation nem preventDefault) pro handler do wrapper (abaixo),
+        // que fecha o dropdown e deixa o navegador avançar o foco normalmente. Engolir Tab
+        // aqui também deixava o dropdown aberto e o foco pulava pro próximo elemento
+        // focável da PÁGINA inteira (não do formulário), em vez do próximo campo lógico.
+        searchInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                e.stopPropagation();
+                closeDropdown();
+                wrapper.focus();
+                return;
+            }
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.stopPropagation();
+                e.preventDefault();
+                var items = _visibleItems();
+                if (!items.length) return;
+                var activeIdx = items.findIndex(function (item) { return item.classList.contains('active'); });
+                var nextIdx;
+                if (e.key === 'ArrowDown') nextIdx = activeIdx + 1 < items.length ? activeIdx + 1 : items.length - 1;
+                else nextIdx = activeIdx - 1 >= 0 ? activeIdx - 1 : 0;
+                if (activeIdx >= 0) items[activeIdx].classList.remove('active');
+                items[nextIdx].classList.add('active');
+                items[nextIdx].scrollIntoView({ block: 'nearest' });
+                return;
+            }
+            if (e.key === 'Enter') {
+                e.stopPropagation();
+                e.preventDefault();
+                var active = itemsWrap.querySelector('.suggestion-item.active');
+                if (active && active.style.display !== 'none' && !active.classList.contains('custom-select-empty')) {
+                    active.click();
+                }
+            }
+        });
+
+        // Teclado no wrapper (trigger fechado) - abre o dropdown; a digitação em si (uma
+        // vez aberto) é tratada pelo listener do campo de busca acima, que já tem o foco.
         wrapper.addEventListener('keydown', function (e) {
             if (e.key === 'Tab') {
                 closeDropdown();
                 return;
             }
-
-            e.preventDefault(); // Prevent page scroll for arrows
-
-            var items = Array.from(dropdown.querySelectorAll('.suggestion-item'));
-            var activeIdx = items.findIndex(function (item) { return item.classList.contains('active'); });
-
-            if (e.key === 'ArrowDown') {
-                if (!isOpen) openDropdown();
-                else {
-                    var nextIdx = activeIdx + 1 < items.length ? activeIdx + 1 : items.length - 1;
-                    items[activeIdx]?.classList.remove('active');
-                    items[nextIdx].classList.add('active');
-                    items[nextIdx].scrollIntoView({ block: 'nearest' });
-                }
-            } else if (e.key === 'ArrowUp') {
-                if (!isOpen) openDropdown();
-                else {
-                    var prevIdx = activeIdx - 1 >= 0 ? activeIdx - 1 : 0;
-                    items[activeIdx]?.classList.remove('active');
-                    items[prevIdx].classList.add('active');
-                    items[prevIdx].scrollIntoView({ block: 'nearest' });
-                }
-            } else if (e.key === 'Enter' || e.key === ' ') {
-                if (!isOpen) {
-                    openDropdown();
-                } else {
-                    if (activeIdx >= 0) {
-                        items[activeIdx].click();
-                    }
-                }
-            } else if (e.key === 'Escape') {
-                closeDropdown();
+            if (isOpen) return;
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                openDropdown();
             } else if (e.key.length === 1) {
-                // Type to search
-                if (!isOpen) openDropdown();
-                searchString += e.key.toLowerCase();
-                clearTimeout(searchTimeout);
-
-                searchTimeout = setTimeout(function () {
-                    searchString = '';
-                }, 1000);
-
-                var matchIdx = items.findIndex(function (item) {
-                    return item.textContent.trim().toLowerCase().startsWith(searchString);
-                });
-
-                if (matchIdx >= 0) {
-                    if (activeIdx >= 0) items[activeIdx].classList.remove('active');
-                    items[matchIdx].classList.add('active');
-                    items[matchIdx].scrollIntoView({ block: 'nearest' });
-                }
+                e.preventDefault();
+                openDropdown();
+                searchInput.value = e.key;
+                _filterItems(e.key);
             }
         });
 
@@ -969,7 +1020,7 @@ function initCustomSelects() {
             var selectedOpt = select.options[select.selectedIndex];
             if (selectedOpt) {
                 valueSpan.textContent = selectedOpt.text;
-                dropdown.querySelectorAll('.suggestion-item').forEach(function (el) {
+                itemsWrap.querySelectorAll('.suggestion-item').forEach(function (el) {
                     el.classList.toggle('active', el.getAttribute('data-value') === selectedOpt.value);
                 });
             }

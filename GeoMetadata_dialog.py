@@ -350,7 +350,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             Qt.WindowCloseButtonHint
         )
         self.setMinimumSize(860, 520)
-        self.resize(1200, 720)
+        self.resize(1200, 690)
 
     def _build_ui_structure(self):
         """Cria o QWebEngineView que carregará toda a interface HTML."""
