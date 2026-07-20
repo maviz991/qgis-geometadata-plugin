@@ -8,6 +8,7 @@ Exposto ao JS via QWebChannel como 'gsBridge'.
 """
 
 import os
+import time
 
 from qgis.PyQt.QtCore import QObject, pyqtSignal, pyqtSlot
 
@@ -57,6 +58,25 @@ class GeoServerBridge(QObject):
         self._apply_style_worker = None
         self._gs_rest_worker = None
         self._pull_layer_worker = None
+        self._last_db_offline_notice = 0.0  # ver _notify_db_offline
+
+    _DB_OFFLINE_NOTICE_INTERVAL = 60  # segundos - mesmo throttle de GeoNetworkBridge._notify_db_offline
+
+    def _notify_db_offline(self):
+        """Avisa o usuário (toast, throttlado) que o banco PostgreSQL desta camada está
+        inacessível agora - mesma razão/throttle de GeoNetworkBridge._notify_db_offline
+        (geonetwork_bridge.py): antes, uma falha de conexão (psycopg2.OperationalError) em
+        fetch_saved_records era engolida e devolvia (None, None), indistinguível de "nada
+        salvo pra essa camada"."""
+        now = time.time()
+        if now - self._last_db_offline_notice < self._DB_OFFLINE_NOTICE_INTERVAL:
+            return
+        self._last_db_offline_notice = now
+        self._dialog.show_toast(
+            'Banco de Dados Inacessível',
+            'Não foi possível conectar ao banco PostgreSQL desta camada agora. Verifique a rede/VPN - até a conexão voltar, o status de sincronização pode não refletir o que está de fato salvo.',
+            'warning'
+        )
 
     @pyqtSlot(str, str)
     def configure_gs_rest_credentials(self, user: str, password: str):
@@ -421,6 +441,13 @@ class GeoServerBridge(QObject):
         # essa lista, e a checagem ao vivo (check_gs_sync) comparava "nada local" contra
         # os adicionais que estão de fato no GeoServer -> "Modificado" pra sempre.
         info['saved_style_additional_json'] = saved.get('style_additional_json') or ''
+        # Banco inacessível agora (ver _GsActiveLayerInfoWorker/fetch_saved_records) -
+        # 'saved_*' acima ficam todos vazios como se a camada nunca tivesse sido salva; sem
+        # esse flag o JS (_renderGsLayerCard, geoserver.js) mostraria "Não Encontrado"
+        # silenciosamente, escondendo que a causa foi só conectividade.
+        info['db_error'] = bool(result.get('db_error'))
+        if info['db_error']:
+            self._notify_db_offline()
         self.gs_layer_info_ready.emit(info)
 
     @pyqtSlot(str, result=str)

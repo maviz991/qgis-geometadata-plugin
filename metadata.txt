@@ -1,5 +1,5 @@
 [general]
-name=Geohab Plugin | GeoMetadata
+name=Geohab Plugin
 qgisMinimumVersion=3.16
 qgisMaximumVersion=3.99
 description=Plugin para criação, gerenciamento e publicação de metadados no padrão MGB 2.0, com integração direta ao Geoportal da CDHU - Geohab.

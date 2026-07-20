@@ -567,28 +567,24 @@ body {
 /* ── Botão de atualizar (↻) ao lado do badge de sincronização (GN/GS) ────────────
    Força uma checagem nova, ignorando o cache de "já verificado recentemente" - único
    jeito de recuperar de um erro de rede (SSL/timeout/403 intermitente) sem fechar e
-   reabrir o plugin inteiro. */
+   reabrir o plugin inteiro. Ícone SVG (não mais o glyph de texto "↻") - o glyph
+   renderizava com a "massa" visual fora do centro do box, então o rotate(180deg) do
+   :active parecia girar torto/fora do eixo; um SVG com viewBox centrado gira limpo. */
 .badge-refresh-btn {
     flex-shrink: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
     background: transparent;
-    border: 1px solid var(--border);
+    border: none;
     color: var(--fg-muted);
-    font-size: 13px;
-    line-height: 1;
     cursor: pointer;
     padding: 0;
-    transition: color 0.15s, border-color 0.15s, transform 0.2s;
-}
-
-.badge-refresh-btn:hover {
-    color: var(--accent);
-    border-color: var(--accent);
+    transition: transform 0.2s;
+    transform-origin: center;
 }
 
 .badge-refresh-btn:active {

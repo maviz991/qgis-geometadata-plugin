@@ -661,6 +661,20 @@ function _renderGsLayerCard(info) {
     _setGsPullGnButtonState(!!(info.abstract || (info.keywords && info.keywords.length)));
     _updateGsPublishButton();
 
+    // Banco inacessível agora (ver _GsActiveLayerInfoWorker/fetch_saved_records) -
+    // info.saved_* vêm todos vazios, mas isso NÃO significa "nada salvo pra essa camada",
+    // só que não deu pra confirmar. Badge normal (abaixo) acusaria "Não Encontrado" ou
+    // "Modificado" silenciosamente, escondendo que a causa é só conectividade - mostra
+    // "Erro ao verificar" direto e pula a checagem AO VIVO (sem baseline confiável pra
+    // comparar contra agora).
+    if (info.db_error) {
+        _gsSyncHasRecord = false;
+        _gsSyncSnapshot = null;
+        setGsBadge('error');
+        updateGsFormProgress();
+        return;
+    }
+
     // Badge de status: compara o formulário atual contra o que está salvo no banco (ou,
     // se nada foi salvo ainda, contra o estado JÁ COM os defaults de auto-preenchimento
     // aplicados acima - nome/título/resumo/palavras-chave puxados de info.name/info.title/
@@ -912,6 +926,30 @@ function _gsToggleFieldLock(fieldId) {
     }, 'Editar campo bloqueado');
 }
 
+// Mesmo estilo de traço (stroke="currentColor", cantos arredondados) dos outros ícones
+// SVG inline do app (ver _LP_INNER_VECTOR/_LP_INNER_RASTER, app.js) - substituem o emoji
+// 🔒/🔓 anterior, que destoava do resto da UI (peso/cor/alinhamento inconsistentes com
+// os demais ícones, todos vetoriais).
+var _GS_LOCK_ICON_LOCKED =
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+    '<rect x="4" y="11" width="16" height="10" rx="2"></rect>' +
+    '<path d="M7.5 11V7.5a4.5 4.5 0 0 1 9 0V11"></path>' +
+    '</svg>';
+var _GS_LOCK_ICON_UNLOCKED =
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+    '<rect x="4" y="11" width="16" height="10" rx="2"></rect>' +
+    '<path d="M7.5 11V7.5a4.5 4.5 0 0 1 8.5-2"></path>' +
+    '</svg>';
+
+// Tooltip do cadeado (data-title, ver initGlobalTooltips/app.js - mesmo sistema dos
+// badges de sync, não o title nativo do navegador) - texto curto explicando o PORQUÊ do
+// campo estar travado (versão resumida das mensagens de _gsToggleFieldLock acima) e o que
+// o clique faz; sem tooltip nenhum já destravado (nada pra explicar/clicar).
+var _GS_LOCK_TOOLTIP_LOCKED = {
+    'gs-layer-name': 'Nome já publicado - precisa bater com a tabela no banco. Clique para editar mesmo assim (risco: publicação atual fica órfã).',
+    'gs-layer-title': 'Título já publicado no Geohab. Clique para editar mesmo assim.'
+};
+
 function _gsApplyFieldLockState() {
     var shouldLock = !!_gsSyncIsPublished;
     ['gs-layer-name', 'gs-layer-title'].forEach(function (fieldId) {
@@ -924,9 +962,10 @@ function _gsApplyFieldLockState() {
             // Só mostra o ícone quando já existe publicação de verdade - antes disso o
             // campo é sempre livre e o cadeado não tem propósito nenhum ali.
             lockBtn.style.display = shouldLock ? '' : 'none';
-            lockBtn.textContent = locked ? '🔒' : '🔓';
+            lockBtn.innerHTML = locked ? _GS_LOCK_ICON_LOCKED : _GS_LOCK_ICON_UNLOCKED;
             lockBtn.style.cursor = locked ? 'pointer' : 'default';
             lockBtn.disabled = !locked;
+            lockBtn.dataset.title = locked ? (_GS_LOCK_TOOLTIP_LOCKED[fieldId] || '') : '';
         }
     });
     _gsUpdateNameMismatchWarning();

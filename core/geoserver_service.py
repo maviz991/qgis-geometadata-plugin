@@ -662,14 +662,17 @@ class GeoServerService:
         de um só com as duas - um banco só com uma das colunas provisionada (migração
         parcial) faria o SELECT combinado falhar inteiro, perdendo a coluna que EXISTE
         junto com a que não existe. Retorna (local_metadata: dict|None, saved_destination:
-        dict|None)."""
+        dict|None).
+
+        A conexão em si (psycopg2.connect) não é protegida por try/except aqui de
+        propósito - deixa psycopg2.OperationalError (banco inacessível: host fora do ar,
+        rede/VPN caída, etc.) propagar pro chamador (_GsActiveLayerInfoWorker.run()), que
+        já roda isso dentro do próprio try/except e sabe avisar o usuário. Engolir e
+        devolver (None, None) aqui era indistinguível de "nada salvo ainda" - causa raiz
+        de vários bugs de badge quando o Postgres estava fora do ar (docs_projeto/bugs.md)."""
         if not psycopg2:
             return None, None
-        try:
-            conn = psycopg2.connect(**conn_params)
-        except Exception as exc:
-            print(f"GeoMetadata [fetch_saved_records] conexão: {exc}")
-            return None, None
+        conn = psycopg2.connect(**conn_params)
         local_metadata, saved_destination = None, None
         try:
             cursor = conn.cursor()

@@ -171,32 +171,41 @@
     background: #64748b;
 }
 
-/* ── Nível 2: banco/sidecar (sem sessão) - mesma família de cor do nível sistema
-   correspondente, só mais clara/dessaturada (menos confiança que uma checagem ao vivo). ── */
-.gn-sync-badge.db_not_found {
+/* ── Nível 2: banco (PostGIS) OU sidecar local (demais tipos de camada, ver
+   check_gn_sync/geonetwork_bridge.py) - mesma família de cor do nível sistema
+   correspondente, só mais clara/dessaturada (menos confiança que uma checagem ao vivo).
+   local_* reaproveita exatamente as mesmas cores de db_* de propósito - é o MESMO nível
+   de confiança, só muda o texto do rótulo (não existe banco na camada de arquivo local). ── */
+.gn-sync-badge.db_not_found,
+.gn-sync-badge.local_not_found {
     background: #faf5ff;
     color: #a855f7;
 }
 
-.gn-sync-badge.db_not_found .gn-sync-dot {
+.gn-sync-badge.db_not_found .gn-sync-dot,
+.gn-sync-badge.local_not_found .gn-sync-dot {
     background: #c084fc;
 }
 
-.gn-sync-badge.db_synced {
+.gn-sync-badge.db_synced,
+.gn-sync-badge.local_synced {
     background: #f0fdf4;
     color: #22c55e;
 }
 
-.gn-sync-badge.db_synced .gn-sync-dot {
+.gn-sync-badge.db_synced .gn-sync-dot,
+.gn-sync-badge.local_synced .gn-sync-dot {
     background: #4ade80;
 }
 
-.gn-sync-badge.db_modified {
+.gn-sync-badge.db_modified,
+.gn-sync-badge.local_modified {
     background: #eff6ff;
     color: #3b82f6;
 }
 
-.gn-sync-badge.db_modified .gn-sync-dot {
+.gn-sync-badge.db_modified .gn-sync-dot,
+.gn-sync-badge.local_modified .gn-sync-dot {
     background: #60a5fa;
 }
 

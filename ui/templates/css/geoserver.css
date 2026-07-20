@@ -11,9 +11,11 @@
 }
 
 /* ── Aba Identificação: cadeado de Nome/Título (trava depois de publicado de
-   verdade) - mesmo tamanho/posição do .help-btn ao lado, só sem borda (o
-   emoji 🔒/🔓 já tem peso visual suficiente). Conteúdo (🔒/🔓) setado via JS
-   (_gsApplyFieldLockState), não hardcoded aqui, porque alterna com o estado. */
+   verdade) - mesmo tamanho/posição do .help-btn ao lado, só sem borda. Ícone SVG
+   inline (stroke="currentColor") setado via JS (_gsApplyFieldLockState/
+   _GS_LOCK_ICON_LOCKED/_UNLOCKED, geoserver.js) - cor aqui igual ao .help-btn,
+   pra bater com o resto dos ícones da UI (antes usava emoji 🔒/🔓, que destoava
+   em peso/cor/alinhamento). */
 .gs-lock-btn {
     flex-shrink: 0;
     display: inline-flex;
@@ -24,15 +26,19 @@
     padding: 0;
     border: none;
     background: transparent;
-    font-size: 11px;
+    color: #94a3b8;
     line-height: 1;
     cursor: pointer;
     vertical-align: middle;
-    opacity: 0.7;
 }
 
 .gs-lock-btn:hover {
-    opacity: 1;
+    color: #475569;
+}
+
+.gs-lock-btn:disabled {
+    cursor: default;
+    opacity: 0.5;
 }
 
 /* Link inline dentro de uma mensagem de aviso (.gs-warning-text) - ex.: "Usar

@@ -8,6 +8,11 @@ bloquear a UI do QGIS (RNF02 de requisitos_v2.md).
 
 from qgis.PyQt.QtCore import QThread, pyqtSignal
 
+try:
+    import psycopg2
+except ImportError:
+    psycopg2 = None
+
 
 def _gs_augment_404(exc):
     """Acrescenta uma dica acionável quando o erro de uma ação de "Atualizar" (Camada ou
@@ -378,7 +383,7 @@ class _GsActiveLayerInfoWorker(QThread):
     _GsSyncCheckWorker). Só recebe dados já resolvidos na main thread (conn_params via
     resolve_layer_db_params, uuid_hint já combinando draft+hint) - nada aqui toca a API do
     QGIS (QgsVectorLayer etc.), que não é thread-safe."""
-    done = pyqtSignal('QVariant')  # {'local_metadata': dict|None, 'saved_destination': dict|None, 'gn_remote': dict|None}
+    done = pyqtSignal('QVariant')  # {'local_metadata': dict|None, 'saved_destination': dict|None, 'gn_remote': dict|None, 'db_error': bool}
 
     def __init__(self, conn_params, f_table_catalog, f_table_schema, f_table_name,
                  uuid_hint, geonetwork_service, config_loader_instance):
@@ -394,12 +399,19 @@ class _GsActiveLayerInfoWorker(QThread):
     def run(self):
         from ..core.geoserver_service import GeoServerService
         local_metadata, saved_destination = None, None
+        db_error = False
         try:
             local_metadata, saved_destination = GeoServerService.fetch_saved_records(
                 self._conn_params, self._f_table_catalog, self._f_table_schema, self._f_table_name
             )
         except Exception as exc:
-            print(f"GeoMetadata [_GsActiveLayerInfoWorker] banco: {exc}")
+            if psycopg2 and isinstance(exc, psycopg2.OperationalError):
+                # Banco inacessível agora (ver fetch_saved_records) - diferente de "nada
+                # salvo" - GeoServerBridge._on_layer_info_ready repassa esse flag pro JS
+                # avisar o usuário em vez de mostrar "Não Encontrado" silenciosamente.
+                db_error = True
+            else:
+                print(f"GeoMetadata [_GsActiveLayerInfoWorker] banco: {exc}")
 
         # Mesma prioridade de uuid de antes (_load_layer_metadata): metadata_uuid do banco
         # primeiro, senão o hint (que já embute o do rascunho local, resolvido na main
@@ -416,4 +428,5 @@ class _GsActiveLayerInfoWorker(QThread):
             'local_metadata': local_metadata,
             'saved_destination': saved_destination,
             'gn_remote': gn_remote,
+            'db_error': db_error,
         })

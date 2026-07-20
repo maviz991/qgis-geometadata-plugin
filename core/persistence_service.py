@@ -187,12 +187,14 @@ class PersistenceService:
                 self._show_message("Impossível salvar local", f"<p>[UI-010] A camada {layer_name} não está salva num arquivo.</p>", parent_widget, msg_type='warning')
             return False
 
-        if not is_automatic_resave and parent_widget:
-            question = f"<p>Salvar arquivo sidecar em:<br>{metadata_path}</p>"
-            reply = QtWidgets.QMessageBox.question(parent_widget, 'Confirmar', question, QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel)
-            if reply != QtWidgets.QMessageBox.Ok:
-                return False
-        
+        # A confirmação agora é feita pela interface HTML/JS antes de chamar este método
+        # (_tryGnSaveMetadata, geonetwork.js) - mesmo padrão de _save_to_db logo abaixo.
+        # Esse QMessageBox nativo era resquício de antes da reescrita HTML/JS: sobrepunha o
+        # Modal.confirm estilizado que já roda antes (pergunta redundante, e essa aqui nem
+        # batia com o resto da UI - nativa, sem o visual do app) e ainda mencionava "banco
+        # de dados" incondicionalmente no texto do lado JS mesmo pra esse caminho, que é
+        # puramente arquivo local.
+
         try:
             xml_content = xml_generator.generate_xml(metadata_dict, cdhu_data)
             with open(metadata_path, 'w', encoding='utf-8') as f:
@@ -247,6 +249,15 @@ class PersistenceService:
             # conhecida, não um erro de verdade. Sem traceback aqui: esse caminho de leitura roda
             # a cada troca de camada, e um dump completo por clique só gera ruído no console.
             pass
+        except psycopg2.OperationalError:
+            # Banco inacessível agora (host fora do ar, rede caída, credencial recusada na
+            # conexão etc.) - bem diferente de "nada salvo pra essa camada". Antes isso caía
+            # no except genérico abaixo e devolvia None do mesmo jeito, indistinguível de
+            # "nunca documentada" - vários bugs de sync (badge "Não Encontrado"/"Sincronizado"
+            # errado) tinham essa causa raiz, sem aviso nenhum ao usuário. Repropaga pro
+            # chamador decidir como avisar (ver check_gn_sync/load_layer_metadata,
+            # geonetwork_bridge.py) em vez de engolir aqui.
+            raise
         except Exception as e:
             traceback.print_exc()
         return xml_content

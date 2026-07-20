@@ -342,7 +342,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         """Configura as propriedades da janela principal."""
         self.setWindowIcon(QIcon(":/plugins/geometadata/icon.png"))
         self.setObjectName("GeoMetadataDialog")
-        self.setWindowTitle("Geohab Plugin | GeoMetadata")
+        self.setWindowTitle("Geohab Plugin")
         self.setWindowFlags(
             Qt.Window |
             Qt.WindowMinimizeButtonHint |

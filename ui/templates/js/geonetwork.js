@@ -260,7 +260,13 @@ function tryExportGeohab() {
 function _tryGnSaveMetadata() {
     var data = collectFormData();
     if (!data) return;
-    Modal.confirm('Deseja realmente salvar as alterações no banco de dados?', function () {
+    // Texto neutro de propósito - PersistenceService.save() (core/persistence_service.py)
+    // decide banco (camada PostGIS) OU arquivo sidecar local (qualquer outra camada) por
+    // baixo dos panos; essa é a ÚNICA confirmação do fluxo (o lado Python não pergunta de
+    // novo - nem pro banco nem pro sidecar, ver os dois comentários "confirmação já é
+    // feita pela interface HTML/JS" em persistence_service.py), então não pode presumir
+    // "banco de dados" incondicionalmente aqui.
+    Modal.confirm('Deseja realmente salvar as alterações agora (sem publicar no Geohab)?', function () {
         _showActionLoading('Salvando...');
         gnBridge.save_metadata(data);
     }, 'Confirmar Salvamento');
@@ -276,6 +282,14 @@ function _tryGnResetForm() {
         if (typeof gnBridge !== 'undefined') gnBridge.clear_draft();
         _editorDraft = null;
         resetEditorForm();
+        // Invalida o cache de "já verificado recentemente" (checkGnSync) ANTES de
+        // recarregar - sem isso, descartar uma edição que tinha acabado de virar
+        // "Modificado" (<60s atrás) reaplicava esse MESMO estado cacheado direto, sem
+        // rechecar de verdade - o formulário voltava pro conteúdo salvo (visível), mas o
+        // badge ficava preso em "Modificado" como se nada tivesse sido descartado. O GS
+        // não sofre disso porque tryGsResetForm recalcula o badge sempre do zero
+        // (_checkGsSyncNow, sem cache de camada) - aqui precisa desse reset explícito.
+        _gnLastCheckedLayerKey = null;
         _loadFormForLayer(null);
     }, 'Descartar Alterações');
 }
@@ -289,6 +303,11 @@ function tryImportXml() {
             resetEditorForm();
             populateForm(data);
             _saveDraftNow();
+            // Invalida o cache de "já verificado recentemente" - o conteúdo do formulário
+            // acabou de mudar de verdade (importado), reaplicar um badge cacheado de ANTES
+            // dessa troca (ver mesmo fix em _tryGnResetForm) mostraria um estado que não
+            // reflete mais o que está na tela.
+            _gnLastCheckedLayerKey = null;
             checkGnSync(data.metadata_uuid, data.dateStamp || '');
             // Modal.confirm chama close() logo depois desse callback retornar - abrir o
             // alert de sucesso na hora faria ele "piscar" (mesmo overlay reaproveitado).
@@ -408,19 +427,26 @@ var _gnLastCheckedAt = 0;
 var _gnLastBadgeState = null;
 
 // Vocabulário de status compartilhado entre GN e GS (ver _GS_SYNC_LABELS, geoserver.js) -
-// 3 níveis de conectividade (prefixo do estado), maior confiança primeiro, + 2 estados
-// universais sem nível (checking/error). O nível não muda a lógica de comparação, só diz
-// QUAL fonte foi usada pra comparar - por isso "Modificado" tem uma mensagem diferente em
-// cada nível (ver _GN_SYNC_TOOLTIPS/onGnSyncBadgeClick), mesmo sendo sempre o mesmo
-// mecanismo de "diverge do snapshot" (_markGnModifiedIfNeeded):
+// 4 níveis de conectividade/armazenamento (prefixo do estado), maior confiança primeiro, +
+// 2 estados universais sem nível (checking/error). O nível não muda a lógica de comparação,
+// só diz QUAL fonte foi usada pra comparar - por isso "Modificado" tem uma mensagem
+// diferente em cada nível (ver _GN_SYNC_TOOLTIPS/onGnSyncBadgeClick), mesmo sendo sempre o
+// mesmo mecanismo de "diverge do snapshot" (_markGnModifiedIfNeeded):
 //   sys_*     - logado no Geohab, comparado contra a busca ao vivo no GeoNetwork.
-//   db_*      - sem sessão, comparado contra a cópia persistida (banco/sidecar).
+//   db_*      - sem sessão, camada PostGIS de verdade, comparado contra o banco.
+//   local_*   - sem sessão, camada de arquivo local (shapefile/GeoPackage/etc.), comparado
+//               contra o sidecar XML salvo ao lado dela - NÃO existe banco nesse caso
+//               (ver check_gn_sync, geonetwork_bridge.py), por isso rótulo próprio em vez
+//               de reaproveitar "(DB)", que seria enganoso.
 //   offline_* - sem sessão nem camada ativa pra identificar, só o rascunho local.
 var _GN_SYNC_LABELS = {
     checking: 'Verificando…',
     error: 'Erro ao verificar',
     offline_saved: 'Salvo (Offline)',
     offline_modified: 'Modificado (Offline)',
+    local_not_found: 'Não Encontrado (Local)',
+    local_modified: 'Modificado (Local)',
+    local_synced: 'Sincronizado (Local)',
     db_not_found: 'Não Encontrado (DB)',
     db_modified: 'Modificado (DB)',
     db_synced: 'Sincronizado (DB)',
@@ -435,6 +461,9 @@ var _GN_SYNC_TOOLTIPS = {
     error: 'Não foi possível verificar o status agora.',
     offline_saved: 'Rascunho salvo só nesta máquina - sem conexão com banco ou Geohab pra confirmar.',
     offline_modified: 'Editado desde o último rascunho local - sem conexão com banco ou Geohab agora.',
+    local_not_found: 'Nenhum metadado salvo no arquivo XML local desta camada ainda.',
+    local_modified: 'Editado desde o último salvamento no arquivo XML local (ao lado da camada).',
+    local_synced: 'Bate com o arquivo XML salvo localmente ao lado da camada.',
     db_not_found: 'Nenhum metadado salvo no banco ainda (sem login no Geohab).',
     db_modified: 'Editado desde o último salvamento no banco (sem login no Geohab).',
     db_synced: 'Bate com o banco de dados (sem login no Geohab pra confirmar lá também).',
@@ -451,6 +480,7 @@ var _GN_SYNC_TOOLTIPS = {
 var _GN_MODIFIED_FOR = {
     sys_synced: 'sys_modified',
     db_synced: 'db_modified',
+    local_synced: 'local_modified',
     offline_saved: 'offline_modified'
 };
 
@@ -658,6 +688,9 @@ var _GN_SYNC_MODALS = {
     db_not_found: { title: 'Não Encontrado (DB)', type: 'warning', message: 'Nenhum metadado salvo no banco de dados pra esta camada ainda.<br><br>⚠️ Verificado sem login no Geohab.<br>Faça login para verificação Online.<br><br>Use: <br>"Arquivo > Continuar Depois" pra salvar no banco, ou <br>"Arquivo > Publicar Metadado" pra publicar direto no Geohab.' },
     db_modified: { title: 'Modificado (DB)', type: 'warning', message: 'O formulário atual foi editado localmente desde a última vez que foi salvo no banco de dados.<br><br>⚠️ Verificado sem login no Geohab.<br>Faça login para verificação Online.<br><br>Use:<br>"Arquivo > Continuar Depois" pra salvar, ou <br>"Arquivo > Descartar Alterações" pra voltar ao último salvo.' },
     db_synced: { title: 'Sincronizado (DB)', type: 'success', message: 'O formulário atual bate com o que está salvo no banco de dados.<br><br>⚠️ Verificado sem login no Geohab.<br>Faça login para verificação Online.' },
+    local_not_found: { title: 'Não Encontrado (Local)', type: 'warning', message: 'Nenhum metadado salvo no arquivo XML local desta camada ainda.<br><br>⚠️ Verificado sem login no Geohab.<br>Faça login para verificação Online.<br><br>Use: <br>"Arquivo > Continuar Depois" pra salvar localmente, ou <br>"Arquivo > Publicar Metadado" pra publicar direto no Geohab.' },
+    local_modified: { title: 'Modificado (Local)', type: 'warning', message: 'O formulário atual foi editado desde a última vez que foi salvo no arquivo XML local (ao lado da camada).<br><br>⚠️ Verificado sem login no Geohab.<br>Faça login para verificação Online.<br><br>Use:<br>"Arquivo > Continuar Depois" pra salvar, ou <br>"Arquivo > Descartar Alterações" pra voltar ao último salvo.' },
+    local_synced: { title: 'Sincronizado (Local)', type: 'success', message: 'O formulário atual bate com o arquivo XML salvo localmente ao lado da camada.<br><br>⚠️ Verificado sem login no Geohab.<br>Faça login para verificação Online.' },
     sys_not_found: { title: 'Não encontrado no Geohab', type: 'warning', message: 'Este metadado tem um UUID salvo localmente ou no banco, mas não foi encontrado no catálogo Geohab (nunca publicado, ou removido de lá).<br><br>Para publicar, use "Catálogo > Publicar Metadado".<br>Pra buscar um registro diferente já existente, use "Arquivo > Baixar Metadado" ou "Arquivo > Importar Metadado".' },
     sys_update_available: { title: 'Atualização disponível', type: 'warning', message: 'Existe uma versão mais nova deste metadado no Geohab.<br><br>Clique em "Atualizar agora" no aviso acima do formulário pra puxar a atualização.' },
     sys_modified: { title: 'Modificado', type: 'warning', message: 'Você tem alterações não salvas.<br><br>Use: <br>"Arquivo > Continuar Depois" pra salvar sem publicar, ou <br>"Arquivo > Publicar Metadado" para publicar no Geohab.' },
@@ -717,7 +750,8 @@ var _GS_STATUS_LABELS = {
     sys_not_found: 'GeoServer: Não Encontrado (Geohab)',
     sys_modified: 'GeoServer: Divergente',
     db_synced: 'GeoServer: Sincronizado (DB)',
-    sys_synced: 'GeoServer: Publicado'
+    sys_synced: 'GeoServer: Publicado',
+    error: 'GeoServer: Erro ao verificar'
 };
 
 var _GS_STATUS_TOOLTIPS = {
@@ -726,7 +760,10 @@ var _GS_STATUS_TOOLTIPS = {
     // Só aparece depois da checagem AO VIVO (_checkGsSyncOnline, geoserver.js) confirmar
     // que o que está publicado de verdade no GeoServer não bate mais com o que está salvo
     // no banco (ex.: editou o resumo e só "Continuar Depois", sem republicar).
-    sys_modified: 'O que está salvo no banco não bate mais com o que está publicado no GeoServer agora. Abra "Serviços > Configurar Camada" e republique pra sincronizar.'
+    sys_modified: 'O que está salvo no banco não bate mais com o que está publicado no GeoServer agora. Abra "Serviços > Configurar Camada" e republique pra sincronizar.',
+    // Banco PostgreSQL desta camada inacessível agora (ver _renderGsLayerCard, geoserver.js)
+    // - não confundir com "não encontrado" (esse aqui é "não deu pra checar").
+    error: 'Não foi possível conectar ao banco de dados desta camada agora.'
     // db_synced/sys_synced não têm entrada fixa aqui - ver _gsStatusTooltip logo abaixo.
 };
 
@@ -765,6 +802,7 @@ function checkGsPublishStatus() {
         var tierPrefix = _isLogged ? 'sys' : 'db';
         _gsLastBadgePublished = !!(info && info.saved_published);
         if (!info || !info.publishable) { _gsBadgeState = null; } // não é camada PostGIS - GS não se aplica
+        else if (info.db_error) { _gsBadgeState = 'error'; } // banco inacessível - não é "não encontrado" (ver _renderGsLayerCard, geoserver.js)
         else if (!info.saved_workspace) { _gsBadgeState = tierPrefix + '_not_found'; }
         else { _gsBadgeState = tierPrefix + '_synced'; }
         _gsLastCheckedLayerKey = _activeLayerName;
@@ -864,6 +902,10 @@ function pullGnRecord(uuid) {
             resetEditorForm();
             populateForm(data);
             _saveDraftNow();
+            // Idem _tryGnResetForm/tryImportXml - conteúdo do formulário acabou de mudar
+            // de verdade (puxado do GN), invalida o cache pra não reaplicar um badge de
+            // ANTES dessa troca.
+            _gnLastCheckedLayerKey = null;
             checkGnSync(data.metadata_uuid, data.dateStamp || '');
             Modal.alert('Metadado baixado do Geohab com sucesso.<br>Confira os campos preenchidos no formulário.', 'Baixado', 'success');
         });

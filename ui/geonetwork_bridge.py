@@ -8,8 +8,14 @@ Exposto ao JS via QWebChannel como 'gnBridge'.
 """
 
 import os
+import time
 from qgis.PyQt.QtCore import QObject, pyqtSignal, pyqtSlot
 from ..core.plugin_config import config_loader
+
+try:
+    import psycopg2
+except ImportError:
+    psycopg2 = None
 
 
 class GeoNetworkBridge(QObject):
@@ -32,6 +38,28 @@ class GeoNetworkBridge(QObject):
         self._enrich_workers   = []
         self._gn_search_worker = None
         self._sync_check_workers = []
+        self._last_db_offline_notice = 0.0  # ver _notify_db_offline
+
+    _DB_OFFLINE_NOTICE_INTERVAL = 60  # segundos - evita um toast a cada troca de camada enquanto o banco estiver fora
+
+    def _notify_db_offline(self):
+        """Avisa o usuário (toast, throttlado) que o banco PostgreSQL desta camada está
+        inacessível agora. Antes, uma falha de conexão (psycopg2.OperationalError) era
+        engolida silenciosamente nos pontos de leitura (ver core/persistence_service.py
+        _load_from_db) e devolvia None do mesmo jeito que "nada salvo pra essa camada" -
+        vários bugs de badge (Modificado/Não Encontrado incorretos, docs_projeto/bugs.md)
+        tinham essa causa raiz, sem nenhum aviso ao usuário de que o problema era só
+        conectividade. Throttlado porque isso é checado a cada troca de camada/autosave -
+        sem o intervalo, o banco caído geraria um toast atrás do outro."""
+        now = time.time()
+        if now - self._last_db_offline_notice < self._DB_OFFLINE_NOTICE_INTERVAL:
+            return
+        self._last_db_offline_notice = now
+        self._dialog.show_toast(
+            'Banco de Dados Inacessível',
+            'Não foi possível conectar ao banco PostgreSQL desta camada agora. Verifique a rede/VPN - até a conexão voltar, o status de sincronização pode não refletir o que está de fato salvo.',
+            'warning'
+        )
 
     # ── Ações do menu Arquivo (exportar/publicar/salvar) ────────────────────────
 
@@ -280,7 +308,10 @@ class GeoNetworkBridge(QObject):
             from ..core import xml_parser
             return xml_parser.parse_xml_to_dict(xml_content, is_string=True)
         except Exception as e:
-            print(f"GeoMetadata [load_layer_metadata]: {e}")
+            if psycopg2 and isinstance(e, psycopg2.OperationalError):
+                self._notify_db_offline()
+            else:
+                print(f"GeoMetadata [load_layer_metadata]: {e}")
             return None
 
     @pyqtSlot(result='QVariant')
@@ -352,8 +383,11 @@ class GeoNetworkBridge(QObject):
 
         1. 'sys_*'     - logado no Geohab: busca ao vivo no GeoNetwork (fonte mais
                           confiável, reflete o que está de fato publicado agora).
-        2. 'db_*'      - sem sessão, mas com camada ativa: compara contra a cópia
-                          persistida (banco/sidecar, via PersistenceService) - não é o
+        2. 'db_*'/'local_*' - sem sessão, mas com camada ativa: compara contra a cópia
+                          persistida via PersistenceService - 'db_*' quando a camada é
+                          PostGIS de verdade (banco), 'local_*' quando é um sidecar XML ao
+                          lado de um arquivo local (shapefile/GeoPackage/etc. - não existe
+                          banco nenhum nesse caso, rótulo "(DB)" seria enganoso). Não é o
                           Geohab ao vivo, mas é mais confiável que só o rascunho local.
         3. 'offline_*' - nem sessão nem camada ativa pra identificar: só o rascunho local
                           (arquivo, por máquina) é conhecido; nada aqui pra comparar contra.
@@ -397,6 +431,7 @@ class GeoNetworkBridge(QObject):
         # "Atualização disponível" de verdade) quanto o nível 2 (comparar direto contra
         # isso, sem rede).
         saved = None
+        db_error = False
         ps = getattr(self._dialog, 'persistence_service', None)
         try:
             if layer and ps:
@@ -405,7 +440,16 @@ class GeoNetworkBridge(QObject):
                     from ..core import xml_parser
                     saved = xml_parser.parse_xml_to_dict(xml_content, is_string=True) or {}
         except Exception as e:
-            print(f"GeoMetadata [check_gn_sync] leitura local: {e}")
+            if psycopg2 and isinstance(e, psycopg2.OperationalError):
+                # Banco inacessível agora - bem diferente de "nada salvo" (db_not_found)
+                # ou "sem camada identificável" (offline_saved). Sem essa distinção, o
+                # usuário via o badge cair silenciosamente pra um desses dois estados
+                # errados sempre que o Postgres caía/VPN desconectava, sem nenhum aviso
+                # de que a causa era só conectividade (ver docs_projeto/bugs.md).
+                db_error = True
+                self._notify_db_offline()
+            else:
+                print(f"GeoMetadata [check_gn_sync] leitura local: {e}")
 
         # Diagnóstico temporário (ver Bug "GN não avisa atualização disponível",
         # docs_projeto/bugs.md) - incondicional, ANTES de qualquer branch, pra confirmar se
@@ -421,16 +465,29 @@ class GeoNetworkBridge(QObject):
             worker.start()
             return
 
-        # Nível 2 - banco/sidecar (sem sessão, mas com camada ativa pra comparar)
+        # Banco inacessível e não dá pra confirmar via Geohab (nível 1 não se aplica aqui,
+        # senão já teria retornado acima) - mostra "erro ao verificar" em vez de seguir pros
+        # níveis abaixo, que assumiriam (errado) "nada salvo"/"sem camada" sem avisar a causa.
+        if db_error:
+            self.gn_sync_checked.emit('error', layer_name, {})
+            return
+
+        # Nível 2 - banco/sidecar (sem sessão, mas com camada ativa pra comparar). Prefixo
+        # muda com o TIPO de armazenamento da camada - 'db_*' só faz sentido pra camada
+        # PostGIS de verdade (PersistenceService._save_to_db); uma camada de arquivo local
+        # (shapefile/GeoPackage/etc.) usa o sidecar XML (_save_to_sidecar_file), e mostrar
+        # "(DB)" nesse caso é enganoso - não existe banco nenhum envolvido, é comparação
+        # contra um arquivo local ao lado da camada.
         if layer and ps:
+            tier = 'db' if layer.providerType() == 'postgres' else 'local'
             if saved:
                 saved_date = saved.get('dateStamp') or ''
                 if saved_date and local_date_stamp and saved_date != local_date_stamp:
-                    self.gn_sync_checked.emit('db_modified', layer_name, saved)
+                    self.gn_sync_checked.emit(tier + '_modified', layer_name, saved)
                 else:
-                    self.gn_sync_checked.emit('db_synced', layer_name, saved)
+                    self.gn_sync_checked.emit(tier + '_synced', layer_name, saved)
             else:
-                self.gn_sync_checked.emit('db_not_found', layer_name, {})
+                self.gn_sync_checked.emit(tier + '_not_found', layer_name, {})
             return
 
         # Nível 3 - offline (nenhuma camada ativa pra identificar - só o rascunho local vale)
