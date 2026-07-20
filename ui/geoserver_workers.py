@@ -278,11 +278,20 @@ class _GsSyncCheckWorker(QThread):
                 return
             remote_kw = sorted((k or '').strip() for k in (remote.get('keywords') or []))
             local_kw = sorted((k or '').strip() for k in (self._keywords or []))
-            matches = (
-                (remote.get('title') or '').strip() == (self._title or '').strip() and
-                (remote.get('abstract') or '').strip() == (self._abstract or '').strip() and
-                remote_kw == local_kw
-            )
+            title_match = (remote.get('title') or '').strip() == (self._title or '').strip()
+            abstract_match = (remote.get('abstract') or '').strip() == (self._abstract or '').strip()
+            kw_match = remote_kw == local_kw
+            matches = title_match and abstract_match and kw_match
+            # Log de diagnóstico temporário (não é logging permanente do projeto) - "matches"
+            # antes era um booleano só, sem dizer QUAL campo diverge; imprime os dois lados
+            # só quando dá falso, pra não gerar ruído numa checagem que bateu certinho.
+            if not matches:
+                print(
+                    f"GeoMetadata [_GsSyncCheckWorker] DIVERGÊNCIA título/resumo/keywords - "
+                    f"title: match={title_match} remoto={remote.get('title')!r} local={self._title!r} | "
+                    f"abstract: match={abstract_match} remoto={remote.get('abstract')!r} local={self._abstract!r} | "
+                    f"keywords: match={kw_match} remoto={remote_kw!r} local={local_kw!r}"
+                )
             base.update(remote)
 
             # Checagem de estilos ao vivo - isolada em try/except próprio: uma falha aqui
@@ -314,6 +323,7 @@ class _GsSyncCheckWorker(QThread):
                         r_def = remote_styles.get('default_style') or ''
                         if r_def != d_nm:
                             styles_match = False
+                            print(f"GeoMetadata [_GsSyncCheckWorker] DIVERGÊNCIA estilo padrão - remoto={r_def!r} local(d_nm)={d_nm!r} style_cfg={self._style_cfg!r}")
 
                         if styles_match:
                             import json
@@ -324,10 +334,12 @@ class _GsSyncCheckWorker(QThread):
 
                             if len(r_adds_list) != len(local_adds_list):
                                 styles_match = False
+                                print(f"GeoMetadata [_GsSyncCheckWorker] DIVERGÊNCIA estilos adicionais (quantidade) - remoto={r_adds_list!r} local={local_adds_list!r}")
                             else:
                                 for la in local_adds_list:
                                     if la not in r_adds_list:
                                         styles_match = False
+                                        print(f"GeoMetadata [_GsSyncCheckWorker] DIVERGÊNCIA estilos adicionais (item) - remoto={r_adds_list!r} local={local_adds_list!r}")
                                         break
 
             base['state'] = 'sys_synced' if (matches and styles_match) else 'sys_modified'

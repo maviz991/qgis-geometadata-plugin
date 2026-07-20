@@ -1248,7 +1248,21 @@ function _gsApplyStyleChoice(source, name, styleWorkspace) {
         var nameEl = document.getElementById('gs-style-name');
         if (nameEl && !nameEl.value && name) {
             nameEl.value = name;
-            onGsStyleNameInput(name);
+            // dataset.sanitized direto, SEM passar por onGsStyleNameInput (RF04) - esse
+            // `name` vem do banco (info.saved_style_name), já é o nome sanitizado de
+            // verdade usado na última publicação, não precisa resanitizar. A sanitização
+            // assíncrona (debounce de 200ms + ida-e-volta no QWebChannel) só existe pra
+            // digitação do usuário; se disparada aqui, _checkGsSyncOnline (chamado logo
+            // em seguida por _renderGsLayerCard) manda o nome CRU pro check_gs_sync antes
+            // da resposta sanitizada chegar - a checagem ao vivo comparava esse nome cru
+            // contra o que está de fato publicado no GeoServer (já sanitizado) e acusava
+            // "Modificado" à toa. Diferente de _gsResyncSnapshotNameIfUnchanged (mesma
+            // race, mas só corrigida até agora no nível banco/_checkGsSyncNow) - a
+            // checagem ao vivo é fire-and-forget e fica em cache por 60s, então o
+            // resultado errado persistia até a próxima checagem forçada.
+            nameEl.dataset.sanitized = name;
+            var previewEl = document.getElementById('gs-style-name-preview');
+            if (previewEl) previewEl.textContent = 'Nome final: ' + name;
         }
     }
 }
