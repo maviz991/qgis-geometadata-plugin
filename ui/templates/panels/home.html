@@ -9,7 +9,8 @@
          persistente do gn-update-banner-close). -->
     <div id="home-login-banner" class="home-login-banner" style="display:none">
         <span class="home-login-banner-icon">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="10"></circle>
                 <line x1="12" y1="16" x2="12" y2="12"></line>
                 <line x1="12" y1="8" x2="12.01" y2="8"></line>
@@ -26,49 +27,66 @@
         </div>
 
         <div class="card-grid">
-        <!-- CARD GEONETWORK -->
-        <div class="card" onclick="navigate('editor')">
-            <div class="card-icon geonetwork-icon">
-                <img src="../../img/icon_geonetwork.png" alt="GeoNetwork"
-                    onerror="this.src='https://img.icons8.com/color/96/database.png'">
-            </div>
-            <div class="card-content">
-                <h3>Catálogo Geohab</h3>
-                <p>Edite metadados no padrão MGB 2.0 e publique diretamente no catálogo institucional.</p>
-                <div class="card-footer">
-                    <span class="badge">Ativo</span>
+            <!-- CARD GEONETWORK -->
+            <div class="card card-accent-blue" onclick="navigate('editor')">
+                <div class="card-icon geonetwork-icon">
+                    <img src="../../img/icon_geonetwork.png" alt="GeoNetwork"
+                        onerror="this.src='https://img.icons8.com/color/96/database.png'">
+                </div>
+                <div class="card-content">
+                    <h3>Catálogo Geohab</h3>
+                    <p>Edite metadados no padrão MGB 2.0 e publique diretamente no catálogo institucional.</p>
+                    <div class="card-footer">
+                        <span class="badge badge-checking" id="home-badge-geonetwork">Verificando…</span>
+                        <svg class="card-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12h14"></path>
+                            <path d="M13 6l6 6-6 6"></path>
+                        </svg>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- CARD GEOSERVER -->
-        <div class="card" onclick="navigate('geoserver')">
-            <div class="card-icon geoserver-icon">
-                <img src="../../img/icon_geoserver.png" alt="GeoServer"
-                    onerror="this.src='https://img.icons8.com/color/96/cloud-lighting.png'">
-            </div>
-            <div class="card-content">
-                <h3>Serviços do GeoServer</h3>
-                <p>Envie suas camadas do QGIS para o servidor de mapas e configure estilos automaticamente.</p>
-                <div class="card-footer">
-                    <span class="badge">Ativo</span>
+            <!-- CARD GEOSERVER -->
+            <div class="card card-accent-green" onclick="navigate('geoserver')">
+                <div class="card-icon geoserver-icon">
+                    <img src="../../img/icon_geoserver.png" alt="GeoServer"
+                        onerror="this.src='https://img.icons8.com/color/96/cloud-lighting.png'">
+                </div>
+                <div class="card-content">
+                    <h3>Serviços Geohab</h3>
+                    <p>Envie suas camadas do QGIS para o servidor de mapas e configure estilos automaticamente.</p>
+                    <div class="card-footer">
+                        <span class="badge badge-checking" id="home-badge-geoserver">Verificando…</span>
+                        <svg class="card-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12h14"></path>
+                            <path d="M13 6l6 6-6 6"></path>
+                        </svg>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- CARD DOCUMENTOS -->
-        <div class="card disabled">
-            <div class="card-icon">
-                <img src="https://img.icons8.com/color/96/document.png" alt="Docs">
-            </div>
-            <div class="card-content">
-                <h3>Documentação</h3>
-                <p>Consulte os manuais de preenchimento ou usuário e normas técnicas de geográficas da CDHU.</p>
-                <div class="card-footer">
-                    <span class="badge badge-outline">Em breve</span>
+            <!-- CARD DOCUMENTOS -->
+            <div class="card card-accent-gray disabled">
+                <div class="card-icon docs-icon">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="8" y1="13" x2="16" y2="13"></line>
+                        <line x1="8" y1="17" x2="16" y2="17"></line>
+                        <line x1="8" y1="9" x2="10" y2="9"></line>
+                    </svg>
+                </div>
+                <div class="card-content">
+                    <h3>Documentação</h3>
+                    <p>Consulte os manuais de preenchimento ou usuário e normas técnicas de geográficas da CDHU.</p>
+                    <div class="card-footer">
+                        <span class="badge badge-outline">Em breve</span>
+                    </div>
                 </div>
             </div>
-        </div>
         </div>
     </div>
 </div>
@@ -80,7 +98,7 @@
     }
 
     .home-content {
-        padding: 20px 40px 40px;
+        padding: 20px 40px 44px;
         max-width: 1000px;
         margin: 0 auto;
     }
@@ -123,74 +141,136 @@
     }
 
     .welcome-header {
-        margin-bottom: 40px;
+        margin-bottom: 36px;
     }
 
     .welcome-header h1 {
-        font-size: 28px;
+        font-size: 26px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
         color: var(--fg);
-        margin-bottom: 8px;
+        margin-bottom: 6px;
     }
 
     .welcome-header p {
+        font-size: 14px;
         color: var(--fg-muted);
     }
 
     .card-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 24px;
+        gap: 20px;
     }
 
+    /* Barra fina de cor no topo do card - só diferencia visualmente os 3 destinos (GN/GS/
+       Docs) sem inventar uma nova paleta: reaproveita os mesmos tons já usados nos badges
+       de sync (azul = db_modified, verde = sys_synced, cinza = neutro/desabilitado, ver
+       geonetwork.css) - consistência com o resto do app em vez de cor nova só pra Home. */
     .card {
-        background: white;
-        border-radius: 12px;
+        position: relative;
+        background: #fff;
+        border-radius: 14px;
         border: 1px solid var(--border);
         overflow: hidden;
         cursor: pointer;
-        transition: all 0.2s;
+        transition: box-shadow 0.2s, border-color 0.2s;
         display: flex;
         flex-direction: column;
     }
 
+    /* top/left/right em -1px (não 0) pra cobrir o pixel da borda cinza do card por baixo -
+       sem isso, essa borda ficava visível como uma linha fina por cima da barra de cor,
+       parecendo "cortada". */
+    .card::before {
+        content: "";
+        position: absolute;
+        top: -1px;
+        left: -1px;
+        right: -1px;
+        height: 5px;
+        background: transparent;
+    }
+
+    .card-accent-blue::before {
+        background: #3b82f6;
+    }
+
+    .card-accent-green::before {
+        background: #22c55e;
+    }
+
+    .card-accent-gray::before {
+        background: #cbd5e1;
+    }
+
     .card:hover {
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
-        border-color: var(--accent);
+        box-shadow: 0 14px 28px rgba(15, 23, 42, 0.1);
     }
 
     .card-icon {
-        height: 120px;
-        background: #f8fafc;
+        height: 108px;
         display: flex;
         justify-content: center;
         align-items: center;
-        border-bottom: 1px solid var(--border);
+    }
+
+    .geonetwork-icon {
+        background: #eff6ff;
+    }
+
+    .geoserver-icon {
+        background: #f0fdf4;
+    }
+
+    .docs-icon {
+        background: #f1f5f9;
+        color: #94a3b8;
     }
 
     .card-icon img {
-        height: 64px;
+        height: 56px;
         transition: transform 0.3s;
     }
 
     .card:hover .card-icon img {
-        transform: scale(1.1);
+        transform: scale(1.08);
     }
 
     .card-content {
-        padding: 20px;
+        padding: 18px 20px 20px;
         flex: 1;
+        display: flex;
+        flex-direction: column;
     }
 
     .card-content h3 {
-        font-size: 18px;
-        margin-bottom: 10px;
+        font-size: 17px;
+        font-weight: 600;
+        margin-bottom: 8px;
     }
 
     .card-content p {
-        font-size: 14px;
+        font-size: 13.5px;
         color: var(--fg-muted);
         line-height: 1.5;
         margin-bottom: 16px;
+        flex: 1;
+    }
+
+    .card-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .card-arrow {
+        color: var(--fg-muted);
+        transition: color 0.2s;
+    }
+
+    .card:hover .card-arrow {
+        color: var(--accent);
     }
 
     .badge {
@@ -213,10 +293,36 @@
         color: var(--fg-muted);
     }
 
+    /* Status ao vivo do GeoNetwork/GeoServer (bridge.check_services_status, disparado ao
+       abrir a Home - ver app.js) - badge "Ativo" era texto fixo no HTML antes, sem
+       relação nenhuma com o servidor de verdade estar de pé ou não. */
+    .badge-checking {
+        background: #f1f5f9;
+        color: var(--fg-muted);
+    }
+
+    .badge-active {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .badge-unstable {
+        background: #fef9c3;
+        color: #854d0e;
+    }
+
+    .badge-offline {
+        background: #fee2e2;
+        color: #b91c1c;
+    }
+
     .card.disabled {
-        opacity: 0.6;
         cursor: not-allowed;
-        filter: grayscale(1);
+    }
+
+    .card.disabled .card-icon,
+    .card.disabled .card-content h3 {
+        opacity: 0.7;
     }
 
     .card.disabled:hover {

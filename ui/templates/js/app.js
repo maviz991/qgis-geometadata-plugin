@@ -331,6 +331,12 @@ function initApp() {
         if (typeof _onGsActiveLayerChanged === 'function') _onGsActiveLayerChanged(name);
     });
 
+    // Status ao vivo dos cards da Home (ver check_services_status, main_bridge.py) -
+    // resultado chega por camada (RNF02, roda em background do lado Python).
+    bridge.service_status_ready.connect(function (service, status) {
+        _updateHomeServiceBadge(service, status);
+    });
+
     if (typeof _initGnBridge === 'function') _initGnBridge();
     if (typeof _initGsBridge === 'function') _initGsBridge();
 }
@@ -478,6 +484,7 @@ function onPanelLoaded(panelId) {
     }
     if (panelId === "home") {
         _updateHomeLoginBanner();
+        if (typeof bridge !== 'undefined' && bridge.check_services_status) bridge.check_services_status();
     }
 }
 
@@ -488,6 +495,26 @@ function _updateHomeLoginBanner() {
     var banner = document.getElementById('home-login-banner');
     if (!banner) return; // painel home não está aberto agora
     banner.style.display = _isLogged ? 'none' : 'flex';
+}
+
+// Badge "Ativo"/"Instável"/"Offline" dos cards da Home (ver bridge.service_status_ready/
+// check_services_status, main_bridge.py) - substitui o texto "Ativo" fixo de antes, que
+// não refletia se o servidor estava de pé de verdade. Sem depender de login (ping simples).
+// data-title = tooltip pelo sistema global (ver initGlobalTooltips, mais abaixo neste
+// arquivo) - mesmo padrão dos badges de sync GN/GS, não o title nativo do navegador.
+var _HOME_SERVICE_STATUS = {
+    checking: { label: 'Verificando…', cls: 'badge-checking', title: 'Verificando se o servidor está respondendo agora...' },
+    active: { label: 'Ativo', cls: 'badge-active', title: 'Servidor respondendo normalmente.' },
+    unstable: { label: 'Instável', cls: 'badge-unstable', title: 'Servidor respondeu, mas devagar ou com erro - pode haver instabilidade agora.' },
+    offline: { label: 'Offline', cls: 'badge-offline', title: 'Não foi possível conectar a este servidor agora (rede/VPN ou servidor fora do ar).' }
+};
+function _updateHomeServiceBadge(service, status) {
+    var badge = document.getElementById('home-badge-' + service);
+    if (!badge) return; // painel home não está aberto agora (ou serviço desconhecido)
+    var entry = _HOME_SERVICE_STATUS[status] || _HOME_SERVICE_STATUS.checking;
+    badge.className = 'badge ' + entry.cls;
+    badge.textContent = entry.label;
+    badge.dataset.title = entry.title;
 }
 
 // X do banner (mesmo padrão não-persistente de dismissGnUpdateBanner, geonetwork.js) - só

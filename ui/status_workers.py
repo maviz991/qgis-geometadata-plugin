@@ -1,0 +1,58 @@
+# -*- coding: utf-8 -*-
+"""
+status_workers.py - GeoMetadata Plugin
+=====================================
+Worker (QThread) usado só pelo badge de status dos cards da Home
+(MainBridge.check_services_status) - ping simples, sem exigir login, pra
+saber se o GeoNetwork/GeoServer estão respondendo (RNF02: chamada de rede
+fora da UI thread).
+"""
+
+from qgis.PyQt.QtCore import QThread, pyqtSignal
+
+try:
+    import requests
+except ImportError:
+    requests = None
+
+
+class _ServiceStatusWorker(QThread):
+    """Verificação simples, sem exigir login (serve tanto deslogado quanto logado) - só
+    confirma se dá pra acessar a URL base do serviço (.../geoserver ou .../geonetwork) e
+    ela responde. Classifica em 3 estados:
+      'active'   - respondeu com status 200 (exatamente - é o "acessou normal" de verdade).
+      'unstable' - respondeu, mas com outro código (redirect que não fechou em 200, 4xx,
+                   5xx, etc.) - o servidor está de pé, mas não do jeito esperado.
+      'offline'  - não respondeu nada (timeout, conexão recusada, DNS, SSL, etc.)."""
+    done = pyqtSignal(str, str)  # service ('geonetwork'|'geoserver'), status
+
+    _TIMEOUT_S = 6
+
+    def __init__(self, service: str, url: str):
+        super().__init__()
+        self._service = service
+        self._url = url
+
+    def run(self):
+        if not requests or not self._url:
+            self.done.emit(self._service, 'offline')
+            return
+        try:
+            resp = requests.get(self._url, timeout=self._TIMEOUT_S, verify=False)
+            if resp.status_code == 200:
+                status = 'active'
+            else:
+                # Servidor respondeu, só não com 200 (ex.: redirect pra uma página de erro
+                # do gateway, 401/403 num endpoint que não deveria exigir isso, 5xx) -
+                # ainda é "está de pé", mas não o esperado -> instável, não offline.
+                print(f"GeoMetadata [_ServiceStatusWorker] {self._service} ({self._url!r}): status {resp.status_code}")
+                status = 'unstable'
+        except requests.exceptions.RequestException as exc:
+            # Diagnóstico - "Offline" pode estar certo (servidor de fato fora do ar), mas
+            # também pode ser um SSLError intermitente já visto neste ambiente antes (ver
+            # docs_projeto/bugs.md - "[EVP: INVALID_KEY_LENGTH] invalid key length" contra
+            # este mesmo host), que não significa o servidor estar fora do ar. Sem esse
+            # print não dava pra distinguir "offline de verdade" de "erro de rede local".
+            print(f"GeoMetadata [_ServiceStatusWorker] {self._service} ({self._url!r}): {exc}")
+            status = 'offline'
+        self.done.emit(self._service, status)

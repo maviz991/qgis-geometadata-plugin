@@ -28,6 +28,7 @@ class MainBridge(QObject):
     login_error    = pyqtSignal(str)            # Erro de autenticação
     layer_changed  = pyqtSignal(str)            # Nome da camada ativa mudou
     toast          = pyqtSignal(str, str, str)  # message, title, type
+    service_status_ready = pyqtSignal(str, str)  # service ('geonetwork'|'geoserver'), status ('active'|'unstable'|'offline') - ver check_services_status
 
     def __init__(self, dialog, parent=None):
         super().__init__(parent)
@@ -35,6 +36,7 @@ class MainBridge(QObject):
         self._form_manager = getattr(dialog, 'form_manager', None)
         self._sso_widget = None
         self._adm_worker = None
+        self._status_workers = []  # ver check_services_status/_on_service_status_done
         try:
             plugin = getattr(dialog, 'plugin', None)
             iface  = getattr(plugin, 'iface', None) or getattr(dialog, 'iface', None)
@@ -202,6 +204,43 @@ class MainBridge(QObject):
             "is_logged": is_logged,
             "cda_url": config_loader.get_cda_url()
         }
+
+    @pyqtSlot()
+    def check_services_status(self):
+        """Dispara um ping (sem exigir login - deslogado é o caso de uso normal aqui) no
+        GeoNetwork e no GeoServer, pra alimentar o badge de status dos cards da Home
+        ("Ativo"/"Instável"/"Offline" - antes era um texto "Ativo" fixo no HTML, sem
+        relação nenhuma com a realidade). Fire-and-forget (RNF02) - cada checagem roda no
+        próprio _ServiceStatusWorker e emite service_status_ready quando terminar; os dois
+        serviços são independentes (um pode estar de pé com o outro fora).
+
+        Aponta pro destino REAL de cada serviço pra um visitante DESLOGADO (confirmado
+        testando manualmente no navegador) - a URL base crua não é confiável: geonetwork
+        depende de um fragmento de rota client-side (.../catalog.search#/home) que o
+        navegador só aplica via JS depois de carregar (nunca chega no `requests` - fragmento
+        não vai pro servidor). geoserver é ainda mais específico: logado, .../geoserver
+        redireciona pro console web de verdade (.../web/, com um "?N" de cache-busting só
+        de JS); deslogado, o gateway/proxy de segurança redireciona pra uma página de
+        entrada diferente (.../index.html) - usar .../web/ aqui daria sempre "Offline"/
+        "Instável" pra quem não está logado, exatamente o caso de uso mais comum desse
+        badge. Usar a URL exata que o servidor entrega pro caso deslogado evita depender de
+        `requests` reproduzir um redirect condicionado à sessão."""
+        from .status_workers import _ServiceStatusWorker
+        targets = {
+            'geonetwork': config_loader.get_geonetwork_base_url().rstrip('/') + '/srv/por/catalog.search',
+            'geoserver': config_loader.get_geoserver_url().rstrip('/') + '/index.html',
+        }
+        for service, url in targets.items():
+            worker = _ServiceStatusWorker(service, url)
+            self._status_workers.append(worker)
+            worker.done.connect(self._on_service_status_done)
+            worker.start()
+
+    def _on_service_status_done(self, service, status):
+        worker = self.sender()
+        if worker in self._status_workers:
+            self._status_workers.remove(worker)
+        self.service_status_ready.emit(service, status)
 
     @pyqtSlot(result='QVariant')
     def get_layer_info(self):
