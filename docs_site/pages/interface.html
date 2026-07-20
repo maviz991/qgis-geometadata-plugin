@@ -1,0 +1,74 @@
+<div class="doc-hero">
+    <h1>Visão Geral da Interface</h1>
+    <p class="lead">Como a janela do plugin é organizada e o que cada área faz.</p>
+</div>
+
+<h2>1. Cabeçalho (barra de ações)</h2>
+<p>Fica sempre visível no topo da janela, com três menus:</p>
+<table>
+    <tr>
+        <th>Menu</th>
+        <th>Ações</th>
+    </tr>
+    <tr>
+        <td><strong>Arquivo</strong></td>
+        <td>Continuar Depois, Exportar Metadado, Importar Metadado, Baixar Metadado (busca no Geohab), Descartar
+            Alterações.</td>
+    </tr>
+    <tr>
+        <td><strong>Catálogo</strong></td>
+        <td>Editor de Metadado, Publicar Metadado (envia pro Geohab).</td>
+    </tr>
+    <tr>
+        <td><strong>Serviços</strong></td>
+        <td>Configurar Camada, Publicar Camada, Atualizar Camada (traz do GeoServer), Atualizar Estilo.</td>
+    </tr>
+</table>
+<p>No canto direito ficam o seletor de camada ativa, o badge do usuário logado (clique para sair) e o botão
+    <strong>Entrar</strong>.
+</p>
+
+<h2>2. Home</h2>
+<p>Tela inicial do plugin, com um card de acesso rápido para cada módulo:</p>
+
+<div class="doc-mockup">
+    <div class="doc-mockup-bar"><span class="dots"><span></span><span></span><span></span></span>Pré-visualização
+        real da interface</div>
+    <iframe src="vendor/ui/templates/mockup-home-cards.html"></iframe>
+</div>
+
+<p><strong>Catálogo Geohab</strong> abre o editor de metadados (GeoNetwork); <strong>Serviços Geohab</strong> abre a
+    publicação de camadas (GeoServer); <strong>Documentação</strong> é este manual.</p>
+
+<h3>Badge "Ativo/Instável/Offline"</h3>
+<p>Cada card mostra o status do servidor correspondente, checado automaticamente ao abrir a Home - sem precisar
+    estar logado:</p>
+
+<div class="doc-mockup">
+    <div class="doc-mockup-bar"><span class="dots"><span></span><span></span><span></span></span>Pré-visualização
+        real da interface</div>
+    <iframe src="vendor/ui/templates/mockup-status-badges.html"></iframe>
+</div>
+
+<div class="doc-note warn">
+    <span>⚠️</span>
+    <span><strong>Offline</strong> aqui significa que o plugin não conseguiu conectar ao servidor - confira sua VPN
+        e conexão de rede antes de abrir um chamado. <strong>Instável</strong> significa que o servidor respondeu,
+        só que de um jeito inesperado (não é necessariamente um problema).</span>
+</div>
+
+<p>Se você ainda não estiver logado, a Home mostra um aviso no topo lembrando que algumas funções exigem login:</p>
+<div class="doc-mockup">
+    <div class="doc-mockup-bar"><span class="dots"><span></span><span></span><span></span></span>Pré-visualização
+        real da interface</div>
+    <iframe src="vendor/ui/templates/mockup-home-login-banner.html"></iframe>
+</div>
+
+<h2>3. Seletor de camada ativa</h2>
+<p>O formulário do editor e o painel do GeoServer sempre trabalham em cima da <strong>camada selecionada no
+        painel de camadas do QGIS</strong>. O badge no cabeçalho mostra o nome da camada ativa e permite trocar
+    rapidamente sem sair do plugin.</p>
+
+<h2>4. Tema claro/escuro</h2>
+<p>O plugin detecta o tema do QGIS na inicialização e se adapta automaticamente. Se você mudar o tema do QGIS com
+    o plugin já aberto, <strong>reinicie o QGIS</strong> para que o plugin acompanhe a mudança.</p>

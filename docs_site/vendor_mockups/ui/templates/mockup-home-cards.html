@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <!-- CSS REAL do plugin (vendorizado por build.py a partir de ui/templates/css/) -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body style="overflow:auto;height:auto;min-height:100%;background:var(--bg);">
+    <div class="home-panel">
+        <div class="home-content">
+            <div class="welcome-header">
+                <h1>Bem-vindo ao Geohab Plugin</h1>
+                <p>Selecione uma ferramenta para começar a trabalhar com dados geográficos.</p>
+            </div>
+            <div class="card-grid">
+                <div class="card card-accent-blue">
+                    <div class="card-icon geonetwork-icon">
+                        <svg width="52" height="52" viewBox="0 0 32 32" fill="currentColor">
+                            <path d="M22.381,30.583l0,0c-0.104,-0.529 -2.848,-0.628 -6.088,-0.628c-4.576,-0 -8.414,-0.652 -9.451,-1.452l0.001,-0.002c-1.653,-1.269 -3.037,-2.864 -4.067,-4.686c0.758,1.356 6.521,2.426 13.517,2.426c2.479,-0 4.741,0.177 6.459,0.464c2.006,0.335 3.269,0.83 3.269,1.374c0,0.135 -0.078,0.281 -0.226,0.407l-0,0.034c-1.041,0.804 -2.187,1.407 -3.414,2.063Zm6.287,-5.27c0,0.124 -0.038,0.237 -0.111,0.341c1.137,-1.48 2.079,-3.192 2.622,-5.024c0.026,-0.079 0.039,-0.165 0.039,-0.245c-0,-1.777 -6.682,-3.217 -14.925,-3.217c-8.468,-0 -15.34,-1.415 -15.34,-3.192l-0.001,-0.035c-0.112,0.75 -0.17,1.517 -0.17,2.297c0,1.138 0.124,2.248 0.358,3.317c0.24,1.124 3.207,2.086 7.521,2.621c2.242,0.278 4.85,0.422 7.632,0.422c6.834,-0 12.375,1.215 12.375,2.715Zm-9.286,-15.538c0.17,1.682 0.275,3.53 0.303,5.475c6.608,-0.331 11.53,-1.608 11.53,-3.134c0,-0.079 -0.01,-0.16 -0.036,-0.238c-0.557,-1.89 -1.466,-3.629 -2.652,-5.143c0.092,0.133 0.141,0.271 0.141,0.41c0,1.265 -3.946,2.329 -9.286,2.63Zm-3.096,-3.525c-0.861,-0 -1.658,-0.02 -2.454,-0.058c-0.202,1.076 -0.376,2.283 -0.507,3.589c-5.399,-0.292 -9.404,-1.361 -9.404,-2.636c-0,-0.14 0.048,-0.278 0.14,-0.412c-1.193,1.523 -2.118,3.272 -2.674,5.176c-0.02,0.069 -0.022,0.138 -0.022,0.207c0,1.777 6.793,3.217 14.921,3.217l-0,-9.083Zm5.817,-3.996c-0,-0.275 -0.398,-0.53 -1.074,-0.739l0.001,-0.002c-1.494,-0.477 -3.085,-0.734 -4.737,-0.734c-1.7,-0 -3.336,0.272 -4.867,0.776l0.001,0.002c-0.596,0.2 -0.943,0.44 -0.943,0.697c0,0.703 2.601,1.274 5.809,1.274c3.209,0 5.81,-0.571 5.81,-1.274Z" />
+                        </svg>
+                    </div>
+                    <div class="card-content">
+                        <h3>Catálogo Geohab</h3>
+                        <p>Edite metadados no padrão MGB 2.0 e publique diretamente no catálogo institucional.</p>
+                        <div class="card-footer">
+                            <span class="badge badge-active">Ativo</span>
+                            <svg class="card-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M5 12h14"></path>
+                                <path d="M13 6l6 6-6 6"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                <div class="card card-accent-green">
+                    <div class="card-icon geoserver-icon">
+                        <svg width="52" height="52" viewBox="0 0 32 32" fill="currentColor">
+                            <path d="M1.968,19.461c-0.71,-1.041 -1.064,-2.257 -1.064,-3.467l0,-0c-0,-1.567 0.598,-3.139 1.789,-4.329l8.972,-8.971c1.191,-1.192 2.766,-1.79 4.333,-1.79l0,0c0.966,0 1.935,0.226 2.815,0.679c0.55,0.282 1.065,0.652 1.523,1.111l8.971,8.971c1.192,1.191 1.789,2.766 1.789,4.333c-0,1.567 -0.597,3.144 -1.789,4.337l-0,0l-8.971,8.971c-0.637,0.637 -1.382,1.104 -2.178,1.401c-0.694,0.259 -1.426,0.389 -2.156,0.389l-0.003,-0c-1.568,-0 -3.143,-0.598 -4.334,-1.79l-5.085,-5.084c0,-0 0,-0 0,-0.001l-1.393,-1.393c-0,-0 -0,0 -0,0l-2.493,-2.493c-0.273,-0.273 -0.515,-0.566 -0.726,-0.874Zm23.218,2.888l3.067,-3.067c0.082,-0.082 0.16,-0.167 0.235,-0.253c-0.525,-0.571 -1.305,-0.937 -2.56,-0.503c-2.42,0.838 -4.096,3.538 -2.7,3.911c0.655,0.174 1.33,0.001 1.958,-0.088Zm-20.522,-2.151l2.807,2.807c0.774,-0.683 1.956,-1.375 3.358,-2.388c2.524,-1.826 -1.826,-3.651 -2.9,-4.188c-1.073,-0.537 0,-1.611 1.128,-2.094c1.128,-0.483 0.748,3.064 2.094,1.718c1.289,-1.288 -2.201,-2.792 0.778,-4.591c2.981,-1.798 -1.315,-1.315 -1.315,-2.98c0,-1.664 1.88,-1.879 1.88,-3.167c-0,-0.351 -0.251,-0.58 -0.617,-0.728l-8.131,8.131c-0.235,0.235 -0.44,0.49 -0.614,0.759c0.55,0.259 1.24,0.321 1.737,0.321c1.181,0 1.825,1.826 0.644,3.007c-0.95,0.951 -1.192,2.445 -0.849,3.393Zm24.929,-4.553c-0.357,-0.222 -1.066,-0.396 -1.298,-0.375c-0.313,0.03 -0.418,0.557 0.464,0.773c0.38,0.093 0.669,0.136 0.845,0.096c0.001,-0.047 0.002,-0.094 0.002,-0.141c0,-0.118 -0.004,-0.235 -0.013,-0.353Zm-9.172,-10.759c-0.6,0.458 -0.992,1.04 -1.024,1.299c-0.133,1.06 0.928,1.458 0.398,1.988c-0.53,0.53 -3.651,1.657 -2.917,1.988c1.961,0.882 -1.361,0.759 0,2.12c0.676,0.676 2.811,-0.517 2.585,-1.325c-0.063,-0.229 0.59,-1.09 1.112,-0.636c0.452,0.393 1.848,0.825 1.848,3.138c-0,1.231 1.06,2.431 2.144,2.137c0.9,-0.244 1.05,-1.375 0.492,-1.789c-0.714,-0.53 1.199,-1.17 3.147,0.932c0.376,0.406 0.855,0.435 1.307,0.326c-0.175,-0.862 -0.594,-1.681 -1.259,-2.347l-7.833,-7.831Zm-6.006,-2.218c0.196,0.195 0.502,0.298 0.966,0.238c2.03,-0.261 0.151,1.408 1.116,1.83c0.601,0.263 1.895,-0.21 2.725,-1.048c-0.895,-0.864 -2.056,-1.294 -3.224,-1.294c-0.537,-0 -1.074,0.091 -1.583,0.274Zm4.894,25.558c-1.37,0.245 -3.165,0.736 -4.664,1.18c0.44,0.133 0.896,0.199 1.354,0.199c1.194,-0 2.38,-0.45 3.283,-1.353l0.027,-0.026Zm-1.204,-19.561c0.551,-0.074 0.118,-0.691 -0.195,-0.828c-0.312,-0.137 -1.308,-0.067 -0.939,0.384c0.278,0.34 0.584,0.518 1.134,0.444Zm2.236,5.654c-0.338,-1.39 -3.581,-1.897 -5.135,-0.765c-2.291,1.669 -2.658,4.882 -0.878,5.064c1.779,0.182 3.4,1.906 2.506,3.612c-0.893,1.707 1.08,5.865 3.245,2.849c2.165,-3.015 1.087,-3.604 1.258,-5.265c0.169,-1.66 2.205,-3.766 1.707,-4.379c-0.5,-0.614 -2.439,-0.026 -2.703,-1.116Z" />
+                        </svg>
+                    </div>
+                    <div class="card-content">
+                        <h3>Serviços Geohab</h3>
+                        <p>Envie suas camadas do QGIS para o servidor de mapas e configure estilos automaticamente.</p>
+                        <div class="card-footer">
+                            <span class="badge badge-unstable">Instável</span>
+                            <svg class="card-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M5 12h14"></path>
+                                <path d="M13 6l6 6-6 6"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                <div class="card card-accent-gray">
+                    <div class="card-icon docs-icon">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="8" y1="13" x2="16" y2="13"></line>
+                            <line x1="8" y1="17" x2="16" y2="17"></line>
+                            <line x1="8" y1="9" x2="10" y2="9"></line>
+                        </svg>
+                    </div>
+                    <div class="card-content">
+                        <h3>Documentação</h3>
+                        <p>Consulte os manuais de preenchimento ou usuário e normas técnicas de geográficas da CDHU.
+                        </p>
+                        <div class="card-footer">
+                            <span class="badge badge-outline">Abre no navegador</span>
+                            <svg class="card-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M5 12h14"></path>
+                                <path d="M13 6l6 6-6 6"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estilo copiado literalmente de ui/templates/panels/home.html (a Home carrega este
+         bloco junto do fragmento, além de styles.css) - se o facelift da Home mudar essas
+         regras, cole o bloco atualizado aqui de novo. -->
+    <style>
+        .home-panel {
+            margin: 0;
+            padding: 0;
+        }
+
+        .home-content {
+            padding: 20px 40px 44px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .welcome-header {
+            margin-bottom: 36px;
+        }
+
+        .welcome-header h1 {
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            color: var(--fg);
+            margin-bottom: 6px;
+        }
+
+        .welcome-header p {
+            font-size: 14px;
+            color: var(--fg-muted);
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            position: relative;
+            background: #fff;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+            cursor: pointer;
+            transition: box-shadow 0.2s, border-color 0.2s;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card::before {
+            content: "";
+            position: absolute;
+            top: -1px;
+            left: -1px;
+            right: -1px;
+            height: 5px;
+            background: transparent;
+        }
+
+        .card-accent-blue::before {
+            background: #3b82f6;
+        }
+
+        .card-accent-green::before {
+            background: #22c55e;
+        }
+
+        .card-accent-gray::before {
+            background: #cbd5e1;
+        }
+
+        .card:hover {
+            box-shadow: 0 14px 28px rgba(15, 23, 42, 0.1);
+            border-color: rgba(229, 34, 45, 0.35);
+        }
+
+        .card-icon {
+            height: 108px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .geonetwork-icon {
+            background: #eff6ff;
+            color: #60a5fa;
+        }
+
+        .geoserver-icon {
+            background: #f0fdf4;
+            color: #4ade80;
+        }
+
+        .docs-icon {
+            background: #f1f5f9;
+            color: #94a3b8;
+        }
+
+        .card-content {
+            padding: 18px 20px 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-content h3 {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .card-content p {
+            font-size: 13.5px;
+            color: var(--fg-muted);
+            line-height: 1.5;
+            margin-bottom: 16px;
+            flex: 1;
+        }
+
+        .card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card-arrow {
+            color: var(--fg-muted);
+        }
+
+        .badge {
+            padding: 4px 10px;
+            background: #dcfce7;
+            color: #166534;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .badge-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--fg-muted);
+        }
+
+        .badge-checking {
+            background: #f1f5f9;
+            color: var(--fg-muted);
+        }
+
+        .badge-active {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .badge-unstable {
+            background: #fef9c3;
+            color: #854d0e;
+        }
+
+        .badge-offline {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .card.disabled {
+            cursor: not-allowed;
+        }
+
+        .card.disabled .card-icon,
+        .card.disabled .card-content h3 {
+            opacity: 0.7;
+        }
+    </style>
+    <script>
+        (function () {
+            function report() {
+                if (window.parent === window) return;
+                window.parent.postMessage({ docMockupHeight: document.documentElement.scrollHeight }, "*");
+            }
+            window.addEventListener("load", function () { report(); setTimeout(report, 200); });
+            window.addEventListener("resize", report);
+        })();
+    </script>
+</body>
+
+</html>

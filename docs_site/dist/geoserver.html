@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Publicar Camada (GeoServer) · Manual Geohab Plugin</title>
+    <link rel="icon" href="vendor/img/favcon_cdhu.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/docs.css">
+</head>
+
+<body>
+<header class="doc-navbar">
+    <a href="index.html" class="doc-logo">
+        <img src="vendor/img/cdhu-logo-white.svg" alt="CDHU">
+        <span>Manual · Geohab Plugin</span>
+    </a>
+    <button class="doc-nav-toggle" onclick="document.querySelector('.doc-nav-links').classList.toggle('open')"
+        aria-label="Abrir menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+    </button>
+    <nav class="doc-nav-links">
+        <a href="index.html" data-page="index">Início</a>
+        <a href="interface.html" data-page="interface">Interface</a>
+        <a href="metadados.html" data-page="metadados">Metadados</a>
+        <a href="geoserver.html" data-page="geoserver" class="active">GeoServer</a>
+        <a href="escala-equivalente.html" data-page="escala-equivalente">Escala Equivalente</a>
+        <a href="faq.html" data-page="faq">FAQ</a>
+    </nav>
+</header>
+<main class="doc-main">
+<div class="doc-hero">
+    <h1>Publicar Camada (GeoServer)</h1>
+    <p class="lead">Enviar sua camada do QGIS pro servidor de mapas e configurar o estilo automaticamente.</p>
+</div>
+
+<div class="doc-note warn">
+    <span>🔒</span>
+    <span>Publicar/atualizar uma camada exige <strong>login</strong> no Geohab.</span>
+</div>
+
+<h2>1. Publicação lógica (PostGIS) vs. upload de arquivo</h2>
+<p>Se a camada selecionada já existe no banco corporativo (PostgreSQL/PostGIS), o plugin registra apenas o
+    <code>FeatureType</code> no GeoServer via REST, sem tráfego de dados espaciais - é o caminho recomendado sempre
+    que possível.
+</p>
+<p>Para camadas locais (Shapefile, GeoPackage), o plugin converte e envia o arquivo via upload. É possível escolher
+    entre <strong>Criar novo</strong> ou <strong>Sobrescrever existente</strong>.</p>
+
+<h2>2. Nome da camada</h2>
+<p>O nome que a camada vai ter no Geohab precisa ser <strong>idêntico ao nome da tabela no banco</strong> (é assim
+    que o GeoServer localiza os dados). O plugin sanitiza automaticamente: minúsculas, sem espaços/acentos e sem
+    começar com número (exigência do GeoServer).</p>
+
+<p>Quando o nome é detectado automaticamente a partir da camada, o campo fica <strong>bloqueado</strong> (cadeado
+    fechado) pra evitar divergir sem querer do nome real da tabela. Clique no cadeado pra liberar edição manual:</p>
+
+<div class="doc-mockup">
+    <div class="doc-mockup-bar"><span class="dots"><span></span><span></span><span></span></span>Pré-visualização
+        real da interface</div>
+    <iframe src="vendor/ui/templates/mockup-gs-lock-fields.html"></iframe>
+</div>
+
+<div class="doc-note">
+    <span>ℹ️</span>
+    <span>O mesmo cadeado aparece no campo <strong>Título</strong> da camada, que pode ser pré-preenchido a partir
+        do metadado já publicado no GeoNetwork para essa camada, se houver.</span>
+</div>
+
+<h2>3. Badge de sincronização</h2>
+<p>Funciona no mesmo espírito do badge do editor de metadados (ver <a href="metadados.html#niveis-de-verificacao">níveis
+        de verificação</a>), comparando a configuração atual do painel com o que já está publicado no GeoServer:
+    <code>Sincronizado</code>, <code>Modificado</code>, <code>Não Encontrado</code> - com a variante
+    <code>(DB)</code> quando ainda não há login pra confirmar contra o servidor de verdade.
+</p>
+
+<div class="doc-note danger">
+    <span>⚠️</span>
+    <span>Se o banco de dados do seu usuário estiver desconectado, o badge muda pra <strong>Erro ao verificar</strong>
+        e um aviso aparece - reconecte a rede/VPN e tente de novo com o botão <strong>↻</strong> antes de
+        continuar, pra não achar que "nada foi salvo" quando na verdade é só a checagem que falhou.</span>
+</div>
+
+<h2>4. Atualizar Camada / Atualizar Estilo</h2>
+<p>No menu <strong>Serviços</strong>:</p>
+<ul>
+    <li><strong>Atualizar Camada</strong> - <em>puxa</em> (pull) a configuração já publicada no GeoServer pro
+        painel, sobrescrevendo o que estiver preenchido localmente. Útil quando alguém mais publicou por fora do
+        seu QGIS.</li>
+    <li><strong>Atualizar Estilo</strong> - exporta a simbologia atual do QGIS (<code>QgsMapLayer.exportSldStyle()</code>)
+        como SLD e a envia como estilo padrão da camada no GeoServer.</li>
+</ul>
+
+<div class="doc-note warn">
+    <span>⚠️</span>
+    <span>A conversão para SLD é <em>best-effort</em>: estilos complexos (regras data-driven, blending modes,
+        efeitos de camada do QGIS) podem não ter equivalente direto em SLD 1.1.0. Revise o resultado no GeoServer
+        depois de enviar.</span>
+</div>
+
+<h2>5. Erros comuns</h2>
+<table>
+    <tr>
+        <th>Situação</th>
+        <th>Causa provável</th>
+    </tr>
+    <tr>
+        <td>Erro 403 ao publicar</td>
+        <td>Sua conta não tem permissão de escrita no Workspace selecionado - solicite acesso ao TI.</td>
+    </tr>
+    <tr>
+        <td>Nome da camada rejeitado</td>
+        <td>Nome começando com número ou com caracteres especiais - use o nome sanitizado sugerido pelo plugin.</td>
+    </tr>
+    <tr>
+        <td>SRS Nativo vazio no GeoServer</td>
+        <td>Conhecido - o plugin ainda não define o CRS automaticamente na criação do FeatureType. Defina
+            manualmente no GeoServer após publicar.</td>
+    </tr>
+</table>
+</main>
+<footer class="doc-footer">
+    <span>Manual do <strong>Geohab Plugin</strong> (GeoMetadata) para QGIS · CDHU</span>
+    <span>Dúvidas, erros ou sugestões? Abra um ticket no CDA.</span>
+</footer>
+<script src="assets/js/docs.js"></script>
+</body>
+</html>

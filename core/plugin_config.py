@@ -64,6 +64,11 @@ class PluginConfig:
         """ URL do formulário de chamado do CDA. Único lugar a alterar se o link mudar. """
         return self.config.get("cda_url", "https://cda.cdhu.sp.gov.br")
 
+    def get_docs_url(self):
+        """ URL do manual (Documentação) hospedado no MinIO. Vazio até ser publicado -
+        nesse caso o bridge (main_bridge.py) cai pro manual local em docs_site/dist/. """
+        return self.config.get("docs_url", "")
+
     def get_entra_id_config(self):
         """
         Retorna as configurações do Microsoft Entra ID.

@@ -292,6 +292,7 @@ function _validateCep(el) {
 }
 
 var CDA_URL = "https://cda.cdhu.sp.gov.br"; // fallback só até bridge.get_initial_data() responder
+var DOCS_URL = ""; // preenchido por bridge.get_initial_data() - local (docs_site/dist/) até publicar no MinIO
 
 function initApp() {
     bridge.get_initial_data(function (data) {
@@ -301,6 +302,7 @@ function initApp() {
             var cdaLink = document.getElementById('cda-link');
             if (cdaLink) cdaLink.href = CDA_URL;
         }
+        if (data && data.docs_url) DOCS_URL = data.docs_url;
         navigate("home");
     });
 
@@ -439,6 +441,17 @@ function navigate(panelId) {
     if (container) _showPanelLoading(container);
     // 3. Chama o Python; nav_changed dispara loadPanel quando estiver pronto.
     bridge.navigate(panelId);
+}
+
+// Card "Documentação" da Home - window.open() (não navigate()/<a href>) porque o manual é
+// um site à parte, fora do SPA do plugin; o _ExternalLinkPage.createWindow() (Python)
+// intercepta e abre no navegador padrão do sistema, mesmo sendo um file:// local.
+function openDocs() {
+    if (!DOCS_URL) {
+        Modal.alert('O manual ainda não está disponível nesta instalação do plugin.', 'Documentação', 'info');
+        return;
+    }
+    window.open(DOCS_URL, '_blank');
 }
 
 function loadPanel(panelId) {

@@ -1,0 +1,70 @@
+<div class="doc-hero">
+    <h1>Guia Técnico: Escala Equivalente</h1>
+    <p class="lead">Como estimar o denominador da escala para um dado sem essa informação documentada.</p>
+</div>
+
+<p>É muito comum trabalhar com dados legados (shapefiles, CAD, etc.) sem documentação da escala original. Ainda
+    assim, o campo <strong>Escala</strong> é importante no metadado, pois informa a precisão e o uso adequado do
+    dado.</p>
+<p>Este guia apresenta métodos técnicos pra estimar esse valor de forma retroativa, baseando-se na
+    <strong>Resolução Espacial</strong> (dados raster) e na <strong>Acurácia Posicional</strong> (dados vetoriais).
+</p>
+
+<h2>1. Para dados raster (imagens, ortofotos)</h2>
+<p>A escala é derivada do <strong>GSD (Ground Sample Distance)</strong>, o tamanho de cada pixel no mundo real. A
+    regra de bolso da cartografia, baseada na acuidade visual humana (0,2mm a 0,5mm no papel), dá uma fórmula
+    simples e segura:</p>
+<div class="doc-note">
+    <span>📐</span>
+    <span><code>Escala Equivalente ≈ Tamanho do Pixel (em metros) × 2.000</code> (considerando uma acuidade
+        conservadora de 0,5mm)</span>
+</div>
+<ul>
+    <li><strong>Exemplo 1:</strong> pixel de 50&nbsp;cm (0,5&nbsp;m). Cálculo: <code>0,5 × 2.000 = 1.000</code> →
+        escala equivalente <strong>1:1.000</strong>.</li>
+    <li><strong>Exemplo 2:</strong> imagem de satélite com pixel de 10&nbsp;m. Cálculo:
+        <code>10 × 2.000 = 20.000</code> → escala equivalente <strong>1:20.000</strong> (ou 1:25.000, sendo mais
+        conservador).
+    </li>
+</ul>
+
+<h2>2. Para dados vetoriais (pontos, linhas, polígonos)</h2>
+<p>Para vetores, analisa-se a precisão da coleta ou a generalização do desenho.</p>
+
+<h3>Método A - pelo erro posicional conhecido (PEC)</h3>
+<p>Se você sabe a acurácia do equipamento que coletou os dados (ex.: GPS de navegação, RTK), use a fórmula reversa
+    do <strong>Padrão de Exatidão Cartográfica (PEC)</strong>, considerando um erro gráfico aceitável de 0,2mm no
+    mapa:</p>
+<div class="doc-note">
+    <span>📐</span>
+    <span><code>Escala = Erro Real (em metros) / 0,0002</code></span>
+</div>
+<ul>
+    <li><strong>Cenário 1:</strong> GPS de mão, erro de 5&nbsp;m. Cálculo: <code>5 / 0,0002 = 25.000</code> →
+        <strong>1:25.000</strong>.
+    </li>
+    <li><strong>Cenário 2:</strong> GPS RTK, erro de 10&nbsp;cm (0,10&nbsp;m). Cálculo:
+        <code>0,10 / 0,0002 = 500</code> → <strong>1:500</strong>.
+    </li>
+</ul>
+
+<h3>Método B - pela generalização (teste visual no QGIS)</h3>
+<p>Se a precisão é desconhecida, use a comparação visual:</p>
+<ol class="doc-steps">
+    <li>Adicione sua camada vetorial no QGIS.</li>
+    <li>Adicione um mapa base de alta resolução por baixo (ex.: Google Satellite).</li>
+    <li>Dê zoom em uma feição curva bem definida (um rio, uma rua).</li>
+    <li>Observe a escala exibida no QGIS no momento em que a linha do seu dado começa a parecer "quadrada",
+        simplificada demais ou descolada da realidade do mapa base - essa escala é uma boa estimativa da escala
+        original.</li>
+</ol>
+
+<h2>3. O que escrever no plugin</h2>
+<p>No campo <strong>Escala</strong>, insira o denominador estimado (ex.: <code>25000</code>).</p>
+<p>Documente como você chegou a esse número no campo <strong>Resumo</strong>, com uma nota honesta como:</p>
+<div class="doc-note">
+    <span>📝</span>
+    <span><em>"Escala original de produção não documentada. O denominador de escala (1:XX.XXX) foi estimado com
+            base na [acurácia posicional conhecida / comparação visual com ortofotos], considerando uma precisão
+            estimada de [X] metros."</em></span>
+</div>

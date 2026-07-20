@@ -1,0 +1,446 @@
+/* docs.css - moldura do manual (navbar, rodapé, tipografia, artigo, caixa de
+   mockup). NÃO é o CSS do plugin - esse é vendorizado à parte (ver build.py)
+   e usado só DENTRO dos iframes de mockup, pra cada preview de UI ficar
+   idêntico ao app de verdade. */
+
+:root {
+    --brand: #e5222d;
+    --brand-dark: #be0a21;
+    --ink: #1e1e24;
+    --ink-muted: #5b6270;
+    --bg: #f7f7f9;
+    --card-bg: #ffffff;
+    --border: #e3e5ea;
+    --radius: 10px;
+    --font: 'Montserrat', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --ink: #e8e9ee;
+        --ink-muted: #a3a8b5;
+        --bg: #15161a;
+        --card-bg: #1d1f25;
+        --border: #2c2f38;
+    }
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+}
+
+img {
+    max-width: 100%;
+}
+
+/* ── NAVBAR ─────────────────────────────────────────────────────── */
+.doc-navbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #000;
+    padding: 10px 28px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.doc-logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    color: #fff;
+    font-weight: 700;
+    font-size: 15px;
+}
+
+.doc-logo img {
+    height: 30px;
+}
+
+.doc-nav-toggle {
+    display: none;
+    background: none;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    padding: 6px;
+}
+
+.doc-nav-links {
+    display: flex;
+    gap: 4px;
+}
+
+.doc-nav-links a {
+    color: #cbd0dc;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: 20px;
+    transition: background .15s, color .15s;
+    white-space: nowrap;
+}
+
+.doc-nav-links a:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.doc-nav-links a.active {
+    color: #fff;
+    background: var(--brand);
+}
+
+@media (max-width: 860px) {
+    .doc-nav-toggle {
+        display: inline-flex;
+    }
+
+    .doc-nav-links {
+        display: none;
+        position: absolute;
+        top: 58px;
+        left: 0;
+        right: 0;
+        background: #000;
+        flex-direction: column;
+        padding: 8px 16px 16px;
+        gap: 2px;
+    }
+
+    .doc-nav-links.open {
+        display: flex;
+    }
+}
+
+/* ── ARTIGO / CONTEÚDO ──────────────────────────────────────────── */
+.doc-main {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+}
+
+.doc-hero h1 {
+    font-size: 30px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    margin: 0 0 8px;
+}
+
+.doc-hero p.lead {
+    font-size: 15px;
+    color: var(--ink-muted);
+    max-width: 640px;
+}
+
+.doc-main h2 {
+    font-size: 21px;
+    font-weight: 700;
+    margin: 44px 0 14px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+}
+
+.doc-main h2:first-of-type {
+    border-top: none;
+    padding-top: 0;
+}
+
+.doc-main h3 {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 26px 0 10px;
+}
+
+.doc-main p {
+    font-size: 14.5px;
+    color: var(--ink);
+}
+
+.doc-main ul,
+.doc-main ol {
+    font-size: 14.5px;
+    padding-left: 22px;
+}
+
+.doc-main li {
+    margin-bottom: 6px;
+}
+
+.doc-main code {
+    background: rgba(127, 127, 127, 0.14);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.doc-main strong {
+    font-weight: 700;
+}
+
+.doc-main a {
+    color: var(--brand);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.doc-main a:hover {
+    text-decoration: underline;
+}
+
+/* Nota / aviso lateral */
+.doc-note {
+    display: flex;
+    gap: 10px;
+    background: rgba(59, 130, 246, 0.08);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13.5px;
+    margin: 16px 0;
+}
+
+.doc-note.warn {
+    background: rgba(245, 158, 11, 0.1);
+    border-color: rgba(245, 158, 11, 0.3);
+}
+
+.doc-note.danger {
+    background: rgba(229, 34, 45, 0.08);
+    border-color: rgba(229, 34, 45, 0.3);
+}
+
+/* Tabela simples (FAQ / referência) */
+.doc-main table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    margin: 12px 0 20px;
+}
+
+.doc-main th,
+.doc-main td {
+    text-align: left;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+}
+
+.doc-main th {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--ink-muted);
+}
+
+/* Passo numerado */
+.doc-steps {
+    counter-reset: step;
+    padding: 0;
+    margin: 16px 0;
+}
+
+.doc-steps>li {
+    list-style: none;
+    counter-increment: step;
+    position: relative;
+    padding: 2px 0 16px 40px;
+    border-left: 2px solid var(--border);
+    margin-left: 15px;
+}
+
+.doc-steps>li:last-child {
+    border-left-color: transparent;
+    padding-bottom: 0;
+}
+
+.doc-steps>li::before {
+    content: counter(step);
+    position: absolute;
+    left: -15px;
+    top: -2px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--brand);
+    color: #fff;
+    font-size: 12.5px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ── CAIXA DE MOCKUP (preview real do plugin, sem screenshot) ──────
+   iframe apontando pra um HTML standalone que usa o CSS REAL do plugin,
+   vendorizado por build.py - qualquer facelift futuro no app se reflete
+   aqui só rodando o build de novo, sem tirar print nenhum. */
+.doc-mockup {
+    margin: 18px 0 30px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--card-bg);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.doc-mockup-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 14px;
+    background: rgba(127, 127, 127, 0.06);
+    border-bottom: 1px solid var(--border);
+    font-size: 10.5px;
+    color: var(--ink-muted);
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.doc-mockup-bar .dots {
+    display: flex;
+    gap: 5px;
+}
+
+.doc-mockup-bar .dots span {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--border);
+}
+
+.doc-mockup iframe {
+    display: block;
+    width: 100%;
+    height: 80px;
+    /* altura inicial só até docs.js medir o conteúdo real (ver _sizeDocMockups) e
+       ajustar - evita o iframe nascer gigante/zerado antes do primeiro resize. */
+    border: 0;
+    background: #fff;
+}
+
+.doc-mockup-caption {
+    font-size: 12px;
+    color: var(--ink-muted);
+    padding: 8px 14px 12px;
+    border-top: 1px solid var(--border);
+    margin: 0;
+}
+
+/* ── RODAPÉ ─────────────────────────────────────────────────────── */
+.doc-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 20px 24px 40px;
+    font-size: 12px;
+    color: var(--ink-muted);
+    border-top: 1px solid var(--border);
+}
+
+.doc-footer a {
+    color: var(--brand);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+/* ── Cartões de navegação rápida (usados no index) ─────────────── */
+.doc-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 14px;
+    margin: 20px 0;
+}
+
+.doc-quick-card {
+    display: block;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    text-decoration: none;
+    transition: border-color .15s, box-shadow .15s;
+}
+
+.doc-quick-card:hover {
+    border-color: var(--brand);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+    text-decoration: none;
+}
+
+.doc-quick-card h3 {
+    margin: 0 0 4px;
+    color: var(--ink);
+    font-size: 14.5px;
+}
+
+.doc-quick-card p {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--ink-muted);
+}
+
+/* ── FAQ (accordion nativo, sem dependência de Bootstrap/JS) ───────── */
+.doc-faq {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin: 10px 0 22px;
+}
+
+.doc-faq summary {
+    cursor: pointer;
+    padding: 14px 16px;
+    font-weight: 700;
+    font-size: 14px;
+    background: var(--card-bg);
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.doc-faq summary::-webkit-details-marker {
+    display: none;
+}
+
+.doc-faq summary::after {
+    content: '+';
+    font-weight: 400;
+    color: var(--ink-muted);
+    font-size: 18px;
+}
+
+.doc-faq[open] summary::after {
+    content: '−';
+}
+
+.doc-faq+.doc-faq {
+    margin-top: -14px;
+}
+
+.doc-faq div.doc-faq-body {
+    padding: 0 16px 16px;
+    font-size: 13.5px;
+    color: var(--ink-muted);
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+}

@@ -1,0 +1,821 @@
+:root {
+    --accent: #e5222d;
+    --accent-hover: #c0111b;
+    --bg: #f8fafc;
+    --navbar-bg: #ffffff;
+    --fg: #1e293b;
+    --fg-muted: #64748b;
+    --border: #bfc3c9;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    --radius: 8px;
+}
+
+/* SCROLLBAR */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #b6bfca;
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+    background-clip: content-box;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    outline: none !important;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: var(--bg);
+    color: var(--fg);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* NAVBAR */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #ffffff;
+    height: 70px;
+    border-bottom: 1px solid var(--border);
+    color: #475569;
+    font-size: 14px;
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    padding: 0 16px 0 0;
+    z-index: 100;
+}
+
+.nav-left {
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.nav-right {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    gap: 12px;
+}
+
+.logo-link {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 8px 20px;
+    background-color: #000000;
+    border-radius: 0 8px 8px 0;
+    height: 100%;
+    cursor: pointer;
+    border: none;
+    margin-right: 24px;
+}
+
+.logo-img {
+    width: 128px;
+}
+
+.dropdown {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    align-self: center;
+}
+
+.dropbtn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background-color: transparent;
+    color: #475569;
+    padding: 8px 16px;
+    font-size: 18px;
+    font-weight: 600;
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    border: none;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.dropbtn:hover {
+    color: var(--accent, #e11d48);
+}
+
+.chevron-icon {
+    width: 14px;
+    height: 14px;
+    transition: transform 0.2s ease;
+}
+
+.dropdown:hover .chevron-icon {
+    transform: rotate(180deg);
+}
+
+.dropdown-content {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background-color: #ffffff;
+    min-width: 200px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 12px;
+    padding: 6px;
+    z-index: 1002;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(2px);
+    transition: all 0.15s ease-out;
+    display: flex;
+    flex-direction: column;
+}
+
+.dropdown:hover .dropdown-content {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.dropdown-content a {
+    color: #475569;
+    padding: 8px 12px;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 14px;
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    transition: all 0.15s;
+}
+
+.dropdown-content a:hover {
+    background-color: #fff1f2;
+    color: var(--accent, #e11d48);
+}
+
+/* BUTTONS */
+.btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    border: none;
+    transition: transform 0.1s;
+}
+
+.btn:active {
+    transform: scale(0.98);
+}
+
+.btn-primary {
+    background-color: var(--accent);
+    color: white;
+}
+
+.btn-login {
+    background-color: black;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: var(--accent-hover);
+}
+
+/* APP CONTAINER */
+#app-container {
+    flex: 1;
+    overflow-y: auto;
+    position: relative;
+}
+
+.loader {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    color: var(--fg-muted);
+    font-style: italic;
+}
+
+/* ── Panel loading overlay — spinner circular (mesmo visual do _SpinnerWidget
+   Qt em gateway_login_dialog.py: anel cinza #bfc3c9 + segmento vermelho
+   #e5222d girando, mesmo par de cores do .search-spinner em geonetwork.css) ─ */
+.panel-loading-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 500;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    pointer-events: none;
+}
+
+.panel-loading-spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid #bfc3c9;
+    border-top-color: #e5222d;
+    border-radius: 50%;
+    animation: panelSpinnerRotate 0.75s linear infinite;
+    flex-shrink: 0;
+}
+
+.panel-loading-msg {
+    font-size: 12px;
+    color: var(--fg-muted);
+    letter-spacing: 0.02em;
+}
+
+@keyframes panelSpinnerRotate {
+    to { transform: rotate(360deg); }
+}
+
+/* ── Skeleton shimmer para campos na troca de camada ──────────────────────── */
+.skeleton-field {
+    color: transparent !important;
+    background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%) !important;
+    background-size: 200% 100% !important;
+    animation: skeletonShimmer 1.2s ease-in-out infinite !important;
+    border-color: #e2e8f0 !important;
+    border-radius: 6px !important;
+    pointer-events: none !important;
+    user-select: none !important;
+}
+
+@keyframes skeletonShimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* FOOTER */
+.footer {
+    height: 32px;
+    background: white;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 16px;
+    font-size: 11px;
+    color: var(--fg-muted);
+}
+
+.footer a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+/* USER BADGE */
+.user-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f1f5f9;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.user-badge:hover {
+    background: #fee2e2;
+    color: var(--accent);
+}
+
+.user-badge:hover .status-dot {
+    background: var(--accent);
+}
+
+.layer-picker-wrap {
+    position: relative;
+}
+
+.layer-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    color: #0369a1;
+    padding: 3px 10px 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    width: 150px;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+}
+
+.layer-badge:hover {
+    background: #e0f2fe;
+    border-color: #7dd3fc;
+}
+
+.layer-badge.open {
+    background: #e0f2fe;
+    border-color: #38bdf8;
+}
+
+.layer-badge.open #layer-chevron {
+    transform: rotate(180deg);
+}
+
+.layer-picker-dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 240px;
+    max-width: 340px;
+    max-height: 260px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
+    z-index: 9999;
+    padding: 4px 0;
+}
+
+.layer-picker-dropdown .lp-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 14px;
+    font-size: 12px;
+    color: #1e293b;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: background .1s;
+}
+
+.layer-picker-dropdown .lp-item:hover {
+    background: #f1f5f9;
+}
+
+.layer-picker-dropdown .lp-item.active {
+    background: #f0f9ff;
+    border-left: 3px solid #0369a1;
+    padding-left: 11px;
+    color: #0369a1;
+}
+
+.layer-picker-dropdown .lp-item .lp-icon {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+    opacity: .6;
+}
+
+.layer-picker-dropdown .lp-empty {
+    padding: 12px 14px;
+    font-size: 12px;
+    color: #94a3b8;
+    text-align: center;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    background: #22c55e;
+    border-radius: 50%;
+}
+
+/* ── Editor de metadados GN (abas, grid de campos, contatos, badge de sync,
+   distribuição, keywords) mudou para geonetwork.css. ─────────────────────── */
+/* ── Busca genérica (usada pelo custom-select e pela busca de contatos/GN) ──── */
+
+.search-wrap {
+    flex: 1;
+    position: relative;
+}
+
+.search-suggestions {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    z-index: 200;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.suggestion-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+}
+
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.suggestion-item:hover {
+    background: #f1f5f9;
+    color: var(--accent);
+}
+
+.suggestion-spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin-simple 0.8s linear infinite;
+    flex-shrink: 0;
+    transform-origin: center;
+}
+
+@keyframes spin-simple {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ── Indicador de carregamento central genérico (publicar/salvar - GN ou GS) ─── */
+.action-loading {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 9000;
+    align-items: center;
+    gap: 10px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+    padding: 12px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--fg);
+}
+
+/* ── Home cards ───────────────────────────────────────────────── */
+.home-panel {
+    padding: 32px;
+}
+
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    margin-top: 24px;
+}
+
+.card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px 20px;
+    cursor: pointer;
+    transition: box-shadow 0.2s, transform 0.15s;
+    text-align: center;
+}
+
+.card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.card-icon {
+    font-size: 32px;
+    margin-bottom: 12px;
+}
+
+.card-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--fg);
+}
+
+.card-desc {
+    font-size: 12px;
+    color: var(--fg-muted);
+    margin-top: 4px;
+}
+
+/* ── Help tooltip (? button next to labels) ───────────────────── */
+.help-btn {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: transparent;
+    color: #94a3b8;
+    border: 1.5px solid #94a3b8;
+    font-size: 8px;
+    font-weight: 700;
+    cursor: help;
+    padding: 0;
+    text-transform: none;
+    letter-spacing: 0;
+    line-height: 1;
+    vertical-align: middle;
+    transition: color 0.15s, border-color 0.15s;
+}
+
+.help-btn:hover {
+    color: #475569;
+    border-color: #475569;
+}
+
+/* ── Botão de atualizar (↻) ao lado do badge de sincronização (GN/GS) ────────────
+   Força uma checagem nova, ignorando o cache de "já verificado recentemente" - único
+   jeito de recuperar de um erro de rede (SSL/timeout/403 intermitente) sem fechar e
+   reabrir o plugin inteiro. Ícone SVG (não mais o glyph de texto "↻") - o glyph
+   renderizava com a "massa" visual fora do centro do box, então o rotate(180deg) do
+   :active parecia girar torto/fora do eixo; um SVG com viewBox centrado gira limpo. */
+.badge-refresh-btn {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    color: var(--fg-muted);
+    cursor: pointer;
+    padding: 0;
+    transition: transform 0.2s;
+    transform-origin: center;
+}
+
+.badge-refresh-btn:active {
+    transform: rotate(180deg);
+}
+
+.field-err {
+    font-size: 11px;
+    color: var(--accent);
+    font-weight: 500;
+    margin-top: 3px;
+    text-transform: none;
+    letter-spacing: 0;
+    line-height: 1.3;
+}
+
+#help-tooltip {
+    position: fixed;
+    background: #1e293b;
+    color: #f8fafc;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.5;
+    padding: 7px 11px;
+    border-radius: 6px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+    max-width: 220px;
+    z-index: 9999;
+    pointer-events: none;
+    display: none;
+    text-transform: none;
+    letter-spacing: 0;
+    white-space: normal;
+}
+
+#help-tooltip-arrow {
+    position: absolute;
+    width: 0;
+    height: 0;
+    border: 6px solid transparent;
+}
+
+#help-tooltip.tip-below #help-tooltip-arrow {
+    top: -6px;
+    border-bottom-color: #1e293b;
+    border-top-width: 0;
+}
+
+#help-tooltip.tip-above #help-tooltip-arrow {
+    bottom: -6px;
+    border-top-color: #1e293b;
+    border-bottom-width: 0;
+}
+
+
+/* ==================================================
+   CUSTOM SELECT & GLOBAL TOOLTIP
+================================================== */
+.custom-select {
+    position: relative;
+    width: 100%;
+    outline: none;
+    cursor: pointer;
+}
+
+.custom-select-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 9px 12px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--fg);
+    user-select: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    cursor: pointer;
+}
+
+.custom-select:focus .custom-select-trigger,
+.custom-select.open .custom-select-trigger {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(229, 34, 45, 0.08);
+}
+
+.custom-select-value {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+}
+
+.custom-select-arrow {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    margin-left: 8px;
+    background: url('../../../img/chevron_down.svg') no-repeat center / contain;
+    opacity: 0.5;
+    transition: transform 0.2s;
+}
+
+.custom-select.open .custom-select-arrow {
+    transform: rotate(180deg);
+}
+
+.custom-select-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    width: 100%;
+    z-index: 1000;
+    display: none; /* vira 'flex' via JS (openDropdown) quando aberto - ver .custom-select-items abaixo */
+    flex-direction: column;
+    max-height: 250px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    /* overflow:hidden (não mais overflow-y:auto) - quem rola agora é só
+       .custom-select-items, por baixo do campo de busca. Isso também recorta a barra de
+       rolagem pro cantinho arredondado do próprio dropdown, em vez do campo de busca ter
+       que competir com um arredondamento próprio (ver comentário dele, abaixo). */
+    overflow: hidden;
+}
+
+/* Campo de busca (filtro ao vivo) no topo do dropdown - FORA da área que rola
+   (.custom-select-items), como item de flex de tamanho fixo (flex: 0 0 auto) em vez de
+   position:sticky - o sticky não funcionava de forma confiável no motor Chromium/Qt
+   embutido no QGIS (o campo rolava junto com a lista, como se fosse só mais um item, em
+   vez de ficar fixo no topo). Mesmo espírito do campo de busca de contatos do editor GN,
+   só que embutido no dropdown em vez de um modal separado. */
+.custom-select-search {
+    flex: 0 0 auto;
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--fg);
+    background: white;
+}
+
+.custom-select-search:focus {
+    outline: none;
+}
+
+/* Só essa parte rola (a lista de opções) - o campo de busca acima fica sempre visível,
+   fora do container com overflow. min-height:0 é necessário aqui: sem isso, um item flex
+   não encolhe abaixo da altura do próprio conteúdo (gotcha clássico de flexbox), e a
+   lista nunca ativaria o scroll, só estufaria o dropdown inteiro pra além do max-height
+   do pai. */
+.custom-select-items {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+/* Dropdown items - override shared suggestion-item colors */
+.custom-select-dropdown .suggestion-item {
+    justify-content: flex-start;
+    color: var(--fg);
+}
+
+.custom-select-dropdown .suggestion-item:hover {
+    background: #f1f5f9;
+    color: var(--fg);
+}
+
+.custom-select-dropdown .suggestion-item.active {
+    background: #f1f5f9;
+    color: var(--fg);
+    font-weight: 600;
+}
+
+/* Global Tooltip */
+.global-tooltip {
+    position: fixed;
+    z-index: 10001;
+    /* acima de .modal-overlay (10000) - senão fica escondido atrás de modais */
+    pointer-events: none;
+    background: #1e293b;
+    color: #f8fafc;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1.4;
+    max-width: 250px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    opacity: 0;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    transform: translateY(4px);
+    text-transform: none;
+    font-weight: 500;
+}
+
+.global-tooltip.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.global-tooltip::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-style: solid;
+}
+
+.global-tooltip[data-arrow="arrow-up"]::after {
+    top: -6px;
+    left: var(--arrow-pos, 50%);
+    margin-left: -6px;
+    border-width: 0 6px 6px 6px;
+    border-color: transparent transparent #1e293b transparent;
+}
+
+.global-tooltip[data-arrow="arrow-down"]::after {
+    bottom: -6px;
+    left: var(--arrow-pos, 50%);
+    margin-left: -6px;
+    border-width: 6px 6px 0 6px;
+    border-color: #1e293b transparent transparent transparent;
+}
+
+/* Fix option highlight when navigating by keyboard */
+.suggestion-item.active {
+    background-color: var(--bg-hover);
+    color: var(--accent);
+}

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/geonetwork.css">
+</head>
+
+<body style="overflow:auto;height:auto;min-height:100%;">
+    <div class="gn-update-banner" style="display:flex;">
+        <span>O formulário atual é diferente do que está publicado no Geohab - clique para trazer os dados do
+            servidor.</span>
+        <button class="btn-icon accent">Atualizar agora</button>
+        <button class="gn-update-banner-close">&times;</button>
+    </div>
+    <script>
+        (function () {
+            function report() {
+                if (window.parent === window) return;
+                window.parent.postMessage({ docMockupHeight: document.documentElement.scrollHeight }, "*");
+            }
+            window.addEventListener("load", function () { report(); setTimeout(report, 200); });
+            window.addEventListener("resize", report);
+        })();
+    </script>
+</body>
+
+</html>

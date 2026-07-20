@@ -1,0 +1,86 @@
+<div class="doc-hero">
+    <h1>Solução de Problemas</h1>
+    <p class="lead">Erros e dúvidas comuns, e o que fazer em cada um.</p>
+</div>
+
+<details class="doc-faq">
+    <summary>Aparece a mensagem "Campos Faltando" ao tentar exportar</summary>
+    <div class="doc-faq-body">
+        <strong>Causa:</strong> nem todos os campos obrigatórios foram preenchidos (Título, Resumo, etc.).<br>
+        <strong>Solução:</strong> preencha os campos listados na mensagem de erro e tente de novo.
+    </div>
+</details>
+
+<details class="doc-faq">
+    <summary>O navegador não abre ao clicar em Entrar</summary>
+    <div class="doc-faq-body">
+        <strong>Causa:</strong> o sistema pode estar bloqueando a abertura do navegador padrão.<br>
+        <strong>Solução:</strong> verifique se há um navegador padrão configurado no Windows. Se persistir, abra um
+        CDA.
+    </div>
+</details>
+
+<details class="doc-faq">
+    <summary>Login diz que minha conta não tem acesso</summary>
+    <div class="doc-faq-body">
+        <strong>Causa:</strong> sua conta corporativa não tem permissão no sistema
+        <code>QGIS-Plugin-Geohab-SSO</code>.<br>
+        <strong>Solução:</strong> solicite acesso ao TI informando seu usuário e o nome do aplicativo
+        <code>QGIS-Plugin-Geohab-SSO</code>.
+    </div>
+</details>
+
+<details class="doc-faq">
+    <summary>Os botões "Publicar Metadado" e "Associar Camada" estão desabilitados</summary>
+    <div class="doc-faq-body">
+        <strong>Causa:</strong> você não está logado.<br>
+        <strong>Solução:</strong> clique em <strong>Entrar</strong> e autentique com sua conta corporativa.
+    </div>
+</details>
+
+<details class="doc-faq">
+    <summary>O badge de sincronização mostra "Erro ao verificar"</summary>
+    <div class="doc-faq-body">
+        <strong>Causa:</strong> normalmente é a conexão com o banco de dados PostgreSQL corporativo caindo (rede,
+        VPN, ou o servidor de banco fora do ar) - o plugin passou a distinguir isso de "nada foi salvo ainda".<br>
+        <strong>Solução:</strong> confira sua rede/VPN e clique no botão <strong>↻</strong> ao lado do badge pra
+        verificar de novo. Se continuar, abra um CDA.
+    </div>
+</details>
+
+<details class="doc-faq">
+    <summary>O card da Home mostra "Offline" para o GeoNetwork ou GeoServer</summary>
+    <div class="doc-faq-body">
+        <strong>Causa:</strong> o plugin não conseguiu conectar ao servidor correspondente pela rede.<br>
+        <strong>Solução:</strong> confira sua VPN/rede corporativa. Isso não depende de estar logado no plugin - é
+        uma checagem de disponibilidade do servidor, feita mesmo deslogado.
+    </div>
+</details>
+
+<details class="doc-faq">
+    <summary>Erro 403 ao publicar uma camada no GeoServer</summary>
+    <div class="doc-faq-body">
+        <strong>Causa:</strong> sua conta não tem permissão de escrita no Workspace selecionado.<br>
+        <strong>Solução:</strong> solicite acesso ao TI para o Workspace em questão.
+    </div>
+</details>
+
+<details class="doc-faq">
+    <summary>O plugin está com tema claro, mas o QGIS está no tema escuro (ou vice-versa)</summary>
+    <div class="doc-faq-body">
+        <strong>Causa:</strong> o plugin detecta o tema do QGIS só na inicialização.<br>
+        <strong>Solução:</strong> mude o tema do QGIS e <strong>reinicie o QGIS</strong> pra que o plugin acompanhe.
+    </div>
+</details>
+
+<details class="doc-faq">
+    <summary>Uma mudança recente no plugin não aparece na tela</summary>
+    <div class="doc-faq-body">
+        <strong>Causa:</strong> algumas telas do plugin só recarregam o HTML/CSS ao navegar pra outra e voltar.<br>
+        <strong>Solução:</strong> feche e reabra o painel (ou navegue para Home e volte). Se ainda assim não
+        aparecer, reinicie o QGIS.
+    </div>
+</details>
+
+<h2>Suporte</h2>
+<p>Em caso de dúvidas, erros ou sugestões não cobertas aqui, por favor abra um ticket no <strong>CDA</strong>.</p>

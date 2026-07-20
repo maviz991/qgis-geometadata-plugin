@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body style="overflow:auto;height:auto;min-height:100%;">
+    <div class="home-login-banner" style="display:flex;">
+        <span class="home-login-banner-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+        </span>
+        <span>Faça login para ter todas as funcionalidades disponíveis.</span>
+        <button class="home-login-banner-close">&times;</button>
+    </div>
+    <!-- copiado literalmente do <style> embutido em ui/templates/panels/home.html -->
+    <style>
+        .home-login-banner {
+            align-items: center;
+            gap: 12px;
+            margin: 0;
+            padding: 10px 24px;
+            background: #eff6ff;
+            border-bottom: 1px solid #bfdbfe;
+            color: #1e40af;
+            font-size: 13px;
+        }
+
+        .home-login-banner span:not(.home-login-banner-icon) {
+            flex: 1;
+        }
+
+        .home-login-banner-icon {
+            flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .home-login-banner-close {
+            background: none;
+            border: none;
+            font-size: 18px;
+            line-height: 1;
+            color: #1e40af;
+            cursor: pointer;
+            padding: 2px 4px;
+        }
+    </style>
+    <script>
+        (function () {
+            function report() {
+                if (window.parent === window) return;
+                window.parent.postMessage({ docMockupHeight: document.documentElement.scrollHeight }, "*");
+            }
+            window.addEventListener("load", function () { report(); setTimeout(report, 200); });
+            window.addEventListener("resize", report);
+        })();
+    </script>
+</body>
+
+</html>

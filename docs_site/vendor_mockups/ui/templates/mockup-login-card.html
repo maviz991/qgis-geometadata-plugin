@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body style="overflow:auto;height:auto;min-height:520px;">
+    <div class="login-page" style="position:relative;height:520px;">
+        <div class="page-bg"></div>
+        <div class="login-topbar">
+            <button class="login-toggle-btn">ACESSO CORPORATIVO</button>
+        </div>
+        <div class="login-center">
+            <div class="login-card">
+                <img src="../../logo.png" alt="CDHU" class="login-card-logo">
+                <h2 class="login-card-title">Geohab</h2>
+                <p class="login-card-sub">Acesso com conta corporativa</p>
+                <button class="btn-login-action">Entrar com conta CDHU</button>
+                <button class="btn-login-back">&lt; Voltar</button>
+            </div>
+        </div>
+        <span class="login-footer-text">GOVERNO DO ESTADO DE SÃO PAULO</span>
+    </div>
+    <!-- copiado literalmente do <style> embutido em ui/templates/panels/login.html -->
+    <style>
+        .login-page {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: inherit;
+            overflow: hidden;
+        }
+
+        .page-bg {
+            position: absolute;
+            inset: 0;
+            background: url('../../img/background.jpeg') center / cover no-repeat;
+            z-index: 0;
+        }
+
+        .page-bg::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(190, 10, 33, .72) 0%, rgba(20, 10, 30, .60) 30%);
+        }
+
+        .login-topbar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 20px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            z-index: 10;
+        }
+
+        .login-toggle-btn {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            cursor: pointer;
+        }
+
+        .login-center {
+            position: relative;
+            z-index: 10;
+        }
+
+        .login-card {
+            background: white;
+            border-radius: 16px;
+            padding: 40px 48px;
+            min-width: 360px;
+            max-width: 420px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
+        }
+
+        .login-card-logo {
+            height: 48px;
+            margin-bottom: 4px;
+        }
+
+        .login-card-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--fg);
+            margin: 0;
+        }
+
+        .login-card-sub {
+            font-size: 13px;
+            color: var(--fg-muted);
+            margin: 0;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        .btn-login-action {
+            width: 100%;
+            padding: 12px 24px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 6px;
+            font-family: inherit;
+        }
+
+        .btn-login-back {
+            background: none;
+            border: none;
+            color: var(--fg-muted);
+            font-size: 13px;
+            cursor: pointer;
+            padding: 4px;
+            font-family: inherit;
+        }
+
+        .login-footer-text {
+            position: absolute;
+            bottom: 24px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            color: rgba(255, 255, 255, 0.65);
+            z-index: 10;
+        }
+    </style>
+    <script>
+        (function () {
+            function report() {
+                if (window.parent === window) return;
+                window.parent.postMessage({ docMockupHeight: document.documentElement.scrollHeight }, "*");
+            }
+            window.addEventListener("load", function () { report(); setTimeout(report, 200); });
+            window.addEventListener("resize", report);
+        })();
+    </script>
+</body>
+
+</html>

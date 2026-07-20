@@ -1,0 +1,322 @@
+/* geoserver.css - Painel de publicação GeoServer, em abas (Destino/Identificação/
+   Estilos) no mesmo padrão visual do editor de metadados GN. Reaproveita .form-tabs/
+   .tab-link/.tab-content/.form-grid/.form-group/.keyword-chips (geonetwork.css, já
+   globais) - só o específico daqui fica aqui. */
+
+.geoserver-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+}
+
+/* ── Aba Identificação: cadeado de Nome/Título (trava depois de publicado de
+   verdade) - mesmo tamanho/posição do .help-btn ao lado, só sem borda. Ícone SVG
+   inline (stroke="currentColor") setado via JS (_gsApplyFieldLockState/
+   _GS_LOCK_ICON_LOCKED/_UNLOCKED, geoserver.js) - cor aqui igual ao .help-btn,
+   pra bater com o resto dos ícones da UI (antes usava emoji 🔒/🔓, que destoava
+   em peso/cor/alinhamento). */
+.gs-lock-btn {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    line-height: 1;
+    cursor: pointer;
+    vertical-align: middle;
+}
+
+.gs-lock-btn:hover {
+    color: #475569;
+}
+
+.gs-lock-btn:disabled {
+    cursor: default;
+    opacity: 0.5;
+}
+
+/* Link inline dentro de uma mensagem de aviso (.gs-warning-text) - ex.: "Usar
+   nome da tabela" dentro do aviso de nome divergente. */
+.gs-inline-link {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    color: inherit;
+    font: inherit;
+    font-weight: 700;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+/* ── Aba Destino: card da camada + linha workspace/datastore/detectar ──────────── */
+.gs-layer-status {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
+
+.gs-status-text {
+    font-size: 12px;
+    color: var(--fg-muted);
+    font-style: italic;
+}
+
+.gs-status-text.gs-warning-text {
+    font-style: normal;
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.gs-layer-detected-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.gs-layer-badge {
+    flex-shrink: 0;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    color: rgb(47, 95, 134);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+/* .skeleton-field (styles.css) força border-radius: 6px !important pensando em campos
+   retangulares (input/textarea) - sobrescrevia o formato pílula do badge acima durante o
+   esqueleto de carregamento (_loadGsLayerInfo). Seletor mais específico pra recuperar o
+   999px só aqui, sem mexer na regra genérica usada em outros lugares. */
+.gs-layer-badge.skeleton-field {
+    border-radius: 999px !important;
+}
+
+.gs-layer-detected-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.gs-layer-detected-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--fg);
+}
+
+.gs-layer-detected-schema {
+    color: var(--fg-muted);
+    font-size: 12px;
+}
+
+/* Workspace + Datastore em grid de 2 colunas. */
+.gs-destino-row {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+/* Posição/tamanho vêm de .tab-header-actions (geonetwork.css) - só o
+   comportamento de desabilitado é específico daqui. */
+.gs-autodetect-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.gs-autodetect-candidates {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.gs-autodetect-candidate {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--fg);
+}
+
+.gs-autodetect-candidate:hover {
+    border-color: var(--accent);
+    background: #fff5f5;
+}
+
+.gs-name-preview {
+    display: block;
+    margin-top: 6px;
+    color: var(--fg-muted);
+    font-size: 12px;
+}
+
+.gs-name-preview.gs-warning-text {
+    color: var(--accent);
+    font-weight: 600;
+}
+
+/* Retângulo de borda tracejada pras mensagens de status (checagem de tabela,
+   busca automática, aviso de nome divergente da tabela) - mesmo padrão já
+   usado no GN pra caixas de destaque (.manual-form-wrap/.extra-accordion,
+   geonetwork.css). Classe reutilizável (não mais por ID) - já são 3 usos.
+   Escondido quando vazio (:empty cobre os que só têm texto; os que têm
+   spinner/lista/botão dentro têm o show/hide feito via JS). */
+.gs-status-box {
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    background: #fafbfc;
+    padding: 10px 14px;
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--fg-muted);
+}
+
+.gs-status-box:empty {
+    display: none;
+}
+
+/* <small> tem font-size menor por padrão do navegador (~80% do herdado) -
+   #gs-datastore-check (que é a própria <small>) escapa disso porque o
+   font-size:12px do .gs-status-box acima é aplicado direto nela;
+   #gs-autodetect-status é uma <small> ANINHADA dentro de #gs-autodetect-box
+   (um <div>), então precisa do próprio font-size explícito pra não ficar
+   menor que o texto do outro retângulo. */
+#gs-autodetect-status {
+    font-size: 12px;
+}
+
+.gs-status-box.gs-warning-text {
+    color: var(--accent);
+    font-weight: 600;
+    border-color: var(--accent);
+}
+
+/* Botão dentro da caixa de aviso (ex.: "Usar nome da tabela") - compacto,
+   mesmo tamanho dos outros botões .btn-icon.accent do painel. */
+.gs-status-box .btn-icon {
+    margin-left: 6px;
+    font-size: 11px;
+    padding: 3px 10px;
+}
+
+/* Spinner circular inline - mesmo estilo do .search-spinner (GN), mas com
+   @keyframes rotação pura (spin-simple, styles.css) por não estar posicionado
+   em absolute/top:50% como o do GN (esse spin do GN embute um translateY). */
+.gs-mini-spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin-right: 6px;
+    vertical-align: middle;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin-simple 0.7s linear infinite;
+}
+
+/* Posição/tamanho vêm de .tab-header-actions (geonetwork.css) - só o
+   comportamento de desabilitado é específico daqui. */
+#gs-pull-gn-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+/* ── Aba Estilos: linha "botão Escolher arquivo... + campo Nome" ────────────────
+   Usada tanto no Estilo Principal (#gs-style-name-group, 2 itens: botão+input,
+   sem o +) quanto nos Estilos Adicionais (#gs-add-style-file-group, 3 itens:
+   botão+input+botão "+" - com o modificador .gs-addstyle-row--plus, que abre a
+   3ª coluna só quando ela realmente é usada). align-items:stretch (não end) -
+   tentar igualar botão e input só no padding não bate exato (métricas internas
+   de <button> vs <input> diferem um pouco no Chromium mesmo com padding/
+   font-size iguais); com stretch, o item mais alto dita a altura da linha e os
+   outros esticam pra bater exato, sem precisar acertar padding na mão. */
+.gs-addstyle-row {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: stretch;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.gs-addstyle-row.gs-addstyle-row--plus {
+    grid-template-columns: 1fr 1fr 32px;
+}
+
+#gs-style-file-btn,
+#gs-add-style-file-btn {
+    grid-column: 1;
+}
+
+#gs-style-name,
+#gs-add-style-name {
+    grid-column: 2;
+}
+
+/* Fonte 'qgis' (só existe no Estilo Principal): botão "Escolher arquivo..."
+   escondido - o input de nome ocupa a linha toda em vez de ficar preso na
+   2ª coluna (metade direita). Classe alternada por onGsStyleSourceChange. */
+.gs-addstyle-row--solo #gs-style-name {
+    grid-column: 1 / -1;
+}
+
+.gs-addstyle-row .btn-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.gs-addstyle-row .btn-icon.accent {
+    grid-column: 3;
+    padding: 0;
+    font-size: 18px;
+}
+
+/* Linha "Estilo existente + botão +" dos Estilos Adicionais - select na altura
+   NATURAL do .custom-select-trigger (mesma de "Estilo existente" do Estilo
+   Principal, que não tem +), com o botão + esticando (align-items:stretch)
+   pra acompanhar, igual ao mesmo princípio usado em .gs-addstyle-row acima. */
+.gs-existing-plus-row {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+}
+
+.gs-existing-plus-row>div {
+    flex: 1;
+    min-width: 0;
+}
+
+.gs-existing-plus-row .btn-icon.accent {
+    flex-shrink: 0;
+    width: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-size: 18px;
+}
+
+/* ── Aba Estilos: preview desabilitado (RF05/RF06 ainda não implementados) ─────── */
+.gs-coming-soon {
+    color: var(--fg-muted);
+    font-style: italic;
+    font-size: 13px;
+    margin: 0;
+}

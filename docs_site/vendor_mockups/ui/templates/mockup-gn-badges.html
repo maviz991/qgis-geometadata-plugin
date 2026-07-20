@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <!-- styles.css: variáveis (--accent, --border, etc.) e reset. geonetwork.css: as
+         classes .gn-sync-badge.* de verdade, com as MESMAS cores do editor. -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/geonetwork.css">
+</head>
+
+<body style="overflow:auto;height:auto;min-height:100%;">
+    <div style="padding:18px 22px;display:flex;flex-direction:column;align-items:flex-start;gap:10px;font-family:ui-sans-serif,system-ui,sans-serif;">
+
+        <div class="gn-sync-badge sys_synced" style="cursor:default;">
+            <span class="gn-sync-dot"></span><span>Sincronizado</span>
+        </div>
+        <div class="gn-sync-badge sys_modified" style="cursor:default;">
+            <span class="gn-sync-dot"></span><span>Modificado</span>
+        </div>
+        <div class="gn-sync-badge sys_update_available" style="cursor:default;">
+            <span class="gn-sync-dot"></span><span>Atualização disponível</span>
+        </div>
+        <div class="gn-sync-badge sys_not_found" style="cursor:default;">
+            <span class="gn-sync-dot"></span><span>Não Encontrado (Geohab)</span>
+        </div>
+        <div class="gn-sync-badge db_synced" style="cursor:default;">
+            <span class="gn-sync-dot"></span><span>Sincronizado (DB)</span>
+        </div>
+        <div class="gn-sync-badge db_modified" style="cursor:default;">
+            <span class="gn-sync-dot"></span><span>Modificado (DB)</span>
+        </div>
+        <div class="gn-sync-badge local_synced" style="cursor:default;">
+            <span class="gn-sync-dot"></span><span>Sincronizado (Local)</span>
+        </div>
+        <div class="gn-sync-badge offline_saved" style="cursor:default;">
+            <span class="gn-sync-dot"></span><span>Salvo (Offline)</span>
+        </div>
+        <div class="gn-sync-badge error" style="cursor:default;">
+            <span class="gn-sync-dot"></span><span>Erro ao verificar</span>
+        </div>
+    </div>
+    <script>
+        (function () {
+            function report() {
+                if (window.parent === window) return;
+                window.parent.postMessage({ docMockupHeight: document.documentElement.scrollHeight }, "*");
+            }
+            window.addEventListener("load", function () { report(); setTimeout(report, 200); });
+            window.addEventListener("resize", report);
+        })();
+    </script>
+</body>
+
+</html>

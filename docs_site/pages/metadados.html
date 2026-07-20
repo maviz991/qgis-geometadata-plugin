@@ -1,0 +1,117 @@
+<div class="doc-hero">
+    <h1>Metadados (GeoNetwork)</h1>
+    <p class="lead">Criar, editar e publicar um metadado no catálogo institucional Geohab.</p>
+</div>
+
+<h2>1. Criar um novo metadado</h2>
+<ol class="doc-steps">
+    <li><strong>Carregue a camada</strong> no QGIS (local ou do banco PostgreSQL) e deixe-a <strong>selecionada</strong>
+        no painel de camadas.</li>
+    <li>Abra o plugin e clique em <strong>Catálogo Geohab</strong> na Home (ou <strong>Catálogo → Editor de
+            Metadado</strong>).</li>
+    <li>O <strong>Título</strong> (baseado no nome da camada) e a <strong>Extensão Geográfica</strong> (Bounding
+        Box) já vêm preenchidos automaticamente.</li>
+    <li>Complete os campos obrigatórios: <strong>Resumo</strong> e <strong>Palavras-chave</strong> (separadas por
+        vírgula ou ponto-e-vírgula).</li>
+    <li>Em <strong>Escala</strong>, digite só o número (ex.: <code>5000</code>) - o plugin extrai automaticamente
+        de formatos como <code>1:5.000</code>. Veja o <a href="escala-equivalente.html">guia de escala
+            equivalente</a> se não souber qual valor usar.</li>
+    <li>Use o menu <strong>Setores CDHU</strong> pra preencher o contato automaticamente com um preset (ex.:
+        "DPDU").</li>
+    <li><strong>(Opcional)</strong> Clique em <strong>Associar Camada</strong> pra vincular um serviço WMS/WFS já
+        publicado no GeoServer.</li>
+    <li>Salve com <strong>Arquivo → Continuar Depois</strong> (rascunho) ou publique de vez com <strong>Catálogo →
+            Publicar Metadado</strong> (requer login).</li>
+</ol>
+
+<h2>2. Editar um metadado existente</h2>
+<p>Selecione a camada cujo metadado já foi salvo (local, no banco ou no Geohab) e abra o editor - o plugin detecta
+    e preenche o formulário automaticamente. A <strong>Extensão Geográfica</strong> é sempre recalculada a partir
+    do estado atual da camada, mesmo sobre um metadado antigo, pra nunca publicar um bounding box desatualizado.</p>
+<p>Também é possível carregar um XML MGB&nbsp;2.0 externo via <strong>Arquivo → Importar Metadado</strong>; ao
+    republicar, o plugin preserva o UUID original em vez de gerar um novo, então a operação atualiza o registro
+    existente em vez de duplicá-lo.</p>
+
+<h2 id="niveis-de-verificacao">3. Badge de sincronização</h2>
+<p>Ao lado das abas do formulário, um badge mostra se o que está no formulário bate com alguma fonte de verdade
+    (Geohab, banco de dados ou arquivo local). Clique nele pra ver o detalhe; o botão <strong>↻</strong> ao lado
+    força uma nova verificação, ignorando o resultado em cache.</p>
+
+<div class="doc-mockup">
+    <div class="doc-mockup-bar"><span class="dots"><span></span><span></span><span></span></span>Pré-visualização
+        real da interface</div>
+    <iframe src="vendor/ui/templates/mockup-gn-badges.html"></iframe>
+</div>
+
+<p>A cor/confiança do badge muda de acordo com o <strong>nível de verificação</strong> disponível no momento:</p>
+<table>
+    <tr>
+        <th>Nível</th>
+        <th>Quando aparece</th>
+        <th>Estados possíveis</th>
+    </tr>
+    <tr>
+        <td><strong>Sistema</strong> (saturado)</td>
+        <td>Logado no Geohab - compara o formulário direto com o que está publicado lá.</td>
+        <td><code>Sincronizado</code>, <code>Modificado</code>, <code>Atualização disponível</code>, <code>Não
+                Encontrado (Geohab)</code></td>
+    </tr>
+    <tr>
+        <td><strong>Banco/Local</strong> (dessaturado)</td>
+        <td>Sem login, mas a camada é do banco PostgreSQL (DB) ou tem um XML sidecar salvo ao lado dela (Local).</td>
+        <td><code>Sincronizado (DB/Local)</code>, <code>Modificado (DB/Local)</code>, <code>Não Encontrado
+                (DB/Local)</code></td>
+    </tr>
+    <tr>
+        <td><strong>Offline</strong> (cinza)</td>
+        <td>Sem login e sem uma camada de banco/arquivo identificável - só o rascunho da sessão atual.</td>
+        <td><code>Salvo (Offline)</code>, <code>Modificado (Offline)</code></td>
+    </tr>
+</table>
+
+<div class="doc-note warn">
+    <span>⚠️</span>
+    <span>Fora do nível <strong>Sistema</strong>, o plugin não tem como saber se existe uma versão mais nova <em>no
+            Geohab</em> - faça login para a verificação mais confiável antes de decidir se precisa atualizar algo.
+    </span>
+</div>
+
+<h3>Atualização disponível</h3>
+<p>Quando o formulário diverge do que está publicado no Geohab (título, resumo ou palavras-chave diferentes), um
+    aviso aparece no topo do editor:</p>
+<div class="doc-mockup">
+    <div class="doc-mockup-bar"><span class="dots"><span></span><span></span><span></span></span>Pré-visualização
+        real da interface</div>
+    <iframe src="vendor/ui/templates/mockup-gn-update-banner.html"></iframe>
+</div>
+<p><strong>Atualizar agora</strong> traz os dados do servidor pro formulário (sobrescrevendo edições locais não
+    salvas). O X só esconde o aviso até a próxima verificação.</p>
+
+<h2>4. Ações do menu Arquivo</h2>
+<table>
+    <tr>
+        <th>Ação</th>
+        <th>O que faz</th>
+    </tr>
+    <tr>
+        <td><strong>Continuar Depois</strong></td>
+        <td>Salva o progresso atual (sidecar <code>.xml</code> junto da camada, ou tabela PostgreSQL) sem publicar
+            no Geohab.</td>
+    </tr>
+    <tr>
+        <td><strong>Exportar Metadado</strong></td>
+        <td>Gera o XML MGB&nbsp;2.0 e salva no seu computador - útil para backup ou envio manual.</td>
+    </tr>
+    <tr>
+        <td><strong>Importar Metadado</strong></td>
+        <td>Carrega um XML existente pra edição, preservando o UUID original.</td>
+    </tr>
+    <tr>
+        <td><strong>Baixar Metadado</strong></td>
+        <td>Busca um registro já publicado no Geohab pelo nome/UUID e carrega no formulário.</td>
+    </tr>
+    <tr>
+        <td><strong>Descartar Alterações</strong></td>
+        <td>Volta o formulário para o último estado salvo, descartando edições não persistidas.</td>
+    </tr>
+</table>

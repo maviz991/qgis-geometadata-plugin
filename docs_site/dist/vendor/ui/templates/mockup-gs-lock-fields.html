@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/geonetwork.css">
+    <link rel="stylesheet" href="css/geoserver.css">
+</head>
+
+<body style="overflow:auto;height:auto;min-height:100%;">
+    <div style="padding:20px 24px;max-width:420px;display:flex;flex-direction:column;gap:22px;">
+
+        <div class="form-group">
+            <label for="mock-locked">Nome da camada publicada <span class="req">*</span>
+                <button type="button" class="gs-lock-btn" title="Campo bloqueado - detectado automaticamente">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                </button>
+            </label>
+            <input id="mock-locked" type="text" value="cadastro_unidades_2026" disabled>
+            <small class="gs-name-preview">🔒 Bloqueado - clique no cadeado para editar manualmente.</small>
+        </div>
+
+        <div class="form-group">
+            <label for="mock-unlocked">Nome da camada publicada <span class="req">*</span>
+                <button type="button" class="gs-lock-btn" title="Campo liberado para edição manual">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
+                    </svg>
+                </button>
+            </label>
+            <input id="mock-unlocked" type="text" value="cadastro_unidades_2026">
+            <small class="gs-name-preview">🔓 Liberado - editável manualmente.</small>
+        </div>
+
+    </div>
+    <script>
+        (function () {
+            function report() {
+                if (window.parent === window) return;
+                window.parent.postMessage({ docMockupHeight: document.documentElement.scrollHeight }, "*");
+            }
+            window.addEventListener("load", function () { report(); setTimeout(report, 200); });
+            window.addEventListener("resize", report);
+        })();
+    </script>
+</body>
+
+</html>

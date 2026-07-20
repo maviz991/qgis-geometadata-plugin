@@ -11,7 +11,7 @@ GeoServer em geoserver_bridge.py ('gsBridge').
 """
 
 import os
-from qgis.PyQt.QtCore import QObject, pyqtSignal, pyqtSlot
+from qgis.PyQt.QtCore import QObject, QUrl, pyqtSignal, pyqtSlot
 from ..core.plugin_config import config_loader
 
 class MainBridge(QObject):
@@ -202,8 +202,25 @@ class MainBridge(QObject):
             "version": "3.0.0-beta",
             "user": username,
             "is_logged": is_logged,
-            "cda_url": config_loader.get_cda_url()
+            "cda_url": config_loader.get_cda_url(),
+            "docs_url": self._resolve_docs_url()
         }
+
+    def _resolve_docs_url(self):
+        """URL do manual (card "Documentação" da Home). Se 'docs_url' estiver
+        configurado em config.json (depois de publicado no MinIO), usa ele. Até lá,
+        abre o manual local em docs_site/dist/index.html direto do disco - o clique
+        passa por window.open() no JS, que o _ExternalLinkPage.createWindow()
+        (GeoMetadata_dialog.py) redireciona pro navegador padrão do sistema mesmo
+        sendo um file://, então não precisa de servidor nenhum pra funcionar."""
+        configured = config_loader.get_docs_url()
+        if configured:
+            return configured
+        plugin_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        local_index = os.path.join(plugin_root, 'docs_site', 'dist', 'index.html')
+        if os.path.isfile(local_index):
+            return QUrl.fromLocalFile(local_index).toString()
+        return ""
 
     @pyqtSlot()
     def check_services_status(self):

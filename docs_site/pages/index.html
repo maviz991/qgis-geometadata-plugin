@@ -1,0 +1,75 @@
+<div class="doc-hero">
+    <h1>Manual do Geohab Plugin</h1>
+    <p class="lead">Plugin oficial da CDHU para criação, edição e publicação de metadados geoespaciais no padrão
+        MGB&nbsp;2.0, diretamente do QGIS.</p>
+</div>
+
+<div class="doc-card-grid">
+    <a class="doc-quick-card" href="interface.html">
+        <h3>Visão Geral da Interface</h3>
+        <p>Header, menus, Home e os indicadores de status.</p>
+    </a>
+    <a class="doc-quick-card" href="metadados.html">
+        <h3>Metadados (GeoNetwork)</h3>
+        <p>Criar, editar e publicar um metadado no catálogo.</p>
+    </a>
+    <a class="doc-quick-card" href="geoserver.html">
+        <h3>Publicar Camada (GeoServer)</h3>
+        <p>Enviar a camada do QGIS pro servidor de mapas.</p>
+    </a>
+    <a class="doc-quick-card" href="faq.html">
+        <h3>Solução de Problemas</h3>
+        <p>Erros comuns e o que fazer em cada um.</p>
+    </a>
+</div>
+
+<h2>1. Introdução</h2>
+<p>Com o Geohab Plugin você pode:</p>
+<ul>
+    <li>Criar metadados ricos e padronizados diretamente no QGIS, seguindo o padrão ISO&nbsp;19115 (MGB&nbsp;2.0).
+    </li>
+    <li>Carregar e editar metadados já existentes.</li>
+    <li>Publicar camadas vetoriais no GeoServer (registro lógico PostGIS ou upload de arquivo) e exportar o estilo
+        (SLD) direto da simbologia do QGIS.</li>
+    <li>Associar suas camadas a serviços web (WMS/WFS) do GeoServer.</li>
+    <li>Exportar metadados para o Geohab com segurança e consistência, com autenticação corporativa (SSO).</li>
+</ul>
+
+<h2>2. Instalação</h2>
+<ol class="doc-steps">
+    <li>Receba o arquivo <code>.zip</code> do plugin.</li>
+    <li>No QGIS, vá até o menu <strong>Complementos → Gerenciar e Instalar Complementos...</strong></li>
+    <li>Na janela que se abre, selecione a aba <strong>Instalar a partir de ZIP</strong>.</li>
+    <li>Clique no botão <code>...</code> e selecione o arquivo <code>.zip</code> que você recebeu.</li>
+    <li>Clique em <strong>Instalar Complemento</strong>. Um novo ícone da CDHU aparece na barra de ferramentas.</li>
+</ol>
+
+<div class="doc-note">
+    <span>ℹ️</span>
+    <span><strong>Primeiro uso:</strong> na primeira vez que o plugin carrega, ele verifica se o
+        <strong>PyQtWebEngine</strong> (a interface visual nativa, que já vem com o QGIS) está disponível. Se algo
+        estiver faltando, uma tela de instalação aparece sozinha com o que precisa ser resolvido - não é algo que
+        você precisa configurar manualmente.
+    </span>
+</div>
+
+<h2>3. Login corporativo (SSO)</h2>
+<p>O acesso ao Geohab usa sua <strong>conta corporativa CDHU</strong> (Microsoft Entra ID). Ao clicar em
+    <strong>Entrar</strong>, o próprio plugin exibe a página de login (dentro da sua janela, sem abrir o
+    navegador do sistema); após confirmar sua conta, ele volta sozinho pra tela principal e passa a exibir seu
+    nome no canto superior direito.
+</p>
+
+<div class="doc-mockup">
+    <div class="doc-mockup-bar"><span class="dots"><span></span><span></span><span></span></span>Pré-visualização
+        real da interface</div>
+    <iframe src="vendor/ui/templates/mockup-login-card.html"></iframe>
+</div>
+<p class="doc-mockup-caption" style="margin-top:-14px">Tela de login - o mesmo HTML/CSS do plugin, sem screenshot.
+</p>
+
+<p>Login é necessário para: associar/publicar camadas, exportar para o Geohab e conferir se um metadado está
+    <strong>sincronizado</strong> com o que já está publicado. Sem login, o plugin continua funcionando em modo
+    offline (salvando localmente/no banco), mas com verificações limitadas - veja
+    <a href="metadados.html#niveis-de-verificacao">os níveis de verificação</a>.
+</p>
