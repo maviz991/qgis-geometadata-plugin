@@ -330,7 +330,21 @@ class _GsSyncCheckWorker(QThread):
                             adds = json.loads(adds_json) if adds_json else []
                             r_adds = remote_styles.get('additional') or []
                             r_adds_list = [(a.get('name') or '', a.get('style_workspace') or '') for a in r_adds]
-                            local_adds_list = [(a.get('existing_name') or a.get('name') or '', a.get('existing_workspace') or self._workspace) for a in adds]
+                            # workspace vazio só cai pro workspace de publicação quando o
+                            # estilo foi CRIADO nessa publicação ('file'/'qgis' - aí sim
+                            # sempre nasce no workspace de destino, mesma regra de
+                            # derive_style_fields/_extract). Pra um estilo 'existing'
+                            # (já existente, escolhido da lista), workspace vazio é um
+                            # ESTILO GLOBAL de verdade - forçar o workspace de publicação
+                            # aqui inventava uma divergência contra o lado remoto (que
+                            # corretamente reporta '' pra estilo global).
+                            local_adds_list = [
+                                (
+                                    a.get('existing_name') or a.get('name') or '',
+                                    (a.get('existing_workspace') or '') if a.get('source') == 'existing' else self._workspace
+                                )
+                                for a in adds
+                            ]
 
                             if len(r_adds_list) != len(local_adds_list):
                                 styles_match = False
