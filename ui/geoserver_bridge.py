@@ -258,6 +258,58 @@ class GeoServerBridge(QObject):
         return draft
 
     @staticmethod
+    def _build_metadata_link_url(uuid, config_loader_instance):
+        """Fórmula única da URL do "Link de metadados" (REST featureType, ver
+        register_postgis_featuretype) - usada tanto na publicação de verdade
+        (_resolve_metadata_link_url) quanto na prévia só-consulta mostrada na aba
+        Identificação (info.metadata_link_url, ver _on_layer_info_ready) - as duas
+        precisam concordar, senão a prévia mente sobre o que vai ser publicado."""
+        if not uuid:
+            return ''
+        records_url = (config_loader_instance.get_geonetwork_url() or {}).get('records_url')
+        if not records_url:
+            return ''
+        return f"{records_url}/{uuid}/formatters/xml"
+
+    def _resolve_metadata_link_url(self, layer, config_loader_instance):
+        """Monta a URL do "Link de metadados" (REST featureType, ver
+        register_postgis_featuretype) pro registro MGB dessa camada no GeoNetwork - só
+        quando existe um metadata_uuid de verdade SALVO (banco/sidecar via
+        persistence_service), nunca um rascunho não publicado (linkaria pra um registro
+        que ainda não existe no catálogo, quebrando o link). Roda na main thread (chamada
+        de publish_layer, uma ação explícita do usuário - custo aceitável, diferente do
+        antigo problema de get_active_layer_publish_info rodando isso a cada troca de
+        camada, já corrigido - ver _GsActiveLayerInfoWorker)."""
+        # Prints de diagnóstico temporários (não é logging permanente do projeto) - o
+        # usuário confirmou que a camada testada JÁ tem metadado no GeoNetwork, mas o link
+        # saiu vazio na publicação; sem saber em qual dos 4 pontos isso falha, qualquer
+        # tentativa de correção seria chute (mesmo erro que já custou caro com o SRS/[GS-500]).
+        try:
+            ps = getattr(self._dialog, 'persistence_service', None)
+            if not ps or not layer:
+                print(f"GeoMetadata [metadata link] abortado: persistence_service={ps!r} layer={layer!r}")
+                return None
+            xml_content = ps.load(layer)
+            if not xml_content:
+                print("GeoMetadata [metadata link] abortado: ps.load(layer) não retornou XML nenhum (nada salvo pra essa camada no banco/sidecar)")
+                return None
+            from ..core import xml_parser
+            saved = xml_parser.parse_xml_to_dict(xml_content, is_string=True) or {}
+            uuid = saved.get('metadata_uuid')
+            if not uuid:
+                print(f"GeoMetadata [metadata link] abortado: XML salvo achado, mas sem metadata_uuid. Chaves presentes: {list(saved.keys())}")
+                return None
+            url = self._build_metadata_link_url(uuid, config_loader_instance)
+            if not url:
+                print(f"GeoMetadata [metadata link] abortado: get_geonetwork_url() não tem 'records_url' - {config_loader_instance.get_geonetwork_url()!r}")
+                return None
+            print(f"GeoMetadata [metadata link] OK - uuid={uuid} url={url}")
+            return url
+        except Exception as exc:
+            print(f"GeoMetadata [metadata link] EXCEÇÃO: {exc}")
+            return None
+
+    @staticmethod
     def _merge_layer_metadata(draft, local_metadata, gn_remote):
         """Mesma prioridade de preenchimento que _load_layer_metadata tinha: 1) GeoNetwork
         online (mais confiável, reflete o que está de fato publicado) 2) banco/sidecar
@@ -337,6 +389,18 @@ class GeoServerBridge(QObject):
         info['title'] = md.get('title') or info.get('name') or ''
         info['abstract'] = md.get('abstract') or ''
         info['keywords'] = md.get('MD_Keywords') or []
+        # Prévia só-consulta (aba Identificação, ver geoserver.js) do que
+        # register_postgis_featuretype vai de fato usar como "Link de metadados" na
+        # publicação (_resolve_metadata_link_url) - mesmo uuid já resolvido acima (banco/
+        # rascunho/GeoNetwork), sem bater no banco de novo. Vazio quando a camada ainda não
+        # tem metadado nenhum salvo - nesse caso a publicação também não vai criar o link.
+        metadata_uuid = md.get('metadata_uuid') or ''
+        info['metadata_uuid'] = metadata_uuid
+        if metadata_uuid:
+            from ..core.plugin_config import config_loader
+            info['metadata_link_url'] = self._build_metadata_link_url(metadata_uuid, config_loader)
+        else:
+            info['metadata_link_url'] = ''
 
         saved = result.get('saved_destination') or {}
         info['saved_workspace'] = saved.get('workspace') or ''
@@ -751,6 +815,14 @@ class GeoServerBridge(QObject):
             self.gs_publish_done.emit(False, info.get('reason') or '[UI-004] Camada não publicável.', published_name, '', '')
             return
 
+        # CRS que o QGIS já conhece da própria camada (ex.: 'EPSG:4674') - tem que ser lido
+        # aqui, na main thread (layer.crs() é API do QGIS) - ver register_postgis_featuretype
+        # sobre por que isso importa (SRS Nativo ficava vazio na UI do GeoServer sem isso).
+        try:
+            srs = layer.crs().authid() or None
+        except Exception:
+            srs = None
+
         keywords = list(keywords) if keywords else []
 
         try:
@@ -768,9 +840,11 @@ class GeoServerBridge(QObject):
         from ..core.plugin_config import config_loader
         from .geoserver_workers import _GsPublishWorker
         publish_title = title or published_name
+        metadata_link_url = self._resolve_metadata_link_url(layer, config_loader)
         self._publish_worker = _GsPublishWorker(
             geoserver_service, workspace, datastore, info['table'], published_name,
-            publish_title, abstract, keywords, config_loader, style_task
+            publish_title, abstract, keywords, config_loader, style_task, srs=srs,
+            metadata_link_url=metadata_link_url
         )
         self._publish_worker.done.connect(
             lambda success, message, name: self._on_publish_done(

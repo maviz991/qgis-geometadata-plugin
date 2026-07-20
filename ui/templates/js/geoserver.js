@@ -597,6 +597,18 @@ function _renderGsLayerCard(info) {
         _gsKeywords = info.saved_keywords.slice();
         _renderGsKeywords();
     }
+    // Prévia só-consulta do link de metadados (aba Identificação) - mesmo uuid/URL que
+    // register_postgis_featuretype vai de fato gravar na publicação (ver
+    // GeoServerBridge._resolve_metadata_link_url/_build_metadata_link_url) - não editável
+    // aqui de propósito, é só pra confirmar visualmente se vai ou não ser criado.
+    var metaLinkBox = document.getElementById('gs-metadata-link-preview');
+    if (metaLinkBox) {
+        if (info.metadata_link_url) {
+            metaLinkBox.innerHTML = 'Será vinculado ao publicar: <a href="' + escHtml(info.metadata_link_url) + '" target="_blank">' + escHtml(info.metadata_link_url) + '</a>';
+        } else {
+            metaLinkBox.textContent = 'Nenhum metadado salvo pra essa camada ainda - o link de metadados não será criado ao publicar.';
+        }
+    }
     _gsDbHasWorkspace = !!info.saved_workspace;
     if (info.saved_workspace) {
         _gsQueueWorkspaceDatastore(info.saved_workspace, info.saved_datastore);

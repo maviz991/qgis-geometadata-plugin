@@ -137,5 +137,46 @@ Falha no GeoNetwork: 400 Client Error: Bad Request for url: https://geo-d.cdhu.s
 > Melhoria de UI (pedido do usuário, com prints comparando a busca de metadado com a de contatos): lista de resultados usando HTML/CSS avulso (`.gn-search-result`), sem o mesmo padrão visual da busca de contatos, e o modal crescia/encolhia conforme o número de resultados mudava.
 > Fix: `_renderGnSearchResults()` (`app.js`) reaproveitando as classes `.suggestion-item` já usadas na busca de contatos (mesmo hover, mesma estrutura) - sem a badge "Catálogo Online" (irrelevante aqui, já que essa busca é sempre no catálogo online). `.gn-search-results` (`modals.css`) trocado de `max-height: 260px` pra `height: 280px` fixo (~5-6 linhas visíveis), pra não redimensionar o modal a cada busca.
 
+### Registro de bug - 2026-07-20 - travamentos de UI (painel GS, login SSO, diálogo principal) e publicação GeoServer
+
+> Bug 13 (RESOLVIDO): badge do painel GS às vezes ficava preso "verificando" pra sempre, e o banner "Atualização disponível" reaparecia sozinho segundos depois de um pull que tinha acabado de sincronizar tudo.
+> Causa: `GeoServerBridge.check_gs_sync` guardava o worker (`_GsSyncCheckWorker`) num único atributo de instância - uma segunda chamada (camada/login mudando rápido, ou o badge combinado do editor GN pedindo a mesma checagem) sobrescrevia essa referência antes do worker anterior terminar, órfãozando a QThread em voo (PyQt descarta o objeto, o sinal `done` nunca emite). Resposta atrasada de uma checagem anterior ao pull, quando chegava, sobrescrevia o badge recém-corrigido.
+> Fix: `self._sync_check_worker` (slot único) virou `self._sync_check_workers` (lista, cada worker se autorremove ao terminar). JS ganhou `_gsOnlineInFlightKey` (evita segunda checagem pra mesma camada+destino em voo) e `_gsInvalidatePendingLiveCheck()` (chamada após publish/"Continuar Depois"/pull/atualizar estilo, descarta checagem antiga). Bug irmão: respostas de erro do `check_gs_sync` não incluíam `workspace`/`datastore`/`published_name`, então eram descartadas por não bater a key esperada - corrigido incluindo os três campos em toda emissão de erro.
+
+> Bug 14 (RESOLVIDO): skeleton do editor GN (shimmer nos campos) ficava travado pra sempre numa camada nunca documentada (sem rascunho nem metadado salvo) - `color: transparent` + `pointer-events: none` deixava o formulário inteiro inutilizável.
+> Causa: `_removeGnSkeleton()` só era chamado de dentro de `populateForm(data)`, e `_loadFormForLayer` pula `populateForm` justamente quando não há rascunho nem metadado salvo.
+> Fix: `_removeGnSkeleton()` explícito nos dois branches de `_loadFormForLayer` que pulam `populateForm`.
+
+> Bug 15 (RESOLVIDO): ir pra "Serviços > Configurar Camada" (ou clicar na logo) nunca mostrava o spinner de transição de painel - tela congelava como antes da feature existir.
+> Causa: os dois links em `main.html` chamavam `bridge.navigate(...)` direto, pulando a função JS `navigate()` (quem mostra o spinner e roda os hooks de saída antes de trocar o painel).
+> Fix: `onclick="bridge.navigate(...)"` → `onclick="navigate(...)"` nos dois pontos.
+
+> Bug 16 (RESOLVIDO, CRÍTICO): abrir "Configurar Camada" ou trocar de camada ativa com o painel aberto travava a UI inteira (inclusive a `QWebEngineView`, mesma thread do Qt), sem exceção - o editor GN sofria bem menos do mesmo tipo de problema.
+> Causa: o GN tem atalho local (`load_draft()`, arquivo JSON, sem rede) e só cai pro banco quando não há rascunho. O GS não tinha atalho nenhum: `get_active_layer_publish_info` abria **duas conexões `psycopg2.connect()` separadas**, direto na thread principal, toda vez.
+> Fix: `core/geoserver_service.py` ganhou `resolve_layer_db_params()` (API do QGIS, main thread) separado de `fetch_saved_records()` (uma conexão, duas queries, roda em background). Novo worker `_GsActiveLayerInfoWorker` (QThread); `get_active_layer_publish_info` virou fire-and-forget com sinal `gs_layer_info_ready`. JS (`_loadGsLayerInfo`/`checkGsPublishStatus`) passou a usar `_requestGsLayerInfo`, um registro de pendências compartilhado que evita duas buscas em paralelo pra mesma camada.
+
+> Bug 17 (RESOLVIDO): depois de um pull com estilos adicionais configurados, fechar/reabrir o plugin (ou trocar de camada e voltar) fazia o badge voltar a "Modificado" sozinho, sem edição nenhuma.
+> Causa: `get_active_layer_publish_info` nunca devolvia `saved_style_additional_json` pro JS (embora `save_publish_destination`/`_build_publish_xml` gravassem certinho no banco) - `_renderGsLayerCard` só restaura os estilos adicionais quando esse campo existe, então a checagem ao vivo comparava "nada local" contra "o que de fato existe no GeoServer".
+> Fix: `info['saved_style_additional_json'] = saved.get('style_additional_json') or ''` adicionado em `_on_layer_info_ready` (`geoserver_bridge.py`).
+
+> Bug 18 (RESOLVIDO): durante o login SSO, o spinner nativo (`_SpinnerWidget`) ficava visivelmente parado por alguns segundos, voltando a girar só depois.
+> Causa: `GatewaySSOWidget._try_verify()` fazia `requests.Session().get(..., timeout=10)` direto na thread principal do Qt, travando o event loop inteiro (inclusive o `QTimer` do spinner) a cada tentativa/retry.
+> Fix: nova `_VerifySessionWorker(QThread)` (`gateway_login_dialog.py`) - requisição em background, resultado via sinal `done` pro slot `_on_verify_result`.
+
+> Bug 19 (RESOLVIDO): com o painel do plugin aberto, minimizar ou clicar no QGIS "travava"/"piscava" - impossível trocar de camada ativa ou mexer no mapa enquanto o plugin estava aberto.
+> Causa: `GeoMetadata.run()` usava `self.dlg.exec_()`, que torna o diálogo modal (`WindowModal`) em relação à janela principal do QGIS. Uma correção anterior contra dialog duplicado (crash de reentrância) só passou a aplicar essa modalidade de forma mais consistente - o bloqueio já existia antes, só não era percebido.
+> Fix: `exec_()` → `show()` (não-modal) em `GeoMetadata.py`. Guarda contra dialog duplicado agora checa `self.dlg.isVisible()` (traz a instância existente pra frente) em vez de depender do bloqueio do `exec_()`. `unload()` fecha o diálogo explicitamente (pode ficar aberto independente do plugin recarregar, agora que não é mais modal).
+
+> Bug 20 (REVERTIDO, sem solução ainda): camadas publicadas ficavam com "SRS Nativo" vazio no admin do GeoServer (só "SRS Declarado" preenchido).
+> Tentativa: `register_postgis_featuretype` passou a mandar `nativeCRS`/`srs`/`projectionPolicy: NONE` explicitamente (`layer.crs().authid()`) no payload JSON de criação do FeatureType.
+> Resultado: quebrou a publicação inteira (`[GS-500] Erro inesperado do GeoServer`) - revertido na hora, payload voltou a mandar só `name`/`nativeName`/`title`/`abstract`/`keywords`. Hipótese não verificada: forçar `nativeCRS` no binding JSON de criação é área conhecida por dar erro no GeoServer - talvez precise ir via XML, ou só num PUT depois de criar. **Em aberto.**
+
+> Bug 21 (RESOLVIDO): Link de Metadados era criado na publicação (URL certa, apontando pro registro no GeoNetwork), mas com `metadataType: 'ISO19115:2003'` - a própria tela do GeoServer avisa "Note only FGDC and TC211 metadata links show up in WMS 1.1.1 capabilities", ou seja, esse valor não ativa a exposição no `GetCapabilities`.
+> Fix: `metadataType` → `'TC211'`, `type` → `'application/xml'` (Content-Type real do endpoint `.../formatters/xml` do GeoNetwork).
+
+> Melhoria: Link de Metadados automático na publicação. `publish_layer` resolve o `metadata_uuid` já salvo de verdade pra camada (nunca de rascunho não publicado) e monta `{geonetwork records_url}/{uuid}/formatters/xml`, gravado como `metadataLinks` no FeatureType. Prévia só-consulta (não editável) adicionada na aba Identificação do painel GS (`#gs-metadata-link-preview`), reaproveitando a mesma busca que já roda ao abrir o painel.
+
+> Melhoria: overlay de spinner circular nas transições de painel (`navigate()`/`loadPanel()`, `app.js`) e skeleton shimmer (`.skeleton-field`) nos campos/card do editor GN e do painel GS enquanto os dados carregam - ocupa o espaço final do layout, sem salto quando o conteúdo chega. Fundo do `QWebEnginePage` (`GeoMetadata_dialog.py`) ajustado pra bater com `--bg` do app, evitando flash branco antes do overlay aparecer.
+
 > Melhoria de UI: adicionado spinner de carregamento no canto direito do campo de busca, reaproveitando `.search-wrap`/`.search-spinner` (mesmo padrão já usado na busca de camadas do GeoServer) - sem CSS novo, só o HTML/JS de toggle em `openGnSearchModal()`/`_renderGnSearchResults()`.
 > Bug (RESOLVIDO): o spinner apareceu levemente abaixo do centro vertical do campo. Causa: `<input>` é `inline-block` por padrão, e a centralização por `top: 50%` do `.search-spinner` fica sujeita ao espaço "fantasma" de baseline abaixo do texto (comportamento padrão de alinhamento de elementos inline). Fix: `display: block` em `.modal-search-input` (`modals.css`), eliminando o espaço fantasma.

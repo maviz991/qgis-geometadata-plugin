@@ -1,6 +1,6 @@
 # Diário de Bordo: Evolução GeoMetadata
 **Mantenedor:** Agente de Documentação  
-**Última Atualização:** 17/04/2026
+**Última Atualização:** 20/07/2026
 
 ---
 
@@ -802,3 +802,74 @@ Durante o processo de testes, o usuário percebeu dois problemas graves ("o add 
 **Bug 3: Badge com erro via AttributeError**
 * **Causa:** O `fetch_layer_styles` retornava uma lista de strings (`"ws:nome"`) em vez de um dicionário na variável `additional`, o que entrava em conflito com o `r_adds.get('name')` feito dentro do worker de sincronização.
 * **Solução:** Adequado o retorno do `fetch_layer_styles` para devolver `{'name': '...', 'style_workspace': '...'}` como exigido.
+
+---
+
+## Registro 19 - Travamentos de UI (painel GS + diálogo principal), login SSO e enriquecimento da publicação GeoServer (16-20/07/2026)
+
+### Contexto
+Sequência de testes do usuário no QGIS real do painel "Serviços > Configurar Camada" e do fluxo de publicação: spinner de carregamento não aparecia ou congelava, a UI inteira travava ao abrir o painel/trocar de camada ativa, o próprio diálogo do plugin bloqueava a interação com o QGIS por trás, o badge de sincronização voltava sozinho pra "Modificado" depois de um pull, e a publicação de camadas não gerava SRS Nativo nem Link de Metadados no GeoServer. Trabalho conduzido em rodadas curtas, testando cada fix no QGIS real entre uma mudança e outra.
+
+### O que foi feito
+1. **Corrida de sincronização do painel GS** (badge "Sincronizado/Modificado", banner "Atualização disponível").
+2. **UX de carregamento**: overlay de spinner nas transições de painel (`navigate()`/`loadPanel()`) e esqueleto (shimmer) nos campos/card enquanto os dados carregam - ocupando o espaço final do layout, sem "salto" quando o conteúdo chega.
+3. **Causa raiz do travamento geral do painel GS**: `GeoServerBridge.get_active_layer_publish_info` era síncrono (até duas conexões `psycopg2.connect()` diretas na thread principal do Qt) - convertido pra assíncrono (QThread), igual ao padrão já usado em `check_gs_sync`.
+4. **Login SSO**: verificação de sessão do gateway (`GatewaySSOWidget._try_verify`) também era síncrona na thread principal - convertida pra QThread.
+5. **Diálogo principal não-modal**: `GeoMetadata.run()` usava `QDialog.exec_()`, bloqueando a janela do QGIS enquanto o painel ficava aberto - trocado por `show()`.
+6. **Enriquecimento da publicação GeoServer**: tentativa de preencher SRS Nativo automaticamente (revertida - ver Bug 20) e Link de Metadados apontando pro registro no GeoNetwork (bem-sucedida, com ajuste de `metadataType` pra `TC211`).
+
+### Bugs Complexos Descobertos e Resolvidos
+
+**Bug 13: Worker de checagem ao vivo (`check_gs_sync`) órfão - badge preso, "Modificado" reaparecendo**
+* **Sintoma:** Às vezes o badge nunca terminava de checar (ficava preso no nível banco); outras vezes, o banner "Atualização disponível" reaparecia sozinho segundos depois de um pull que acabou de sincronizar tudo.
+* **Causa:** `GeoServerBridge.check_gs_sync` guardava o worker (`_GsSyncCheckWorker`, QThread) num único atributo de instância. Uma segunda chamada (camada/login mudando rápido, ou o badge combinado do editor GN pedindo a mesma checagem) sobrescrevia essa referência antes do worker anterior terminar - a QThread órfã perdia sua única referência Python enquanto ainda rodava em background, o PyQt descartava o objeto e o sinal `done` nunca chegava a emitir `gs_sync_checked`. Quando a resposta ATRASADA de uma checagem anterior ao pull chegava depois, sobrescrevia o badge recém-corrigido com um estado desatualizado.
+* **Fix:** `self._sync_check_worker` (slot único) virou `self._sync_check_workers` (lista) - cada worker se autorremove ao terminar. No JS, nova variável `_gsOnlineInFlightKey` evita disparar uma segunda checagem pra mesma camada+destino enquanto a primeira ainda não respondeu. Nova função `_gsInvalidatePendingLiveCheck()`, chamada nos 4 pontos onde o app confirma um estado fresco (publish/"Continuar Depois"/pull/atualizar estilo), descarta qualquer checagem que já estava em voo de ANTES da ação.
+* **Bug irmão:** respostas de erro do `check_gs_sync` (tanto o early-return da falta de `geoserver_service` quanto a exceção genérica do worker) não incluíam `workspace`/`datastore`/`published_name` - o JS descartava essas respostas por não bater a key esperada, deixando o badge preso em "verificando" pra sempre em vez de mostrar o erro. Corrigido incluindo esses três campos em toda emissão.
+
+**Bug 14: Skeleton do editor GN travado pra sempre em camada nunca documentada**
+* **Sintoma:** Abrir o Editor de Metadados numa camada nova (nunca salva) deixava os campos com o efeito shimmer (`color: transparent` + `pointer-events: none`) preso indefinidamente - formulário inteiro inutilizável.
+* **Causa:** `_removeGnSkeleton()` só era chamado de dentro de `populateForm(data)`. `_loadFormForLayer` só chama `populateForm` quando existe rascunho OU metadado salvo - pra uma camada sem nenhum dos dois, o branch correspondente simplesmente pulava `populateForm`, nunca removendo o skeleton.
+* **Fix:** `_removeGnSkeleton()` explícito nos dois branches de `_loadFormForLayer` que hoje pulam `populateForm` (gnBridge indefinido, e "sem rascunho e sem metadado salvo").
+
+**Bug 15: Menu "Configurar Camada"/logo pulando o wrapper de navegação - sem spinner, tela congelada**
+* **Sintoma:** Ir pra "Configurar Camada" (ou clicar na logo) nunca mostrava o spinner de transição, comportamento idêntico a antes da feature existir.
+* **Causa:** Os dois links (`main.html`) chamavam `bridge.navigate(...)` diretamente, pulando a função JS `navigate()` (quem mostra o spinner e roda os hooks de saída/draft antes de trocar o painel).
+* **Fix:** `onclick="bridge.navigate(...)"` → `onclick="navigate(...)"` nos dois pontos.
+
+**Bug 16 (CRÍTICO): `get_active_layer_publish_info` síncrono travando a UI toda vez**
+* **Sintoma:** Abrir "Configurar Camada" ou trocar de camada ativa com o painel aberto congelava a interface inteira (inclusive o compositor da `QWebEngineView`, que reusa a mesma thread do Qt) - sem exceção, mesmo revisitando a mesma camada. O editor GN sofria bem menos do mesmo tipo de problema.
+* **Causa:** comparando os dois fluxos: o GN dá um atalho local (`load_draft()`, arquivo JSON puro, sem rede) e só cai pro banco na primeira vez que não há rascunho. O GS não tinha esse atalho - `get_active_layer_publish_info` abria **duas conexões `psycopg2.connect()` separadas**, direto na thread principal do Qt, toda vez, sem exceção.
+* **Fix:** `core/geoserver_service.py` ganhou `resolve_layer_db_params()` (a parte que toca API do QGIS, fica na main thread) separado de `fetch_saved_records()` (uma conexão só, duas queries, roda em background). Novo worker `_GsActiveLayerInfoWorker` (QThread). `get_active_layer_publish_info` virou `pyqtSlot` fire-and-forget com um novo sinal `gs_layer_info_ready`. No JS, os dois pontos que chamavam essa info (`_loadGsLayerInfo` e `checkGsPublishStatus`) passaram a usar um registro de pendências compartilhado (`_requestGsLayerInfo`), evitando disparar a mesma busca duas vezes em paralelo.
+
+**Bug 17: `saved_style_additional_json` nunca devolvido - estilos adicionais "sumindo" a cada revisita**
+* **Sintoma:** Depois de um pull com estilos adicionais configurados, fechar e reabrir o plugin (ou trocar de camada e voltar) fazia o badge voltar a "Modificado" mesmo sem nenhuma edição.
+* **Causa:** `_build_publish_xml`/`save_publish_destination` gravam `style_additional_json` certinho no banco, mas `get_active_layer_publish_info` nunca devolvia esse campo pro JS - `_renderGsLayerCard` só restaura `_gsAdditionalStyles` quando `info.saved_style_additional_json` existe. Sem isso, a checagem ao vivo comparava "nenhum estilo adicional local" contra "os que de fato existem no GeoServer" e sempre acusava divergência.
+* **Fix:** `info['saved_style_additional_json'] = saved.get('style_additional_json') or ''` adicionado em `_on_layer_info_ready`.
+
+**Bug 18: Verificação de sessão SSO travando a UI (spinner nativo parado)**
+* **Sintoma:** Durante o login SSO (redirect de volta do gateway), o spinner nativo (`_SpinnerWidget`, QTimer de 16ms) ficava visivelmente parado por alguns segundos antes de voltar a girar.
+* **Causa:** `GatewaySSOWidget._try_verify()` fazia `requests.Session().get(..., timeout=10)` direto na thread principal do Qt, bloqueando o event loop inteiro (inclusive o `QTimer` do spinner) durante cada tentativa - repetido a cada 1.5s de retry.
+* **Fix:** nova `_VerifySessionWorker(QThread)` em `gateway_login_dialog.py` - a requisição roda em background, o resultado chega via sinal `done` pro slot `_on_verify_result` (main thread).
+
+**Bug 19: Diálogo principal modal bloqueando o QGIS**
+* **Sintoma:** Com o painel do plugin aberto, minimizar ou clicar no QGIS "travava"/"piscava" - impossível interagir com o QGIS (trocar camada ativa, mexer no mapa) enquanto o plugin estava aberto.
+* **Causa:** `GeoMetadata.run()` chamava `self.dlg.exec_()` - torna o diálogo modal (`WindowModal`) em relação à janela principal do QGIS. Uma correção anterior (guarda contra dialog duplicado, evitando um crash nativo de reentrância) só passou a aplicar essa modalidade de forma mais consistente, sem mudar o fato de já existir - por isso só ficou perceptível depois.
+* **Fix:** `self.dlg.exec_()` → `self.dlg.show()` (não-modal). A guarda contra dialog duplicado passou a checar `self.dlg.isVisible()` (traz a instância existente pra frente) em vez de depender do bloqueio do `exec_()`. `unload()` agora fecha o diálogo explicitamente, já que ele pode continuar aberto independente do plugin ser recarregado.
+
+**Bug 20 (REVERTIDO, sem solução ainda): `[GS-500]` ao tentar preencher SRS Nativo na publicação**
+* **Sintoma:** Camadas publicadas ficavam com "SRS Nativo" vazio no admin do GeoServer (só "SRS Declarado" preenchido) - risco de bbox/reprojeção errada em WMS/WFS no futuro.
+* **Tentativa:** `register_postgis_featuretype` passou a mandar `nativeCRS`/`srs`/`projectionPolicy: NONE` explicitamente (usando `layer.crs().authid()`) no payload JSON de criação do FeatureType.
+* **Resultado:** quebrou a publicação inteira (`[GS-500] Erro inesperado do GeoServer`). Revertido na hora - payload voltou a mandar só `name`/`nativeName`/`title`/`abstract`/`keywords` (o parâmetro `srs` continua existindo na assinatura, só não é mais usado).
+* **Hipótese (não verificada contra log do GeoServer):** forçar `nativeCRS` no binding JSON do REST de criação é uma área conhecida por dar erro no GeoServer - provavelmente precisa ir via XML, ou só num PUT de atualização depois de criar, não no POST inicial. Ver `docs_projeto`/memória do agente pra detalhes de uma próxima tentativa.
+
+**Bug 21: Link de Metadados criado, mas com `metadataType` que o GeoServer não reconhece**
+* **Sintoma:** O link foi criado certo (URL apontando pro registro no GeoNetwork), mas usando `metadataType: 'ISO19115:2003'` - a própria tela do GeoServer avisa "Note only FGDC and TC211 metadata links show up in WMS 1.1.1 capabilities", ou seja, esse valor não ativa a exposição no `GetCapabilities`.
+* **Fix:** trocado pra `metadataType: 'TC211'` (o valor que o GeoServer reconhece) e `type: 'application/xml'` (Content-Type real do endpoint `.../formatters/xml` do GeoNetwork, em vez de `text/xml`).
+
+### Funcionalidade nova: Link de Metadados automático na publicação
+`GeoServerBridge.publish_layer` agora resolve o `metadata_uuid` já salvo de verdade pra camada (via `persistence_service.load(layer)` - nunca de rascunho não publicado, pra não linkar pra um registro que ainda não existe no catálogo) e monta a URL `{geonetwork records_url}/{uuid}/formatters/xml`, gravada como "Link de metadados" no FeatureType (`metadataLinks`, REST). Uma prévia **só-consulta** (não editável) foi adicionada na aba Identificação do painel GS (`#gs-metadata-link-preview`), mostrando o link que será gravado (ou avisando que não há metadado salvo ainda) - reaproveita a mesma busca que já roda ao abrir o painel, sem round-trip extra ao banco.
+
+### Próximos Passos
+1. Resolver o SRS Nativo vazio (Bug 20) - testar envio via XML em vez de JSON, ou um PUT separado depois da criação, contra um GeoServer real/staging antes de tentar de novo.
+2. Validar o Link de Metadados/`TC211` num teste real de `GetCapabilities` WMS 1.1.1.
+3. Considerar levar o mesmo tratamento assíncrono (QThread) pro `_load_layer_metadata`/persistência do lado GN, hoje ainda síncrono (menor impacto que o Bug 16 por causa do atalho de rascunho local, mas mesma classe de risco).

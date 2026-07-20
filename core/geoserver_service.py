@@ -248,11 +248,26 @@ class GeoServerService:
         }
 
     def register_postgis_featuretype(self, workspace, datastore, native_table_name, published_name,
-                                      config_loader_instance, title=None, abstract=None, keywords=None):
+                                      config_loader_instance, title=None, abstract=None, keywords=None, srs=None,
+                                      metadata_link_url=None):
         """RF02 - registro lógico: expõe uma tabela PostGIS já existente num datastore do
         GeoServer como FeatureType, sem tráfego de dados espaciais. 'name'/'nativeName'
         seguem a sanitização RF04; 'title' é livre (sem essas regras); 'abstract' e
-        'keywords', quando fornecidos, vêm do metadado MGB já salvo pra camada."""
+        'keywords', quando fornecidos, vêm do metadado MGB já salvo pra camada.
+        `metadata_link_url`, quando fornecido, vira um "Link de metadados" (aba
+        Identificação da camada na UI do GeoServer) apontando pro registro MGB no
+        GeoNetwork - só setado quando a camada JÁ tem um metadata_uuid salvo de verdade
+        (ver GeoServerBridge.publish_layer), nunca um rascunho não publicado (linkaria pra
+        um registro que ainda não existe no catálogo).
+
+        `srs` foi uma tentativa de mandar explicitamente nativeCRS/srs/projectionPolicy
+        (CRS que o QGIS já conhece da camada) pra evitar "SRS Nativo" vazio na UI do
+        GeoServer - REVERTIDA: causou [GS-500] na publicação (forçar nativeCRS na criação
+        via JSON é uma área conhecida por dar erro 500 no binding JSON do GeoServer -
+        provavelmente precisa ser feito via XML, ou só depois via PUT de atualização, não
+        no POST de criação). Parâmetro mantido (não usado) só pra não quebrar a assinatura
+        de quem já chama passando `srs=` - não fazer nada com ele até ter um jeito
+        confirmado de não derrubar a publicação."""
         api_session = self._get_rest_session()
 
         base_url = config_loader_instance.get_geoserver_url().rstrip('/')
@@ -270,6 +285,19 @@ class GeoServerService:
             payload['featureType']['abstract'] = abstract
         if keywords:
             payload['featureType']['keywords'] = {'string': list(keywords)}
+        if metadata_link_url:
+            # metadataType 'TC211' (não 'ISO19115:2003') de propósito - é o valor que o
+            # próprio GeoServer reconhece pra expor o link no GetCapabilities do WMS 1.1.1
+            # (aviso "Note only FGDC and TC211 metadata links show up in WMS 1.1.1
+            # capabilities", visível na tela "Adicionar link" do GeoServer) - com
+            # 'ISO19115:2003' o link é salvo mas fica invisível pra esse propósito.
+            # type 'application/xml' (não 'text/xml') porque é o Content-Type de verdade
+            # que .../formatters/xml (GeoNetwork) devolve nessa URL.
+            payload['featureType']['metadataLinks'] = {
+                'metadataLink': [
+                    {'type': 'application/xml', 'metadataType': 'TC211', 'content': metadata_link_url}
+                ]
+            }
 
         response = api_session.post(
             f"{base_url}/rest/workspaces/{workspace}/datastores/{datastore}/featuretypes",

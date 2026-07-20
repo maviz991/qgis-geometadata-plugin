@@ -117,7 +117,8 @@ class _GsPublishWorker(QThread):
     done = pyqtSignal(bool, str, str)  # sucesso, mensagem (erro OU aviso de estilo), nome_publicado
 
     def __init__(self, geoserver_service, workspace, datastore, native_table_name, published_name,
-                 title, abstract, keywords, config_loader_instance, style_task=None):
+                 title, abstract, keywords, config_loader_instance, style_task=None, srs=None,
+                 metadata_link_url=None):
         super().__init__()
         self._service = geoserver_service
         self._workspace = workspace
@@ -129,12 +130,15 @@ class _GsPublishWorker(QThread):
         self._keywords = keywords
         self._config = config_loader_instance
         self._style_task = style_task
+        self._srs = srs
+        self._metadata_link_url = metadata_link_url
 
     def run(self):
         try:
             self._service.register_postgis_featuretype(
                 self._workspace, self._datastore, self._native_table_name,
-                self._published_name, self._config, self._title, self._abstract, self._keywords
+                self._published_name, self._config, self._title, self._abstract, self._keywords,
+                srs=self._srs, metadata_link_url=self._metadata_link_url
             )
         except Exception as exc:
             self.done.emit(False, str(exc), self._published_name)
