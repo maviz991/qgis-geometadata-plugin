@@ -168,7 +168,7 @@ class GeoMetadata:
 
     def initGui(self):
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
-        self._setup_in_progress = False  # Flag para evitar diálogos duplos
+        self.dlg = None  # referência à instância atual do diálogo - ver run()
 
         icon_path = os.path.join(self.plugin_dir, 'icon.png')
         self.add_action(
@@ -187,6 +187,15 @@ class GeoMetadata:
 
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
+        # Diálogo agora é não-modal (ver run()) - pode continuar aberto na tela quando o
+        # plugin é recarregado/desabilitado (Plugin Reloader etc.), o que não acontecia
+        # antes (exec_() bloqueava até o diálogo fechar). Fecha explicitamente pra não
+        # deixar uma janela órfã, sem bridge/ação nenhuma funcionando por trás.
+        if getattr(self, 'dlg', None) is not None:
+            try:
+                self.dlg.close()
+            except RuntimeError:
+                pass
         for action in self.actions:
             self.iface.removePluginMenu(
                 self.tr(u'&GeoMetadata'),
@@ -198,29 +207,25 @@ class GeoMetadata:
 
     def run(self):
         """Run method that performs all the real work"""
-        # _setup_in_progress evita abrir uma SEGUNDA instância do diálogo - a flag já
-        # existia (ver initGui, "Flag para evitar diálogos duplos") mas nunca era checada
-        # aqui. Sem essa guarda, um duplo-clique no ícone da toolbar (ou um clique que
-        # chega durante a janela entre show() e exec_()) reentra em run() e cria um
-        # SEGUNDO GeoMetadataDialog, com dois QDialog.exec_() aninhados antes do primeiro
-        # bloquear de verdade a aplicação - reentrância que já causou crash nativo (access
-        # violation) num diálogo baseado em QtWebEngine (stack trace com
-        # QToolButton::mouseReleaseEvent duplicado + QDialog::exec_() aninhado).
-        if self._setup_in_progress:
-            return
-        self._setup_in_progress = True
-        try:
-            # Create the dialog (after translation) and keep reference
-            self.dlg = GeoMetadataDialog(iface=self.iface,
-                                         plugin_instance=self,
-                                         parent=self.iface.mainWindow())
-            # Run the dialog event loop - exec_() já mostra o diálogo, um show() explícito
-            # antes só alargava a janela de corrida descrita acima sem necessidade.
-            result = self.dlg.exec_()
-            # See if OK was pressed
-            if result:
-                # Do something useful here - delete the line containing pass and
-                # substitute with your code.
-                pass
-        finally:
-            self._setup_in_progress = False
+        # Guarda contra dialog duplicado (reentrância em run() já causou crash nativo -
+        # access violation - com dois QDialog abertos/QDialog.exec_() aninhados, stack
+        # trace com QToolButton::mouseReleaseEvent duplicado). A guarda ANTES usava
+        # QDialog.exec_() (bloqueante) + uma flag zerada só quando o diálogo fechava - só
+        # que exec_() torna o diálogo modal (WindowModal) em relação à janela principal do
+        # QGIS, bloqueando interação com o QGIS (trocar camada ativa, mexer no mapa)
+        # enquanto o painel está aberto - o oposto do que o plugin precisa, já que ele
+        # depende de bridge.layer_changed/iface.activeLayer() pra reagir à camada ativa
+        # trocando DURANTE a sessão. Não-modal (show()) resolve isso; a guarda agora checa
+        # se já existe uma instância visível em vez de "ainda dentro do exec_() bloqueante".
+        if getattr(self, 'dlg', None) is not None:
+            try:
+                if self.dlg.isVisible():
+                    self.dlg.raise_()
+                    self.dlg.activateWindow()
+                    return
+            except RuntimeError:
+                pass  # wrapped C++ object já foi deletado - segue e cria uma instância nova
+        self.dlg = GeoMetadataDialog(iface=self.iface,
+                                     plugin_instance=self,
+                                     parent=self.iface.mainWindow())
+        self.dlg.show()
