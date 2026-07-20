@@ -349,6 +349,14 @@ class GeoServerBridge(QObject):
         info['saved_style_source'] = saved.get('style_source') or ''
         info['saved_style_name'] = saved.get('style_name') or ''
         info['saved_style_workspace'] = saved.get('style_workspace') or ''
+        # Faltava esse campo aqui (bug pré-existente, não introduzido nessa refatoração) -
+        # _build_publish_xml grava style_additional_json certinho (ver save_publish_destination),
+        # mas esse método nunca devolvia ele pro JS. _renderGsLayerCard (geoserver.js) só
+        # restaura _gsAdditionalStyles quando 'info.saved_style_additional_json' existe -
+        # sem isso, toda revisita/reabertura numa camada com estilos adicionais perdia
+        # essa lista, e a checagem ao vivo (check_gs_sync) comparava "nada local" contra
+        # os adicionais que estão de fato no GeoServer -> "Modificado" pra sempre.
+        info['saved_style_additional_json'] = saved.get('style_additional_json') or ''
         self.gs_layer_info_ready.emit(info)
 
     @pyqtSlot(str, result=str)
