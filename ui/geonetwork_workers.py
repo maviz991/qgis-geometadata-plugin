@@ -151,14 +151,22 @@ class _GnSyncCheckWorker(QThread):
     """Nível sistema de check_gn_sync (GeoNetworkBridge) isolado da UI thread - é a única
     chamada de rede desse método (fetch_from_geonetwork, com possível warm-up de sessão
     antes), antes rodava direto no pyqtSlot e travava a UI (Qt event loop, inclusive a
-    QWebEngineView) a cada troca de camada com usuário logado."""
+    QWebEngineView) a cada troca de camada com usuário logado.
+
+    Compara CONTEÚDO (título/resumo/palavras-chave) entre o que está de fato publicado no
+    Geohab agora (`remote`) e o que sabemos ter salvo localmente (`local_snapshot`, dict no
+    formato de xml_parser.parse_xml_to_dict) - não só o campo dateStamp. Mesmo espírito do
+    GeoServer (`_GsSyncCheckWorker`, geoserver_workers.py): comparar timestamp sozinho é
+    frágil (não muda com toda edição de campo, e pode ter formato/precisão diferente entre
+    o que o form local guarda e o que o GN carimba) - "Atualização disponível" precisa
+    refletir se o CONTEÚDO mudou, não só uma data."""
     done = pyqtSignal(str, str)  # state, layer_name
 
-    def __init__(self, geonetwork_service, uuid: str, local_date_stamp: str, config_loader_instance, layer_name: str):
+    def __init__(self, geonetwork_service, uuid: str, local_snapshot: dict, config_loader_instance, layer_name: str):
         super().__init__()
         self._service = geonetwork_service
         self._uuid = uuid
-        self._local_date_stamp = local_date_stamp
+        self._local_snapshot = local_snapshot or {}
         self._config = config_loader_instance
         self._layer_name = layer_name
 
@@ -166,10 +174,26 @@ class _GnSyncCheckWorker(QThread):
         try:
             remote = self._service.fetch_from_geonetwork(self._uuid, self._config)
             if not remote:
+                print(f"GeoMetadata [_GnSyncCheckWorker] uuid={self._uuid!r} não encontrado no Geohab -> sys_not_found")
                 self.done.emit('sys_not_found', self._layer_name)
                 return
-            remote_date = remote.get('dateStamp') or ''
-            if remote_date and self._local_date_stamp and remote_date > self._local_date_stamp:
+            remote_title = (remote.get('title') or '').strip()
+            remote_abstract = (remote.get('abstract') or '').strip()
+            remote_keywords = sorted(remote.get('MD_Keywords') or [])
+            local_title = (self._local_snapshot.get('title') or '').strip()
+            local_abstract = (self._local_snapshot.get('abstract') or '').strip()
+            local_keywords = sorted(self._local_snapshot.get('MD_Keywords') or [])
+            diverges = (
+                remote_title != local_title or
+                remote_abstract != local_abstract or
+                remote_keywords != local_keywords
+            )
+            print(
+                f"GeoMetadata [_GnSyncCheckWorker] uuid={self._uuid!r} diverges={diverges} "
+                f"remote_title={remote_title!r} local_title={local_title!r} "
+                f"remote_dateStamp={remote.get('dateStamp')!r} local_dateStamp={self._local_snapshot.get('dateStamp')!r}"
+            )
+            if diverges:
                 self.done.emit('sys_update_available', self._layer_name)
                 return
             self.done.emit('sys_synced', self._layer_name)

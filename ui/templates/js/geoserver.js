@@ -324,9 +324,11 @@ function _onGsBeforePanelUnload() {
     }
 }
 
-// Roda DEPOIS de _loadGsLayerInfo()/_renderGsLayerCard() - só preenche o que o banco
-// (info.saved_*) deixou vazio ("if vazio", mesma lógica de antes, só que agora o banco é
-// quem tem prioridade e o rascunho é o último recurso, não o primeiro).
+// Roda DEPOIS de _loadGsLayerInfo()/_renderGsLayerCard() - nome/workspace/datastore/
+// estilo só entram se o banco (info.saved_*) deixou vazio (banco tem prioridade nesses -
+// ver comentário mais abaixo sobre o nome). Título/resumo/palavras-chave são a exceção: o
+// rascunho SEMPRE sobrepõe quando existe, mesmo com banco preenchido - ver comentário
+// junto desses campos abaixo.
 function _loadGsDraft(callback) {
     if (typeof gsBridge === 'undefined') { if (callback) callback(); return; }
     gsBridge.load_draft(function (draft) {
@@ -336,11 +338,20 @@ function _loadGsDraft(callback) {
                 nameEl.value = draft.published_name;
                 onGsLayerNameInput(draft.published_name);
             }
+            // Título/resumo/palavras-chave: diferente do nome/workspace/destino (banco
+            // sempre vence, ver acima), esses são só texto descritivo, sem nenhuma
+            // restrição técnica pra respeitar - o rascunho é sempre uma edição MAIS
+            // RECENTE que o que está salvo (autosave roda a cada input, debounce de
+            // 1.5s), então ele sobrepõe mesmo com o campo já preenchido pelo banco.
+            // Bug corrigido aqui: editar o título de uma camada JÁ publicada e trocar de
+            // aba (ou fechar o plugin) antes de "Continuar Depois"/republicar descartava
+            // a edição em silêncio - a condição antiga (`!titleEl.value`) só aplicava o
+            // rascunho num campo VAZIO, o que nunca acontece numa camada já publicada.
             var titleEl = document.getElementById('gs-layer-title');
-            if (titleEl && !titleEl.value && draft.title) titleEl.value = draft.title;
+            if (titleEl && draft.title) titleEl.value = draft.title;
             var abstractEl = document.getElementById('gs-layer-abstract');
-            if (abstractEl && !abstractEl.value && draft.abstract) abstractEl.value = draft.abstract;
-            if (!_gsKeywords.length && draft.keywords && draft.keywords.length) {
+            if (abstractEl && draft.abstract) abstractEl.value = draft.abstract;
+            if (draft.keywords && draft.keywords.length) {
                 _gsKeywords = draft.keywords.slice();
                 _renderGsKeywords();
             }
@@ -361,15 +372,19 @@ function _loadGsDraft(callback) {
                     if (fileBtn && draft.style_file_name) fileBtn.textContent = draft.style_file_name;
                 }
             }
-            // Estilos adicionais do rascunho - só entra se nada já veio do banco (mesmo
-            // "if vazio" usado pras palavras-chave logo acima).
+            // Estilos adicionais do rascunho - só entra se nada já veio do banco (mesma
+            // prioridade banco > rascunho do workspace/estilo principal, acima).
             if (!_gsAdditionalStyles.length && draft.style_additional && draft.style_additional.length) {
                 _gsAdditionalStyles = draft.style_additional.slice();
                 _renderGsAdditionalStyles();
             }
-            // O rascunho pode ter preenchido campos que o banco deixou vazios (camada
-            // nunca salva de verdade) - reavalia o badge (_gsSyncSnapshot já é o estado
-            // "vazio" nesse caso, ver _renderGsLayerCard, então isso vira "Modificado").
+            // Reavalia o badge: título/resumo/palavras-chave do rascunho podem ter acabado
+            // de sobrepor o que o banco preencheu (ver acima) - ou, numa camada nunca salva
+            // de verdade, o rascunho preencheu campos que o banco deixou vazios. Em
+            // qualquer um dos casos, _gsSyncSnapshot (capturado em _renderGsLayerCard, a
+            // partir do banco ou do estado pós-auto-preenchimento) continua intocado, então
+            // _checkGsSyncNow() aqui compara direito contra a fonte de verdade e vira
+            // "Modificado" quando for o caso.
             _markGsModifiedIfNeeded();
             updateGsFormProgress();
         }

@@ -357,6 +357,11 @@ function _loadFormForLayer(sessionDraft) {
         if (_activeLayerName !== _expectedLayer) return; // camada trocou enquanto carregava - resposta obsoleta
         if (draft) {
             populateForm(draft);
+            // checkGnSync já busca a fonte de verdade (banco/sidecar) do lado Python e
+            // devolve junto do resultado (ver gn_sync_checked/_onGnSyncChecked) - ela
+            // mesma compara o formulário atual (o rascunho, já exibido) contra isso e
+            // corrige pra "Modificado" quando diverge de verdade, sem precisar buscar de
+            // novo aqui.
             checkGnSync(draft.metadata_uuid, draft.dateStamp || '');
             _applyPendingGsDistLayerIfAny();
         } else {
@@ -497,8 +502,16 @@ function setGnBadge(state) {
         _gnLastBadgeState = state;
     }
 
+    // Banner amarelo: mesma condição do GS (setGsBadge, geoserver.js) - qualquer
+    // divergência confirmada contra o Geohab (nível sistema, exige login) merece o
+    // aviso, não só 'sys_update_available' (servidor mudou) - 'sys_modified' cobre o
+    // caso mais comum na prática (o FORMULÁRIO diverge do que está publicado, seja
+    // porque o usuário editou localmente ou porque o servidor mudou - _onGnSyncChecked
+    // não distingue as duas causas, só confirma que divergem). 'db_modified'/
+    // 'offline_modified' ficam de fora - sem login não há "o que está publicado no
+    // Geohab" pra comparar de verdade (ver mesmo racional em setGsBadge).
     var banner = document.getElementById('gn-update-banner');
-    if (banner) banner.style.display = (state === 'sys_update_available') ? 'flex' : 'none';
+    if (banner) banner.style.display = (state === 'sys_update_available' || state === 'sys_modified') ? 'flex' : 'none';
 }
 
 // Reescreve o texto/tooltip do badge GN com base no estado atual.
@@ -536,6 +549,21 @@ function _markGnModifiedIfNeeded() {
     } else if (!matches && isBaseline) {
         setGnBadge(modifiedState);
     }
+}
+
+// Snapshot no MESMO formato de collectFormData(), a partir de um dict qualquer (rascunho
+// OU metadado salvo) sem depender do que já está na tela - popula o formulário com `data`
+// e lê de volta via collectFormData(). Zera antes os campos "aditivos" (arrays: keywords/
+// contatos/recursos online) que populateForm só sobrescreve quando o array vier NÃO-vazio
+// (ver populateForm) - sem isso, um array do conteúdo anterior vazaria pro snapshot de
+// `data` quando `data` não tiver esse campo preenchido. Quem chama isso deve popular o
+// formulário de novo com o conteúdo que quer de fato exibir logo em seguida - essa função
+// deixa a DOM temporariamente com `data`, não com o conteúdo final.
+function _gnSnapshotFor(data) {
+    if (!data) return null;
+    keywords = []; contacts = []; procContacts = []; metaContacts = []; distResources = [];
+    populateForm(data);
+    return collectFormData();
 }
 
 function checkGnSync(uuid, dateStamp) {
@@ -577,8 +605,38 @@ function checkGnSync(uuid, dateStamp) {
 }
 
 // Sinal gn_sync_checked (ver _initGnBridge) - resultado assíncrono de checkGnSync.
-function _onGnSyncChecked(state, layerName) {
+// `saved` é o dict do que está salvo local/DB nessa camada (ou {} - ver check_gn_sync,
+// ui/geonetwork_bridge.py) - devolvido em TODA chamada, não só quando um rascunho de
+// arquivo acabou de ser carregado (ver Bug 25/26/27, docs_projeto/bugs.md). Isso cobre o
+// caso geral: o formulário atual (que pode ter edições feitas por digitação OU vindas de
+// um rascunho) sempre é comparado contra a fonte de verdade, mesmo quando o resultado do
+// nível sistema/banco é "Atualização disponível" ou "Sincronizado" - sem isso, clicar em
+// "↻ Atualizar" com o formulário já dirty apagava esse aviso, já que o estado "limpo"
+// vindo da rede sobrescrevia o badge sem levar em conta que o formulário tinha mudado.
+function _onGnSyncChecked(state, layerName, saved) {
     if (layerName !== _gnSyncExpectedLayer) return; // camada trocou de novo enquanto verificava - resposta obsoleta
+    // collectFormData() exige o editor aberto (senão mostra um toast "Ação Necessária") -
+    // como essa resposta chega de forma assíncrona (podendo envolver uma chamada de rede
+    // de até 15s, nível sistema), o usuário pode ter navegado pra outro painel enquanto
+    // isso ainda estava em voo, mesmo sem trocar de camada (guarda acima não cobre isso).
+    if (document.getElementById('f-title') && saved && Object.keys(saved).length && _GN_MODIFIED_FOR[state]) {
+        // Captura o que está DE FATO visível ANTES de mexer na DOM - _gnSnapshotFor(saved)
+        // sobrescreve o formulário temporariamente com o conteúdo salvo pra poder ler o
+        // snapshot de volta (ver a função), então precisa vir DEPOIS de coletar `current`,
+        // e o formulário original tem que ser restaurado logo em seguida.
+        var current = collectFormData();
+        var trueSnapshot = JSON.stringify(_gnSnapshotFor(saved));
+        if (current) populateForm(current); // restaura o que estava visível antes da comparação
+        if (current && JSON.stringify(current) !== trueSnapshot) {
+            // _gnSyncSnapshot/_gnSyncBaseline semeados com a fonte de verdade (não com o
+            // formulário atual) - _markGnModifiedIfNeeded (digitação daqui pra frente)
+            // precisa comparar contra o que está REALMENTE salvo, não contra si mesmo.
+            _gnSyncSnapshot = trueSnapshot;
+            _gnSyncBaseline = state;
+            setGnBadge(_GN_MODIFIED_FOR[state]);
+            return;
+        }
+    }
     setGnBadge(state);
 }
 
