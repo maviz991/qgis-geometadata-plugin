@@ -564,6 +564,37 @@ body {
     border-color: #475569;
 }
 
+/* ── Botão de atualizar (↻) ao lado do badge de sincronização (GN/GS) ────────────
+   Força uma checagem nova, ignorando o cache de "já verificado recentemente" - único
+   jeito de recuperar de um erro de rede (SSL/timeout/403 intermitente) sem fechar e
+   reabrir o plugin inteiro. */
+.badge-refresh-btn {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--fg-muted);
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    transition: color 0.15s, border-color 0.15s, transform 0.2s;
+}
+
+.badge-refresh-btn:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+.badge-refresh-btn:active {
+    transform: rotate(180deg);
+}
+
 .field-err {
     font-size: 11px;
     color: var(--accent);

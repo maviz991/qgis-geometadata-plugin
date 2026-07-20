@@ -7,6 +7,9 @@
         <button class="tab-link" onclick="showTab('gs-estilos', this)">Estilos</button>
 
         <div class="tabs-status-group">
+            <button type="button" id="gs-refresh-btn" class="badge-refresh-btn" style="display:none"
+                onclick="event.stopPropagation();refreshGsSync();"
+                data-title="Verificar novamente (ignora o resultado em cache)">↻</button>
             <div id="gs-sync-badge" class="gn-sync-badge" style="display:none" onclick="onGsSyncBadgeClick()">
                 <span class="gn-sync-dot"></span>
                 <span class="gn-sync-label" id="gs-sync-label"></span>

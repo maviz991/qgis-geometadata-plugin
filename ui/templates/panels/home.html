@@ -1,10 +1,25 @@
 <div class="home-panel">
-    <div class="welcome-header">
-        <h1>Bem-vindo ao Geohab Plugin</h1>
-        <p>Selecione uma ferramenta para começar a trabalhar com dados geográficos.</p>
+    <!-- Barra full-width (mesmo padrão de .gn-update-banner, geonetwork.css - só cores de
+         info em vez de warning: não estar logado é um estado normal, não um problema,
+         "warning" fica reservado pra ações bloqueadas de verdade). Visibilidade controlada
+         por _updateHomeLoginBanner (app.js), chamada ao abrir o painel e sempre que o login
+         mudar (updateUserUI) - sem precisar recarregar o painel pra sumir depois de logar.
+         X fecha na hora (dismissHomeLoginBanner) - reaparece a próxima vez que
+         _updateHomeLoginBanner rodar de novo ainda deslogado (mesmo comportamento não-
+         persistente do gn-update-banner-close). -->
+    <div id="home-login-banner" class="home-login-banner" style="display:none">
+        <span class="home-login-banner-icon">ℹ️</span>
+        <span>Faça login para ter todas as funcionalidades disponíveis.</span>
+        <button class="home-login-banner-close" onclick="dismissHomeLoginBanner()">&times;</button>
     </div>
 
-    <div class="card-grid">
+    <div class="home-content">
+        <div class="welcome-header">
+            <h1>Bem-vindo ao Geohab Plugin</h1>
+            <p>Selecione uma ferramenta para começar a trabalhar com dados geográficos.</p>
+        </div>
+
+        <div class="card-grid">
         <!-- CARD GEONETWORK -->
         <div class="card" onclick="navigate('editor')">
             <div class="card-icon geonetwork-icon">
@@ -48,14 +63,55 @@
                 </div>
             </div>
         </div>
+        </div>
     </div>
 </div>
 
 <style>
     .home-panel {
-        padding: 40px;
+        margin: 0;
+        padding: 0;
+    }
+
+    .home-content {
+        padding: 20px 40px 40px;
         max-width: 1000px;
         margin: 0 auto;
+    }
+
+    /* Barra full-width, mesmo padrão de .gn-update-banner (geonetwork.css) - fica FORA de
+       .home-content de propósito, senão herdaria o padding/max-width e não bateria de
+       ponta a ponta com o resto da tela (navbar acima). margin:0 explícito (não só
+       confiar no reset global *{margin:0}) pra descartar de vez qualquer vão no topo/
+       esquerda entre a navbar/borda da janela e a barra. */
+    .home-login-banner {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 0;
+        padding: 10px 24px;
+        background: #eff6ff;
+        border-bottom: 1px solid #bfdbfe;
+        color: #1e40af;
+        font-size: 13px;
+    }
+
+    .home-login-banner span:not(.home-login-banner-icon) {
+        flex: 1;
+    }
+
+    .home-login-banner-icon {
+        flex-shrink: 0;
+    }
+
+    .home-login-banner-close {
+        background: none;
+        border: none;
+        font-size: 18px;
+        line-height: 1;
+        color: #1e40af;
+        cursor: pointer;
+        padding: 2px 4px;
     }
 
     .welcome-header {

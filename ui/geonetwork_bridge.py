@@ -23,6 +23,7 @@ class GeoNetworkBridge(QObject):
     gn_metadata_search_ready = pyqtSignal('QVariant')            # [{uuid, title, dateStamp}]
     gn_publish_succeeded     = pyqtSignal(str)  # uuid - publicação confirmada, badge -> Sincronizado
     local_save_succeeded     = pyqtSignal(str)  # uuid - save local (DB/sidecar) confirmado, recheca badge
+    gn_sync_checked          = pyqtSignal(str, str)  # state, layer_name - ver check_gn_sync/_GnSyncCheckWorker
 
     def __init__(self, dialog, parent=None):
         super().__init__(parent)
@@ -30,6 +31,7 @@ class GeoNetworkBridge(QObject):
         self._gn_workers       = {}
         self._enrich_workers   = []
         self._gn_search_worker = None
+        self._sync_check_workers = []
 
     # ── Ações do menu Arquivo (exportar/publicar/salvar) ────────────────────────
 
@@ -342,8 +344,8 @@ class GeoNetworkBridge(QObject):
             print(f"GeoMetadata [pull_from_gn]: {e}")
             return None
 
-    @pyqtSlot(str, str, result=str)
-    def check_gn_sync(self, uuid: str, local_date_stamp: str) -> str:
+    @pyqtSlot(str, str)
+    def check_gn_sync(self, uuid: str, local_date_stamp: str):
         """Compara o formulário local contra a melhor fonte de verdade disponível AGORA,
         em 3 níveis de conectividade (maior confiança primeiro) - o nível determina só o
         PREFIXO do estado devolvido, não a lógica de comparação em si:
@@ -359,29 +361,32 @@ class GeoNetworkBridge(QObject):
         O estado 'modified' de cada nível é decidido no JS (_markGnModifiedIfNeeded, ver
         geonetwork.js) comparando o formulário atual contra o snapshot capturado no
         momento em que este método respondeu 'synced'/'not_found' - aqui só devolvemos
-        esse baseline "limpo". 'checking'/'error' são estados universais (não têm nível)."""
+        esse baseline "limpo". 'checking'/'error' são estados universais (não têm nível).
+
+        Assíncrono (RNF02) - emite gn_sync_checked(state, layer_name) em vez de retornar
+        direto. O nível sistema (única chamada de rede daqui) roda em background
+        (_GnSyncCheckWorker); os níveis banco/offline são leitura local (rápidos o
+        bastante pra responder direto, sem passar por thread) - ver troca de camada
+        travando com usuário logado (docs_projeto/bugs.md): essa chamada síncrona à rede
+        do Geohab, disparada a cada troca de camada ativa, era a causa."""
         plugin = getattr(self._dialog, 'plugin', None)
         logged_in = bool(getattr(plugin, 'api_session', None))
         geonetwork_service = getattr(self._dialog, 'geonetwork_service', None)
+        iface = getattr(plugin, 'iface', None) or getattr(self._dialog, 'iface', None)
+        layer = iface.activeLayer() if iface else None
+        layer_name = layer.name() if layer else ''
 
-        # Nível 1 - sistema (logado no Geohab)
+        # Nível 1 - sistema (logado no Geohab) - só essa chamada precisa de thread própria.
         if logged_in and uuid and geonetwork_service:
-            try:
-                remote = geonetwork_service.fetch_from_geonetwork(uuid, config_loader)
-                if not remote:
-                    return 'sys_not_found'
-                remote_date = remote.get('dateStamp') or ''
-                if remote_date and local_date_stamp and remote_date > local_date_stamp:
-                    return 'sys_update_available'
-                return 'sys_synced'
-            except Exception as e:
-                print(f"GeoMetadata [check_gn_sync] nível sistema: {e}")
-                return 'error'
+            from .geonetwork_workers import _GnSyncCheckWorker
+            worker = _GnSyncCheckWorker(geonetwork_service, uuid, local_date_stamp, config_loader, layer_name)
+            self._sync_check_workers.append(worker)
+            worker.done.connect(self._on_sync_check_done)
+            worker.start()
+            return
 
         # Nível 2 - banco/sidecar (sem sessão, mas com camada ativa pra comparar)
         try:
-            iface = getattr(plugin, 'iface', None) or getattr(self._dialog, 'iface', None)
-            layer = iface.activeLayer() if iface else None
             ps = getattr(self._dialog, 'persistence_service', None)
             if layer and ps:
                 xml_content = ps.load(layer)
@@ -390,11 +395,22 @@ class GeoNetworkBridge(QObject):
                     saved = xml_parser.parse_xml_to_dict(xml_content, is_string=True) or {}
                     saved_date = saved.get('dateStamp') or ''
                     if saved_date and local_date_stamp and saved_date != local_date_stamp:
-                        return 'db_modified'
-                    return 'db_synced'
-                return 'db_not_found'
+                        self.gn_sync_checked.emit('db_modified', layer_name)
+                    else:
+                        self.gn_sync_checked.emit('db_synced', layer_name)
+                    return
+                self.gn_sync_checked.emit('db_not_found', layer_name)
+                return
         except Exception as e:
             print(f"GeoMetadata [check_gn_sync] nível banco: {e}")
 
         # Nível 3 - offline (nenhuma camada ativa pra identificar - só o rascunho local vale)
-        return 'offline_saved'
+        self.gn_sync_checked.emit('offline_saved', layer_name)
+
+    def _on_sync_check_done(self, state: str, layer_name: str):
+        """Handler de _GnSyncCheckWorker.done - limpa a referência da lista (evita
+        crescer indefinidamente) e repassa o resultado pro JS."""
+        worker = self.sender()
+        if worker in self._sync_check_workers:
+            self._sync_check_workers.remove(worker)
+        self.gn_sync_checked.emit(state, layer_name)

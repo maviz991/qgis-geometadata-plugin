@@ -866,10 +866,15 @@ Sequência de testes do usuário no QGIS real do painel "Serviços > Configurar 
 * **Sintoma:** O link foi criado certo (URL apontando pro registro no GeoNetwork), mas usando `metadataType: 'ISO19115:2003'` - a própria tela do GeoServer avisa "Note only FGDC and TC211 metadata links show up in WMS 1.1.1 capabilities", ou seja, esse valor não ativa a exposição no `GetCapabilities`.
 * **Fix:** trocado pra `metadataType: 'TC211'` (o valor que o GeoServer reconhece) e `type: 'application/xml'` (Content-Type real do endpoint `.../formatters/xml` do GeoNetwork, em vez de `text/xml`).
 
+**Bug 24: `check_gn_sync` síncrono travando a troca de camada com usuário logado**
+* **Sintoma:** Trocar a camada ativa pelo seletor do navbar travava a UI inteira sempre que havia sessão no Geohab - relatado como "muitas verificações online" a cada troca.
+* **Causa:** exatamente o item 3 dos Próximos Passos abaixo, agora confirmado: `GeoNetworkBridge.check_gn_sync` (nível sistema) chamava `geonetwork_service.fetch_from_geonetwork` - até 2 requisições HTTPS, timeout 15s - direto no `pyqtSlot`, síncrono na thread principal. Disparado a cada `layer_changed`, era a única checagem do app ainda fora do padrão RNF02 (o lado GeoServer já tinha sido convertido no Bug 16).
+* **Fix:** novo `_GnSyncCheckWorker` (`geonetwork_workers.py`), mesmo padrão dos demais workers do módulo. `check_gn_sync` virou fire-and-forget; resultado chega pelo novo sinal `gn_sync_checked(state, layer_name)`. JS (`checkGnSync`/`_onGnSyncChecked`, `geonetwork.js`) passou a escutar o sinal em vez de esperar retorno direto, com `_gnSyncExpectedLayer` descartando resposta obsoleta de uma camada já trocada (mesma guarda de `_gsOnlineExpectedKey`).
+
 ### Funcionalidade nova: Link de Metadados automático na publicação
 `GeoServerBridge.publish_layer` agora resolve o `metadata_uuid` já salvo de verdade pra camada (via `persistence_service.load(layer)` - nunca de rascunho não publicado, pra não linkar pra um registro que ainda não existe no catálogo) e monta a URL `{geonetwork records_url}/{uuid}/formatters/xml`, gravada como "Link de metadados" no FeatureType (`metadataLinks`, REST). Uma prévia **só-consulta** (não editável) foi adicionada na aba Identificação do painel GS (`#gs-metadata-link-preview`), mostrando o link que será gravado (ou avisando que não há metadado salvo ainda) - reaproveita a mesma busca que já roda ao abrir o painel, sem round-trip extra ao banco.
 
 ### Próximos Passos
 1. Resolver o SRS Nativo vazio (Bug 20) - testar envio via XML em vez de JSON, ou um PUT separado depois da criação, contra um GeoServer real/staging antes de tentar de novo.
 2. Validar o Link de Metadados/`TC211` num teste real de `GetCapabilities` WMS 1.1.1.
-3. Considerar levar o mesmo tratamento assíncrono (QThread) pro `_load_layer_metadata`/persistência do lado GN, hoje ainda síncrono (menor impacto que o Bug 16 por causa do atalho de rascunho local, mas mesma classe de risco).
+3. ~~Considerar levar o mesmo tratamento assíncrono (QThread) pro `_load_layer_metadata`/persistência do lado GN, hoje ainda síncrono~~ - feito (Bug 24) pro caminho de rede (`check_gn_sync` nível sistema). `load_draft`/`load_layer_metadata` continuam síncronos, mas só tocam arquivo local/DB (sem rede) - risco bem menor, não revisitado ainda.

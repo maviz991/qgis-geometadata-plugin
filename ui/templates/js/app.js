@@ -476,6 +476,26 @@ function onPanelLoaded(panelId) {
     if (panelId === "geoserver" && typeof _onGeoServerPanelLoaded === 'function') {
         _onGeoServerPanelLoaded();
     }
+    if (panelId === "home") {
+        _updateHomeLoginBanner();
+    }
+}
+
+// Aviso permanente (info, não warning - ver comentário em home.html) pra logar, na home -
+// chamado ao carregar o painel E de novo em updateUserUI (login/logout) pra sumir/aparecer
+// na hora, sem precisar recarregar o painel se o usuário já estiver na home quando logar.
+function _updateHomeLoginBanner() {
+    var banner = document.getElementById('home-login-banner');
+    if (!banner) return; // painel home não está aberto agora
+    banner.style.display = _isLogged ? 'none' : 'flex';
+}
+
+// X do banner (mesmo padrão não-persistente de dismissGnUpdateBanner, geonetwork.js) - só
+// esconde agora; reaparece na próxima vez que _updateHomeLoginBanner rodar (reabrir a home,
+// ou um login/logout) se ainda estiver deslogado.
+function dismissHomeLoginBanner() {
+    var banner = document.getElementById('home-login-banner');
+    if (banner) banner.style.display = 'none';
 }
 
 function showTab(tabId, btn) {
@@ -523,6 +543,7 @@ function updateUserUI(isLogged, username) {
     if (wasLogged !== _isLogged && typeof _onAuthStateChangedForSync === 'function') {
         _onAuthStateChangedForSync();
     }
+    _updateHomeLoginBanner(); // no-op se a home não estiver aberta agora (ver definição)
 }
 
 // ─── Utilitário ───────────────────────────────────────────────────────────────

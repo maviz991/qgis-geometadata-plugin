@@ -75,6 +75,7 @@ function _initGsBridge() {
         _gsSyncIsPublished = true; // publicação de verdade - GeoServer já tem isso
         _gsApplyFieldLockState();
         _gsInvalidatePendingLiveCheck(); // ver definição - descarta checagem ao vivo desatualizada de antes da publicação
+        _flashGsRefreshBtn(); // ver definição - deixa o botão "↻" visível por uns instantes, momento onde erros de rede mais apareceram nos testes
         if (message) {
             _checkGsSyncNow();
             Modal.alert(message, 'Publicado com Ressalvas', 'warning');
@@ -106,6 +107,7 @@ function _initGsBridge() {
             _gsSyncIsPublished = false; // "Continuar Depois" salva no banco, mas o GeoServer ainda não sabe disso
             _gsApplyFieldLockState();
             _gsInvalidatePendingLiveCheck(); // ver definição - descarta checagem ao vivo desatualizada de antes do salvamento
+            _flashGsRefreshBtn();
             var tierPrefix = _isLogged ? 'sys' : 'db';
             setGsBadge(tierPrefix + '_synced');
             _gsLastCheckedLayerKey = null; // idem publish_done acima - invalida o cache do badge combinado do editor
@@ -162,6 +164,7 @@ function _initGsBridge() {
             _gsLayerInfo.saved_style_name = appliedStyle.style_name;
         }
         _gsInvalidatePendingLiveCheck(); // ver definição - descarta checagem ao vivo desatualizada de antes de aplicar o estilo
+        _flashGsRefreshBtn();
         try {
             var snap = JSON.parse(_gsSyncSnapshot);
             var cur = _gsCollectFormState();
@@ -211,6 +214,7 @@ function _initGsBridge() {
         _gsCaptureSnapshotRawNames();
         _gsSyncIsPublished = true;
         _gsInvalidatePendingLiveCheck(); // ver definição - senão uma checagem em voo de ANTES do pull chega depois com "Modificado" desatualizado e o banner "Atualização disponível" reaparece
+        _flashGsRefreshBtn();
         setGsBadge((_isLogged ? 'sys' : 'db') + '_synced');
         _gsLastCheckedLayerKey = null; // idem publish_done/destination_saved - invalida o cache do badge combinado do editor
         updateGsFormProgress();
@@ -1640,7 +1644,8 @@ var _GS_SYNC_LABELS = {
     db_modified: 'Modificado (DB)',
     sys_not_found: 'Não Encontrado (Geohab)',
     sys_synced: 'Sincronizado',
-    sys_modified: 'Modificado'
+    sys_modified: 'Modificado',
+    error: 'Erro ao verificar'
 };
 
 var _GS_SYNC_TOOLTIPS = {
@@ -1648,7 +1653,8 @@ var _GS_SYNC_TOOLTIPS = {
     db_not_found: 'Nenhum destino salvo no banco ainda (sem login no Geohab).',
     db_modified: 'Editado desde o último salvamento no banco (sem login no Geohab).',
     sys_not_found: 'Nenhum destino de publicação salvo ainda.',
-    sys_modified: 'Editado desde o último salvamento/publicação.'
+    sys_modified: 'Editado desde o último salvamento/publicação.',
+    error: 'Não foi possível verificar contra o GeoServer agora.'
     // db_synced/sys_synced não têm entrada fixa aqui - ver _gsPublishTooltip (texto curto,
     // pro hover - não confundir com _gsPublishModalMessage, versão rica do modal).
 };
@@ -1666,7 +1672,8 @@ var _GS_SYNC_MODALS = {
     db_synced: { title: 'Sincronizado (DB)', type: 'success' },
     sys_not_found: { title: 'Não Encontrado (Geohab)', type: 'warning', message: 'Nenhum destino de publicação salvo pra esta camada ainda.<br><br>Use "Arquivo > Continuar Depois" pra salvar sem publicar, ou publique direto em "Serviços > Publicar Camada".' },
     sys_modified: { title: 'Modificado', type: 'warning', message: 'Você tem alterações não salvas.<br><br>Use: <br>"Arquivo > Continuar Depois" pra salvar sem publicar, ou <br>"Serviços > Publicar Camada" para publicar no Geohab.' },
-    sys_synced: { title: 'Sincronizado', type: 'success' }
+    sys_synced: { title: 'Sincronizado', type: 'success' },
+    error: { title: 'Erro ao verificar', type: 'error', message: 'Não foi possível verificar o status agora (falha de rede ao consultar o GeoServer). Clique no botão "↻" ao lado do badge pra tentar de novo.' }
 };
 
 // Tooltip CURTO (hover, texto plano - ver initGlobalTooltips/app.js, que joga isso direto
@@ -1693,12 +1700,36 @@ function _gsPublishModalMessage(tierPrefix, isPublished) {
     return 'O formulário atual bate com o que está salvo no banco, mas ainda não foi publicada no GeoServer.' + loginNote;
 }
 
+// Botão "↻" (ver refreshGsSync) fica escondido na maior parte do tempo - só aparece (1)
+// no estado 'error' (única situação onde recarregar de verdade ajuda) ou (2) por uma
+// janela curta logo após publicar/salvar/puxar/atualizar estilo (_flashGsRefreshBtn) -
+// foi exatamente nesses momentos que os erros de rede intermitentes (SSL/403) mais
+// apareceram nos testes. Mesmo padrão de _gnUpdateRefreshBtnVisibility (geonetwork.js).
+var _gsRefreshVisibleUntil = 0;
+function _gsUpdateRefreshBtnVisibility(state) {
+    var btn = document.getElementById('gs-refresh-btn');
+    if (!btn) return;
+    btn.style.display = (state === 'error' || Date.now() < _gsRefreshVisibleUntil) ? 'inline-flex' : 'none';
+}
+function _flashGsRefreshBtn() {
+    _gsRefreshVisibleUntil = Date.now() + 8000;
+    var badge = document.getElementById('gs-sync-badge');
+    var state = badge ? badge.className.replace('gn-sync-badge', '').trim() : '';
+    _gsUpdateRefreshBtnVisibility(state);
+    setTimeout(function () {
+        var b = document.getElementById('gs-sync-badge');
+        var s = b ? b.className.replace('gn-sync-badge', '').trim() : '';
+        _gsUpdateRefreshBtnVisibility(s);
+    }, 8000);
+}
+
 function setGsBadge(state) {
     var badge = document.getElementById('gs-sync-badge');
     var label = document.getElementById('gs-sync-label');
     if (!badge || !label) return;
     badge.className = 'gn-sync-badge ' + state;
     badge.style.display = 'flex';
+    _gsUpdateRefreshBtnVisibility(state);
     badge.dataset.title = (state === 'sys_synced' || state === 'db_synced')
         ? _gsPublishTooltip(state.split('_')[0], _gsSyncIsPublished)
         : (_GS_SYNC_TOOLTIPS[state] || '');
@@ -1833,6 +1864,16 @@ function _gsForceLiveRecheck() {
     _checkGsSyncOnline(_gsLayerInfo);
 }
 
+// Botão "↻" ao lado do badge (geoserver.html) - único jeito de sair do estado "Erro ao
+// verificar"/de um resultado desatualizado (falha de rede/SSL/403 intermitente na
+// checagem ao vivo contra o GeoServer/GeoNetwork) sem fechar e reabrir o plugin inteiro.
+function refreshGsSync() {
+    if (!document.getElementById('gs-layer-card')) return;
+    _gsOnlineInFlightKey = null; // libera mesmo se uma checagem anterior ainda não respondeu (ex.: presa num erro de rede lento)
+    _checkGsSyncNow(); // nível banco - local, instantâneo, sem custo de rede
+    _gsForceLiveRecheck(); // nível sistema - ignora o cache de 60s e força uma checagem de verdade
+}
+
 // Chamada por publish/"Continuar Depois"/pull/atualizar estilo (ver _initGsBridge) assim
 // que qualquer uma dessas ações CONFIRMA um estado novo de verdade (setGsBadge('..._synced')
 // logo em seguida) - descarta qualquer checagem AO VIVO (check_gs_sync) que já estava em
@@ -1906,6 +1947,12 @@ function _onGsSyncChecked(result) {
             _gsSyncHasRecord = false;
             _gsSyncIsPublished = false;
             setGsBadge('sys_not_found');
+        } else if (state === 'error') {
+            // Falha de rede/SSL/403 intermitente na checagem ao vivo - não mexe em
+            // _gsSyncSnapshot/_gsSyncHasRecord/_gsSyncIsPublished (não sabemos nada de
+            // novo, só que a tentativa falhou); só troca o badge visualmente pra avisar
+            // e liberar o botão "↻" (ver _gsUpdateRefreshBtnVisibility/refreshGsSync).
+            setGsBadge('error');
         }
         updateGsFormProgress();
         _gsApplyFieldLockState();

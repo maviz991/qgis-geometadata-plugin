@@ -12,6 +12,9 @@
         <button class="tab-link" onclick="showTab('metadado',      this)">Metadado</button>
 
         <div class="tabs-status-group">
+            <button type="button" id="gn-refresh-btn" class="badge-refresh-btn" style="display:none"
+                onclick="event.stopPropagation();refreshGnSync();"
+                data-title="Verificar novamente (ignora o resultado em cache)">↻</button>
             <div id="gn-sync-badge" class="gn-sync-badge" style="display:none" onclick="onGnSyncBadgeClick()">
                 <span class="gn-sync-dot"></span>
                 <span class="gn-sync-label" id="gn-sync-label"></span>

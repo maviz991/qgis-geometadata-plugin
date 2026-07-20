@@ -66,6 +66,7 @@ function _initGnBridge() {
         _gnSyncUuid = uuid || null;
         _gnSyncUuidLayerName = uuid ? _activeLayerName : null;
         setGnBadge('sys_synced'); // publicar exige login - sempre nível sistema
+        _flashGnRefreshBtn();
     });
 
     // Save local (Continuar Depois) confirmado - recheca contra o GN na hora, sem
@@ -74,6 +75,7 @@ function _initGnBridge() {
     gnBridge.local_save_succeeded.connect(function (uuid) {
         _hideActionLoading();
         if (!uuid) return;
+        _flashGnRefreshBtn();
         var data = collectFormData();
         checkGnSync(uuid, (data && data.dateStamp) || '');
     });
@@ -106,6 +108,8 @@ function _initGnBridge() {
         if (key === 'main') renderContacts();
         else renderFor(key);
     });
+
+    gnBridge.gn_sync_checked.connect(_onGnSyncChecked);
 }
 
 // Chamado por loadPanel() (app.js) antes de trocar o HTML do painel - captura o
@@ -379,6 +383,7 @@ var _gnSyncUuidLayerName = null; // qual camada esse uuid corresponde - usado pe
 // dica de fallback quando a busca local (banco/sidecar) não acha nada,
 // só quando bate com a camada ativa (evita puxar uuid de outra camada)
 var _gnSearchTimer = null;
+var _gnSyncExpectedLayer = null; // camada que pediu a checagem em voo - ver checkGnSync/_onGnSyncChecked
 // Retrato (JSON) do formulário no momento exato em que o badge virou "Sincronizado" OU
 // "Não encontrado no Geohab" - comparado a cada input/change pra saber se o conteúdo
 // atual bate de novo com esse ponto de partida, mesmo que o usuário tenha revertido a
@@ -444,12 +449,36 @@ var _GN_MODIFIED_FOR = {
     offline_saved: 'offline_modified'
 };
 
+// Botão "↻" (ver refreshGnSync) fica escondido na maior parte do tempo - só aparece (1)
+// no estado 'error' (única situação onde recarregar de verdade ajuda) ou (2) por uma
+// janela curta logo após publicar/salvar (_flashGnRefreshBtn, chamada pelos handlers de
+// gn_publish_succeeded/local_save_succeeded) - foi exatamente nesses momentos que os
+// erros de rede intermitentes (SSL/403) mais apareceram nos testes.
+var _gnRefreshVisibleUntil = 0;
+function _gnUpdateRefreshBtnVisibility(state) {
+    var btn = document.getElementById('gn-refresh-btn');
+    if (!btn) return;
+    btn.style.display = (state === 'error' || Date.now() < _gnRefreshVisibleUntil) ? 'inline-flex' : 'none';
+}
+function _flashGnRefreshBtn() {
+    _gnRefreshVisibleUntil = Date.now() + 8000;
+    var badge = document.getElementById('gn-sync-badge');
+    var state = badge ? badge.className.replace('gn-sync-badge', '').trim() : '';
+    _gnUpdateRefreshBtnVisibility(state);
+    setTimeout(function () {
+        var b = document.getElementById('gn-sync-badge');
+        var s = b ? b.className.replace('gn-sync-badge', '').trim() : '';
+        _gnUpdateRefreshBtnVisibility(s);
+    }, 8000);
+}
+
 function setGnBadge(state) {
     var badge = document.getElementById('gn-sync-badge');
     var label = document.getElementById('gn-sync-label');
     if (!badge || !label) return;
     badge.className = 'gn-sync-badge ' + state;
     badge.style.display = 'flex';
+    _gnUpdateRefreshBtnVisibility(state);
     _refreshGnBadgeLabel();
     if (_GN_MODIFIED_FOR[state]) {
         var snap = collectFormData();
@@ -535,11 +564,22 @@ function checkGnSync(uuid, dateStamp) {
     // draft nem save ainda), o nível banco ainda consegue achar um registro salvo pela
     // identidade da própria camada (ver check_gn_sync, ui/geonetwork_bridge.py).
     setGnBadge('checking');
-    var _expectedLayer = _activeLayerName;
-    gnBridge.check_gn_sync(uuid || '', dateStamp || '', function (result) {
-        if (_activeLayerName !== _expectedLayer) return; // camada trocou enquanto verificava - resposta obsoleta
-        setGnBadge(result);
-    });
+    // Fire-and-forget (RNF02) - check_gn_sync não retorna mais direto: a checagem nível
+    // sistema é uma chamada de rede ao Geohab, rodando em background do lado Python
+    // (_GnSyncCheckWorker); o resultado chega depois pelo sinal gn_sync_checked
+    // (_onGnSyncChecked, abaixo). Antes disso essa chamada bloqueava a UI inteira (Qt event
+    // loop, inclusive a QWebEngineView) a cada troca de camada ativa com usuário logado.
+    // _gnSyncExpectedLayer trava qual camada pediu essa checagem - resposta que chega
+    // depois do usuário já ter trocado de camada de novo é descartada como obsoleta (mesma
+    // race de _gsOnlineExpectedKey, geoserver.js).
+    _gnSyncExpectedLayer = _activeLayerName;
+    gnBridge.check_gn_sync(uuid || '', dateStamp || '');
+}
+
+// Sinal gn_sync_checked (ver _initGnBridge) - resultado assíncrono de checkGnSync.
+function _onGnSyncChecked(state, layerName) {
+    if (layerName !== _gnSyncExpectedLayer) return; // camada trocou de novo enquanto verificava - resposta obsoleta
+    setGnBadge(state);
 }
 
 // Sufixo com o status GS (_gsBadgeState) pra anexar no modal do badge combinado - mesmo
@@ -578,6 +618,18 @@ function onGnSyncBadgeClick() {
 function applyGnUpdate() {
     if (!_gnSyncUuid) return;
     pullGnRecord(_gnSyncUuid);
+}
+
+// Botão "↻" ao lado do badge (editor.html) - único jeito de sair do estado "Erro ao
+// verificar" (falha de rede/SSL/403 intermitente na checagem contra o Geohab) sem fechar
+// e reabrir o plugin inteiro. Ignora o cache de "já verificado recentemente"
+// (_gnLastCheckedLayerKey) pra garantir que uma checagem de verdade rode agora, mesmo que
+// a última tentativa (com erro) tenha sido há poucos segundos.
+function refreshGnSync() {
+    if (!document.getElementById('f-title')) return; // editor não está aberto
+    _gnLastCheckedLayerKey = null;
+    var data = collectFormData();
+    checkGnSync(_gnSyncUuid, (data && data.dateStamp) || '');
 }
 
 // ─── Status de publicação no GeoServer (fundido no MESMO badge #gn-sync-badge) ────

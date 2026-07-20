@@ -147,6 +147,37 @@ class _GnRecordSearchWorker(QThread):
             self.done.emit([])
 
 
+class _GnSyncCheckWorker(QThread):
+    """Nível sistema de check_gn_sync (GeoNetworkBridge) isolado da UI thread - é a única
+    chamada de rede desse método (fetch_from_geonetwork, com possível warm-up de sessão
+    antes), antes rodava direto no pyqtSlot e travava a UI (Qt event loop, inclusive a
+    QWebEngineView) a cada troca de camada com usuário logado."""
+    done = pyqtSignal(str, str)  # state, layer_name
+
+    def __init__(self, geonetwork_service, uuid: str, local_date_stamp: str, config_loader_instance, layer_name: str):
+        super().__init__()
+        self._service = geonetwork_service
+        self._uuid = uuid
+        self._local_date_stamp = local_date_stamp
+        self._config = config_loader_instance
+        self._layer_name = layer_name
+
+    def run(self):
+        try:
+            remote = self._service.fetch_from_geonetwork(self._uuid, self._config)
+            if not remote:
+                self.done.emit('sys_not_found', self._layer_name)
+                return
+            remote_date = remote.get('dateStamp') or ''
+            if remote_date and self._local_date_stamp and remote_date > self._local_date_stamp:
+                self.done.emit('sys_update_available', self._layer_name)
+                return
+            self.done.emit('sys_synced', self._layer_name)
+        except Exception as exc:
+            print(f"GeoMetadata [check_gn_sync] nível sistema: {exc}")
+            self.done.emit('error', self._layer_name)
+
+
 class _GnContactEnrichWorker(QThread):
     """Busca o XML de um sub-template de contato do GeoNetwork e extrai todos os campos."""
     done = pyqtSignal(str, int, dict)  # section_key, idx, enriched_data
