@@ -35,7 +35,7 @@
     max-height: 200px;
     border: 1px solid var(--border);
     border-radius: 6px;
-    background: #f8fafc;
+    background: var(--bg);
     object-fit: cover;
 }
 
@@ -51,7 +51,7 @@
 .form-tabs {
     display: flex;
     border-bottom: 1px solid var(--border);
-    background: white;
+    background: var(--surface);
     padding: 0 24px;
     flex-shrink: 0;
 }
@@ -108,7 +108,7 @@
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
-    background: #f1f5f9;
+    background: var(--surface-hover);
     color: var(--fg-muted);
     transition: background 0.15s;
 }
@@ -309,7 +309,7 @@
     width: 26px;
     height: 26px;
     border-radius: 50%;
-    background-color: white;
+    background-color: var(--surface);
 }
 
 .progress-value {
@@ -375,7 +375,7 @@
     border-radius: 6px;
     font-size: 14px;
     color: var(--fg);
-    background: white;
+    background: var(--surface);
     outline: none;
     transition: border-color 0.15s, box-shadow 0.15s;
     font-family: inherit;
@@ -405,11 +405,11 @@
 .form-group select:disabled {
     opacity: 0.38;
     cursor: not-allowed;
-    background: #f8fafc;
+    background: var(--bg);
 }
 
 .form-group input[readonly] {
-    background: #f1f5f9;
+    background: var(--surface-hover);
     color: var(--fg-muted);
     cursor: default;
     user-select: text;
@@ -488,6 +488,8 @@
     font-size: 14px;
     font-family: inherit;
     outline: none;
+    background: var(--surface);
+    color: var(--fg);
 }
 
 .contacts-toolbar input:focus {
@@ -600,7 +602,7 @@
     padding: 8px 14px;
     border: 1px solid var(--border);
     border-radius: 6px;
-    background: white;
+    background: var(--surface);
     font-size: 14px;
     cursor: pointer;
     transition: background 0.15s, border-color 0.15s;
@@ -610,8 +612,8 @@
 }
 
 .btn-icon:hover {
-    background: #f1f5f9;
-    border-color: #cbd5e1;
+    background: var(--surface-hover);
+    border-color: var(--border);
 }
 
 .btn-icon.accent {
@@ -668,7 +670,7 @@
     border: 1px solid var(--border);
     border-radius: 6px;
     font-size: 14px;
-    background: white;
+    background: var(--surface);
     cursor: pointer;
     font-family: inherit;
     color: var(--fg);
@@ -699,7 +701,7 @@
 
 .btn-move:hover {
     color: var(--fg);
-    background: #f1f5f9;
+    background: var(--surface-hover);
 }
 
 .btn-move:disabled {
@@ -729,7 +731,7 @@
 }
 
 .manual-form-header:hover {
-    background: #f1f5f9;
+    background: var(--surface-hover);
 }
 
 .manual-form-body {
@@ -764,7 +766,7 @@
 .accordion-header {
     width: 100%;
     text-align: left;
-    background: white;
+    background: var(--surface);
     border: none;
     padding: 12px 16px;
     font-size: 13px;
@@ -777,7 +779,7 @@
 }
 
 .accordion-header:hover {
-    background: #f8fafc;
+    background: var(--bg);
 }
 
 .acc-arrow {
@@ -865,7 +867,7 @@
 }
 
 .btn-edit:hover {
-    background: #f1f5f9;
+    background: var(--surface-hover);
     border-color: #64748b;
 }
 
@@ -897,7 +899,7 @@
 }
 
 .btn-export-contact:hover {
-    background: #f1f5f9;
+    background: var(--surface-hover);
     border-color: #64748b;
 }
 
@@ -1017,7 +1019,7 @@
 }
 
 .extra-accordion summary:hover {
-    background: #f1f5f9;
+    background: var(--surface-hover);
 }
 
 @keyframes accordionSlideDown {
@@ -1144,9 +1146,9 @@
 }
 
 .proto-badge.link {
-    background: #f1f5f9;
-    color: #475569;
-    border: 1px solid #cbd5e1;
+    background: var(--surface-hover);
+    color: var(--fg-muted);
+    border: 1px solid var(--border);
 }
 
 /* ── Distribution: protocol toggles ──────────────────────────── */
@@ -1164,7 +1166,7 @@
     padding: 5px 10px;
     border-radius: 6px;
     border: 1px solid var(--border);
-    background: white;
+    background: var(--surface);
     transition: border-color 0.15s, background 0.15s;
     font-size: 13px;
 }
@@ -1208,4 +1210,220 @@
 
 .addr-bairro-wrap {
     flex: 1 1 0;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   DARK MODE — overrides pontuais. Padrão geral: fundo pastel claro vira
+   uma versão translúcida (rgba) da MESMA cor, texto/ponto ficam na versão
+   mais clara/saturada dela (ex.: verde #22c55e -> #4ade80) - mantém a
+   mesma identidade de cor de cada estado, só adaptada pro fundo escuro.
+   ══════════════════════════════════════════════════════════════════════ */
+:root[data-theme="dark"] .gn-sync-badge:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+:root[data-theme="dark"] .gn-sync-badge.error {
+    background: rgba(239, 68, 68, 0.18);
+    color: #f87171;
+}
+
+:root[data-theme="dark"] .gn-sync-badge.offline,
+:root[data-theme="dark"] .gn-sync-badge.offline_saved {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+:root[data-theme="dark"] .gn-sync-badge.offline_modified {
+    background: rgba(255, 255, 255, 0.06);
+    color: #94a3b8;
+}
+
+:root[data-theme="dark"] .gn-sync-badge.offline_modified .gn-sync-dot {
+    background: #94a3b8;
+}
+
+:root[data-theme="dark"] .gn-sync-badge.db_not_found,
+:root[data-theme="dark"] .gn-sync-badge.local_not_found {
+    background: rgba(168, 85, 247, 0.15);
+    color: #c084fc;
+}
+
+:root[data-theme="dark"] .gn-sync-badge.db_synced,
+:root[data-theme="dark"] .gn-sync-badge.local_synced {
+    background: rgba(34, 197, 94, 0.15);
+    color: #4ade80;
+}
+
+:root[data-theme="dark"] .gn-sync-badge.db_modified,
+:root[data-theme="dark"] .gn-sync-badge.local_modified {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+}
+
+:root[data-theme="dark"] .gn-sync-badge.sys_not_found {
+    background: rgba(147, 51, 234, 0.18);
+    color: #c084fc;
+}
+
+:root[data-theme="dark"] .gn-sync-badge.sys_synced {
+    background: rgba(22, 163, 74, 0.18);
+    color: #4ade80;
+}
+
+:root[data-theme="dark"] .gn-sync-badge.sys_update_available {
+    background: rgba(245, 158, 11, 0.18);
+    color: #fbbf24;
+}
+
+:root[data-theme="dark"] .gn-sync-badge.sys_modified {
+    background: rgba(29, 78, 216, 0.25);
+    color: #60a5fa;
+}
+
+:root[data-theme="dark"] .gn-update-banner {
+    background: rgba(245, 158, 11, 0.12);
+    border-bottom-color: rgba(245, 158, 11, 0.35);
+    color: #fbbf24;
+}
+
+:root[data-theme="dark"] .gn-update-banner-close {
+    color: #fbbf24;
+}
+
+:root[data-theme="dark"] .circular-progress {
+    background: conic-gradient(#3b82f6 calc(var(--progress) * 1%), var(--border) 0);
+}
+
+:root[data-theme="dark"] .circular-progress.completed {
+    background: conic-gradient(#22c55e calc(var(--progress) * 1%), var(--border) 0);
+}
+
+:root[data-theme="dark"] .progress-value {
+    color: var(--fg-muted);
+}
+
+:root[data-theme="dark"] .form-group input.error,
+:root[data-theme="dark"] .form-group select.error,
+:root[data-theme="dark"] .form-group textarea.error,
+:root[data-theme="dark"] .custom-select.error .custom-select-trigger {
+    background: rgba(229, 34, 45, 0.12);
+}
+
+:root[data-theme="dark"] .sugg-badge-gn {
+    background: rgba(34, 197, 94, 0.15);
+    color: #4ade80;
+}
+
+:root[data-theme="dark"] .sugg-badge-local {
+    background: rgba(147, 51, 234, 0.15);
+    color: #c084fc;
+}
+
+:root[data-theme="dark"] .sugg-badge-user {
+    background: rgba(194, 65, 12, 0.2);
+    color: #fb923c;
+}
+
+:root[data-theme="dark"] .sugg-delete-btn:hover,
+:root[data-theme="dark"] .btn-remove:hover,
+:root[data-theme="dark"] .btn-delete-user:hover {
+    background: rgba(229, 34, 45, 0.15);
+}
+
+:root[data-theme="dark"] .btn-save-local {
+    border-color: #fb923c;
+    color: #fb923c;
+}
+
+:root[data-theme="dark"] .btn-save-local:hover {
+    background: rgba(249, 115, 22, 0.15);
+}
+
+:root[data-theme="dark"] .btn-delete-user {
+    border-color: rgba(239, 68, 68, 0.5);
+}
+
+:root[data-theme="dark"] .manual-form-wrap,
+:root[data-theme="dark"] .accordion-body,
+:root[data-theme="dark"] .extra-accordion-grid {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+:root[data-theme="dark"] .badge-manual {
+    background: rgba(59, 130, 246, 0.18);
+    color: #60a5fa;
+}
+
+:root[data-theme="dark"] .badge-preset {
+    background: rgba(147, 51, 234, 0.15);
+    color: #c084fc;
+}
+
+:root[data-theme="dark"] .badge-gn {
+    background: rgba(34, 197, 94, 0.15);
+    color: #4ade80;
+}
+
+:root[data-theme="dark"] .badge-user {
+    background: rgba(194, 65, 12, 0.2);
+    color: #fb923c;
+}
+
+:root[data-theme="dark"] .btn-edit,
+:root[data-theme="dark"] .btn-cancel,
+:root[data-theme="dark"] .btn-export-contact {
+    color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .cdhu-warning {
+    background: rgba(245, 158, 11, 0.12);
+    border-color: rgba(245, 158, 11, 0.35);
+    color: #fbbf24;
+}
+
+:root[data-theme="dark"] .cdhu-warning strong {
+    color: #fcd34d;
+}
+
+:root[data-theme="dark"] .keyword-chip {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+    border-color: rgba(59, 130, 246, 0.35);
+}
+
+:root[data-theme="dark"] .keyword-chip button {
+    color: #93c5fd;
+}
+
+:root[data-theme="dark"] .keyword-chip button:hover {
+    color: #bfdbfe;
+}
+
+:root[data-theme="dark"] .proto-badge.wms {
+    background: rgba(253, 155, 138, 0.18);
+    color: #fdba8c;
+    border-color: rgba(253, 155, 138, 0.4);
+}
+
+:root[data-theme="dark"] .proto-badge.wfs {
+    background: rgba(82, 179, 179, 0.2);
+    color: #5eead4;
+    border-color: rgba(82, 179, 179, 0.4);
+}
+
+:root[data-theme="dark"] .proto-badge.wcs {
+    background: rgba(196, 181, 253, 0.18);
+    color: #c4b5fd;
+    border-color: rgba(196, 181, 253, 0.4);
+}
+
+:root[data-theme="dark"] .proto-badge.wps {
+    background: rgba(251, 207, 232, 0.15);
+    color: #f9a8d4;
+    border-color: rgba(251, 207, 232, 0.35);
+}
+
+:root[data-theme="dark"] .proto-badge.download {
+    background: rgba(125, 211, 252, 0.15);
+    color: #7dd3fc;
+    border-color: rgba(125, 211, 252, 0.35);
 }

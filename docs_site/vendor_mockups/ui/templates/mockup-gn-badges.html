@@ -10,35 +10,75 @@
 </head>
 
 <body style="overflow:auto;height:auto;min-height:100%;">
-    <div style="padding:18px 22px;display:flex;flex-direction:column;align-items:flex-start;gap:10px;font-family:ui-sans-serif,system-ui,sans-serif;">
+    <div style="padding:18px 22px;display:flex;flex-direction:column;gap:16px;font-family:ui-sans-serif,system-ui,sans-serif;">
 
-        <div class="gn-sync-badge sys_synced" style="cursor:default;">
-            <span class="gn-sync-dot"></span><span>Sincronizado</span>
+        <div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--fg-muted);margin-bottom:6px;">
+                Sincronizado</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                <div class="gn-sync-badge sys_synced" style="cursor:default;">
+                    <span class="gn-sync-dot"></span><span>Sincronizado</span>
+                </div>
+                <div class="gn-sync-badge db_synced" style="cursor:default;">
+                    <span class="gn-sync-dot"></span><span>Sincronizado (DB)</span>
+                </div>
+                <div class="gn-sync-badge local_synced" style="cursor:default;">
+                    <span class="gn-sync-dot"></span><span>Sincronizado (Local)</span>
+                </div>
+            </div>
         </div>
-        <div class="gn-sync-badge sys_modified" style="cursor:default;">
-            <span class="gn-sync-dot"></span><span>Modificado</span>
+
+        <div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--fg-muted);margin-bottom:6px;">
+                Modificado</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                <div class="gn-sync-badge sys_modified" style="cursor:default;">
+                    <span class="gn-sync-dot"></span><span>Modificado</span>
+                </div>
+                <div class="gn-sync-badge db_modified" style="cursor:default;">
+                    <span class="gn-sync-dot"></span><span>Modificado (DB)</span>
+                </div>
+                <div class="gn-sync-badge local_modified" style="cursor:default;">
+                    <span class="gn-sync-dot"></span><span>Modificado (Local)</span>
+                </div>
+            </div>
         </div>
-        <div class="gn-sync-badge sys_update_available" style="cursor:default;">
-            <span class="gn-sync-dot"></span><span>Atualização disponível</span>
+
+        <div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--fg-muted);margin-bottom:6px;">
+                Outros estados</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                <div class="gn-sync-badge sys_update_available" style="cursor:default;">
+                    <span class="gn-sync-dot"></span><span>Atualização disponível</span>
+                </div>
+                <div class="gn-sync-badge sys_not_found" style="cursor:default;">
+                    <span class="gn-sync-dot"></span><span>Não Encontrado (Geohab)</span>
+                </div>
+                <div class="gn-sync-badge db_not_found" style="cursor:default;">
+                    <span class="gn-sync-dot"></span><span>Não Encontrado (DB)</span>
+                </div>
+                <div class="gn-sync-badge local_not_found" style="cursor:default;">
+                    <span class="gn-sync-dot"></span><span>Não Encontrado (Local)</span>
+                </div>
+            </div>
         </div>
-        <div class="gn-sync-badge sys_not_found" style="cursor:default;">
-            <span class="gn-sync-dot"></span><span>Não Encontrado (Geohab)</span>
+
+        <div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--fg-muted);margin-bottom:6px;">
+                Offline / Erro</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                <div class="gn-sync-badge offline_saved" style="cursor:default;">
+                    <span class="gn-sync-dot"></span><span>Salvo (Offline)</span>
+                </div>
+                <div class="gn-sync-badge offline_modified" style="cursor:default;">
+                    <span class="gn-sync-dot"></span><span>Modificado (Offline)</span>
+                </div>
+                <div class="gn-sync-badge error" style="cursor:default;">
+                    <span class="gn-sync-dot"></span><span>Erro ao verificar</span>
+                </div>
+            </div>
         </div>
-        <div class="gn-sync-badge db_synced" style="cursor:default;">
-            <span class="gn-sync-dot"></span><span>Sincronizado (DB)</span>
-        </div>
-        <div class="gn-sync-badge db_modified" style="cursor:default;">
-            <span class="gn-sync-dot"></span><span>Modificado (DB)</span>
-        </div>
-        <div class="gn-sync-badge local_synced" style="cursor:default;">
-            <span class="gn-sync-dot"></span><span>Sincronizado (Local)</span>
-        </div>
-        <div class="gn-sync-badge offline_saved" style="cursor:default;">
-            <span class="gn-sync-dot"></span><span>Salvo (Offline)</span>
-        </div>
-        <div class="gn-sync-badge error" style="cursor:default;">
-            <span class="gn-sync-dot"></span><span>Erro ao verificar</span>
-        </div>
+
     </div>
     <script>
         (function () {

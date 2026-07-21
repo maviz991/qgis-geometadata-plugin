@@ -362,11 +362,14 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.web_view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         if QWebEnginePage is not None:
             self.web_view.setPage(_ExternalLinkPage(self.web_view))
-        # Fundo da página (mesma cor de --bg em styles.css) em vez do branco padrão do
-        # QWebEnginePage - sem isso, o instante entre a QWebEngineView aparecer e o primeiro
-        # paint do HTML (main.html + CSS ainda carregando) mostrava um "flash" branco puro
-        # antes do overlay de carregamento (mesmo --bg) aparecer.
-        self.web_view.page().setBackgroundColor(QColor("#f8fafc"))
+        # Fundo da página (mesma cor de --bg em styles.css, claro ou escuro conforme o tema
+        # já detectado em __init__) em vez do branco padrão do QWebEnginePage - sem isso, o
+        # instante entre a QWebEngineView aparecer e o primeiro paint do HTML (main.html +
+        # CSS ainda carregando) mostrava um "flash" branco puro antes do overlay de
+        # carregamento (mesmo --bg) aparecer - no tema escuro, esse flash era pior ainda
+        # (branco puro sobre o resto já escuro da janela).
+        is_dark = self.property("theme") == "dark"
+        self.web_view.page().setBackgroundColor(QColor("#10131a" if is_dark else "#f8fafc"))
 
         # Configura o QWebChannel para comunicação - três bridges por domínio
         # (genérico, GeoNetwork, GeoServer), cada um exposto ao JS com seu próprio nome.
@@ -379,9 +382,21 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         self.channel.registerObject("gsBridge", self.gs_bridge)
         self.web_view.page().setWebChannel(self.channel)
 
-        # Carrega o arquivo HTML principal
+        # Carrega o arquivo HTML principal - via setHtml() (não load()) pra poder injetar
+        # data-theme="dark"/"light" na tag <html> ANTES do primeiro parse/paint. Fazer essa
+        # troca depois, via JS a partir de bridge.get_initial_data() (round-trip Python↔JS
+        # assíncrono), pintaria a tela inteira no tema claro primeiro e só depois viraria
+        # escura - um flash visível toda vez que o plugin abre com o QGIS em tema escuro.
         template_path = os.path.join(os.path.dirname(__file__), "ui", "templates", "main.html")
-        self.web_view.load(QUrl.fromLocalFile(template_path))
+        base_url = QUrl.fromLocalFile(template_path)
+        with open(template_path, "r", encoding="utf-8") as f:
+            html = f.read()
+        html = html.replace(
+            '<html lang="pt-BR">',
+            '<html lang="pt-BR" data-theme="{}">'.format("dark" if is_dark else "light"),
+            1
+        )
+        self.web_view.setHtml(html, base_url)
 
         # QStackedWidget em vez de adicionar o web_view direto: permite trocar o
         # conteúdo da MESMA janela (ex: login SSO embutido) sem abrir popup separado.

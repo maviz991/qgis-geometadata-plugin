@@ -8,6 +8,44 @@
     --border: #bfc3c9;
     --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     --radius: 8px;
+    /* Tokens novos (tema escuro) - agrupam cores que se repetiam soltas (white, #f1f5f9,
+       #1e293b/#f8fafc de tooltip) em variáveis, pra dar um único lugar pra virar escuro. */
+    --surface: #ffffff;
+    --surface-hover: #f1f5f9;
+    --tooltip-bg: #1e293b;
+    --tooltip-fg: #f8fafc;
+}
+
+/* ── TEMA ESCURO ────────────────────────────────────────────────────────
+   Ativado via atributo data-theme="dark" na tag <html>, injetado direto no HTML
+   por GeoMetadata_dialog.py (_build_ui_structure - detecção de luminância do
+   tema do QGIS, via setHtml() em vez de load() pra não ter flash do tema claro
+   antes do primeiro paint). Só redefine os TOKENS - os componentes continuam
+   usando var(--x) normalmente; overrides de cores que não vêm de variável
+   (badges, acentos específicos) ficam nos blocos "DARK MODE" no fim de cada
+   arquivo CSS. Paleta neutra (cinza QGIS - #202020/#2b2b2b), não azulada -
+   pra combinar com o resto da UI nativa do QGIS ao redor do diálogo, em vez de
+   destoar como uma ilha com tom próprio. */
+:root[data-theme="dark"] {
+    --accent: #e5222d;
+    --accent-hover: #ff4550;
+    --bg: #202020;
+    --navbar-bg: #2b2b2b;
+    --fg: #eff0f1;
+    --fg-muted: #b0b0b0;
+    --border: #3c3c3c;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    --surface: #2b2b2b;
+    --surface-hover: #383838;
+    --tooltip-bg: #3c3c3c;
+    --tooltip-fg: #f5f5f5;
+    /* Faz <select>/checkbox/radio/scrollbar NATIVOS (renderizados pelo motor do
+       navegador, não por CSS - ex.: o <select> de Protocolo em "Recursos Online" e
+       os de "Regra"/contato) virem escuros automaticamente. Sem isso, esses
+       controles continuam com popup/track claros mesmo com o resto da UI escuro,
+       porque não são pintados por nenhuma regra CSS daqui - são desenhados pelo
+       próprio Chromium/Qt usando o esquema de cor padrão do SO. */
+    color-scheme: dark;
 }
 
 /* SCROLLBAR */
@@ -54,10 +92,10 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background-color: #ffffff;
+    background-color: var(--navbar-bg);
     height: 70px;
     border-bottom: 1px solid var(--border);
-    color: #475569;
+    color: var(--fg-muted);
     font-size: 14px;
     font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     padding: 0 16px 0 0;
@@ -106,7 +144,7 @@ body {
     align-items: center;
     gap: 4px;
     background-color: transparent;
-    color: #475569;
+    color: var(--fg-muted);
     padding: 8px 16px;
     font-size: 18px;
     font-weight: 600;
@@ -134,7 +172,7 @@ body {
     position: absolute;
     top: 100%;
     left: 0;
-    background-color: #ffffff;
+    background-color: var(--surface);
     min-width: 200px;
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
     border: 1px solid rgba(0, 0, 0, 0.05);
@@ -156,7 +194,7 @@ body {
 }
 
 .dropdown-content a {
-    color: #475569;
+    color: var(--fg-muted);
     padding: 8px 12px;
     text-decoration: none;
     display: flex;
@@ -275,7 +313,7 @@ body {
 /* FOOTER */
 .footer {
     height: 32px;
-    background: white;
+    background: var(--navbar-bg);
     border-top: 1px solid var(--border);
     display: flex;
     justify-content: space-between;
@@ -296,7 +334,7 @@ body {
     display: flex;
     align-items: center;
     gap: 8px;
-    background: #f1f5f9;
+    background: var(--surface-hover);
     padding: 4px 12px;
     border-radius: 20px;
     font-size: 12px;
@@ -357,8 +395,8 @@ body {
     max-width: 340px;
     max-height: 260px;
     overflow-y: auto;
-    background: #fff;
-    border: 1px solid #e2e8f0;
+    background: var(--surface);
+    border: 1px solid var(--border);
     border-radius: 8px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
     z-index: 9999;
@@ -371,7 +409,7 @@ body {
     gap: 8px;
     padding: 7px 14px;
     font-size: 12px;
-    color: #1e293b;
+    color: var(--fg);
     cursor: pointer;
     white-space: nowrap;
     overflow: hidden;
@@ -380,7 +418,7 @@ body {
 }
 
 .layer-picker-dropdown .lp-item:hover {
-    background: #f1f5f9;
+    background: var(--surface-hover);
 }
 
 .layer-picker-dropdown .lp-item.active {
@@ -426,7 +464,7 @@ body {
     top: calc(100% + 4px);
     left: 0;
     right: 0;
-    background: white;
+    background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 6px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
@@ -451,7 +489,7 @@ body {
 }
 
 .suggestion-item:hover {
-    background: #f1f5f9;
+    background: var(--surface-hover);
     color: var(--accent);
 }
 
@@ -483,7 +521,7 @@ body {
     z-index: 9000;
     align-items: center;
     gap: 10px;
-    background: white;
+    background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 10px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
@@ -506,7 +544,7 @@ body {
 }
 
 .card {
-    background: white;
+    background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 10px;
     padding: 24px 20px;
@@ -603,8 +641,8 @@ body {
 
 #help-tooltip {
     position: fixed;
-    background: #1e293b;
-    color: #f8fafc;
+    background: var(--tooltip-bg);
+    color: var(--tooltip-fg);
     font-size: 12px;
     font-weight: 400;
     line-height: 1.5;
@@ -629,13 +667,13 @@ body {
 
 #help-tooltip.tip-below #help-tooltip-arrow {
     top: -6px;
-    border-bottom-color: #1e293b;
+    border-bottom-color: var(--tooltip-bg);
     border-top-width: 0;
 }
 
 #help-tooltip.tip-above #help-tooltip-arrow {
     bottom: -6px;
-    border-top-color: #1e293b;
+    border-top-color: var(--tooltip-bg);
     border-bottom-width: 0;
 }
 
@@ -656,7 +694,7 @@ body {
     justify-content: space-between;
     width: 100%;
     padding: 9px 12px;
-    background: white;
+    background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 6px;
     font-size: 14px;
@@ -703,7 +741,7 @@ body {
     display: none; /* vira 'flex' via JS (openDropdown) quando aberto - ver .custom-select-items abaixo */
     flex-direction: column;
     max-height: 250px;
-    background: white;
+    background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 6px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -729,7 +767,7 @@ body {
     font-size: 13px;
     font-family: inherit;
     color: var(--fg);
-    background: white;
+    background: var(--surface);
 }
 
 .custom-select-search:focus {
@@ -754,12 +792,12 @@ body {
 }
 
 .custom-select-dropdown .suggestion-item:hover {
-    background: #f1f5f9;
+    background: var(--surface-hover);
     color: var(--fg);
 }
 
 .custom-select-dropdown .suggestion-item.active {
-    background: #f1f5f9;
+    background: var(--surface-hover);
     color: var(--fg);
     font-weight: 600;
 }
@@ -770,8 +808,8 @@ body {
     z-index: 10001;
     /* acima de .modal-overlay (10000) - senão fica escondido atrás de modais */
     pointer-events: none;
-    background: #1e293b;
-    color: #f8fafc;
+    background: var(--tooltip-bg);
+    color: var(--tooltip-fg);
     padding: 8px 12px;
     border-radius: 6px;
     font-size: 12px;
@@ -803,7 +841,7 @@ body {
     left: var(--arrow-pos, 50%);
     margin-left: -6px;
     border-width: 0 6px 6px 6px;
-    border-color: transparent transparent #1e293b transparent;
+    border-color: transparent transparent var(--tooltip-bg) transparent;
 }
 
 .global-tooltip[data-arrow="arrow-down"]::after {
@@ -811,11 +849,78 @@ body {
     left: var(--arrow-pos, 50%);
     margin-left: -6px;
     border-width: 6px 6px 0 6px;
-    border-color: #1e293b transparent transparent transparent;
+    border-color: var(--tooltip-bg) transparent transparent transparent;
 }
 
 /* Fix option highlight when navigating by keyboard */
 .suggestion-item.active {
     background-color: var(--bg-hover);
     color: var(--accent);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   DARK MODE — overrides pontuais (cores que não vinham de variável: tons
+   pastéis específicos de badge/hover, ou onde light/dark precisam de mais
+   que só trocar um tom por outro). Tudo que já usa var(--x) acima já se
+   resolve sozinho a partir do bloco de tokens no topo do arquivo.
+   ══════════════════════════════════════════════════════════════════════ */
+/* Scrollbar - thumb mais claro que o fundo escuro pra não sumir */
+:root[data-theme="dark"] ::-webkit-scrollbar-thumb {
+    background: #3a4150;
+}
+
+:root[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+    background: #4b5563;
+}
+
+:root[data-theme="dark"] .dropdown-content {
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+:root[data-theme="dark"] .dropdown-content a:hover {
+    background-color: rgba(229, 34, 45, 0.15);
+}
+
+:root[data-theme="dark"] .btn-login {
+    background-color: #2a2e38;
+}
+
+:root[data-theme="dark"] .panel-loading-spinner {
+    /* border-color (shorthand) reafirmando border-top-color junto - senão a
+       especificidade maior deste seletor apagaria o "entalhe" vermelho do topo,
+       que na regra base vem de uma declaração border-top-color SEPARADA. */
+    border-color: var(--border);
+    border-top-color: var(--accent);
+}
+
+:root[data-theme="dark"] .skeleton-field {
+    background: linear-gradient(90deg, #1c212b 25%, #262c38 50%, #1c212b 75%) !important;
+    border-color: #262c38 !important;
+}
+
+:root[data-theme="dark"] .user-badge:hover {
+    background: rgba(229, 34, 45, 0.18);
+}
+
+:root[data-theme="dark"] .layer-badge {
+    background: rgba(56, 189, 248, 0.12);
+    border-color: rgba(56, 189, 248, 0.35);
+    color: #7dd3fc;
+}
+
+:root[data-theme="dark"] .layer-badge:hover,
+:root[data-theme="dark"] .layer-badge.open {
+    background: rgba(56, 189, 248, 0.2);
+    border-color: #38bdf8;
+}
+
+:root[data-theme="dark"] .layer-picker-dropdown .lp-item.active {
+    background: rgba(56, 189, 248, 0.15);
+    border-left-color: #38bdf8;
+    color: #7dd3fc;
+}
+
+:root[data-theme="dark"] .help-btn:hover {
+    color: #cbd5e1;
+    border-color: #cbd5e1;
 }

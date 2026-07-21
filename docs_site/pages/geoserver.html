@@ -50,15 +50,51 @@
         continuar, pra não achar que "nada foi salvo" quando na verdade é só a checagem que falhou.</span>
 </div>
 
-<h2>4. Atualizar Camada / Atualizar Estilo</h2>
+<h2>4. Ações do menu Arquivo</h2>
+<p>O menu <strong>Arquivo</strong> é genérico - as duas ações agem sobre o que estiver aberto no momento. Aqui no
+    painel do GeoServer, elas agem sobre a <em>configuração de publicação</em> da camada, não sobre o metadado:</p>
+<table>
+    <tr>
+        <th>Ação</th>
+        <th>O que faz no painel GeoServer</th>
+    </tr>
+    <tr>
+        <td><strong>Continuar Depois</strong></td>
+        <td>Salva o rascunho atual da configuração de publicação (Workspace, Datastore, nome da camada, etc.),
+            sem publicar de fato no GeoServer.</td>
+    </tr>
+    <tr>
+        <td><strong>Descartar Alterações</strong></td>
+        <td>Descarta o rascunho e qualquer edição não salva no painel, voltando os campos para o que está
+            <strong>realmente publicado no banco</strong> - ou vazios/auto-preenchidos, se essa camada nunca foi
+            publicada. É o mesmo botão do editor de metadados, só que aplicado à camada em vez do metadado.</td>
+    </tr>
+</table>
+<div class="doc-note">
+    <span>ℹ️</span>
+    <span>Ações de metadado (<strong>Exportar/Importar/Baixar Metadado</strong>, <strong>Publicar Metadado</strong>)
+        ficam no menu <strong>Catálogo</strong>, não aqui - veja <a href="metadados.html">o editor de
+            metadados</a>.</span>
+</div>
+
+<h2>5. Baixar Camada / Atualizar Estilo</h2>
 <p>No menu <strong>Serviços</strong>:</p>
 <ul>
-    <li><strong>Atualizar Camada</strong> - <em>puxa</em> (pull) a configuração já publicada no GeoServer pro
-        painel, sobrescrevendo o que estiver preenchido localmente. Útil quando alguém mais publicou por fora do
-        seu QGIS.</li>
-    <li><strong>Atualizar Estilo</strong> - exporta a simbologia atual do QGIS (<code>QgsMapLayer.exportSldStyle()</code>)
-        como SLD e a envia como estilo padrão da camada no GeoServer.</li>
+    <li><strong>Baixar Camada</strong> - <em>puxa</em> (pull) a configuração já publicada no GeoServer pro painel,
+        sobrescrevendo o que estiver preenchido localmente. Útil quando alguém mais publicou por fora do seu
+        QGIS.</li>
+    <li><strong>Atualizar Estilo</strong> - <em>envia</em> (push) a simbologia atual do QGIS
+        (<code>QgsMapLayer.exportSldStyle()</code>) como SLD, aplicando o novo estilo numa camada <strong>já
+            publicada</strong> sem republicar o FeatureType. Note a direção oposta de "Baixar Camada": ambos ficam
+        no mesmo menu, mas um traz do servidor e o outro envia pra ele.</li>
 </ul>
+
+<div class="doc-note">
+    <span>ℹ️</span>
+    <span><strong>Publicar Camada</strong> (seção 1) já envia o estilo escolhido na aba Estilos junto com a
+        primeira publicação - você só precisa de <strong>Atualizar Estilo</strong> depois, quando quiser trocar o
+        estilo de uma camada que já está publicada.</span>
+</div>
 
 <div class="doc-note warn">
     <span>⚠️</span>
@@ -67,7 +103,7 @@
         depois de enviar.</span>
 </div>
 
-<h2>5. Erros comuns</h2>
+<h2>6. Erros comuns</h2>
 <table>
     <tr>
         <th>Situação</th>

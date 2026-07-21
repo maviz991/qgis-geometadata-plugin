@@ -443,7 +443,7 @@ class GeoServerService:
         'workspace' separada preenchida (dependendo da versão) - por isso sempre tira o
         prefixo do nome quando presente, independente de já ter vindo um workspace
         separado. Sem isso, os dois se somavam e o prefixo dobrava ('ws:ws:nome') no
-        nome exibido pra estilos adicionais depois de 'Atualizar Camada'. Retorna
+        nome exibido pra estilos adicionais depois de 'Baixar Camada'. Retorna
         (nome_puro, workspace)."""
         name = name or ''
         if ':' in name:

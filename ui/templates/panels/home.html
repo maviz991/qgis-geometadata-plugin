@@ -176,7 +176,7 @@
        geonetwork.css) - consistência com o resto do app em vez de cor nova só pra Home. */
     .card {
         position: relative;
-        background: #fff;
+        background: var(--surface);
         border-radius: 14px;
         border: 1px solid var(--border);
         overflow: hidden;
@@ -311,7 +311,7 @@
        abrir a Home - ver app.js) - badge "Ativo" era texto fixo no HTML antes, sem
        relação nenhuma com o servidor de verdade estar de pé ou não. */
     .badge-checking {
-        background: #f1f5f9;
+        background: var(--surface-hover);
         color: var(--fg-muted);
     }
 
@@ -343,5 +343,45 @@
         transform: none;
         box-shadow: none;
         border-color: var(--border);
+    }
+
+    /* ── DARK MODE — overrides pontuais ─────────────────────────────── */
+    :root[data-theme="dark"] .home-login-banner {
+        background: rgba(59, 130, 246, 0.12);
+        border-bottom-color: rgba(59, 130, 246, 0.35);
+        color: #93c5fd;
+    }
+
+    :root[data-theme="dark"] .home-login-banner-close {
+        color: #93c5fd;
+    }
+
+    :root[data-theme="dark"] .geonetwork-icon {
+        background: rgba(96, 165, 250, 0.12);
+    }
+
+    :root[data-theme="dark"] .geoserver-icon {
+        background: rgba(74, 222, 128, 0.12);
+    }
+
+    :root[data-theme="dark"] .docs-icon {
+        background: rgba(255, 255, 255, 0.06);
+    }
+
+    :root[data-theme="dark"] .badge,
+    :root[data-theme="dark"] .badge-active {
+        background: rgba(22, 163, 74, 0.2);
+        color: #4ade80;
+    }
+
+    :root[data-theme="dark"] .badge-secondary,
+    :root[data-theme="dark"] .badge-unstable {
+        background: rgba(133, 77, 14, 0.3);
+        color: #fbbf24;
+    }
+
+    :root[data-theme="dark"] .badge-offline {
+        background: rgba(185, 28, 28, 0.25);
+        color: #f87171;
     }
 </style>

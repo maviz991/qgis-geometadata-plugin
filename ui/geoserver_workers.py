@@ -161,7 +161,7 @@ class _GsPublishWorker(QThread):
 
 
 class _GsPullLayerWorker(QThread):
-    """"Serviços > Atualizar Camada" (banner "Atualização disponível", como o GN) - PULL,
+    """"Serviços > Baixar Camada" (banner "Atualização disponível", como o GN) - PULL,
     não push: busca o que está DE FATO publicado no GeoServer agora (título/resumo/
     palavras-chave via fetch_published_featuretype, estilo padrão/adicionais via
     fetch_layer_styles - as duas só leitura, já usadas pelo badge) e devolve pro bridge

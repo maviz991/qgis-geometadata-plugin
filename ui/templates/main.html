@@ -5,10 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Geohab Plugin</title>
-    <link rel="stylesheet" href="css/styles.css?v=15">
-    <link rel="stylesheet" href="css/modals.css?v=7">
-    <link rel="stylesheet" href="css/geonetwork.css?v=9">
-    <link rel="stylesheet" href="css/geoserver.css?v=15">
+    <link rel="stylesheet" href="css/styles.css?v=17">
+    <link rel="stylesheet" href="css/modals.css?v=9">
+    <link rel="stylesheet" href="css/geonetwork.css?v=11">
+    <link rel="stylesheet" href="css/geoserver.css?v=16">
     <script src="js/modals.js?v=7"></script>
 </head>
 
@@ -30,9 +30,6 @@
                 </button>
                 <div class="dropdown-content">
                     <a href="#" onclick="trySaveMetadata()">Continuar Depois</a>
-                    <a href="#" onclick="tryExportXml()">Exportar Metadado</a>
-                    <a href="#" onclick="tryImportXml()">Importar Metadado</a>
-                    <a href="#" onclick="openGnSearchModal()">Baixar Metadado</a>
                     <a href="#" onclick="tryResetForm()">Descartar Alterações</a>
                 </div>
             </div>
@@ -47,6 +44,9 @@
                 </button>
                 <div class="dropdown-content">
                     <a href="#" onclick="navigate('editor')">Editor de Metadado</a>
+                    <a href="#" onclick="openGnSearchModal()">Baixar Metadado</a>
+                    <a href="#" onclick="tryImportXml()">Importar Metadado</a>
+                    <a href="#" onclick="tryExportXml()">Exportar Metadado</a>
                     <a href="#" onclick="tryExportGeohab()">Publicar Metadado</a>
                 </div>
             </div>
@@ -62,7 +62,7 @@
                 <div class="dropdown-content">
                     <a href="#" onclick="navigate('geoserver')">Configurar Camada</a>
                     <a href="#" onclick="tryPublishGeoServerLayer()">Publicar Camada</a>
-                    <a href="#" onclick="pullGsLayerFromServer()">Atualizar Camada</a>
+                    <a href="#" onclick="pullGsLayerFromServer()">Baixar Camada</a>
                     <a href="#" onclick="tryUpdateGsStyle()">Atualizar Estilo</a>
                 </div>
             </div>
@@ -119,8 +119,8 @@
     <!-- SCRIPTS -->
     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
     <script src="js/app.js?v=19"></script>
-    <script src="js/geonetwork.js?v=32"></script>
-    <script src="js/geoserver.js?v=58"></script>
+    <script src="js/geonetwork.js?v=33"></script>
+    <script src="js/geoserver.js?v=59"></script>
 </body>
 
 </html>

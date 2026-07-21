@@ -29,7 +29,7 @@ class GeoServerBridge(QObject):
     gs_sync_checked = pyqtSignal('QVariant')  # resultado de check_gs_sync (ver _GsSyncCheckWorker)
     gs_styles_ready = pyqtSignal(list, str)  # [{'name':..., 'workspace': ''|ws}], error - ver list_styles
     gs_style_updated = pyqtSignal(bool, str)  # sucesso, erro - "Serviços > Atualizar Estilo" (ver update_style)
-    gs_layer_pulled = pyqtSignal(bool, 'QVariant', str)  # sucesso, dados, erro - "Serviços > Atualizar Camada" (ver pull_layer_from_server)
+    gs_layer_pulled = pyqtSignal(bool, 'QVariant', str)  # sucesso, dados, erro - "Serviços > Baixar Camada" (ver pull_layer_from_server)
     gs_rest_configured = pyqtSignal(bool, str)  # ok, username - resultado de configure_gs_rest_credentials
     gs_layer_info_ready = pyqtSignal('QVariant')  # resultado de get_active_layer_publish_info (ver _GsActiveLayerInfoWorker)
 
@@ -690,7 +690,7 @@ class GeoServerBridge(QObject):
 
     @pyqtSlot(str, str, str)
     def pull_layer_from_server(self, workspace, datastore, published_name):
-        """"Serviços > Atualizar Camada" (banner "Atualização disponível", como o GN) -
+        """"Serviços > Baixar Camada" (banner "Atualização disponível", como o GN) -
         PULL, não push: busca o que está DE FATO publicado no GeoServer agora (título/
         resumo/palavras-chave + estilo padrão/adicionais, só leitura - ver
         _GsPullLayerWorker) e devolve pro JS aplicar no formulário local, sobrescrevendo o

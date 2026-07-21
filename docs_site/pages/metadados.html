@@ -87,31 +87,45 @@
 <p><strong>Atualizar agora</strong> traz os dados do servidor pro formulário (sobrescrevendo edições locais não
     salvas). O X só esconde o aviso até a próxima verificação.</p>
 
-<h2>4. Ações do menu Arquivo</h2>
+<h2>4. Ações dos menus Arquivo e Catálogo</h2>
+<p>O menu <strong>Arquivo</strong> tem as ações genéricas (funcionam também no painel do GeoServer); o menu
+    <strong>Catálogo</strong> reúne tudo que é específico de metadados:
+</p>
 <table>
     <tr>
         <th>Ação</th>
+        <th>Menu</th>
         <th>O que faz</th>
     </tr>
     <tr>
         <td><strong>Continuar Depois</strong></td>
+        <td>Arquivo</td>
         <td>Salva o progresso atual (sidecar <code>.xml</code> junto da camada, ou tabela PostgreSQL) sem publicar
             no Geohab.</td>
     </tr>
     <tr>
-        <td><strong>Exportar Metadado</strong></td>
-        <td>Gera o XML MGB&nbsp;2.0 e salva no seu computador - útil para backup ou envio manual.</td>
-    </tr>
-    <tr>
-        <td><strong>Importar Metadado</strong></td>
-        <td>Carrega um XML existente pra edição, preservando o UUID original.</td>
+        <td><strong>Descartar Alterações</strong></td>
+        <td>Arquivo</td>
+        <td>Volta o formulário para o último estado salvo, descartando edições não persistidas.</td>
     </tr>
     <tr>
         <td><strong>Baixar Metadado</strong></td>
+        <td>Catálogo</td>
         <td>Busca um registro já publicado no Geohab pelo nome/UUID e carrega no formulário.</td>
     </tr>
     <tr>
-        <td><strong>Descartar Alterações</strong></td>
-        <td>Volta o formulário para o último estado salvo, descartando edições não persistidas.</td>
+        <td><strong>Importar Metadado</strong></td>
+        <td>Catálogo</td>
+        <td>Carrega um XML existente pra edição, preservando o UUID original.</td>
+    </tr>
+    <tr>
+        <td><strong>Exportar Metadado</strong></td>
+        <td>Catálogo</td>
+        <td>Gera o XML MGB&nbsp;2.0 e salva no seu computador - útil para backup ou envio manual.</td>
+    </tr>
+    <tr>
+        <td><strong>Publicar Metadado</strong></td>
+        <td>Catálogo</td>
+        <td>Envia o metadado pro Geohab (requer login).</td>
     </tr>
 </table>

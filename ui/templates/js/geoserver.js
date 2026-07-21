@@ -175,7 +175,7 @@ function _initGsBridge() {
         } catch (e) { /* sem snapshot ainda (null) - nada a realinhar */ }
         Modal.alert('Estilo aplicado como padrão da camada no GeoServer.', 'Estilo Atualizado', 'success');
     });
-    // "Serviços > Atualizar Camada" / banner "Atualização disponível" (ver
+    // "Serviços > Baixar Camada" / banner "Atualização disponível" (ver
     // pullGsLayerFromServer) - PULL: busca o que está DE FATO publicado no GeoServer e
     // substitui o formulário local por isso.
     gsBridge.gs_layer_pulled.connect(function (success, data, error) {
@@ -1592,7 +1592,7 @@ function tryUpdateGsStyle() {
     );
 }
 
-// "Serviços > Atualizar Camada" / banner "Atualização disponível" (ver setGsBadge) -
+// "Serviços > Baixar Camada" / banner "Atualização disponível" (ver setGsBadge) -
 // análogo, do lado GeoServer, do "Atualizar agora" do editor GN: PULL, não push. Busca
 // o que está DE FATO publicado no GeoServer agora (título/resumo/palavras-chave +
 // estilo padrão/adicionais) e substitui o formulário local por isso. Existe pro caso em
@@ -1633,7 +1633,7 @@ function pullGsLayerFromServer() {
             _showActionLoading('Buscando dados publicados no GeoServer...');
             gsBridge.pull_layer_from_server(d.workspace, d.datastore, d.published_name);
         },
-        'Atualizar Camada'
+        'Baixar Camada'
     );
 }
 
@@ -1794,7 +1794,7 @@ function setGsBadge(state) {
     // sentido quando: (1) a camada JÁ está publicada de verdade (_gsSyncIsPublished) -
     // sem isso não há nada pra buscar no GeoServer, o caminho certo é "Publicar Camada"
     // (já indicado no modal do badge, ver _GS_SYNC_MODALS); (2) o estado é
-    // especificamente 'sys_modified', não 'db_modified' - "Atualizar Camada" (pull) exige
+    // especificamente 'sys_modified', não 'db_modified' - "Baixar Camada" (pull) exige
     // sessão ativa (fetch_published_featuretype/fetch_layer_styles chamam
     // _get_rest_session()), e 'db_modified' significa "ainda sem login" (ver
     // _checkGsSyncNow) - mostrar o banner nesse estado deixava o botão clicável só pra
@@ -1807,7 +1807,7 @@ function setGsBadge(state) {
 }
 
 // Botão "Atualizar agora" do banner (ver setGsBadge) - reusa a mesma ação e confirmação
-// do menu "Serviços > Atualizar Camada", só entrando por um atalho visível direto no
+// do menu "Serviços > Baixar Camada", só entrando por um atalho visível direto no
 // painel quando a divergência já foi detectada.
 function applyGsLayerUpdate() {
     pullGsLayerFromServer();
@@ -1909,7 +1909,7 @@ function _checkGsSyncOnline(info) {
 // _GN_RECHECK_STALE_MS) - normalmente a checagem ao vivo só roda quando o painel/camada
 // carrega ou quando o login muda (ver _onGsAuthStateChangedForSync), então o badge podia
 // ficar preso num "Modificado" desatualizado até um desses dois momentos acontecerem de
-// novo. Chamada depois de uma falha em "Atualizar Camada"/"Atualizar Estilo" (ver
+// novo. Chamada depois de uma falha em "Baixar Camada"/"Atualizar Estilo" (ver
 // _initGsBridge) - se a falha foi porque o destino salvo não existe mais de verdade no
 // GeoServer, o badge corrige sozinho pra "Não Encontrado" na hora, em vez do usuário só
 // descobrir isso pelo texto de erro da chamada REST.

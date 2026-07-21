@@ -147,7 +147,7 @@
     padding: 8px 10px;
     border: 1px solid var(--border);
     border-radius: 6px;
-    background: white;
+    background: var(--surface);
     cursor: pointer;
     font-size: 12px;
     color: var(--fg);
@@ -319,4 +319,23 @@
     font-style: italic;
     font-size: 13px;
     margin: 0;
+}
+
+/* ── DARK MODE — overrides pontuais ────────────────────────────────────── */
+:root[data-theme="dark"] .gs-lock-btn:hover {
+    color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .gs-layer-badge {
+    background: rgba(56, 189, 248, 0.15);
+    border-color: rgba(56, 189, 248, 0.35);
+    color: #7dd3fc;
+}
+
+:root[data-theme="dark"] .gs-autodetect-candidate:hover {
+    background: rgba(229, 34, 45, 0.15);
+}
+
+:root[data-theme="dark"] .gs-status-box {
+    background: rgba(255, 255, 255, 0.03);
 }
