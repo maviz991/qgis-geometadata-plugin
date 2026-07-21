@@ -21,9 +21,10 @@ acontece, em vez de abrir uma janela popup separada.
 Autor: GeoMetadata Plugin | CDHU
 """
 
+import logging
+import warnings
 import requests
 import urllib3
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 from qgis.PyQt.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QStackedWidget
 from qgis.PyQt.QtCore import Qt, QUrl, QTimer, QThread, pyqtSignal
@@ -33,6 +34,22 @@ try:
     from qgis.PyQt.QtWebEngineWidgets import QWebEngineView, QWebEngineProfile, QWebEnginePage
 except ImportError:
     from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineProfile, QWebEnginePage
+
+try:
+    from ..core.ca_installer import get_ca_bundle as _get_ca_bundle
+except Exception:
+    def _get_ca_bundle():
+        return False
+
+log = logging.getLogger(__name__)
+
+try:
+    from contextlib import nullcontext as _nullcontext  # Python 3.7+
+except ImportError:
+    from contextlib import contextmanager
+    @contextmanager
+    def _nullcontext(*_a, **_kw):
+        yield
 
 
 _OIDC_REGISTRATION_ID = "entraid"
@@ -44,7 +61,7 @@ class _InsecurePage(QWebEnginePage):
     corporativo do ambiente GeoOrchestra não é confiável por padrão)."""
 
     def certificateError(self, error):
-        print(f"GeoMetadata [GatewaySSOWidget] certificado ignorado: {error.description()}")
+        log.debug("GeoMetadata [GatewaySSOWidget] certificado corporativo aceito: %s", error.description())
         try:
             error.acceptCertificate()
         except AttributeError:
@@ -105,16 +122,25 @@ class _VerifySessionWorker(QThread):
         self._cookies = cookies_snapshot  # cópia feita na thread principal antes do start() - ver _try_verify
 
     def run(self):
+        ca_bundle = _get_ca_bundle()
         try:
             session = requests.Session()
-            session.verify = False
+            session.verify = ca_bundle
             for (name, domain, path), value in self._cookies.items():
                 session.cookies.set(name, value, domain=domain, path=path or '/')
 
-            resp = session.get(
-                self._verify_url, timeout=10,
-                headers={'Accept': 'application/json'}
+            # Supressão de aviso de certificado com escopo restrito a esta chamada:
+            # só ativa quando a CA corporativa não está disponível (fallback legado).
+            ctx_mgr = (
+                warnings.catch_warnings() if not ca_bundle else _nullcontext()
             )
+            with ctx_mgr:
+                if not ca_bundle:
+                    warnings.simplefilter("ignore", urllib3.exceptions.InsecureRequestWarning)
+                resp = session.get(
+                    self._verify_url, timeout=10,
+                    headers={'Accept': 'application/json'}
+                )
             content_type = resp.headers.get('Content-Type', '')
             result = {
                 'ok': True, 'status': resp.status_code, 'content_type': content_type,
@@ -300,7 +326,7 @@ class GatewaySSOWidget(QWidget):
         if self._done or self._verifying:
             return
         if not ok:
-            print(f"GeoMetadata [GatewaySSOWidget] falha ao carregar: {self._view.url().toString()}")
+            log.debug("GeoMetadata [GatewaySSOWidget] falha ao carregar: %s", self._view.url().toString())
             self._set_status("Falha ao carregar a página de login.")
             return
         current_host = self._view.url().host()
@@ -329,12 +355,14 @@ class GatewaySSOWidget(QWidget):
     def _on_verify_result(self, result):
         self._verifying = False
         if self._done:
-            return  # cancelado (_on_cancel) enquanto o worker estava em voo - ignora a resposta atrasada
+            return  # cancelado (_on_cancel) enquanto o worker estava em vôo - ignora a resposta atrasada
         if result.get('ok'):
             status = result.get('status')
-            print(f"GeoMetadata [GatewaySSOWidget] verify {self._verify_url} -> "
-                  f"status={status} content-type={result.get('content_type')} "
-                  f"cookies={result.get('cookies')}")
+            # Não logar nomes de cookies (dados de sessão) - apenas status HTTP
+            log.debug(
+                "GeoMetadata [GatewaySSOWidget] verify %s -> status=%s content-type=%s",
+                self._verify_url, status, result.get('content_type')
+            )
             data = result.get('data')
             if status == 200 and data is not None:
                 # GeoNetwork separa nome/sobrenome em campos distintos (name/surname) -
@@ -352,7 +380,7 @@ class GatewaySSOWidget(QWidget):
                 return
             self._set_status(f"Sessão ainda não confirmada (HTTP {status}) - tentando de novo...")
         else:
-            print(f"GeoMetadata [GatewaySSOWidget] erro ao verificar sessão: {result.get('error')}")
+            log.warning("GeoMetadata [GatewaySSOWidget] erro ao verificar sessão: %s", result.get('error'))
             self._set_status(f"Erro ao verificar sessão: {result.get('error')}")
         # Ainda pode ser um hop intermediário do redirect, ou o cookie de sessão
         # ter chegado um instante depois do load - tenta de novo em 1.5s em vez de

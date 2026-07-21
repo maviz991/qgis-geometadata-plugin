@@ -9,7 +9,10 @@ Consultado antes de qualquer instalação para evitar trabalho desnecessário.
 import sys
 import os
 import site
+import logging
 from typing import List
+
+log = logging.getLogger(__name__)
 
 # Trava global para evitar múltiplos SetupDialogs abertos simultaneamente
 _setup_dialog_open = False
@@ -111,14 +114,27 @@ def silently_fix_lxml_if_needed():
         _lxml_installer_ref = None
 
     installer.install_success.connect(
-        lambda pkg: print(f"GeoMetadata: {pkg} atualizado em background (efetivo após reiniciar o QGIS).")
+        lambda pkg: log.info("GeoMetadata: %s atualizado em background (efetivo após reiniciar o QGIS).", pkg)
     )
     installer.install_failed.connect(
-        lambda pkg, err: print(f"GeoMetadata: falha ao atualizar {pkg} em background: {err}")
+        lambda pkg, err: log.warning("GeoMetadata: falha ao atualizar %s em background: %s", pkg, err)
     )
     installer.finished.connect(_release_ref)
     _lxml_installer_ref = installer
     installer.start()
+
+
+def silently_install_ca_if_needed():
+    """Instala o certificado CA corporativo da CDHU no bundle do certifi
+    (via core/ca_installer.py), se ainda não estiver instalado. Roda em
+    background (thread principal - operação de arquivo local, sem rede).
+    Segura chamar mais de uma vez: ca_installer é idempotente."""
+    try:
+        from .ca_installer import install_ca_cert, is_ca_cert_available
+        if is_ca_cert_available():
+            install_ca_cert()
+    except Exception as exc:
+        log.warning("GeoMetadata [env_checker] falha ao instalar CA corporativa: %s", exc)
 
 
 def missing_packages() -> List[str]:
@@ -181,4 +197,5 @@ def check_and_run_setup(parent=None):
 PACKAGE_LABELS = {
     # "msal":        "Login corporativo",  # ver comentário em missing_packages()
     "PyQtWebEngine": "Interface visual nativa",
+    "certifi":       "Certificados TLS corporativos",
 }

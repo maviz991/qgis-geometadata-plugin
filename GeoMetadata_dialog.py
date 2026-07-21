@@ -413,6 +413,63 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         """Callback disparado quando qualquer campo do formulário é editado (dirty flag)."""
         pass
 
+    def closeEvent(self, event):
+        """Para todas as QThreads em voo antes de destruir o diálogo.
+
+        Sem isso, qualquer worker ainda em execução (request HTTP, psycopg2, pip) é
+        destruído enquanto ainda roda — o Qt chama std::terminate(), que fecha o QGIS
+        silenciosamente sem crash dump. Ocorria especialmente ao usar o Plugin Reloader
+        ou ao recarregar o plugin enquanto o painel GeoServer estava aberto.
+
+        Padrão: quit() sinaliza encerramento ao event loop da thread; wait(2000) espera
+        até 2 s e depois abandona (não bloqueia o QGIS indefinidamente em casos extremos
+        como um timeout de 10 s no requests ainda em andamento — o processo Qt já vai
+        encerrar de qualquer forma, e 2 s é suficiente para a maioria dos workers).
+        """
+        # --- Bridges GeoServer (múltiplas listas de workers) ---
+        gs_bridge = getattr(self, 'gs_bridge', None)
+        if gs_bridge:
+            for w in list(getattr(gs_bridge, '_sync_check_workers', [])):
+                if w and w.isRunning():
+                    w.quit()
+                    w.wait(2000)
+            for w in list(getattr(gs_bridge, '_layer_info_workers', [])):
+                if w and w.isRunning():
+                    w.quit()
+                    w.wait(2000)
+            for attr in (
+                '_workspaces_worker', '_datastores_worker', '_featuretypes_worker',
+                '_find_datastore_worker', '_publish_worker', '_styles_worker',
+                '_apply_style_worker', '_gs_rest_worker', '_pull_layer_worker',
+            ):
+                w = getattr(gs_bridge, attr, None)
+                if w and w.isRunning():
+                    w.quit()
+                    w.wait(2000)
+
+        # --- Bridges GeoNetwork ---
+        gn_bridge = getattr(self, 'gn_bridge', None)
+        if gn_bridge:
+            for attr in ('_push_worker', '_fetch_worker', '_sync_worker'):
+                w = getattr(gn_bridge, attr, None)
+                if w and w.isRunning():
+                    w.quit()
+                    w.wait(2000)
+
+        # --- GatewaySSOWidget (login SSO embutido no content_stack) ---
+        stack = getattr(self, 'content_stack', None)
+        if stack:
+            for i in range(stack.count()):
+                widget = stack.widget(i)
+                if hasattr(widget, '_verify_worker'):
+                    vw = widget._verify_worker
+                    if vw and vw.isRunning():
+                        widget._done = True   # cancela retries pendentes
+                        vw.quit()
+                        vw.wait(2000)
+
+        super().closeEvent(event)
+
 
     def _make_menu(self):
         """QMenu com cantos arredondados sem artefatos no Windows.

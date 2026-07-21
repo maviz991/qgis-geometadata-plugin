@@ -181,7 +181,9 @@ class GeoMetadata:
         QTimer.singleShot(3000, self._check_and_install_dependencies)
 
     def _check_and_install_dependencies(self):
-        from .core.env_checker import check_and_run_setup
+        from .core.env_checker import check_and_run_setup, silently_fix_lxml_if_needed, silently_install_ca_if_needed
+        silently_install_ca_if_needed()   # instala cert CA corporativo no bundle certifi (sem diálogo)
+        silently_fix_lxml_if_needed()     # corrige bug lxml em background, se necessário
         check_and_run_setup(parent=self.iface.mainWindow())
 
 
