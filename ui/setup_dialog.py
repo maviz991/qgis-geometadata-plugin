@@ -228,6 +228,20 @@ class SetupDialog(QDialog):
         self._btn.setText("Fechar")
         self._btn.setVisible(True)
 
+    def reject(self):
+        """Ignora Esc/Alt+F4 (e o X, se algum WM insistir em mostrá-lo mesmo sem
+        WindowCloseButtonHint) enquanto a instalação está em andamento.
+
+        self._installer é QThread com parent=self - destruí-la ainda rodando mata o
+        QGIS inteiro (Qt chama std::terminate(), sem crash dump - mesma causa raiz de
+        GeoMetadataDialog.closeEvent). A ausência do botão de fechar na janela já é uma
+        pista visual dessa intenção, mas QDialog.closeEvent() chama reject() por padrão
+        (e Esc vai direto pra reject() via keyPressEvent) - sem esta guarda, os dois
+        continuavam fechando o diálogo por baixo dos panos."""
+        if self._installer and self._installer.isRunning():
+            return
+        super().reject()
+
     # ------------------------------------------------------------------
     # Stylesheet
     # ------------------------------------------------------------------

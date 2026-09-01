@@ -202,6 +202,25 @@ class LoginDialog(QDialog):
             return self._bridge.username
         return ""
 
+    def closeEvent(self, event):
+        """Para as QThreads do LoginBridge antes de destruir o diálogo.
+
+        start_sso() bloqueia em EntraAuthProvider.authenticate_interactive() (login via
+        navegador - pode levar minutos) rodando em _sso_worker; start_admin() e
+        run_install() têm o mesmo padrão em _adm_worker/_installer. Fechar este modal (X,
+        Esc, ou clique duplo em "Cancelar") enquanto qualquer um desses ainda está em
+        execução destrói a QThread ainda rodando - Qt chama std::terminate(), que fecha o
+        QGIS inteiro silenciosamente, sem crash dump (mesma causa raiz documentada em
+        GeoMetadataDialog.closeEvent, GeoMetadata_dialog.py)."""
+        bridge = getattr(self, '_bridge', None)
+        if bridge:
+            for attr in ('_sso_worker', '_adm_worker', '_installer'):
+                w = getattr(bridge, attr, None)
+                if w and w.isRunning():
+                    w.quit()
+                    w.wait(2000)
+        super().closeEvent(event)
+
 
 # ==================================================================
 # WORKERS (Processamento em Background)

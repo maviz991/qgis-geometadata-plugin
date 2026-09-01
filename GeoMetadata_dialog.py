@@ -419,7 +419,12 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         Sem isso, qualquer worker ainda em execução (request HTTP, psycopg2, pip) é
         destruído enquanto ainda roda — o Qt chama std::terminate(), que fecha o QGIS
         silenciosamente sem crash dump. Ocorria especialmente ao usar o Plugin Reloader
-        ou ao recarregar o plugin enquanto o painel GeoServer estava aberto.
+        ou ao recarregar o plugin enquanto o painel GeoServer estava aberto - e também ao
+        fechar o diálogo com o ping de status da Home (bridge._status_workers, disparado
+        sozinho toda vez que a Home carrega) ou uma publicação no GN (_gn_publish_worker)
+        ainda em voo (os nomes de atributo do gn_bridge abaixo estavam desatualizados desde
+        um refactor anterior - _push_worker/_fetch_worker/_sync_worker não existem mais em
+        GeoNetworkBridge -, então esse bloco não limpava nada de fato).
 
         Padrão: quit() sinaliza encerramento ao event loop da thread; wait(2000) espera
         até 2 s e depois abandona (não bloqueia o QGIS indefinidamente em casos extremos
@@ -450,11 +455,41 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         # --- Bridges GeoNetwork ---
         gn_bridge = getattr(self, 'gn_bridge', None)
         if gn_bridge:
-            for attr in ('_push_worker', '_fetch_worker', '_sync_worker'):
-                w = getattr(gn_bridge, attr, None)
+            for w in list(getattr(gn_bridge, '_gn_workers', {}).values()):
                 if w and w.isRunning():
                     w.quit()
                     w.wait(2000)
+            for w in list(getattr(gn_bridge, '_enrich_workers', [])):
+                if w and w.isRunning():
+                    w.quit()
+                    w.wait(2000)
+            for w in list(getattr(gn_bridge, '_sync_check_workers', [])):
+                if w and w.isRunning():
+                    w.quit()
+                    w.wait(2000)
+            w = getattr(gn_bridge, '_gn_search_worker', None)
+            if w and w.isRunning():
+                w.quit()
+                w.wait(2000)
+
+        # --- Worker de publicação no GeoNetwork (vive no próprio diálogo, não no gn_bridge -
+        # ver exportar_to_geo) ---
+        gn_publish_worker = getattr(self, '_gn_publish_worker', None)
+        if gn_publish_worker and gn_publish_worker.isRunning():
+            gn_publish_worker.quit()
+            gn_publish_worker.wait(2000)
+
+        # --- MainBridge (status dos cards da Home + login admin do GeoServer) ---
+        bridge = getattr(self, 'bridge', None)
+        if bridge:
+            for w in list(getattr(bridge, '_status_workers', [])):
+                if w and w.isRunning():
+                    w.quit()
+                    w.wait(2000)
+            adm_worker = getattr(bridge, '_adm_worker', None)
+            if adm_worker and adm_worker.isRunning():
+                adm_worker.quit()
+                adm_worker.wait(2000)
 
         # --- GatewaySSOWidget (login SSO embutido no content_stack) ---
         stack = getattr(self, 'content_stack', None)

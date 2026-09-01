@@ -403,4 +403,12 @@ class GatewaySSOWidget(QWidget):
         if self._done:
             return
         self._done = True
+        # _verify_worker tem parent=self (QThread filha deste widget) - se ainda estiver
+        # rodando (clique em "Voltar" durante "Validando sessão..."), o login_failed abaixo
+        # dispara _leave_sso_widget() (main_bridge.py) -> deleteLater() neste widget, o que
+        # destruiria a QThread ainda em execução: Qt chama std::terminate(), fecha o QGIS
+        # inteiro sem crash dump (mesma causa raiz de GeoMetadataDialog.closeEvent).
+        if self._verify_worker and self._verify_worker.isRunning():
+            self._verify_worker.quit()
+            self._verify_worker.wait(2000)
         self.login_failed.emit("Login cancelado.")
