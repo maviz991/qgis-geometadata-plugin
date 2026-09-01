@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Geohab Plugin</title>
-    <link rel="stylesheet" href="ui/templates/css/styles.css?v=7">
-    <link rel="stylesheet" href="ui/templates/css/modals.css?v=7">
-    <script src="ui/templates/js/modals.js?v=7"></script>
+    <link rel="stylesheet" href="../ui/templates/css/styles.css?v=7">
+    <link rel="stylesheet" href="../ui/templates/css/modals.css?v=7">
+    <script src="../ui/templates/js/modals.js?v=7"></script>
 
     <style>
         /* ── Layout geral ─────────────────────────────────────── */
@@ -510,7 +510,7 @@
             height: 16px;
             vertical-align: middle;
             margin-right: 6px;
-            background: url('img/chevron_down.svg') no-repeat center / contain;
+            background: url('../img/chevron_down.svg') no-repeat center / contain;
             transform: rotate(-90deg);
             transition: transform 0.2s;
         }
@@ -676,7 +676,7 @@
     <header class="navbar">
         <div class="nav-left">
             <button id="logo-btn" class="logo-link" onclick="bridge.navigate('home')">
-                <img src="../../logo.png" alt="CDHU" class="logo-img">
+                <img src="../logo.png" alt="CDHU" class="logo-img">
             </button>
 
             <div class="dropdown">
@@ -2227,7 +2227,7 @@
 
             return '<div class="contact-accordion">' +
                 '<button class="accordion-header" onclick="toggleAccordion(' + idx + ')">' +
-                '<span class="acc-arrow" id="arr-' + idx + '"><img class="acc-chevron" src="img/chevron_down.svg"></span>' +
+                '<span class="acc-arrow" id="arr-' + idx + '"><img class="acc-chevron" src="../img/chevron_down.svg"></span>' +
                 label + badge +
                 '</button>' +
                 '<div class="accordion-body" id="acc-body-' + idx + '">' +
@@ -2476,7 +2476,7 @@
                         fld('Cargo', d.position, c.isManual, 'af-' + key + '-' + idx + '-position') +
                         fld('Telefone', d.phone, c.isManual, 'af-' + key + '-' + idx + '-phone');
                     return '<div class="contact-accordion"><button class="accordion-header" onclick="toggleAccordionFor(\'' + key + '\',' + idx + ')">' +
-                        '<span class="acc-arrow" id="arr-' + key + '-' + idx + '"><img class="acc-chevron" src="img/chevron_down.svg"></span>' +
+                        '<span class="acc-arrow" id="arr-' + key + '-' + idx + '"><img class="acc-chevron" src="../img/chevron_down.svg"></span>' +
                         lbl + badge + '</button>' +
                         '<div class="accordion-body" id="acc-body-' + key + '-' + idx + '"><div class="form-grid">' + flds + '</div></div></div>';
                 }).join('');
