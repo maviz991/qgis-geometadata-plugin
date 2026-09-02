@@ -4,6 +4,7 @@
 from lxml import etree as ET
 import uuid as _uuid_mod
 import datetime
+import re
 
 # ── Namespaces canônicos ISO 19139 ──────────────────────────────────────────
 NS = {
@@ -55,6 +56,25 @@ def _datetime_el(parent, prefix, wrapper_tag, value):
         dt = _sub(wrapper, 'gco', 'DateTime')
         dt.set(_ns('gco', 'nilReason'), 'missing')
     return wrapper
+
+_TZ_SUFFIX_RE = re.compile(r'(Z|[+-]\d{2}:\d{2})$')
+
+def _ensure_br_offset(value):
+    """Reanexa o offset de Brasília (-03:00) a um datetime-local do form (YYYY-MM-DDTHH:MM
+    ou ...:SS, sempre sem timezone - é o que <input type="datetime-local"> produz) antes de
+    gravar no XML. Sem isso, um registro puxado do GN com timezone explícita (core/
+    xml_parser.py _to_local_datetime_str já converte pra hora de Brasília ao ler) volta pro
+    catálogo "flutuando" sem timezone nenhuma ao ser republicado - a hora de parede continua
+    certa, mas o dado vira ambíguo pra qualquer sistema que não assuma o mesmo fuso (ex:
+    poderia ser lido como UTC). Não mexe em valores que já tragam timezone (ex: 'Z' ou um
+    offset explícito, vindos de algum outro fluxo que não seja o form)."""
+    if not value or 'T' not in value:
+        return value
+    if _TZ_SUFFIX_RE.search(value):
+        return value
+    if len(value) == 16:  # YYYY-MM-DDTHH:MM, sem segundos
+        value += ':00'
+    return value + '-03:00'
 
 # ── Bloco de Contato CI_ResponsibleParty ────────────────────────────────────
 def _build_contact_block(parent, wrapper_tag, contact_data):
@@ -176,7 +196,9 @@ def generate_xml(data_dict, cdhu_contact_data=None):
             _build_contact_block(root, 'contact', cdhu)
 
     # ── dateStamp ────────────────────────────────────────────────────────────
-    date_stamp = d.get('dateStamp') or datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+    date_stamp = d.get('dateStamp')
+    date_stamp = _ensure_br_offset(date_stamp) if date_stamp \
+        else datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
     _datetime_el(root, 'gmd', 'dateStamp', date_stamp)
 
     # ── metadataStandardName / Version ───────────────────────────────────────
@@ -207,7 +229,7 @@ def generate_xml(data_dict, cdhu_contact_data=None):
     # Data do dado
     ci_date = _sub(_sub(citation, 'gmd', 'date'), 'gmd', 'CI_Date')
     date_val = d.get('date') or d.get('date_creation') or ''
-    _datetime_el(ci_date, 'gmd', 'date', date_val)
+    _datetime_el(ci_date, 'gmd', 'date', _ensure_br_offset(date_val))
     date_type = d.get('dateType') or 'creation'
     _codelist(ci_date, 'gmd', 'dateType', 'CI_DateTypeCode', 'CI_DateTypeCode', date_type)
 
@@ -217,7 +239,7 @@ def generate_xml(data_dict, cdhu_contact_data=None):
         _char(citation, 'gmd', 'edition', edition)
         date_edition = d.get('date_edition')
         if date_edition:
-            _datetime_el(citation, 'gmd', 'editionDate', date_edition)
+            _datetime_el(citation, 'gmd', 'editionDate', _ensure_br_offset(date_edition))
 
     # Abstract
     _char(id_info, 'gmd', 'abstract', d.get('abstract') or '')

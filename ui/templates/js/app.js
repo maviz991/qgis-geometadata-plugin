@@ -430,7 +430,20 @@ document.addEventListener('click', function (e) {
 
 // ─── Navegação ────────────────────────────────────────────────────────────────
 
+// Guarda contra clique repetido/duplo (ex.: logo do header) enquanto uma navegação já
+// está em andamento - sem isso, cada clique disparava um bridge.navigate() novo,
+// encadeando loadPanel -> bridge.load_panel_html -> onPanelLoaded -> (na Home)
+// check_services_status() de novo, sem esperar o ciclo anterior terminar. Cliques
+// rápidos empilhavam N navegações e 2N QThreads de status concorrentes, sobrecarregando
+// a QWebEngineView (innerHTML trocado várias vezes por segundo) e travando o badge em
+// "Verificando..." (respostas atrasadas se pisando) - relatado como o QGIS fechando
+// sozinho depois de multi-clique no logo. Zerada em onPanelLoaded(), quando a
+// navegação em andamento de fato termina.
+var _navInFlight = false;
+
 function navigate(panelId) {
+    if (_navInFlight) return;
+    _navInFlight = true;
     // 1. Executa os hooks de saída ANTES de trocar o DOM - collectFormData() e
     //    _saveGsDraftNow() ainda encontram os campos do painel atual aqui.
     if (typeof _onBeforePanelUnload === 'function') _onBeforePanelUnload();
@@ -482,6 +495,7 @@ function _showPanelLoading(container) {
 }
 
 function onPanelLoaded(panelId) {
+    _navInFlight = false; // navegação (via navigate()) concluída - ver guarda em navigate()
     if (panelId === "login") {
         if (typeof bridge !== 'undefined') {
             bridge.login_loading.connect(function (msg) { setLoginState(true, msg); });

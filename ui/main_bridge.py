@@ -37,6 +37,7 @@ class MainBridge(QObject):
         self._sso_widget = None
         self._adm_worker = None
         self._status_workers = []  # ver check_services_status/_on_service_status_done
+        self._service_status_cache = {}  # service -> status, 1 checagem real por sessão do plugin (ver check_services_status)
         try:
             plugin = getattr(dialog, 'plugin', None)
             iface  = getattr(plugin, 'iface', None) or getattr(dialog, 'iface', None)
@@ -158,6 +159,15 @@ class MainBridge(QObject):
     @pyqtSlot(str, str)
     def do_admin_login(self, user: str, password: str):
         """Login administrativo (usuário/senha GeoServer) sem abrir diálogo Qt separado."""
+        # Guarda contra reentrância: _AdminWorker não tem parent (ver web_bridge.py) - um
+        # duplo clique em "Entrar" (ou Enter no campo de senha seguido de clique no botão)
+        # sobrescreveria self._adm_worker com uma instância nova enquanto a anterior ainda
+        # está rodando (até 12s de timeout na requisição), órfã e sem nenhuma referência
+        # Python - o GC destrói a QThread ainda em execução, e o Qt chama std::terminate(),
+        # fechando o QGIS inteiro sem crash dump (mesma causa raiz de
+        # GeoMetadataDialog.closeEvent).
+        if self._adm_worker and self._adm_worker.isRunning():
+            return
         try:
             from ..core.plugin_config import config_loader
             from .web_bridge import _AdminWorker
@@ -241,7 +251,27 @@ class MainBridge(QObject):
         entrada diferente (.../index.html) - usar .../web/ aqui daria sempre "Offline"/
         "Instável" pra quem não está logado, exatamente o caso de uso mais comum desse
         badge. Usar a URL exata que o servidor entrega pro caso deslogado evita depender de
-        `requests` reproduzir um redirect condicionado à sessão."""
+        `requests` reproduzir um redirect condicionado à sessão.
+
+        Guarda contra sobreposição: ignora a chamada se a checagem anterior ainda não
+        terminou (`self._status_workers` não vazio). Defesa complementar ao debounce de
+        navigate() (app.js) - sem isso, qualquer chamador que dispare check_services_status()
+        repetidamente (cliques rápidos no logo/Home, ou uma chamada programática futura)
+        empilha N QThreads concorrentes batendo nas mesmas URLs.
+
+        Cache por sessão do plugin (`self._service_status_cache`): esse status muda pouco
+        (é só "o servidor está de pé?"), e onPanelLoaded('home') chama isso TODA vez que o
+        usuário revisita a Home - sem cache, cada ida-e-volta pro Catálogo/GeoServer e volta
+        pra Home disparava 2 requisições de rede de novo à toa (pedido do usuário: "abriu,
+        verificou, guardou" - não precisa reverificar só por ter navegado de volta, nem
+        depois de logar). Só a PRIMEIRA chamada da sessão bate no servidor de verdade; as
+        seguintes reemitem o resultado já guardado, síncrono, sem QThread nenhuma."""
+        if self._status_workers:
+            return
+        if self._service_status_cache:
+            for service, status in self._service_status_cache.items():
+                self.service_status_ready.emit(service, status)
+            return
         from .status_workers import _ServiceStatusWorker
         targets = {
             'geonetwork': config_loader.get_geonetwork_base_url().rstrip('/') + '/srv/por/catalog.search',
@@ -257,6 +287,7 @@ class MainBridge(QObject):
         worker = self.sender()
         if worker in self._status_workers:
             self._status_workers.remove(worker)
+        self._service_status_cache[service] = status  # ver check_services_status
         self.service_status_ready.emit(service, status)
 
     @pyqtSlot(result='QVariant')

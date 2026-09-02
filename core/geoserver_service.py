@@ -3,6 +3,8 @@ import unicodedata
 
 import requests
 
+from .http_lock import HTTP_SESSION_LOCK
+
 try:
     import psycopg2
 except ImportError:
@@ -115,12 +117,13 @@ class GeoServerService:
         if not base_url:
             raise ValueError("A URL do GeoServer não está definida corretamente no config.json.")
 
-        response = api_session.get(
-            f"{base_url}/rest/workspaces",
-            headers={'Accept': 'application/json'},
-            timeout=15,
-            verify=False
-        )
+        with HTTP_SESSION_LOCK:
+            response = api_session.get(
+                f"{base_url}/rest/workspaces",
+                headers={'Accept': 'application/json'},
+                timeout=15,
+                verify=False
+            )
         response.raise_for_status()
         data = response.json()
         workspaces = (data.get('workspaces') or {}).get('workspace') or []
@@ -134,12 +137,13 @@ class GeoServerService:
         if not base_url:
             raise ValueError("A URL do GeoServer não está definida corretamente no config.json.")
 
-        response = api_session.get(
-            f"{base_url}/rest/workspaces/{workspace}/datastores",
-            headers={'Accept': 'application/json'},
-            timeout=15,
-            verify=False
-        )
+        with HTTP_SESSION_LOCK:
+            response = api_session.get(
+                f"{base_url}/rest/workspaces/{workspace}/datastores",
+                headers={'Accept': 'application/json'},
+                timeout=15,
+                verify=False
+            )
         response.raise_for_status()
         data = response.json()
         datastores = (data.get('dataStores') or {}).get('dataStore') or []
@@ -158,13 +162,14 @@ class GeoServerService:
         if not base_url:
             raise ValueError("A URL do GeoServer não está definida corretamente no config.json.")
 
-        response = api_session.get(
-            f"{base_url}/rest/workspaces/{workspace}/datastores/{datastore}/featuretypes",
-            params={'list': 'all'},
-            headers={'Accept': 'application/json'},
-            timeout=20,
-            verify=False
-        )
+        with HTTP_SESSION_LOCK:
+            response = api_session.get(
+                f"{base_url}/rest/workspaces/{workspace}/datastores/{datastore}/featuretypes",
+                params={'list': 'all'},
+                headers={'Accept': 'application/json'},
+                timeout=20,
+                verify=False
+            )
         response.raise_for_status()
         data = response.json()
         names = (data.get('list') or {}).get('string') or []
@@ -299,13 +304,14 @@ class GeoServerService:
                 ]
             }
 
-        response = api_session.post(
-            f"{base_url}/rest/workspaces/{workspace}/datastores/{datastore}/featuretypes",
-            json=payload,
-            headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
-            timeout=30,
-            verify=False
-        )
+        with HTTP_SESSION_LOCK:
+            response = api_session.post(
+                f"{base_url}/rest/workspaces/{workspace}/datastores/{datastore}/featuretypes",
+                json=payload,
+                headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
+                timeout=30,
+                verify=False
+            )
         try:
             response.raise_for_status()
         except requests.exceptions.HTTPError:
@@ -327,12 +333,13 @@ class GeoServerService:
         if not base_url:
             raise ValueError("A URL do GeoServer não está definida corretamente no config.json.")
 
-        response = api_session.get(
-            f"{base_url}/rest/workspaces/{workspace}/datastores/{datastore}/featuretypes/{published_name}.json",
-            headers={'Accept': 'application/json'},
-            timeout=15,
-            verify=False
-        )
+        with HTTP_SESSION_LOCK:
+            response = api_session.get(
+                f"{base_url}/rest/workspaces/{workspace}/datastores/{datastore}/featuretypes/{published_name}.json",
+                headers={'Accept': 'application/json'},
+                timeout=15,
+                verify=False
+            )
         if response.status_code == 404:
             return None
         response.raise_for_status()
@@ -363,7 +370,8 @@ class GeoServerService:
         styles = []
 
         def _collect(url, ws_label):
-            response = api_session.get(url, headers={'Accept': 'application/json'}, timeout=15, verify=False)
+            with HTTP_SESSION_LOCK:
+                response = api_session.get(url, headers={'Accept': 'application/json'}, timeout=15, verify=False)
             if response.status_code == 404:
                 return  # workspace sem estilos próprios ainda - não é erro
             response.raise_for_status()
@@ -388,12 +396,13 @@ class GeoServerService:
         api_session = self._get_rest_session()
         base_url = config_loader_instance.get_geoserver_url().rstrip('/')
         scope = f"workspaces/{workspace}/" if workspace else ''
-        response = api_session.get(
-            f"{base_url}/rest/{scope}styles/{style_name}.json",
-            headers={'Accept': 'application/json'},
-            timeout=15,
-            verify=False
-        )
+        with HTTP_SESSION_LOCK:
+            response = api_session.get(
+                f"{base_url}/rest/{scope}styles/{style_name}.json",
+                headers={'Accept': 'application/json'},
+                timeout=15,
+                verify=False
+            )
         if response.status_code == 404:
             return False
         response.raise_for_status()
@@ -421,16 +430,18 @@ class GeoServerService:
         headers = {'Content-Type': self._sld_content_type(sld_body)}
         body = (sld_body or '').encode('utf-8')
         if self.style_exists(workspace, style_name, config_loader_instance):
-            response = api_session.put(
-                f"{base_url}/rest/workspaces/{workspace}/styles/{style_name}",
-                data=body, headers=headers, timeout=30, verify=False
-            )
+            with HTTP_SESSION_LOCK:
+                response = api_session.put(
+                    f"{base_url}/rest/workspaces/{workspace}/styles/{style_name}",
+                    data=body, headers=headers, timeout=30, verify=False
+                )
         else:
-            response = api_session.post(
-                f"{base_url}/rest/workspaces/{workspace}/styles",
-                params={'name': style_name},
-                data=body, headers=headers, timeout=30, verify=False
-            )
+            with HTTP_SESSION_LOCK:
+                response = api_session.post(
+                    f"{base_url}/rest/workspaces/{workspace}/styles",
+                    params={'name': style_name},
+                    data=body, headers=headers, timeout=30, verify=False
+                )
         try:
             response.raise_for_status()
         except requests.exceptions.HTTPError:
@@ -460,12 +471,13 @@ class GeoServerService:
         api_session = self._get_rest_session()
 
         base_url = config_loader_instance.get_geoserver_url().rstrip('/')
-        response = api_session.get(
-            f"{base_url}/rest/layers/{layer_workspace}:{published_name}.json",
-            headers={'Accept': 'application/json'},
-            timeout=15,
-            verify=False
-        )
+        with HTTP_SESSION_LOCK:
+            response = api_session.get(
+                f"{base_url}/rest/layers/{layer_workspace}:{published_name}.json",
+                headers={'Accept': 'application/json'},
+                timeout=15,
+                verify=False
+            )
         if response.status_code == 404:
             return None
         response.raise_for_status()
@@ -522,13 +534,14 @@ class GeoServerService:
             return
 
         base_url = config_loader_instance.get_geoserver_url().rstrip('/')
-        response = api_session.put(
-            f"{base_url}/rest/layers/{layer_workspace}:{published_name}.json",
-            json={'layer': layer_payload},
-            headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
-            timeout=30,
-            verify=False
-        )
+        with HTTP_SESSION_LOCK:
+            response = api_session.put(
+                f"{base_url}/rest/layers/{layer_workspace}:{published_name}.json",
+                json={'layer': layer_payload},
+                headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
+                timeout=30,
+                verify=False
+            )
         try:
             response.raise_for_status()
         except requests.exceptions.HTTPError:

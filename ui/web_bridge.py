@@ -147,6 +147,14 @@ class LoginBridge(QObject):
 
     @pyqtSlot()
     def start_sso(self):
+        # Guarda contra reentrância: _SsoWorker não tem parent - um duplo clique no botão
+        # sobrescreveria self._sso_worker com uma instância nova enquanto a anterior ainda
+        # está esperando o login no navegador (pode levar minutos), órfã e sem referência
+        # Python - o GC destrói a QThread ainda em execução, Qt chama std::terminate() e
+        # fecha o QGIS inteiro sem crash dump (mesma causa raiz de
+        # GeoMetadataDialog.closeEvent/MainBridge.do_admin_login).
+        if self._sso_worker and self._sso_worker.isRunning():
+            return
         self.sso_status.emit("Aguardando login no navegador...")
         provider = EntraAuthProvider(self._client_id, self._tenant_id, self._scopes)
         self._sso_worker = _SsoWorker(provider)
@@ -156,6 +164,9 @@ class LoginBridge(QObject):
 
     @pyqtSlot(str, str)
     def start_admin(self, user: str, password: str):
+        # Mesma guarda de start_sso, aplicada a _AdminWorker.
+        if self._adm_worker and self._adm_worker.isRunning():
+            return
         self._adm_worker = _AdminWorker(user, password, self._geoserver_url)
         self._adm_worker.login_success.connect(self._on_admin_ok)
         self._adm_worker.login_failed.connect(self._on_admin_fail)

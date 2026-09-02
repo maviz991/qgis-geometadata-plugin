@@ -1,7 +1,35 @@
 # xml_parser.py (VERSÃO FINAL COM LEITURA DE UUID)
 
 from lxml import etree as ET
+from datetime import datetime, timedelta, timezone
 import traceback
+
+# Brasil não observa horário de verão desde 2019 - offset fixo evita depender do pacote
+# tzdata (zoneinfo) estar instalado no Python do QGIS.
+_BR_TZ = timezone(timedelta(hours=-3))
+
+
+def _to_local_datetime_str(value):
+    """Converte um gmd:date (gco:Date ou gco:DateTime, com ou sem timezone) pro formato
+    exato que <input type="datetime-local"> aceita (YYYY-MM-DDTHH:MM, sem timezone) - sem
+    essa normalização o navegador REJEITA SILENCIOSAMENTE (campo fica vazio) tanto um
+    gco:Date puro (sem componente de hora, ex: "2019-05-14") quanto um gco:DateTime com
+    offset (ex: "2019-05-14T00:00:00-03:00") - era essa a causa de "não baixa a data e
+    hora de criação" pra registros não criados por este plugin (que só grava DateTime sem
+    timezone). Datas com offset são CONVERTIDAS (não truncadas) pro horário de Brasília -
+    truncar às cegas mostraria a hora errada sempre que a origem não usar -03:00 (ex: 'Z'/UTC)."""
+    if not value:
+        return None
+    value = value.strip()
+    if value.endswith('Z'):
+        value = value[:-1] + '+00:00'
+    try:
+        dt = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    if dt.tzinfo is not None:
+        dt = dt.astimezone(_BR_TZ).replace(tzinfo=None)
+    return dt.strftime('%Y-%m-%dT%H:%M')
 
 
 # --- As funções de ajuda (get_element_text, get_element_attribute) estão perfeitas ---
@@ -106,8 +134,12 @@ def parse_xml_to_dict(source, is_string=False):
             pass
             #print(f"UUID oficial do metadado encontrado no arquivo XML: {data['metadata_uuid']}")
 
-        # Data do próprio metadado (não do dado) - usada para comparar versão local vs. GN.
-        data['dateStamp'] = get_element_text(root, './gmd:dateStamp/gco:DateTime', ns)
+        # Data do próprio metadado (não do dado) - usada para comparar versão local vs. GN
+        # e exibida em "Data e hora de criação do metadado" (datetime-local).
+        data['dateStamp'] = _to_local_datetime_str(
+            get_element_text(root, './gmd:dateStamp/gco:DateTime', ns)
+            or get_element_text(root, './gmd:dateStamp/gco:Date', ns)
+        )
 
         # Contatos de metadado (gmd:contact no nível raiz) - array no formato que o
         # form/populateForm espera, espelhando o que _build_contact_block escreve.
@@ -120,11 +152,30 @@ def parse_xml_to_dict(source, is_string=False):
         if id_info is not None:
             data['title'] = get_element_text(id_info, './/gmd:title/gco:CharacterString', ns)
             data['edition'] = get_element_text(id_info, './/gmd:edition/gco:CharacterString', ns)
-            data['date_edition'] = get_element_text(id_info, './/gmd:editionDate/gco:DateTime', ns)
-            # Campo do form é "date" (não "date_creation" - mantido também por compat legada).
-            data['date'] = get_element_text(id_info, './/gmd:citation//gmd:date/gmd:CI_Date/gmd:date/gco:DateTime', ns)
-            data['date_creation'] = data['date']
-            data['dateType'] = get_element_attribute(id_info, './/gmd:citation//gmd:dateType/gmd:CI_DateTypeCode', 'codeListValue', ns)
+            data['date_edition'] = _to_local_datetime_str(
+                get_element_text(id_info, './/gmd:editionDate/gco:DateTime', ns)
+                or get_element_text(id_info, './/gmd:editionDate/gco:Date', ns)
+            )
+            # A citação pode ter mais de um gmd:CI_Date (criação/publicação/revisão) - um
+            # find() solto e separado pra date/dateType (como antes) pega os dois de nós
+            # DIFERENTES quando há mais de uma entrada, podendo misturar por ex. a data de
+            # revisão com o rótulo "Criação". Busca todos os CI_Date e prioriza
+            # explicitamente o de tipo 'creation'; sem essa entrada, cai no primeiro (caso
+            # mais comum: só existe uma data mesmo). Campo do form é "date" (não
+            # "date_creation" - mantido também por compat legada).
+            ci_dates = id_info.findall('.//gmd:citation//gmd:date/gmd:CI_Date', namespaces=ns)
+            ci_date = next(
+                (cd for cd in ci_dates if get_element_attribute(
+                    cd, './gmd:dateType/gmd:CI_DateTypeCode', 'codeListValue', ns
+                ) == 'creation'),
+                ci_dates[0] if ci_dates else None
+            )
+            if ci_date is not None:
+                raw_date = get_element_text(ci_date, './gmd:date/gco:DateTime', ns) \
+                    or get_element_text(ci_date, './gmd:date/gco:Date', ns)
+                data['date'] = _to_local_datetime_str(raw_date)
+                data['date_creation'] = data['date']
+                data['dateType'] = get_element_attribute(ci_date, './gmd:dateType/gmd:CI_DateTypeCode', 'codeListValue', ns)
             data['abstract'] = get_element_text(id_info, './gmd:abstract/gco:CharacterString', ns)
             data['purpose'] = get_element_text(id_info, './gmd:purpose/gco:CharacterString', ns)
             data['credit'] = get_element_text(id_info, './gmd:credit/gco:CharacterString', ns)
@@ -158,8 +209,14 @@ def parse_xml_to_dict(source, is_string=False):
             maint = id_info.find('./gmd:resourceMaintenance/gmd:MD_MaintenanceInformation', namespaces=ns)
             if maint is not None:
                 data['maintenanceFrequency'] = get_element_attribute(maint, './gmd:maintenanceAndUpdateFrequency/gmd:MD_MaintenanceFrequencyCode', 'codeListValue', ns)
-                data['dateOfNextUpdate'] = get_element_text(maint, './gmd:dateOfNextUpdate/gco:DateTime', ns) \
+                # Campo do form é <input type="date"> (sem hora) - se a origem gravou
+                # gco:DateTime, corta pra YYYY-MM-DD via _to_local_datetime_str (o valor
+                # completo com hora/timezone seria rejeitado silenciosamente pelo navegador
+                # num campo type="date", mesma causa raiz dos outros campos de data).
+                raw_next_update = get_element_text(maint, './gmd:dateOfNextUpdate/gco:DateTime', ns) \
                     or get_element_text(maint, './gmd:dateOfNextUpdate/gco:Date', ns)
+                normalized_next_update = _to_local_datetime_str(raw_next_update)
+                data['dateOfNextUpdate'] = normalized_next_update[:10] if normalized_next_update else None
 
             # Restrições de acesso / uso / licença
             md_legal = id_info.find('./gmd:resourceConstraints/gmd:MD_LegalConstraints', namespaces=ns)

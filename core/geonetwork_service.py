@@ -4,6 +4,8 @@ import requests
 import traceback
 from qgis.PyQt import QtWidgets
 
+from .http_lock import HTTP_SESSION_LOCK
+
 class GeoNetworkService:
     """
     Serviço que abstrai a comunicação com o GeoNetwork (API REST).
@@ -32,14 +34,16 @@ class GeoNetworkService:
         if not geonetwork_api_url or not geonetwork_catalog_url:
             raise ValueError("As URLs do GeoNetwork não estão definidas corretamente no config.json.")
 
-        # Obtendo CSRF (XSRF-TOKEN) acessando a página inicial
-        api_session.get(geonetwork_catalog_url, verify=False)
-
+        # Obtendo CSRF (XSRF-TOKEN) acessando a página inicial - warm-up + leitura dos
+        # cookies num lock só (mesmo motivo do fetch_from_geonetwork: outra QThread pode
+        # estar mutando api_session.cookies ao mesmo tempo, ver core/http_lock.py).
         csrf_token = None
-        for cookie in api_session.cookies:
-            if cookie.name == 'XSRF-TOKEN' and 'geonetwork' in cookie.path:
-                csrf_token = cookie.value
-                break
+        with HTTP_SESSION_LOCK:
+            api_session.get(geonetwork_catalog_url, verify=False)
+            for cookie in api_session.cookies:
+                if cookie.name == 'XSRF-TOKEN' and 'geonetwork' in cookie.path:
+                    csrf_token = cookie.value
+                    break
 
         headers = {
             'Content-Type': 'application/xml',
@@ -48,13 +52,14 @@ class GeoNetworkService:
         if csrf_token:
             headers['X-XSRF-TOKEN'] = csrf_token
 
-        response = api_session.put(
-            geonetwork_api_url,
-            data=xml_payload.encode('utf-8'),
-            headers=headers,
-            params={'publishToAll': 'false', 'uuidProcessing': uuid_processing}
-        )
-        
+        with HTTP_SESSION_LOCK:
+            response = api_session.put(
+                geonetwork_api_url,
+                data=xml_payload.encode('utf-8'),
+                headers=headers,
+                params={'publishToAll': 'false', 'uuidProcessing': uuid_processing}
+            )
+
         try:
             response.raise_for_status()
         except requests.exceptions.HTTPError:
@@ -108,16 +113,20 @@ class GeoNetworkService:
         # visita ao catálogo, o GN nunca estabelece sua sessão interna (JSESSIONID/
         # XSRF-TOKEN) a partir da credencial do gateway (Basic Auth ou Bearer SSO), e
         # rejeita com 403 registros que exigem autenticação mesmo com token válido.
-        if catalog_url and not any(
-            c.name == 'XSRF-TOKEN' and 'geonetwork' in c.path for c in api_session.cookies
-        ):
-            api_session.get(catalog_url, verify=False)
+        # Tudo dentro do lock (inclusive a leitura de api_session.cookies) - essa sessão é
+        # compartilhada com GeoServerService após login local (ver core/http_lock.py) e
+        # outra QThread pode estar mutando os cookies ao mesmo tempo.
+        with HTTP_SESSION_LOCK:
+            if catalog_url and not any(
+                c.name == 'XSRF-TOKEN' and 'geonetwork' in c.path for c in api_session.cookies
+            ):
+                api_session.get(catalog_url, verify=False)
 
-        response = api_session.get(
-            f"{records_url}/{uuid}/formatters/xml",
-            timeout=15,
-            verify=False
-        )
+            response = api_session.get(
+                f"{records_url}/{uuid}/formatters/xml",
+                timeout=15,
+                verify=False
+            )
         if response.status_code == 404:
             self._fetch_cache[uuid] = (time.time(), None)
             return None

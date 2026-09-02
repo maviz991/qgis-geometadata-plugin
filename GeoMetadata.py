@@ -23,7 +23,7 @@ from qgis.PyQt.QtWidgets import QAction
 
 # Initialize Qt resources from file resources.py
 from .resources import *
-# Import the code for the dialog
+# Import the code for the dialog 2
 from .GeoMetadata_dialog import GeoMetadataDialog
 import os.path
 
