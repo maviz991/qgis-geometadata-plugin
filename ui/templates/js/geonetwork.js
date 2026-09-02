@@ -927,6 +927,10 @@ function pullGnRecord(uuid) {
                 data.metadata_uuid || '',
                 JSON.stringify(data)
             );
+            // Guarda wms_data do pull para uso pelo painel GeoServer ("Baixar Camada"
+            // sem camada PostGIS ativa - ver pullGsLayerFromServer em geoserver.js).
+            // window scope: visível ao geoserver.js que carrega no mesmo QWebEngineView.
+            window._gnPullWmsData = data.wms_data || null;
             Modal.alert('Metadado baixado do Geohab com sucesso.<br>Confira os campos preenchidos no formulário.', 'Baixado', 'success');
         });
     }, 'Puxar do Geohab');

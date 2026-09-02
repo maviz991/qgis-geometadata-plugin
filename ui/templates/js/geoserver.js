@@ -191,6 +191,22 @@ function _initGsBridge() {
         var abstractEl = document.getElementById('gs-layer-abstract');
         if (titleEl) titleEl.value = data.title || '';
         if (abstractEl) abstractEl.value = data.abstract || '';
+        
+        // No fluxo via WMS/WFS, o workspace, datastore e nome vêm preenchidos do worker.
+        // Se a camada não estava ativa, a UI pode estar vazia, então preenchemos agora.
+        if (data.workspace) _clickGsSuggestionItem('gs-workspace-wrap', data.workspace);
+        if (data.datastore) {
+            var dsWrap = document.getElementById('gs-datastore-wrap');
+            if (dsWrap) dsWrap.innerHTML = '<select id="gs-datastore" onchange="onGsDatastoreChange(this.value)"><option value="' + escHtml(data.datastore) + '">' + escHtml(data.datastore) + '</option></select>';
+        }
+        if (data.published_name) {
+            var nameEl = document.getElementById('gs-layer-name');
+            if (nameEl) {
+                nameEl.value = data.published_name;
+                nameEl.dataset.sanitized = data.published_name;
+            }
+        }
+        
         _gsKeywords = (data.keywords || []).slice();
         _renderGsKeywords();
         // Estilo: só sabemos o NOME do estilo ao vivo (não o corpo SLD), então vira fonte
@@ -1617,7 +1633,31 @@ function pullGsLayerFromServer() {
         return;
     }
     if (!_gsLayerInfo || !_gsLayerInfo.publishable) {
-        Modal.alert((_gsLayerInfo && _gsLayerInfo.reason) || 'Nenhuma camada publicável ativa no QGIS.', 'Aviso', 'warning');
+        // Caminho alternativo: sem camada PostGIS ativa, mas o usuário já fez pull do
+        // GeoNetwork nesta sessão e o metadado tem um link WMS/WFS com o nome da camada
+        // publicada (workspace:published_name, guardado por pullGnRecord em geonetwork.js).
+        // Usa pull_gs_layer_by_wms_name que descobre o datastore automaticamente.
+        var wmsName = (window._gnPullWmsData && window._gnPullWmsData.geoserver_layer_name) || '';
+        if (wmsName) {
+            Modal.confirm(
+                'Sem camada PostGIS ativa no QGIS, mas o metadado baixado do Geohab indica a ' +
+                'camada "<strong>' + escHtml(wmsName) + '</strong>" publicada no GeoServer.<br><br>' +
+                'Isso vai substituir título/resumo/palavras-chave/estilo do formulário atual ' +
+                'pelo que está DE FATO publicado agora nessa camada. Continuar?',
+                function () {
+                    _showActionLoading('Buscando datastore e dados publicados no GeoServer...');
+                    gsBridge.pull_gs_layer_by_wms_name(wmsName);
+                },
+                'Baixar Camada via Metadado'
+            );
+        } else {
+            Modal.alert(
+                ((_gsLayerInfo && _gsLayerInfo.reason) || 'Nenhuma camada publicável ativa no QGIS.') +
+                '<br><br>Dica: faça "Catálogo > Baixar Metadado" primeiro — se o metadado tiver ' +
+                'um link WMS/WFS, o plugin detectará a camada no GeoServer automaticamente.',
+                'Aviso', 'warning'
+            );
+        }
         return;
     }
     var d = _gsCollectFormState();
@@ -1636,6 +1676,7 @@ function pullGsLayerFromServer() {
         'Baixar Camada'
     );
 }
+
 
 // Junta o que está de fato nos campos da tela agora (editáveis - podem ter sido
 // preenchidos via rascunho, "Puxar do GeoNetwork" ou digitados à mão). Usado tanto por

@@ -58,7 +58,9 @@ class GeoServerBridge(QObject):
         self._apply_style_worker = None
         self._gs_rest_worker = None
         self._pull_layer_worker = None
+        self._pull_by_wms_worker = None
         self._last_db_offline_notice = 0.0  # ver _notify_db_offline
+
 
     _DB_OFFLINE_NOTICE_INTERVAL = 60  # segundos - mesmo throttle de GeoNetworkBridge._notify_db_offline
 
@@ -390,13 +392,20 @@ class GeoServerBridge(QObject):
                 conn_params, details.get('f_table_catalog'), details.get('f_table_schema'), details.get('f_table_name'),
                 effective_hint, geonetwork_service, config_loader
             )
+            worker._ctx_base_info = info
+            worker._ctx_draft = draft
             self._layer_info_workers.append(worker)
-            worker.done.connect(
-                lambda result, w=worker, base_info=info, draft=draft: self._on_layer_info_ready(result, w, base_info, draft)
-            )
+            worker.done.connect(self._on_standard_layer_info_ready)
             worker.start()
         except Exception as exc:
             self.gs_layer_info_ready.emit({'publishable': False, 'reason': str(exc)})
+
+    @pyqtSlot('QVariant')
+    def _on_standard_layer_info_ready(self, result):
+        worker = self.sender()
+        if worker in self._layer_info_workers:
+            self._layer_info_workers.remove(worker)
+        self._on_layer_info_ready(result, worker, getattr(worker, '_ctx_base_info', {}), getattr(worker, '_ctx_draft', None))
 
     def _on_layer_info_ready(self, result, worker, base_info, draft):
         """Handler do _GsActiveLayerInfoWorker.done (ver get_active_layer_publish_info) -
@@ -713,10 +722,29 @@ class GeoServerBridge(QObject):
         self._pull_layer_worker = _GsPullLayerWorker(
             geoserver_service, workspace, datastore, published_name, config_loader
         )
-        self._pull_layer_worker.done.connect(
-            lambda ok, data, err: self._on_layer_pulled(ok, data, err, layer, workspace, datastore, published_name)
-        )
+        # Salva o contexto no próprio worker para evitar uso de lambda (que causa crash
+        # no QWebChannel por executar em DirectConnection na thread de background)
+        self._pull_layer_worker._ctx_layer = layer
+        self._pull_layer_worker._ctx_workspace = workspace
+        self._pull_layer_worker._ctx_datastore = datastore
+        self._pull_layer_worker._ctx_published_name = published_name
+        
+        self._pull_layer_worker.done.connect(self._on_standard_layer_pulled)
         self._pull_layer_worker.start()
+
+    @pyqtSlot(bool, 'QVariant', str)
+    def _on_standard_layer_pulled(self, ok, data, error):
+        """Handler seguro (QueuedConnection via @pyqtSlot) para pull_layer_from_server.
+        Evita o crash do QGIS ao emitir sinais JS a partir de background threads."""
+        worker = self.sender()
+        self._on_layer_pulled(
+            ok, data, error,
+            getattr(worker, '_ctx_layer', None),
+            getattr(worker, '_ctx_workspace', ''),
+            getattr(worker, '_ctx_datastore', ''),
+            getattr(worker, '_ctx_published_name', '')
+        )
+
 
     def _on_layer_pulled(self, ok, data, error, layer, workspace, datastore, published_name):
         """Persiste no banco o que acabou de vir do GeoServer (título/resumo/palavras-
@@ -742,6 +770,47 @@ class GeoServerBridge(QObject):
                     style_additional_json=json.dumps(adds) if adds else ''
                 )
         self.gs_layer_pulled.emit(ok, data or {}, error or '')
+
+    @pyqtSlot(str)
+    def pull_gs_layer_by_wms_name(self, ws_layer_name: str):
+        """"Serviços > Baixar Camada" quando não há camada PostGIS ativa no QGIS mas o
+        usuário já fez pull do GeoNetwork e o metadado tem um link WMS/WFS com o nome da
+        camada publicada no formato 'workspace:published_name' (CI_OnlineResource name,
+        campo geoserver_layer_name de wms_data — xml_parser.py).
+
+        Difere de pull_layer_from_server (que exige layer ativo + workspace/datastore/nome
+        já preenchidos pelo usuário) em dois pontos:
+        - Descobre o datastore automaticamente (find_datastore_for_published_name), sem exigir
+          camada PostGIS ativa ou que o usuário saiba/tenha preenchido o destino.
+        - Não persiste no banco (layer=None para _on_layer_pulled): sem camada ativa não há
+          chave de persistência. O formulário GS é atualizado na tela, mas o save fica como
+          rascunho local (save_gs_draft_now chamado pelo JS no handler gs_layer_pulled).
+
+        Emite gs_layer_pulled(ok, data, error) — mesmo sinal de pull_layer_from_server,
+        reutilizando integralmente o handler JS gs_layer_pulled.connect (geoserver.js)."""
+        geoserver_service = getattr(self._dialog, 'geoserver_service', None)
+        if not geoserver_service or not ws_layer_name:
+            self.gs_layer_pulled.emit(
+                False, {},
+                '[UI-005] Sem serviço GeoServer ou nome de camada WMS/WFS inválido.'
+            )
+            return
+        from ..core.plugin_config import config_loader
+        from .geoserver_workers import _GsPullLayerByWmsNameWorker
+        self._pull_by_wms_worker = _GsPullLayerByWmsNameWorker(
+            geoserver_service, ws_layer_name, config_loader
+        )
+        self._pull_by_wms_worker.done.connect(self._on_wms_layer_pulled)
+        self._pull_by_wms_worker.start()
+
+    @pyqtSlot(bool, 'QVariant', str)
+    def _on_wms_layer_pulled(self, ok, data, error):
+        """Handler seguro (QueuedConnection garantida pelo PyQt via @pyqtSlot) para o
+        resultado do _GsPullLayerByWmsNameWorker. Evita o crash do QWebChannel que ocorria
+        ao usar um lambda, o qual executava _on_layer_pulled direto na thread do worker."""
+        self._on_layer_pulled(ok, data, error, None, '', '', '')
+
+
 
     @pyqtSlot(str, str, str, str, str, 'QVariant', str)
     def check_gs_sync(self, workspace, datastore, published_name, title, abstract, keywords, style_json=''):

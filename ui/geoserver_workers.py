@@ -207,6 +207,83 @@ class _GsPullLayerWorker(QThread):
             self.done.emit(False, {}, str(exc))
 
 
+class _GsPullLayerByWmsNameWorker(QThread):
+    """"Serviços > Baixar Camada" quando não há camada PostGIS ativa no QGIS mas o usuário
+    já fez pull do GeoNetwork e o metadado tem um link WMS/WFS com o nome da camada no
+    formato workspace:published_name (CI_OnlineResource name, xml_parser.py wms_data).
+
+    Fluxo: (1) extrai workspace/published_name do ws_layer_name, (2) descobre o datastore
+    via GeoServerService.find_datastore_for_published_name (tenta fetch_published_featuretype
+    em cada datastore do workspace), (3) faz fetch_published_featuretype + fetch_layer_styles
+    normalmente. Emite done(bool, QVariant, str) — mesmo assinatura de _GsPullLayerWorker,
+    permitindo o mesmo handler (GeoServerBridge._on_layer_pulled) e o mesmo sinal (gs_layer_pulled)."""
+    progress = pyqtSignal(str)   # mensagem de status para _showActionLoading no JS
+    done = pyqtSignal(bool, 'QVariant', str)  # sucesso, dados, erro
+
+    def __init__(self, geoserver_service, ws_layer_name, config_loader_instance):
+        super().__init__()
+        self._service = geoserver_service
+        self._ws_layer_name = ws_layer_name      # 'workspace:published_name' do link WMS
+        self._config = config_loader_instance
+        self._workspace = ''
+        self._datastore = ''
+        self._published_name = ''
+
+    def run(self):
+        try:
+            # Extrai workspace:published_name (formato padrão GeoServer: 'ws:nome')
+            if ':' not in (self._ws_layer_name or ''):
+                self.done.emit(False, {}, (
+                    'Nome de camada do link WMS/WFS inválido: esperado "workspace:nome" '
+                    f'(recebido: "{self._ws_layer_name}"). Verifique o metadado no GeoNetwork.'
+                ))
+                return
+            workspace, published_name = self._ws_layer_name.split(':', 1)
+            self._workspace = workspace
+            self._published_name = published_name
+
+            # Descobre o datastore varrendo os datastores do workspace
+            self.progress.emit(f'Buscando em qual datastore "{workspace}:{published_name}" está publicado...')
+            datastore = self._service.find_datastore_for_published_name(
+                workspace, published_name, self._config,
+                progress_callback=self.progress.emit
+            )
+            if not datastore:
+                self.done.emit(False, {}, (
+                    f'Camada "{workspace}:{published_name}" não foi encontrada em nenhum datastore '
+                    f'do workspace "{workspace}" no GeoServer. Verifique se o link WMS/WFS no '
+                    'metadado (GeoNetwork) aponta para a camada correta.'
+                ))
+                return
+            self._datastore = datastore
+
+            # Pull normal: mesma lógica de _GsPullLayerWorker daqui pra frente
+            self.progress.emit(f'Baixando dados publicados de "{workspace}/{datastore}/{published_name}"...')
+            remote = self._service.fetch_published_featuretype(
+                workspace, datastore, published_name, self._config
+            )
+            if remote is None:
+                self.done.emit(False, {}, (
+                    f'[GS-404] "{workspace}:{published_name}" sumiu do datastore "{datastore}" '
+                    'durante a busca. Tente novamente ou verifique o GeoServer.'
+                ))
+                return
+            styles = None
+            try:
+                styles = self._service.fetch_layer_styles(workspace, published_name, self._config)
+            except Exception as style_exc:
+                print(f'GeoMetadata [_GsPullLayerByWmsNameWorker] fetch_layer_styles: {style_exc}')
+            remote['workspace'] = workspace
+            remote['datastore'] = datastore
+            remote['published_name'] = published_name
+            remote['default_style'] = (styles or {}).get('default_style') or ''
+            remote['default_style_workspace'] = (styles or {}).get('default_style_workspace') or ''
+            remote['additional_styles'] = (styles or {}).get('additional') or []
+            self.done.emit(True, remote, '')
+        except Exception as exc:
+            self.done.emit(False, {}, str(exc))
+
+
 class _GsStylesWorker(QThread):
     """Lista os estilos disponíveis (globais + do workspace) em background - popula o
     select "Usar estilo existente" da aba Estilos (ver GeoServerService.list_styles)."""

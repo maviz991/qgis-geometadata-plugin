@@ -127,6 +127,8 @@ class GeoServerService:
         response.raise_for_status()
         data = response.json()
         workspaces = (data.get('workspaces') or {}).get('workspace') or []
+        if isinstance(workspaces, dict):
+            workspaces = [workspaces]
         return [w.get('name') for w in workspaces if w.get('name')]
 
     def list_datastores(self, workspace, config_loader_instance):
@@ -147,6 +149,8 @@ class GeoServerService:
         response.raise_for_status()
         data = response.json()
         datastores = (data.get('dataStores') or {}).get('dataStore') or []
+        if isinstance(datastores, dict):
+            datastores = [datastores]
         return [d.get('name') for d in datastores if d.get('name')]
 
     def list_featuretypes(self, workspace, datastore, config_loader_instance):
@@ -203,6 +207,36 @@ class GeoServerService:
                 if any((n or '').lower() == table_lower for n in names):
                     matches.append({'workspace': ws, 'datastore': ds})
         return matches
+
+    def find_datastore_for_published_name(self, workspace, published_name, config_loader_instance,
+                                          progress_callback=None):
+        """Dado um workspace e um published_name (ex.: do link WMS/WFS de um metadado GN),
+        descobre em qual datastore esse FeatureType está publicado.
+
+        Diferente de find_datastore_for_table (que busca pelo nome da TABELA via list=all),
+        este tenta fetch_published_featuretype em cada datastore do workspace — mais preciso
+        quando só temos o nome publicado (sem acesso à camada PostGIS local). Retorna o nome
+        do primeiro datastore que responder 200 (não None), ou None se não encontrar em nenhum.
+
+        Usado por pull_gs_layer_by_wms_name para completar a tripla workspace/datastore/name
+        necessária para _GsPullLayerWorker, partindo apenas de workspace:published_name como
+        vem do CI_OnlineResource name do metadado GN (xml_parser.py, wms_data.geoserver_layer_name)."""
+        try:
+            datastores = self.list_datastores(workspace, config_loader_instance)
+        except Exception as e:
+            raise Exception(f'Não foi possível listar datastores do workspace "{workspace}": {e}')
+
+        for i, ds in enumerate(datastores):
+            if progress_callback:
+                progress_callback(f'Procurando em "{workspace}/{ds}" ({i + 1}/{len(datastores)})...')
+            try:
+                result = self.fetch_published_featuretype(workspace, ds, published_name, config_loader_instance)
+                if result is not None:  # 200 OK — found it
+                    return ds
+            except Exception:
+                continue  # 404 ou erro de rede — tenta o próximo datastore
+        return None
+
 
     @staticmethod
     def sanitize_layer_name(name):
