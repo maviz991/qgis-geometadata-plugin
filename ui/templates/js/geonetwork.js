@@ -902,15 +902,36 @@ function pullGnRecord(uuid) {
             resetEditorForm();
             populateForm(data);
             _saveDraftNow();
-            // Idem _tryGnResetForm/tryImportXml - conteúdo do formulário acabou de mudar
-            // de verdade (puxado do GN), invalida o cache pra não reaplicar um badge de
-            // ANTES dessa troca.
-            _gnLastCheckedLayerKey = null;
-            checkGnSync(data.metadata_uuid, data.dateStamp || '');
+            // Após um pull, o formulário É por definição o que está no Geohab agora -
+            // não faz sentido chamar checkGnSync aqui: o _GnSyncCheckWorker compararia
+            // o remoto contra o que está *salvo localmente* (banco/sidecar), que pode
+            // estar vazio (sem camada ativa ou sem save anterior), resultando sempre em
+            // divergência e badge falso-positivo "Atualização disponível". O padrão
+            // correto é o mesmo de gn_publish_succeeded: setar sys_synced diretamente,
+            // já que sabemos com certeza que o formulário bate com o servidor.
+            // Pull só está disponível quando logado → nível sistema (sys_*) é correto.
+            _gnLastCheckedLayerKey = null; // invalida cache pra eventual refresh manual
+            _gnSyncUuid = data.metadata_uuid || null;
+            _gnSyncUuidLayerName = _gnSyncUuid ? _activeLayerName : null;
+            setGnBadge('sys_synced');
+            // Persiste o baseline de comparação (Bug 40): fechar e reabrir o plugin
+            // volta a chamar checkGnSync do zero, e sem um save local (banco/sidecar)
+            // o worker compararia remoto vs {} e acusaria divergência. O baseline
+            // salva os dados completos do pull para que check_gn_sync use como
+            // referência quando saved={} - o worker acha remoto == baseline → sys_synced.
+            // IMPORTANTE: deve ser o `data` COMPLETO (não só title/abstract/keywords):
+            // _onGnSyncChecked chama _gnSnapshotFor(saved) que popula o formulário inteiro
+            // com `saved` e faz collectFormData() - se `saved` tiver só 3 campos, todos os
+            // outros ficam vazios no snapshot e ele nunca bate com o draft real → sys_modified.
+            gnBridge.save_pull_baseline(
+                data.metadata_uuid || '',
+                JSON.stringify(data)
+            );
             Modal.alert('Metadado baixado do Geohab com sucesso.<br>Confira os campos preenchidos no formulário.', 'Baixado', 'success');
         });
     }, 'Puxar do Geohab');
 }
+
 
 // Guard comum pra qualquer ação do menu Arquivo que dependa do editor estar aberto -
 // mesmo toast "Ação Necessária" pra todas (exportar, importar, buscar, descartar).

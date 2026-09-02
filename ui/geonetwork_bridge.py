@@ -332,13 +332,85 @@ class GeoNetworkBridge(QObject):
 
     @pyqtSlot()
     def clear_draft(self):
-        """Remove só o rascunho da camada ativa - não mexe nos drafts de outras camadas."""
+        """Remove só o rascunho da camada ativa - não mexe nos drafts de outras camadas.
+        Também limpa o pull baseline associado (ver save_pull_baseline): descartar é um
+        reset completo, qualquer referência ao pull anterior fica obsoleta."""
         try:
             drafts = self._load_all_drafts()
             if drafts.pop(self._layer_key(), None) is not None:
                 self._save_all_drafts(drafts)
         except Exception as e:
             print(f"GeoMetadata [clear_draft]: {e}")
+        try:
+            baselines = self._load_all_baselines()
+            if baselines.pop(self._layer_key(), None) is not None:
+                self._save_all_baselines(baselines)
+        except Exception as e:
+            print(f"GeoMetadata [clear_draft/baseline]: {e}")
+
+    # ── Baseline de pull (anti-falso sys_update_available ao reabrir) ──────────
+
+    def _pull_baseline_path(self) -> str:
+        """Arquivo JSON que persiste o baseline de comparação de pulls recentes,
+        keyed por camada - mesmo padrão de _draft_path."""
+        try:
+            from qgis.core import QgsApplication
+            base = QgsApplication.qgisSettingsDirPath()
+        except Exception:
+            base = os.path.expanduser('~')
+        return os.path.join(base, 'geometadata_pull_baselines.json')
+
+    def _load_all_baselines(self) -> dict:
+        """Lê {layer_key: {uuid, snapshot}} do arquivo de baselines."""
+        import json
+        path = self._pull_baseline_path()
+        if not os.path.exists(path):
+            return {}
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"GeoMetadata [_load_all_baselines]: {e}")
+            return {}
+
+    def _save_all_baselines(self, baselines: dict):
+        import json
+        with open(self._pull_baseline_path(), 'w', encoding='utf-8') as f:
+            json.dump(baselines, f, ensure_ascii=False)
+
+    @pyqtSlot(str, str)
+    def save_pull_baseline(self, uuid: str, snapshot_json: str):
+        """Persiste o baseline de comparação de um pull (dict completo do GN),
+        keyed por camada ativa, em geometadata_pull_baselines.json.
+
+        Problema que resolve (Bug 40): fechar e reabrir o plugin após um pull
+        disparava check_gn_sync com saved={} (nenhum save local no banco/sidecar),
+        e _GnSyncCheckWorker sempre achava divergência (remoto ≠ vazio), resultando
+        em sys_update_available falso-positivo. O baseline persiste o dict COMPLETO
+        do pull para que check_gn_sync use como local_snapshot no worker.
+
+        Por que o dict completo (não só title/abstract/keywords)?
+        _onGnSyncChecked chama _gnSnapshotFor(saved) que popula o formulário HTML
+        inteiro com `saved` e faz collectFormData() de volta - se `saved` tiver só
+        3 campos, todos os demais ficam vazios nesse snapshot parcial e ele nunca
+        bate com o draft real (que tem todos os campos) → sys_modified incorreto.
+        Com o dict completo, _gnSnapshotFor produz um snapshot idêntico ao draft,
+        e o badge fica em sys_synced como esperado (Bug 40b).
+
+        O baseline NÃO é apagado quando o usuário salva (Continuar Depois): nesse
+        caso ps.load(layer) passa a devolver um resultado não-vazio, e o baseline
+        deixa de ser usado naturalmente (fallback só ativa quando saved={}).
+        Apagado explicitamente em clear_draft (reset completo da camada)."""
+        import json
+        try:
+            snapshot = json.loads(snapshot_json) if snapshot_json else {}
+            baselines = self._load_all_baselines()
+            baselines[self._layer_key()] = {'uuid': uuid, 'snapshot': snapshot}
+            self._save_all_baselines(baselines)
+            print(f"GeoMetadata [save_pull_baseline]: baseline salvo para uuid={uuid!r} camada={self._layer_key()!r}")
+        except Exception as e:
+            print(f"GeoMetadata [save_pull_baseline]: {e}")
+
 
     # ── Puxar do GeoNetwork (busca manual + checagem de sincronização) ─────────
 
@@ -450,6 +522,24 @@ class GeoNetworkBridge(QObject):
                 self._notify_db_offline()
             else:
                 print(f"GeoMetadata [check_gn_sync] leitura local: {e}")
+
+        # Pull baseline fallback (Bug 40): se não há save local (banco/sidecar), mas
+        # existe um baseline de pull persistido pra este contexto (camada/sem-camada) e
+        # uuid, usa-o como referência pra o _GnSyncCheckWorker. Sem isso, fechar e
+        # reabrir o plugin após um pull sempre resultaria em sys_update_available falso
+        # (remoto ≠ {} → diverges=True). O baseline é salvo por save_pull_baseline
+        # (chamado pelo JS em pullGnRecord) e apagado em clear_draft.
+        # Quando há save local (ps.load devolveu algo), o baseline é ignorado - o save
+        # é a fonte de verdade mais confiável e já serve como snapshot.
+        if not saved and uuid and not db_error:
+            try:
+                baselines = self._load_all_baselines()
+                entry = baselines.get(self._layer_key(), {})
+                if entry.get('uuid') == uuid and entry.get('snapshot'):
+                    saved = entry['snapshot']
+                    print(f"GeoMetadata [check_gn_sync] usando pull baseline para uuid={uuid!r}")
+            except Exception as e:
+                print(f"GeoMetadata [check_gn_sync] baseline: {e}")
 
         # Diagnóstico temporário (ver Bug "GN não avisa atualização disponível",
         # docs_projeto/bugs.md) - incondicional, ANTES de qualquer branch, pra confirmar se
