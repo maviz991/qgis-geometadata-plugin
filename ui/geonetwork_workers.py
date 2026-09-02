@@ -9,6 +9,12 @@ publicação (RNF02 - chamadas de rede não podem travar a UI do QGIS).
 
 from qgis.PyQt.QtCore import QThread, pyqtSignal
 
+# Overrides built-in print for this module to prevent QGIS segfaults from background threads
+# (mesmo fix de ui/geoserver_workers.py - _GnSyncCheckWorker e as demais QThreads deste
+# módulo têm o mesmo padrão de print() direto em run(), exposto ao mesmo crash).
+def print(*args, **kwargs):
+    pass
+
 
 class _GnPublishWorker(QThread):
     """Publica o XML no GeoNetwork e busca de volta o dateStamp real que o GN carimbou -

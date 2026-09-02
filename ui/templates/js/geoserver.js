@@ -51,6 +51,16 @@ function _initGsBridge() {
     gsBridge.gs_find_datastore_done.connect(function (matches, error) {
         _onGsAutoDetectDone(matches, error);
     });
+    gsBridge.gs_metadata_updated.connect(function (success, message) {
+        _hideActionLoading();
+        if (success) {
+            _gsForceLiveRecheck();
+            Modal.alert(message, 'Atualizado', 'success');
+        } else {
+            Modal.alert(message, 'Erro', 'error');
+        }
+    });
+
     gsBridge.gs_publish_done.connect(function (success, message, publishedName, wmsUrl, wfsUrl) {
         _hideActionLoading();
         if (!success) {
@@ -194,10 +204,18 @@ function _initGsBridge() {
         
         // No fluxo via WMS/WFS, o workspace, datastore e nome vêm preenchidos do worker.
         // Se a camada não estava ativa, a UI pode estar vazia, então preenchemos agora.
-        if (data.workspace) _clickGsSuggestionItem('gs-workspace-wrap', data.workspace);
-        if (data.datastore) {
-            var dsWrap = document.getElementById('gs-datastore-wrap');
-            if (dsWrap) dsWrap.innerHTML = '<select id="gs-datastore" onchange="onGsDatastoreChange(this.value)"><option value="' + escHtml(data.datastore) + '">' + escHtml(data.datastore) + '</option></select>';
+        // _gsApplyKnownWorkspaceDatastore semeia os dois diretamente (opção única, sem
+        // depender de list_workspaces()/list_datastores() já ter respondido) - a versão
+        // anterior usava _clickGsSuggestionItem('gs-workspace-wrap', ...) sem checar o
+        // retorno: se a lista de workspaces ainda não tinha carregado (comum logo após
+        // abrir o painel sem camada ativa), o clique falhava em silêncio e #gs-workspace
+        // ficava vazio bem no momento em que _gsApplyStyleChoice('existing', ...) (abaixo)
+        // chamava _gsLoadStylesList() - que busca só estilos GLOBAIS sem um workspace,
+        // perdendo o estilo padrão sempre que ele vive dentro de um workspace (o caso mais
+        // comum). Estilos adicionais (_gsAdditionalStyles) não dependiam dessa lista, por
+        // isso vinham certos mesmo com esse bug - só o padrão sumia.
+        if (data.workspace) {
+            _gsApplyKnownWorkspaceDatastore(data.workspace, data.datastore || '');
         }
         if (data.published_name) {
             var nameEl = document.getElementById('gs-layer-name');
@@ -1560,10 +1578,35 @@ function tryUpdateGsStyle() {
         Modal.alert('Abra "Serviços > Configurar Camada" antes de atualizar o estilo.', 'Ação Necessária', 'warning');
         return;
     }
+
     if (!_gsLayerInfo || !_gsLayerInfo.publishable) {
-        Modal.alert((_gsLayerInfo && _gsLayerInfo.reason) || 'Nenhuma camada publicável ativa no QGIS.', 'Aviso', 'warning');
+        var wmsName = (window._gnPullWmsData && window._gnPullWmsData.geoserver_layer_name) || '';
+        var d2 = _gsCollectFormState();
+        if (wmsName && d2.workspace && d2.datastore && d2.published_name) {
+            Modal.confirm(
+                'Nenhuma camada ativa no QGIS. Como o destino está preenchido, deseja apenas ATUALIZAR os metadados ' +
+                '(Título/Resumo/Palavras-chave) e Estilo dessa camada no GeoServer?',
+                function () {
+                    _showActionLoading('Atualizando metadados no GeoServer...');
+                    var style = _gsCollectStyleConfig();
+                    // _gnSyncUuid (geonetwork.js, mesmo escopo global) veio do MESMO pull que
+                    // preencheu window._gnPullWmsData (pullGnRecord) - sem ele, o Link de
+                    // Metadados nunca era setado nesse fluxo sem camada ativa (não dá pra
+                    // resolver via persistence_service.load(layer), que exige um QgsMapLayer).
+                    gsBridge.update_layer_metadata(
+                        d2.workspace, d2.datastore, d2.published_name,
+                        d2.title, d2.abstract, d2.keywords, style ? JSON.stringify(style) : '',
+                        (typeof _gnSyncUuid !== 'undefined' && _gnSyncUuid) || ''
+                    );
+                },
+                'Atualizar Metadados'
+            );
+        } else {
+            Modal.alert((_gsLayerInfo && _gsLayerInfo.reason) || 'Nenhuma camada publicável ativa no QGIS.', 'Aviso', 'warning');
+        }
         return;
     }
+
     var d = _gsCollectFormState();
     if (!d.workspace || !d.published_name) {
         Modal.alert('Preencha o Workspace (aba Destino) e o Nome da camada publicada (aba Identificação) antes de atualizar o estilo.', 'Aviso', 'warning');
@@ -2177,10 +2220,35 @@ function _gsOnFieldChanged() {
 // camada", igual o Editor de Metadados não tem botão de publicar dentro dele), então
 // valida e avisa por toast em vez de só desabilitar um botão que não existe mais.
 function confirmGsPublish() {
+
     if (!_gsLayerInfo || !_gsLayerInfo.publishable) {
-        Modal.alert((_gsLayerInfo && _gsLayerInfo.reason) || 'Nenhuma camada publicável ativa no QGIS.', 'Aviso', 'warning');
+        var wmsName = (window._gnPullWmsData && window._gnPullWmsData.geoserver_layer_name) || '';
+        var d2 = _gsCollectFormState();
+        if (wmsName && d2.workspace && d2.datastore && d2.published_name) {
+            Modal.confirm(
+                'Nenhuma camada ativa no QGIS. Como o destino está preenchido, deseja apenas ATUALIZAR os metadados ' +
+                '(Título/Resumo/Palavras-chave) e Estilo dessa camada no GeoServer?',
+                function () {
+                    _showActionLoading('Atualizando metadados no GeoServer...');
+                    var style = _gsCollectStyleConfig();
+                    // _gnSyncUuid (geonetwork.js, mesmo escopo global) veio do MESMO pull que
+                    // preencheu window._gnPullWmsData (pullGnRecord) - sem ele, o Link de
+                    // Metadados nunca era setado nesse fluxo sem camada ativa (não dá pra
+                    // resolver via persistence_service.load(layer), que exige um QgsMapLayer).
+                    gsBridge.update_layer_metadata(
+                        d2.workspace, d2.datastore, d2.published_name,
+                        d2.title, d2.abstract, d2.keywords, style ? JSON.stringify(style) : '',
+                        (typeof _gnSyncUuid !== 'undefined' && _gnSyncUuid) || ''
+                    );
+                },
+                'Atualizar Metadados'
+            );
+        } else {
+            Modal.alert((_gsLayerInfo && _gsLayerInfo.reason) || 'Nenhuma camada publicável ativa no QGIS.', 'Aviso', 'warning');
+        }
         return;
     }
+
     var d = _gsCollectFormState();
     if (!d.workspace || !d.datastore) {
         Modal.alert('Escolha o Workspace e o Datastore (aba Destino) antes de publicar.', 'Aviso', 'warning');

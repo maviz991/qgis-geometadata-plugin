@@ -351,6 +351,51 @@ class GeoServerService:
         except requests.exceptions.HTTPError:
             raise Exception(self.translate_gs_error(response.status_code, response.text or ''))
 
+    def update_published_featuretype(self, workspace, datastore, published_name, config_loader_instance,
+                                     title=None, abstract=None, keywords=None, metadata_link_url=None):
+        """Atualiza Título, Resumo, Palavras-chave e Link de Metadados de uma camada já publicada
+        (FeatureType) via PUT, sem precisar da camada PostGIS física. Ideal para sincronização de
+        metadados (fluxo sem camada QGIS ativa, ver GeoServerBridge.update_layer_metadata).
+
+        `metadata_link_url` segue exatamente o mesmo formato de register_postgis_featuretype
+        (metadataType 'TC211'/type 'application/xml' - é o valor que o GeoServer reconhece pra
+        expor o link no GetCapabilities do WMS 1.1.1, ver comentário lá) - os dois precisam
+        concordar, senão esse fluxo alternativo publicaria um link num formato diferente do da
+        publicação normal."""
+        api_session = self._get_rest_session()
+        base_url = config_loader_instance.get_geoserver_url().rstrip('/')
+        if not base_url:
+            raise ValueError("A URL do GeoServer não está definida corretamente no config.json.")
+
+        payload = {'featureType': {'name': published_name}}
+        if title is not None:
+            payload['featureType']['title'] = title
+        if abstract is not None:
+            payload['featureType']['abstract'] = abstract
+        if keywords is not None:
+            payload['featureType']['keywords'] = {'string': [k.strip() for k in keywords if k.strip()]}
+        if metadata_link_url:
+            payload['featureType']['metadataLinks'] = {
+                'metadataLink': [
+                    {'type': 'application/xml', 'metadataType': 'TC211', 'content': metadata_link_url}
+                ]
+            }
+
+        import json
+        with HTTP_SESSION_LOCK:
+            response = api_session.put(
+                f"{base_url}/rest/workspaces/{workspace}/datastores/{datastore}/featuretypes/{published_name}.json",
+                headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
+                data=json.dumps(payload),
+                timeout=30,
+                verify=False
+            )
+        try:
+            response.raise_for_status()
+        except requests.exceptions.HTTPError:
+            raise Exception(self.translate_gs_error(response.status_code, response.text or ''))
+
+
     def fetch_published_featuretype(self, workspace, datastore, published_name, config_loader_instance):
         """Busca o featuretype de VERDADE no GeoServer (REST, ao vivo) - é a fonte mais
         confiável de 'o que está publicado agora', ao contrário do banco

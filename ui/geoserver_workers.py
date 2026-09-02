@@ -12,6 +12,10 @@ try:
     import psycopg2
 except ImportError:
     psycopg2 = None
+# Overrides built-in print for this module to prevent QGIS segfaults from background threads
+def print(*args, **kwargs):
+    pass
+
 
 
 def _gs_augment_404(exc):
@@ -507,3 +511,40 @@ class _GsActiveLayerInfoWorker(QThread):
             'gn_remote': gn_remote,
             'db_error': db_error,
         })
+
+
+class _GsUpdateMetadataWorker(QThread):
+    done = pyqtSignal(bool, str)
+
+    def __init__(self, geoserver_service, workspace, datastore, published_name, title, abstract, keywords, style_task,
+                 config_loader_instance, metadata_link_url=''):
+        super().__init__()
+        self._service = geoserver_service
+        self._workspace = workspace
+        self._datastore = datastore
+        self._published_name = published_name
+        self._title = title
+        self._abstract = abstract
+        self._keywords = keywords
+        self._style_task = style_task
+        self._config = config_loader_instance
+        self._metadata_link_url = metadata_link_url
+
+    def run(self):
+        try:
+            self._service.update_published_featuretype(
+                self._workspace, self._datastore, self._published_name, self._config,
+                title=self._title, abstract=self._abstract, keywords=self._keywords,
+                metadata_link_url=self._metadata_link_url
+            )
+            
+            if self._style_task:
+                try:
+                    self._service.apply_style(self._workspace, self._published_name, self._style_task, self._config)
+                except Exception as exc:
+                    self.done.emit(False, f'Metadados atualizados, mas falha ao aplicar estilo: {str(exc)}')
+                    return
+
+            self.done.emit(True, 'Metadados atualizados com sucesso.')
+        except Exception as exc:
+            self.done.emit(False, str(exc))

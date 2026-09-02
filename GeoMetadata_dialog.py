@@ -446,6 +446,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
                 '_workspaces_worker', '_datastores_worker', '_featuretypes_worker',
                 '_find_datastore_worker', '_publish_worker', '_styles_worker',
                 '_apply_style_worker', '_gs_rest_worker', '_pull_layer_worker',
+                '_pull_by_wms_worker', '_update_metadata_worker',
             ):
                 w = getattr(gs_bridge, attr, None)
                 if w and w.isRunning():

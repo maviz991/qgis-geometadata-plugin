@@ -25,6 +25,7 @@ class GeoServerBridge(QObject):
     gs_find_datastore_progress = pyqtSignal(str)  # mensagem de status da varredura
     gs_find_datastore_done = pyqtSignal(list, str)  # [{'workspace':..,'datastore':..}, ...], error
     gs_publish_done = pyqtSignal(bool, str, str, str, str)  # sucesso, mensagem (erro OU aviso de estilo), nome_publicado, wms_url, wfs_url
+    gs_metadata_updated = pyqtSignal(bool, str)  # sucesso, mensagem - ver update_layer_metadata
     gs_destination_saved = pyqtSignal(bool)  # db_ok - "Continuar Depois" do painel GeoServer
     gs_sync_checked = pyqtSignal('QVariant')  # resultado de check_gs_sync (ver _GsSyncCheckWorker)
     gs_styles_ready = pyqtSignal(list, str)  # [{'name':..., 'workspace': ''|ws}], error - ver list_styles
@@ -59,10 +60,24 @@ class GeoServerBridge(QObject):
         self._gs_rest_worker = None
         self._pull_layer_worker = None
         self._pull_by_wms_worker = None
+        self._update_metadata_worker = None
         self._last_db_offline_notice = 0.0  # ver _notify_db_offline
 
 
     _DB_OFFLINE_NOTICE_INTERVAL = 60  # segundos - mesmo throttle de GeoNetworkBridge._notify_db_offline
+
+    @staticmethod
+    def _worker_busy(worker):
+        """True se `worker` (QThread de slot único, não uma das listas _sync_check_workers/
+        _layer_info_workers) ainda está rodando. Usado como guarda de reentrância antes de
+        sobrescrever a referência: sem isso, um duplo clique (ou qualquer chamada repetida
+        antes da anterior terminar) sobrescreve o atributo com uma QThread nova enquanto a
+        antiga ainda executa - sem parent Qt e sem mais nenhuma referência Python, o GC
+        destrói a QThread ainda em execução, e o Qt chama std::terminate(), fechando o QGIS
+        inteiro sem crash dump (mesma causa raiz de MainBridge.do_admin_login/LoginBridge.
+        start_admin/start_sso, ver docs_projeto/bugs.md Bug 35 - nunca replicada aqui até
+        agora, apesar de todo worker de slot único desta classe estar exposto ao mesmo risco)."""
+        return worker is not None and worker.isRunning()
 
     def _notify_db_offline(self):
         """Avisa o usuário (toast, throttlado) que o banco PostgreSQL desta camada está
@@ -90,6 +105,8 @@ class GeoServerBridge(QObject):
         caso de falha (credenciais inválidas ou servidor inacessível)."""
         if not user or not password:
             self.gs_rest_configured.emit(False, '[UI-001] Usuário e senha são obrigatórios.')
+            return
+        if self._worker_busy(self._gs_rest_worker):
             return
         from ..core.plugin_config import config_loader
         from .web_bridge import _AdminWorker
@@ -135,6 +152,8 @@ class GeoServerBridge(QObject):
         if not geoserver_service:
             self.gs_workspaces_ready.emit([], 'Serviço GeoServer não inicializado.')
             return
+        if self._worker_busy(self._workspaces_worker):
+            return
         from ..core.plugin_config import config_loader
         from .geoserver_workers import _GsWorkspacesWorker
         self._workspaces_worker = _GsWorkspacesWorker(geoserver_service, config_loader)
@@ -148,6 +167,8 @@ class GeoServerBridge(QObject):
         geoserver_service = getattr(self._dialog, 'geoserver_service', None)
         if not geoserver_service:
             self.gs_datastores_ready.emit([], 'Serviço GeoServer não inicializado.')
+            return
+        if self._worker_busy(self._datastores_worker):
             return
         from ..core.plugin_config import config_loader
         from .geoserver_workers import _GsDatastoresWorker
@@ -163,6 +184,8 @@ class GeoServerBridge(QObject):
         geoserver_service = getattr(self._dialog, 'geoserver_service', None)
         if not geoserver_service:
             self.gs_featuretypes_ready.emit([], 'Serviço GeoServer não inicializado.')
+            return
+        if self._worker_busy(self._featuretypes_worker):
             return
         from ..core.plugin_config import config_loader
         from .geoserver_workers import _GsFeatureTypesWorker
@@ -185,6 +208,8 @@ class GeoServerBridge(QObject):
         info = geoserver_service.get_active_layer_publish_info(layer)
         if not info.get('publishable') or not info.get('table'):
             self.gs_find_datastore_done.emit([], info.get('reason') or 'Camada não publicável.')
+            return
+        if self._worker_busy(self._find_datastore_worker):
             return
 
         from ..core.plugin_config import config_loader
@@ -476,6 +501,8 @@ class GeoServerBridge(QObject):
         if not geoserver_service:
             self.gs_styles_ready.emit([], 'Serviço GeoServer não inicializado.')
             return
+        if self._worker_busy(self._styles_worker):
+            return
         from ..core.plugin_config import config_loader
         from .geoserver_workers import _GsStylesWorker
         self._styles_worker = _GsStylesWorker(geoserver_service, workspace, config_loader)
@@ -658,6 +685,8 @@ class GeoServerBridge(QObject):
         if not style_task:
             self.gs_style_updated.emit(False, '[UI-003] Escolha um estilo na aba Estilos antes de atualizar.')
             return
+        if self._worker_busy(self._apply_style_worker):
+            return
         keywords = list(keywords) if keywords else []
         from ..core.plugin_config import config_loader
         from .geoserver_workers import _GsApplyStyleWorker
@@ -715,6 +744,8 @@ class GeoServerBridge(QObject):
         geoserver_service = getattr(self._dialog, 'geoserver_service', None)
         if not geoserver_service or not workspace or not datastore or not published_name:
             self.gs_layer_pulled.emit(False, {}, '[UI-004] Destino de publicação incompleto (workspace/datastore/nome).')
+            return
+        if self._worker_busy(self._pull_layer_worker) or self._worker_busy(self._pull_by_wms_worker):
             return
         layer = self._active_layer()
         from ..core.plugin_config import config_loader
@@ -794,6 +825,8 @@ class GeoServerBridge(QObject):
                 False, {},
                 '[UI-005] Sem serviço GeoServer ou nome de camada WMS/WFS inválido.'
             )
+            return
+        if self._worker_busy(self._pull_layer_worker) or self._worker_busy(self._pull_by_wms_worker):
             return
         from ..core.plugin_config import config_loader
         from .geoserver_workers import _GsPullLayerByWmsNameWorker
@@ -903,6 +936,8 @@ class GeoServerBridge(QObject):
         geoserver_service = getattr(self._dialog, 'geoserver_service', None)
         if not geoserver_service:
             self.gs_publish_done.emit(False, '[SYS-001] Serviço GeoServer não inicializado.', published_name, '', '')
+            return
+        if self._worker_busy(self._publish_worker):
             return
 
         layer = self._active_layer()
@@ -1065,3 +1100,47 @@ class GeoServerBridge(QObject):
             print(f"GeoMetadata [search_geoserver] ERRO: {e}")
             traceback.print_exc()
             return []
+
+    @pyqtSlot(str, str, str, str, str, 'QVariant', str, str)
+    def update_layer_metadata(self, workspace, datastore, published_name, title, abstract, keywords, style_json='', metadata_uuid=''):
+        geoserver_service = getattr(self._dialog, 'geoserver_service', None)
+        if not geoserver_service:
+            self.gs_metadata_updated.emit(False, 'Serviço GeoServer não inicializado.')
+            return
+        if self._worker_busy(self._update_metadata_worker):
+            return
+
+        style_task = None
+        if style_json:
+            import json
+            try:
+                style_cfg = json.loads(style_json)
+                if style_cfg.get('source') not in ('', 'none'):
+                    # pass None for layer since there's no active layer in this flow
+                    style_task, error = self._prepare_style_task(style_cfg, None, workspace)
+                    if error:
+                        self.gs_metadata_updated.emit(False, error)
+                        return
+            except Exception as e:
+                self.gs_metadata_updated.emit(False, f"Erro ao processar estilo: {e}")
+                return
+
+        from ..core.plugin_config import config_loader
+        from .geoserver_workers import _GsUpdateMetadataWorker
+        # _resolve_metadata_link_url exige um QgsMapLayer (lê o metadata_uuid salvo via
+        # persistence_service.load(layer)) - não dá pra usar aqui, esse fluxo roda sem
+        # camada ativa (workspace/datastore/published_name vêm de um link WMS/WFS puxado
+        # do GN, não de uma camada do QGIS). metadata_uuid chega pronto do JS (o próprio
+        # registro que acabou de ser puxado do GN, ver _gnSyncUuid/geonetwork.js) - mesma
+        # fórmula de URL (_build_metadata_link_url), só sem precisar resolver via layer.
+        metadata_link_url = self._build_metadata_link_url(metadata_uuid, config_loader) if metadata_uuid else ''
+        self._update_metadata_worker = _GsUpdateMetadataWorker(
+            geoserver_service, workspace, datastore, published_name, title, abstract, keywords, style_task,
+            config_loader, metadata_link_url
+        )
+        self._update_metadata_worker.done.connect(self._on_standard_metadata_updated)
+        self._update_metadata_worker.start()
+
+    @pyqtSlot(bool, str)
+    def _on_standard_metadata_updated(self, ok, message):
+        self.gs_metadata_updated.emit(ok, message)
