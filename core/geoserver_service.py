@@ -581,7 +581,7 @@ class GeoServerService:
         único (defaultStyle + lista styles). Lista de adicionais VAZIA não toca nos
         adicionais que já existem no GeoServer (o PUT com 'styles' SUBSTITUI a lista
         inteira - mandar [] apagaria adicionais configurados por fora do plugin).
-        Chamado pelos workers (_GsPublishWorker/_GsApplyStyleWorker) - nunca na UI
+        Chamado pelos workers (_GsPublishWorker/_GsUpdateMetadataWorker) - nunca na UI
         thread (RNF02)."""
         if not style_task:
             return

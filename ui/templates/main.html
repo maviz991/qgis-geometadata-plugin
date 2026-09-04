@@ -29,8 +29,9 @@
                     </svg>
                 </button>
                 <div class="dropdown-content">
-                    <a href="#" onclick="trySaveMetadata()">Continuar Depois</a>
+                    <a href="#" onclick="trySaveMetadata()">Salvar Rascunho</a>
                     <a href="#" onclick="tryResetForm()">Descartar Alterações</a>
+                    <a href="#" onclick="tryClearDraft()">Limpar Formulários</a>
                 </div>
             </div>
 
@@ -63,7 +64,6 @@
                     <a href="#" onclick="navigate('geoserver')">Configurar Camada</a>
                     <a href="#" onclick="tryPublishGeoServerLayer()">Publicar Camada</a>
                     <a href="#" onclick="pullGsLayerFromServer()">Baixar Camada</a>
-                    <a href="#" onclick="tryUpdateGsStyle()">Atualizar Estilo</a>
                 </div>
             </div>
         </div>
@@ -118,9 +118,9 @@
 
     <!-- SCRIPTS -->
     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
-    <script src="js/app.js?v=20"></script>
-    <script src="js/geonetwork.js?v=33"></script>
-    <script src="js/geoserver.js?v=61"></script>
+    <script src="js/app.js?v=23"></script>
+    <script src="js/geonetwork.js?v=35"></script>
+    <script src="js/geoserver.js?v=73"></script>
 </body>
 
 </html>

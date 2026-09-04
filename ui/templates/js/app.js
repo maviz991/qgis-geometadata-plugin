@@ -683,6 +683,56 @@ function tryResetForm() {
     Modal.alert('Abra "Catálogo > Editor de Metadados" ou "Serviços > Configurar Camada" antes de descartar alterações.', 'Ação Necessária', 'warning');
 }
 
+// "Arquivo > Limpar Rascunho (GN + GS)" (main.html) - diferente de "Descartar Alterações"
+// (que só reverte o formulário do painel ATUAL pro que já está salvo, sem tocar no
+// arquivo), isso APAGA o rascunho persistido em disco dos DOIS lados de uma vez
+// (geometadata_form_draft.json + geometadata_pull_baselines.json no GN,
+// geoserver_publish_draft.json no GS), independente de qual painel está aberto agora.
+// Pedido do usuário: o rascunho "sem camada ativa" do GS (chave __no_layer__, ver Bugs
+// 45/46) grudava e não havia como zerar isso manualmente - só reabrindo o plugin de novo
+// numa sessão sem QGIS aberto, o que não é uma opção viável no dia a dia.
+function tryClearDraft() {
+    Modal.confirm(
+        'Isso vai apagar os rascunhos salvos localmente (Catálogo e GeoServer) - tanto o da ' +
+        'camada ativa quanto o de "sem camada ativa" (Baixar Camada via Metadado/busca). Os ' +
+        'dados JÁ publicados no Geohab ou salvos no banco NÃO são afetados. Continuar?',
+        function () {
+            if (typeof gnBridge !== 'undefined' && gnBridge.clear_draft) gnBridge.clear_draft();
+            if (typeof gsBridge !== 'undefined' && gsBridge.clear_draft) gsBridge.clear_draft();
+            // Reseta o painel ATUAL em pé, sem passar por navigate() - navigate() dispara
+            // _onBeforePanelUnload/_onGsBeforePanelUnload ANTES de trocar o painel, que é
+            // justamente o hook que SALVA o rascunho com o que ainda está na tela (não
+            // limpo ainda) - recriava na hora o rascunho que acabou de ser apagado (só
+            // sumia de verdade depois de sair e voltar de novo, quando o unload já não
+            // tinha mais nada "sujo" pra resalvar). Mesmo padrão de "Descartar Alterações"
+            // (_tryGnResetForm/tryGsResetForm, geonetwork.js/geoserver.js): reseta os
+            // campos e recarrega em memória, sem "sair" do painel.
+            if (document.getElementById('f-title')) {
+                if (typeof _editorDraft !== 'undefined') _editorDraft = null;
+                resetEditorForm();
+                if (typeof _gnLastCheckedLayerKey !== 'undefined') _gnLastCheckedLayerKey = null;
+                _loadFormForLayer(null);
+            } else if (document.getElementById('gs-layer-card')) {
+                _gsKeywords = [];
+                _renderGsKeywords();
+                var nameEl = document.getElementById('gs-layer-name');
+                if (nameEl) { nameEl.value = ''; nameEl.dataset.sanitized = ''; }
+                var titleEl = document.getElementById('gs-layer-title');
+                if (titleEl) titleEl.value = '';
+                var abstractEl = document.getElementById('gs-layer-abstract');
+                if (abstractEl) abstractEl.value = '';
+                var preview = document.getElementById('gs-layer-name-preview');
+                if (preview) preview.textContent = '';
+                _gsResetWorkspaceDatastoreSelection(); // volta workspace/datastore pra "Selecione..."
+                _gsResetStyleControls(); // volta a aba Estilos pro default
+                _loadGsLayerInfo(function () { updateGsFormProgress(); }); // recarrega do banco (ou vazio) - sem rascunho
+            }
+            Modal.alert('Rascunhos apagados.', 'Concluído', 'success');
+        },
+        'Limpar Rascunho'
+    );
+}
+
 function generateUUID() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
         var r = Math.random() * 16 | 0;

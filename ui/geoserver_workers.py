@@ -17,6 +17,124 @@ def print(*args, **kwargs):
     pass
 
 
+class _GsSearchLayersWorker(QThread):
+    """Busca TODAS as camadas do GeoServer via WMS GetCapabilities (RNF02 - essa chamada de
+    rede rodava direto no pyqtSlot, na main thread, sem QThread nenhuma - GetCapabilities
+    pode ter uma resposta grande/lenta dependendo do tamanho do catálogo, travando a
+    QWebEngineView inteira, tanto ao abrir a busca quanto a cada letra digitada enquanto a
+    1ª busca da sessão ainda estava em voo). O resultado completo (não filtrado) é devolvido
+    pro bridge cachear (GeoServerBridge._geoserver_layers_cache) - só a PRIMEIRA busca de
+    cada sessão paga esse custo de rede; buscas seguintes filtram o cache já carregado, sem
+    I/O nenhum, por isso continuam síncronas no bridge.
+
+    geoserver_service (opcional) - quando presente e com sessão REST configurada (login já
+    feito), a requisição usa essa sessão autenticada em vez de ir anônima: o GeoServer
+    aplica segurança de dados (data security) por workspace/camada no próprio WMS, e uma
+    chamada anônima só enxerga o que estiver liberado pra "sem autenticação" - normalmente
+    UM workspace público só, nunca o catálogo inteiro. Sem isso, a busca "sumia" quase todo
+    o catálogo mesmo com o usuário logado no plugin, porque essa chamada nunca usava a
+    sessão de verdade. Sem geoserver_service (ou sem sessão ainda, ex.: GN "Recursos
+    associados" antes de logar), cai pro mesmo fallback anônimo de sempre."""
+    done = pyqtSignal(list, str)  # camadas (sem filtro), erro
+
+    def __init__(self, geoserver_url, geoserver_service=None):
+        super().__init__()
+        self._geoserver_url = geoserver_url
+        self._service = geoserver_service
+
+    def _fetch_capabilities(self, caps_url):
+        if self._service is not None:
+            try:
+                session = self._service._get_rest_session()
+            except Exception:
+                session = None
+            if session is not None:
+                import requests
+                from ..core.http_lock import HTTP_SESSION_LOCK
+                with HTTP_SESSION_LOCK:
+                    response = session.get(caps_url, timeout=60, verify=False)
+                response.raise_for_status()
+                return response.content
+        import ssl
+        import urllib.request
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode    = ssl.CERT_NONE
+        # 60s (não 15s) - agora que roda em QThread, um timeout maior não trava mais a tela
+        # (era o problema original) - só demora mais a responder em catálogos grandes/
+        # servidor lento, o que é preferível a um timeout curto demais estourando à toa
+        # (visto em uso real: "The read operation timed out" com 15s).
+        req = urllib.request.Request(caps_url, headers={'User-Agent': 'GeoMetadataPlugin/1.0'})
+        with urllib.request.urlopen(req, context=ctx, timeout=60) as resp:
+            return resp.read()
+
+    def run(self):
+        try:
+            import xml.etree.ElementTree as ET
+
+            base_url = (self._geoserver_url or '').rstrip('/')
+            if not base_url:
+                self.done.emit([], 'geoserver_url não configurado.')
+                return
+            caps_url = f"{base_url}/wms?service=WMS&version=1.3.0&request=GetCapabilities"
+
+            content = self._fetch_capabilities(caps_url)
+
+            root = ET.fromstring(content)
+            all_layers = []
+            for layer_el in root.iter():
+                tag_local = layer_el.tag.split('}')[-1] if '}' in layer_el.tag else layer_el.tag
+                if tag_local != 'Layer':
+                    continue
+                name_el = title_el = None
+                for child in layer_el:
+                    ct = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+                    if ct == 'Name'  and name_el  is None: name_el  = child
+                    if ct == 'Title' and title_el is None: title_el = child
+                name  = (name_el.text  or '').strip() if name_el  is not None else ''
+                title = (title_el.text or '').strip() if title_el is not None else ''
+                if not name or ':' not in name:
+                    continue
+                workspace = name.split(':', 1)[0]
+                all_layers.append({
+                    'name':      name,
+                    'workspace': workspace,
+                    'title':     title or name,
+                    'wms_url':   f"{base_url}/{workspace}/wms?service=WMS",
+                    'wfs_url':   f"{base_url}/{workspace}/wfs?service=WFS",
+                })
+            self.done.emit(all_layers, '')
+        except Exception as exc:
+            self.done.emit([], self._translate_error(exc))
+
+    @staticmethod
+    def _translate_error(exc):
+        """Traduz os erros mais comuns dessa busca - GetCapabilities pode ter uma resposta
+        grande (catálogo com muitas camadas); timeout/conexão são os casos mais prováveis
+        de aparecerem pro usuário aqui. Cobre tanto o caminho anônimo (urllib) quanto o
+        autenticado (requests, quando geoserver_service tem sessão) - os dois podem
+        estourar timeout/conexão; erro de autenticação (401/403) vindo do path autenticado
+        cai no fallback genérico (str(exc)) abaixo, sem tradução especial ainda."""
+        import socket
+        import urllib.error
+        try:
+            import requests
+            if isinstance(exc, requests.exceptions.Timeout):
+                return 'O GeoServer demorou demais pra responder (timeout) - o catálogo pode estar grande ou o servidor lento agora. Tente de novo.'
+            if isinstance(exc, requests.exceptions.ConnectionError):
+                return f'Não foi possível conectar ao GeoServer: {exc}.'
+        except ImportError:
+            pass
+        if isinstance(exc, socket.timeout):
+            return 'O GeoServer demorou demais pra responder (timeout) - o catálogo pode estar grande ou o servidor lento agora. Tente de novo.'
+        if isinstance(exc, urllib.error.URLError):
+            reason = getattr(exc, 'reason', None)
+            if isinstance(reason, socket.timeout):
+                return 'O GeoServer demorou demais pra responder (timeout) - o catálogo pode estar grande ou o servidor lento agora. Tente de novo.'
+            return f'Não foi possível conectar ao GeoServer: {reason or exc}.'
+        return str(exc)
+
+
 
 def _gs_augment_404(exc):
     """Acrescenta uma dica acionável quando o erro de uma ação de "Atualizar" (Camada ou
@@ -159,7 +277,7 @@ class _GsPublishWorker(QThread):
             except Exception as exc:
                 style_warning = (
                     'A camada foi publicada, mas o estilo não pôde ser aplicado: ' + str(exc) +
-                    '<br><br>Ajuste a aba Estilos e use "Serviços > Atualizar Estilo" pra tentar de novo.'
+                    '<br><br>Ajuste a aba Estilos e publique de novo pra tentar outra vez.'
                 )
         self.done.emit(True, style_warning, self._published_name)
 
@@ -305,28 +423,6 @@ class _GsStylesWorker(QThread):
             self.done.emit(styles, '')
         except Exception as exc:
             self.done.emit([], str(exc))
-
-
-class _GsApplyStyleWorker(QThread):
-    """Aplica um estilo a uma camada JÁ publicada ("Serviços > Atualizar Estilo") sem
-    republicar o FeatureType - upload do SLD (quando há corpo) + defaultStyle, fora da UI
-    thread (RNF02). Ver GeoServerService.apply_style."""
-    done = pyqtSignal(bool, str)  # sucesso, mensagem de erro
-
-    def __init__(self, geoserver_service, layer_workspace, published_name, style_task, config_loader_instance):
-        super().__init__()
-        self._service = geoserver_service
-        self._layer_workspace = layer_workspace
-        self._published_name = published_name
-        self._style_task = style_task
-        self._config = config_loader_instance
-
-    def run(self):
-        try:
-            self._service.apply_style(self._layer_workspace, self._published_name, self._style_task, self._config)
-            self.done.emit(True, '')
-        except Exception as exc:
-            self.done.emit(False, _gs_augment_404(exc))
 
 
 class _GsSyncCheckWorker(QThread):
@@ -514,7 +610,18 @@ class _GsActiveLayerInfoWorker(QThread):
 
 
 class _GsUpdateMetadataWorker(QThread):
-    done = pyqtSignal(bool, str)
+    """Atualiza título/resumo/palavras-chave/link de metadados (PUT, sem republicar o
+    FeatureType) e, se houver style_task, aplica o estilo logo em seguida - usado tanto
+    pelo fallback "sem camada ativa" (GeoServerBridge.update_layer_metadata) quanto por
+    "Publicar Camada" com camada ativa quando o destino JÁ está publicado (ver
+    GeoServerBridge.publish_layer - detecta isso via fetch_published_featuretype antes de
+    decidir entre criar ou atualizar, mesma filosofia do "Publicar Metadados" do GN: uma
+    ação só, cria OU atualiza, sem exigir um botão "Atualizar Estilo" à parte).
+
+    Mesma convenção de _GsPublishWorker: falha SÓ no estilo não derruba o resultado geral
+    (os metadados já foram atualizados de verdade) - emite sucesso=True com a mensagem de
+    aviso preenchida; mensagem vazia = sucesso completo, sem nada a avisar."""
+    done = pyqtSignal(bool, str)  # sucesso, mensagem (erro OU aviso de estilo, '' = sem ressalvas)
 
     def __init__(self, geoserver_service, workspace, datastore, published_name, title, abstract, keywords, style_task,
                  config_loader_instance, metadata_link_url=''):
@@ -537,14 +644,17 @@ class _GsUpdateMetadataWorker(QThread):
                 title=self._title, abstract=self._abstract, keywords=self._keywords,
                 metadata_link_url=self._metadata_link_url
             )
-            
-            if self._style_task:
-                try:
-                    self._service.apply_style(self._workspace, self._published_name, self._style_task, self._config)
-                except Exception as exc:
-                    self.done.emit(False, f'Metadados atualizados, mas falha ao aplicar estilo: {str(exc)}')
-                    return
-
-            self.done.emit(True, 'Metadados atualizados com sucesso.')
         except Exception as exc:
-            self.done.emit(False, str(exc))
+            self.done.emit(False, _gs_augment_404(exc))
+            return
+
+        style_warning = ''
+        if self._style_task:
+            try:
+                self._service.apply_style(self._workspace, self._published_name, self._style_task, self._config)
+            except Exception as exc:
+                style_warning = (
+                    'Os metadados foram atualizados, mas o estilo não pôde ser aplicado: ' + str(exc) +
+                    '<br><br>Ajuste a aba Estilos e publique/atualize de novo pra tentar outra vez.'
+                )
+        self.done.emit(True, style_warning)

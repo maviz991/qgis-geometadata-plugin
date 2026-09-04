@@ -55,7 +55,10 @@ function _initGsBridge() {
         _hideActionLoading();
         if (success) {
             _gsForceLiveRecheck();
-            Modal.alert(message, 'Atualizado', 'success');
+            // message vazia = sucesso completo, sem ressalvas (mesma convenção de
+            // gs_publish_done/_GsUpdateMetadataWorker) - só o estilo falhando preenche
+            // message aqui, com os metadados já atualizados de verdade.
+            Modal.alert(message || 'Dados atualizados no GeoServer.', message ? 'Atualizado com Ressalvas' : 'Atualizado', message ? 'warning' : 'success');
         } else {
             Modal.alert(message, 'Erro', 'error');
         }
@@ -151,48 +154,14 @@ function _initGsBridge() {
     gsBridge.gs_styles_ready.connect(function (styles, error) {
         _renderGsStyleOptions(styles, error);
     });
-    // "Serviços > Atualizar Estilo" (ver tryUpdateGsStyle) - aplica o estilo a uma camada
-    // JÁ publicada, sem republicar o FeatureType.
-    gsBridge.gs_style_updated.connect(function (success, error) {
-        _hideActionLoading();
-        if (!success) {
-            // Força uma checagem AO VIVO na hora - se a falha foi porque a camada não
-            // existe de verdade nesse destino (ver _gs_augment_404, geoserver_workers.py),
-            // o badge corrige sozinho pra "Não Encontrado" em vez de ficar preso em
-            // "Modificado" até o próximo login/reabertura do painel (a checagem ao vivo,
-            // normalmente, só roda nesses dois momentos - ver _checkGsSyncOnline).
-            _gsForceLiveRecheck();
-            Modal.alert(error || 'Falha ao aplicar o estilo no GeoServer.', 'Erro', 'error');
-            return;
-        }
-        // O bridge já gravou os campos de estilo no registro do banco (quando havia
-        // registro) - realinha o snapshot local pro badge não acusar "Modificado" só por
-        // causa do estilo recém-aplicado.
-        if (_gsLayerInfo) {
-            var appliedStyle = _gsCollectFormState();
-            _gsLayerInfo.saved_style_source = appliedStyle.style_source;
-            _gsLayerInfo.saved_style_name = appliedStyle.style_name;
-        }
-        _gsInvalidatePendingLiveCheck(); // ver definição - descarta checagem ao vivo desatualizada de antes de aplicar o estilo
-        _flashGsRefreshBtn();
-        try {
-            var snap = JSON.parse(_gsSyncSnapshot);
-            var cur = _gsCollectFormState();
-            snap.style_source = cur.style_source;
-            snap.style_name = cur.style_name;
-            _gsSyncSnapshot = JSON.stringify(snap);
-            _checkGsSyncNow();
-        } catch (e) { /* sem snapshot ainda (null) - nada a realinhar */ }
-        Modal.alert('Estilo aplicado como padrão da camada no GeoServer.', 'Estilo Atualizado', 'success');
-    });
     // "Serviços > Baixar Camada" / banner "Atualização disponível" (ver
     // pullGsLayerFromServer) - PULL: busca o que está DE FATO publicado no GeoServer e
     // substitui o formulário local por isso.
     gsBridge.gs_layer_pulled.connect(function (success, data, error) {
         _hideActionLoading();
         if (!success) {
-            // Idem gs_style_updated acima - reverifica ao vivo na hora em vez de esperar
-            // o próximo login/reabertura do painel.
+            // Reverifica ao vivo na hora em vez de esperar o próximo login/reabertura do
+            // painel (mesmo padrão de gs_metadata_updated/gs_publish_done em caso de erro).
             _gsForceLiveRecheck();
             Modal.alert(error || 'Falha ao buscar os dados publicados no GeoServer.', 'Erro', 'error');
             return;
@@ -240,6 +209,12 @@ function _initGsBridge() {
             return { source: 'existing', mode: 'existing', existing_name: s.name || '', existing_workspace: s.style_workspace || '' };
         });
         _renderGsAdditionalStyles();
+        
+        var metaLinkBox = document.getElementById('gs-metadata-link-preview');
+        if (metaLinkBox && typeof _gnSyncUuid !== 'undefined' && _gnSyncUuid) {
+            metaLinkBox.innerHTML = 'Será vinculado ao atualizar: UUID ' + escHtml(_gnSyncUuid);
+        }
+        
         // Preenchimento programático não dispara input/change (o que aciona o rascunho
         // por debounce) - salva na hora, mesmo motivo de pullGsAbstractKeywordsFromGn.
         _saveGsDraftNow();
@@ -253,6 +228,23 @@ function _initGsBridge() {
         _gsLastCheckedLayerKey = null; // idem publish_done/destination_saved - invalida o cache do badge combinado do editor
         updateGsFormProgress();
         Modal.alert('Formulário atualizado com o que está publicado no GeoServer agora.', 'Camada Atualizada', 'success');
+    });
+    // Resultado de search_geoserver (fire-and-forget, RNF02 - antes era bloqueante na main
+    // thread e travava a tela ao abrir a busca ou digitar enquanto a 1ª busca da sessão
+    // ainda estava em voo). Dois consumidores possíveis, cada um só atualiza se o próprio
+    // elemento existir na tela agora: a aba "Recursos associados" do editor GN
+    // (#dist-suggestions, searchGeoServer/geonetwork.js) e a busca de camadas do painel GS
+    // (#gs-search-results, openGsSearchModal, mais abaixo neste arquivo).
+    gsBridge.gs_search_ready.connect(function (results, error) {
+        if (document.getElementById('dist-suggestions')) {
+            var spinner = document.getElementById('dist-spinner');
+            if (spinner) spinner.style.display = 'none';
+            _distSugg = results || [];
+            renderDistSugg();
+        }
+        if (document.getElementById('gs-search-results')) {
+            _renderGsSearchResults(results, error);
+        }
     });
 }
 
@@ -339,7 +331,21 @@ function _saveGsDraftNow() {
         // Estilos adicionais (chips) - sem isso, quem só adiciona um estilo adicional e
         // navega pra outro painel (ou fecha o QGIS) antes de publicar/"Continuar Depois"
         // perdia a lista inteira: _loadGsDraft não tinha de onde restaurá-la.
-        style_additional: _gsAdditionalStyles.slice()
+        style_additional: _gsAdditionalStyles.slice(),
+        // Marca se ESTE estado reflete um pull confirmado (Baixar Camada) - usado só pelo
+        // fallback "sem camada ativa" em _loadGsDraft pra restaurar o badge de status
+        // depois de fechar/reabrir o plugin. Sem camada ativa, save_publish_destination
+        // nunca roda (exige um QgsMapLayer de verdade pra abrir a conexão no banco), então
+        // não existe registro nenhum pra _renderGsLayerCard recalcular o badge a partir
+        // dele - o painel reabria "cru" (_gsSyncSnapshot nunca inicializado,
+        // _markGsModifiedIfNeeded silenciosamente não fazia nada) até puxar de novo.
+        synced_tier: (_gsSyncHasRecord && _gsSyncIsPublished) ? (_isLogged ? 'sys' : 'db') : '',
+        // uuid do metadado GN (_gnSyncUuid, geonetwork.js, mesmo escopo global) associado a
+        // este destino - também é variável JS pura, perdida ao fechar/reabrir. Persistido
+        // aqui pra "Atualizar Metadados" (fallback sem camada ativa) continuar sabendo pra
+        // qual registro montar o Link de Metadados mesmo depois de reabrir o plugin (ver
+        // update_layer_metadata/_build_metadata_link_url).
+        metadata_uuid: (typeof _gnSyncUuid !== 'undefined' && _gnSyncUuid) || ''
     };
     // Estilo não entra em hasContent de propósito: a fonte default ('qgis') existe em
     // qualquer formulário recém-aberto - contaria como "conteúdo" e salvaria rascunho
@@ -411,6 +417,26 @@ function _loadGsDraft(callback) {
             if (!_gsAdditionalStyles.length && draft.style_additional && draft.style_additional.length) {
                 _gsAdditionalStyles = draft.style_additional.slice();
                 _renderGsAdditionalStyles();
+            }
+            // Restaura _gnSyncUuid (geonetwork.js) se ainda não tiver um nesta sessão - ver
+            // comentário em _saveGsDraftNow. Só entra se vazio: um pull do GN feito DEPOIS
+            // de abrir o painel GS (mais recente que o rascunho) não deve ser sobrescrito.
+            if (draft.metadata_uuid && typeof _gnSyncUuid !== 'undefined' && !_gnSyncUuid) {
+                _gnSyncUuid = draft.metadata_uuid;
+            }
+            // Sem registro no banco (_gsSyncHasRecord ainda false aqui - _renderGsLayerCard
+            // não roda esse trecho sem camada ativa), mas o rascunho veio de um pull
+            // confirmado (draft.synced_tier) - usa o próprio estado recém-restaurado como
+            // baseline (mesma ideia do "pull baseline" do GN, Bug 40), em vez de deixar o
+            // badge sem status nenhum até o usuário puxar de novo. Captura o snapshot DEPOIS
+            // de todo o resto acima já ter restaurado os campos, senão a comparação em
+            // _checkGsSyncNow (mais abaixo) acusaria "Modificado" comparando o formulário
+            // ainda vazio contra o snapshot.
+            if (!_gsSyncHasRecord && draft.synced_tier) {
+                _gsSyncHasRecord = true;
+                _gsSyncIsPublished = true;
+                _gsSyncSnapshot = JSON.stringify(_gsCollectFormState());
+                _gsCaptureSnapshotRawNames();
             }
             // Reavalia o badge: título/resumo/palavras-chave do rascunho podem ter acabado
             // de sobrepor o que o banco preencheu (ver acima) - ou, numa camada nunca salva
@@ -502,7 +528,7 @@ function _onGsActiveLayerChanged() {
     _gsSyncSnapshot = null;
     _gsSyncSnapshotRawName = '';
     _gsSyncSnapshotRawStyleName = '';
-    _clickGsSuggestionItem('gs-workspace-wrap', ''); // volta workspace/datastore pra "Selecione..."
+    _gsResetWorkspaceDatastoreSelection(); // volta workspace/datastore pra "Selecione..."
     _gsResetStyleControls(); // estilo também é por camada
     _loadGsLayerInfo(function () {
         _loadGsDraft();
@@ -551,7 +577,7 @@ function tryGsResetForm() {
             if (abstractEl) abstractEl.value = '';
             var preview = document.getElementById('gs-layer-name-preview');
             if (preview) preview.textContent = '';
-            _clickGsSuggestionItem('gs-workspace-wrap', ''); // volta workspace/datastore pra "Selecione..."
+            _gsResetWorkspaceDatastoreSelection(); // volta workspace/datastore pra "Selecione..."
             _gsResetStyleControls(); // volta a aba Estilos pro default ('qgis') - _loadGsLayerInfo reaplica o salvo, se houver
             _loadGsLayerInfo(function () { updateGsFormProgress(); }); // recarrega do banco (ou vazio) - sem rascunho
         },
@@ -1377,6 +1403,13 @@ function _gsResetStyleControls() {
     }
     _gsSetExistingStatus('');
     _gsApplyStyleChoice('qgis', '', '');
+    // Estilos ADICIONAIS (_gsAdditionalStyles) são um array à parte do estilo principal
+    // acima - sem isso, "Descartar Alterações"/"Limpar Rascunho" não tocavam nele, e os
+    // chips continuavam visíveis com o conteúdo antigo até navegar pra outro painel e
+    // voltar (único outro caminho que passa por aqui, ver _renderGsLayerCard/linha ~714-719
+    // - reseta pra [] quando não há estilo adicional salvo).
+    _gsAdditionalStyles = [];
+    _renderGsAdditionalStyles();
 }
 
 // --- Estilos Adicionais ---
@@ -1514,7 +1547,7 @@ function _renderGsAdditionalStyles() {
 
 // Configuração da aba Estilos no formato que o Python espera (_prepare_style_task/
 // derive_style_fields, ver geoserver_bridge.py) - serializada como JSON em
-// confirmGsPublish/saveGsDraftNow/tryUpdateGsStyle.
+// confirmGsPublish/saveGsDraftNow/_gsTryNoActiveLayerUpdate.
 function _gsCollectStyleConfig() {
     var srcEl = document.getElementById('gs-style-source');
     var src = srcEl ? srcEl.value : 'none';
@@ -1547,7 +1580,7 @@ function _gsStyleBestEffortNote(style) {
         : '';
 }
 
-// Descrição curta do estilo pros modais de confirmação (Publicar/Atualizar Estilo).
+// Descrição curta do estilo pro modal de confirmação de "Publicar Camada".
 function _gsDescribeStyle(style) {
     if (style.source === 'existing') {
         return '"' + escHtml((style.existing_workspace ? style.existing_workspace + ':' : '') + style.existing_name) + '" (já existente no GeoServer)';
@@ -1558,8 +1591,8 @@ function _gsDescribeStyle(style) {
         : ('"' + name + '" (gerado do estilo atual do QGIS)');
 }
 
-// Valida a configuração da aba Estilos antes de publicar/atualizar - retorna a mensagem
-// de erro ('' = ok). Compartilhada entre confirmGsPublish e tryUpdateGsStyle.
+// Valida a configuração da aba Estilos antes de publicar (confirmGsPublish, camada
+// ativa) - retorna a mensagem de erro ('' = ok).
 function _gsValidateStyleConfig(style) {
     if (style.source === 'file' && !style.file_path) {
         return 'Escolha o arquivo .sld na aba Estilos antes de continuar.';
@@ -1570,85 +1603,51 @@ function _gsValidateStyleConfig(style) {
     return '';
 }
 
-// "Serviços > Atualizar Estilo" (main.html) - aplica o estilo da aba Estilos a uma camada
-// JÁ publicada, sem republicar o FeatureType (publicar de novo daria "já existe"). Mesmo
-// pré-requisito de tryPublishGeoServerLayer: painel "Configurar Camada" aberto.
-function tryUpdateGsStyle() {
-    if (!document.getElementById('gs-layer-card')) {
-        Modal.alert('Abra "Serviços > Configurar Camada" antes de atualizar o estilo.', 'Ação Necessária', 'warning');
-        return;
-    }
-
-    if (!_gsLayerInfo || !_gsLayerInfo.publishable) {
-        var wmsName = (window._gnPullWmsData && window._gnPullWmsData.geoserver_layer_name) || '';
-        var d2 = _gsCollectFormState();
-        if (wmsName && d2.workspace && d2.datastore && d2.published_name) {
-            Modal.confirm(
-                'Nenhuma camada ativa no QGIS. Como o destino está preenchido, deseja apenas ATUALIZAR os metadados ' +
-                '(Título/Resumo/Palavras-chave) e Estilo dessa camada no GeoServer?',
-                function () {
-                    _showActionLoading('Atualizando metadados no GeoServer...');
-                    var style = _gsCollectStyleConfig();
-                    // _gnSyncUuid (geonetwork.js, mesmo escopo global) veio do MESMO pull que
-                    // preencheu window._gnPullWmsData (pullGnRecord) - sem ele, o Link de
-                    // Metadados nunca era setado nesse fluxo sem camada ativa (não dá pra
-                    // resolver via persistence_service.load(layer), que exige um QgsMapLayer).
-                    gsBridge.update_layer_metadata(
-                        d2.workspace, d2.datastore, d2.published_name,
-                        d2.title, d2.abstract, d2.keywords, style ? JSON.stringify(style) : '',
-                        (typeof _gnSyncUuid !== 'undefined' && _gnSyncUuid) || ''
-                    );
-                },
-                'Atualizar Metadados'
-            );
-        } else {
-            Modal.alert((_gsLayerInfo && _gsLayerInfo.reason) || 'Nenhuma camada publicável ativa no QGIS.', 'Aviso', 'warning');
-        }
-        return;
-    }
-
-    var d = _gsCollectFormState();
-    if (!d.workspace || !d.published_name) {
-        Modal.alert('Preencha o Workspace (aba Destino) e o Nome da camada publicada (aba Identificação) antes de atualizar o estilo.', 'Aviso', 'warning');
-        return;
-    }
-    // Essa ação faz um PUT usando o Nome da camada publicada como identificador da
-    // camada JÁ existente no GeoServer - se o campo foi alterado desde a última
-    // publicação/salvamento conhecida, o PUT tentaria achar uma camada com o nome NOVO
-    // (que não existe) em vez de atualizar a que já existe com o nome ANTIGO, e o
-    // GeoServer devolve 404 (confuso: "a camada existe", só que com outro nome).
-    var knownName = _gsLayerInfo.saved_published_name || _gsLayerInfo.name;
-    if (knownName && d.published_name !== knownName) {
-        Modal.alert(
-            'O "Nome da camada publicada" foi alterado ("' + escHtml(knownName) + '" → "' + escHtml(d.published_name) +
-            '"). Essa ação atualiza o estilo de uma camada JÁ publicada pelo nome ATUAL no GeoServer - renomear não é ' +
-            'suportado por aqui.<br><br>Desfaça a alteração nesse campo (aba Identificação) antes de atualizar o estilo, ' +
-            'ou publique como uma camada nova em "Serviços > Publicar Camada".',
-            'Nome Alterado', 'warning'
-        );
-        return;
+// Fallback comum "sem camada ativa" pra Publicar Camada/Atualizar Estilo - GS não tem
+// como CRIAR (POST/register_postgis_featuretype) sem uma camada QGIS real (schema/
+// tabela/SRS vêm de lá), então aqui é sempre ATUALIZAÇÃO (PUT) do que já está publicado -
+// mesma filosofia do "Publicar Metadados" no GN (cria OU atualiza, mesma ação, o backend
+// decide, sem o usuário precisar escolher). Por isso os dois menus levam pro MESMO lugar
+// nesse cenário - não é bug, é intencional: um único fluxo "atualizar o que já existe",
+// alcançável a partir de qualquer um dos dois. O que muda é o texto/título do confirm,
+// DINÂMICO conforme o que de fato vai ser enviado (só dados / dados + estilo) - refletir
+// o resultado real, em vez de sempre dizer "metadados e Estilo" mesmo sem nenhum estilo
+// configurado na aba. Retorna true se assumiu o clique (chamador deve parar por aí),
+// false se não é esse cenário (há camada ativa - chamador segue no fluxo normal dele).
+function _gsTryNoActiveLayerUpdate() {
+    if (_gsLayerInfo && _gsLayerInfo.publishable) return false;
+    var d2 = _gsCollectFormState();
+    if (!(d2.workspace && d2.datastore && d2.published_name)) {
+        Modal.alert((_gsLayerInfo && _gsLayerInfo.reason) || 'Nenhuma camada publicável ativa no QGIS.', 'Aviso', 'warning');
+        return true;
     }
     var style = _gsCollectStyleConfig();
-    if (!style.source) {
-        Modal.alert('Escolha um estilo na aba Estilos antes de atualizar - a fonte "Não definir" não tem o que aplicar.', 'Aviso', 'warning');
-        return;
-    }
-    var styleError = _gsValidateStyleConfig(style);
-    if (styleError) {
-        Modal.alert(styleError, 'Aviso', 'warning');
-        return;
-    }
+    var hasStyle = !!(style && style.source && style.source !== 'none');
+    var actionLabel = hasStyle ? 'Atualizar Dados e Estilo' : 'Atualizar Dados';
+    var whatText = hasStyle
+        ? 'os metadados (Título/Resumo/Palavras-chave) e o estilo'
+        : 'os metadados (Título/Resumo/Palavras-chave)';
+    var extraNote = hasStyle ? '' :
+        '<br><br><small>Nenhum estilo configurado na aba Estilos - só os metadados serão enviados.</small>';
     Modal.confirm(
-        'Aplicar o estilo ' + _gsDescribeStyle(style) + ' como estilo padrão da camada "' +
-        escHtml(d.workspace) + ':' + escHtml(d.published_name) + '"?<br><br>' +
-        'A camada precisa já estar publicada no GeoServer - isso não republica a camada, só troca o estilo.' +
-        _gsStyleBestEffortNote(style),
+        'Nenhuma camada ativa no QGIS. Como o destino já é conhecido, deseja atualizar ' +
+        whatText + ' dessa camada no GeoServer?' + extraNote,
         function () {
-            _showActionLoading('Aplicando estilo no GeoServer...');
-            gsBridge.update_style(d.workspace, d.datastore, d.published_name, d.title, d.abstract, d.keywords, JSON.stringify(style));
+            _showActionLoading('Atualizando ' + (hasStyle ? 'dados e estilo' : 'dados') + ' no GeoServer...');
+            // _gnSyncUuid (geonetwork.js, mesmo escopo global) vem de um pull do GN
+            // (pullGnRecord) - sem ele, o Link de Metadados nunca era setado nesse fluxo
+            // sem camada ativa (não dá pra resolver via persistence_service.load(layer),
+            // que exige um QgsMapLayer). Também pode ter sido restaurado do rascunho GS
+            // (ver _loadGsDraft).
+            gsBridge.update_layer_metadata(
+                d2.workspace, d2.datastore, d2.published_name,
+                d2.title, d2.abstract, d2.keywords, style ? JSON.stringify(style) : '',
+                (typeof _gnSyncUuid !== 'undefined' && _gnSyncUuid) || ''
+            );
         },
-        'Atualizar Estilo'
+        actionLabel
     );
+    return true;
 }
 
 // "Serviços > Baixar Camada" / banner "Atualização disponível" (ver setGsBadge) -
@@ -1666,41 +1665,20 @@ function pullGsLayerFromServer() {
         Modal.alert('Abra "Serviços > Configurar Camada" antes de atualizar a camada.', 'Ação Necessária', 'warning');
         return;
     }
-    // Diferente do menu (sempre disponível) e do banner (gated por _isLogged em
-    // setGsBadge, mas só reavaliado quando o badge recomputa), essa checagem aqui cobre
-    // as duas entradas - a busca no GeoServer (fetch_published_featuretype/
-    // fetch_layer_styles) exige sessão ativa; sem isso, o clique só falharia com
-    // "Sessão não foi inicializada" vindo do Python.
+    // Login exigido logo aqui, ANTES de abrir busca/confirm - baixar uma camada de verdade
+    // sempre bate na API REST administrativa do GeoServer (fetch_published_featuretype/
+    // fetch_layer_styles), que exige sessão autenticada mesmo pra camadas "públicas" (ao
+    // contrário do WMS GetCapabilities usado só pra listar em openGsSearchModal - por isso
+    // a busca em si continua sem exigir login, só não faz sentido abrir a busca pra um
+    // resultado que não vai poder ser puxado de qualquer forma sem logar depois).
     if (!_isLogged) {
-        Modal.alert('Faça login no Geohab antes de atualizar a camada - essa ação busca os dados direto do GeoServer.', 'Login Necessário', 'warning');
+        Modal.alert('Faça login no Geohab antes de baixar a camada - essa ação busca os dados direto do GeoServer.', 'Login Necessário', 'warning');
         return;
     }
     if (!_gsLayerInfo || !_gsLayerInfo.publishable) {
-        // Caminho alternativo: sem camada PostGIS ativa, mas o usuário já fez pull do
-        // GeoNetwork nesta sessão e o metadado tem um link WMS/WFS com o nome da camada
-        // publicada (workspace:published_name, guardado por pullGnRecord em geonetwork.js).
-        // Usa pull_gs_layer_by_wms_name que descobre o datastore automaticamente.
-        var wmsName = (window._gnPullWmsData && window._gnPullWmsData.geoserver_layer_name) || '';
-        if (wmsName) {
-            Modal.confirm(
-                'Sem camada PostGIS ativa no QGIS, mas o metadado baixado do Geohab indica a ' +
-                'camada "<strong>' + escHtml(wmsName) + '</strong>" publicada no GeoServer.<br><br>' +
-                'Isso vai substituir título/resumo/palavras-chave/estilo do formulário atual ' +
-                'pelo que está DE FATO publicado agora nessa camada. Continuar?',
-                function () {
-                    _showActionLoading('Buscando datastore e dados publicados no GeoServer...');
-                    gsBridge.pull_gs_layer_by_wms_name(wmsName);
-                },
-                'Baixar Camada via Metadado'
-            );
-        } else {
-            Modal.alert(
-                ((_gsLayerInfo && _gsLayerInfo.reason) || 'Nenhuma camada publicável ativa no QGIS.') +
-                '<br><br>Dica: faça "Catálogo > Baixar Metadado" primeiro — se o metadado tiver ' +
-                'um link WMS/WFS, o plugin detectará a camada no GeoServer automaticamente.',
-                'Aviso', 'warning'
-            );
-        }
+        // Sem camada PostGIS ativa - igual o "Baixar Metadado" do GN (openGnSearchModal):
+        // sempre abre a busca, sem atalho de re-baixar um destino já conhecido direto.
+        openGsSearchModal();
         return;
     }
     var d = _gsCollectFormState();
@@ -1715,6 +1693,98 @@ function pullGsLayerFromServer() {
         function () {
             _showActionLoading('Buscando dados publicados no GeoServer...');
             gsBridge.pull_layer_from_server(d.workspace, d.datastore, d.published_name);
+        },
+        'Baixar Camada'
+    );
+}
+
+// Busca de camadas direto no GeoServer (independe de camada QGIS ativa ou de um pull do
+// GN antes) - mesmo padrão visual/estrutural de openGnSearchModal (geonetwork.js), reusando
+// gsBridge.search_geoserver (já existente, usado hoje pela aba "Recursos associados" do
+// editor GN pra linkar WMS/WFS a um metadado) em vez de criar uma busca nova do zero. Não
+// exige login pra BUSCAR (WMS GetCapabilities é público) - só pra efetivamente puxar os
+// dados (pull_gs_layer_by_wms_name usa a sessão REST, ver pullGsLayerByName).
+var _gsSearchTimer = null;
+
+function openGsSearchModal() {
+    if (typeof gsBridge === 'undefined') return;
+    // Mesmo badge de openGnSearchModal (geonetwork.js) - a listagem (WMS GetCapabilities)
+    // é pública e funciona sem login, mas baixar (pull) uma camada de fato exige sessão
+    // ativa (ver checagem de _isLogged em pullGsLayerByName/pullGsLayerFromServer).
+    var loginBadge = _isLogged ? '' :
+        '<span class="modal-info-badge" onclick="Modal.close();navigate(\'login\')" ' +
+        'data-title="A listagem de camadas é pública, mas baixar (pull) uma camada exige login. Clique pra entrar.">' +
+        'Não Autenticado</span>';
+    var bodyHtml =
+        '<div class="search-wrap">' +
+        '<input type="text" id="gs-search-input" class="modal-search-input" placeholder="Buscar camada publicada no GeoServer...">' +
+        '<span class="search-spinner" id="gs-search-spinner" style="display:none"></span>' +
+        '</div>' +
+        '<div id="gs-search-results" class="gn-search-results"></div>';
+    Modal.show({ title: 'Buscar Camada no GeoServer', message: bodyHtml, headerBadge: loginBadge, buttons: [{ label: 'Fechar', primary: false, onClick: null }] });
+
+    var input = document.getElementById('gs-search-input');
+    if (!input) return;
+    input.focus();
+    input.addEventListener('input', function () {
+        clearTimeout(_gsSearchTimer);
+        var q = input.value.trim();
+        var spinner = document.getElementById('gs-search-spinner');
+        if (spinner) spinner.style.display = q ? 'block' : 'none';
+        // Fire-and-forget (RNF02) - resposta chega em gs_search_ready, conectado em
+        // _initGsBridge, que chama _renderGsSearchResults quando #gs-search-results existir.
+        _gsSearchTimer = setTimeout(function () { gsBridge.search_geoserver(q); }, 300);
+    });
+    // Lista inicial (sem termo) - mesmo comportamento de abrir e já ver algo, em vez de
+    // uma caixa vazia até o usuário digitar. Só a 1ª busca da sessão bate na rede de
+    // verdade (timeout de até 60s, ver _GsSearchLayersWorker) - spinner + mensagem aqui
+    // pra não parecer travado nesse meio-tempo (buscas seguintes, já cacheadas, respondem
+    // na hora e o spinner nem chega a aparecer por tempo perceptível).
+    var initialSpinner = document.getElementById('gs-search-spinner');
+    if (initialSpinner) initialSpinner.style.display = 'block';
+    var resultsBox = document.getElementById('gs-search-results');
+    if (resultsBox) resultsBox.innerHTML = '<div class="suggestion-item" style="color:var(--fg-muted);cursor:default;">Carregando camadas do GeoServer...</div>';
+    gsBridge.search_geoserver('');
+}
+
+function _renderGsSearchResults(results, error) {
+    var spinner = document.getElementById('gs-search-spinner');
+    if (spinner) spinner.style.display = 'none';
+    var box = document.getElementById('gs-search-results');
+    if (!box) return; // modal já foi fechado
+    if (error) {
+        box.innerHTML = '<div class="suggestion-item" style="color:var(--fg-muted);cursor:default;">Falha ao buscar no GeoServer: ' + escHtml(error) + '</div>';
+        return;
+    }
+    if (!results || !results.length) {
+        box.innerHTML = '<div class="suggestion-item" style="color:var(--fg-muted);cursor:default;">Nenhum resultado.</div>';
+        return;
+    }
+    box.innerHTML = results.map(function (r) {
+        return '<div class="suggestion-item" onclick="pullGsLayerByName(\'' + escHtml(r.workspace || '') + '\', \'' +
+            escHtml((r.name || '').split(':').pop()) + '\')">' +
+            '<span><b>' + escHtml(r.workspace || '') + '</b> - ' + escHtml(r.title || r.name || '') + '</span>' +
+            '</div>';
+    }).join('');
+}
+
+// Puxa uma camada escolhida na busca (openGsSearchModal) - reusa pull_gs_layer_by_wms_name
+// (já descobre o datastore automaticamente) e o mesmo handler gs_layer_pulled de sempre,
+// exatamente como o caminho "via Metadado" (pullGsLayerFromServer). Exige login aqui (não
+// na busca) - fetch_published_featuretype/fetch_layer_styles usam a sessão REST.
+function pullGsLayerByName(workspace, name) {
+    if (!_isLogged) {
+        Modal.alert('Faça login no Geohab antes de baixar a camada - essa ação busca os dados direto do GeoServer.', 'Login Necessário', 'warning');
+        return;
+    }
+    Modal.close();
+    var wsLayerName = workspace + ':' + name;
+    Modal.confirm(
+        'Isso vai trazer o que está DE FATO publicado agora em "<strong>' + escHtml(wsLayerName) + '</strong>" ' +
+        '(título/resumo/palavras-chave/estilo), substituindo o formulário atual. Continuar?',
+        function () {
+            _showActionLoading('Buscando datastore e dados publicados no GeoServer...');
+            gsBridge.pull_gs_layer_by_wms_name(wsLayerName);
         },
         'Baixar Camada'
     );
@@ -2221,33 +2291,7 @@ function _gsOnFieldChanged() {
 // valida e avisa por toast em vez de só desabilitar um botão que não existe mais.
 function confirmGsPublish() {
 
-    if (!_gsLayerInfo || !_gsLayerInfo.publishable) {
-        var wmsName = (window._gnPullWmsData && window._gnPullWmsData.geoserver_layer_name) || '';
-        var d2 = _gsCollectFormState();
-        if (wmsName && d2.workspace && d2.datastore && d2.published_name) {
-            Modal.confirm(
-                'Nenhuma camada ativa no QGIS. Como o destino está preenchido, deseja apenas ATUALIZAR os metadados ' +
-                '(Título/Resumo/Palavras-chave) e Estilo dessa camada no GeoServer?',
-                function () {
-                    _showActionLoading('Atualizando metadados no GeoServer...');
-                    var style = _gsCollectStyleConfig();
-                    // _gnSyncUuid (geonetwork.js, mesmo escopo global) veio do MESMO pull que
-                    // preencheu window._gnPullWmsData (pullGnRecord) - sem ele, o Link de
-                    // Metadados nunca era setado nesse fluxo sem camada ativa (não dá pra
-                    // resolver via persistence_service.load(layer), que exige um QgsMapLayer).
-                    gsBridge.update_layer_metadata(
-                        d2.workspace, d2.datastore, d2.published_name,
-                        d2.title, d2.abstract, d2.keywords, style ? JSON.stringify(style) : '',
-                        (typeof _gnSyncUuid !== 'undefined' && _gnSyncUuid) || ''
-                    );
-                },
-                'Atualizar Metadados'
-            );
-        } else {
-            Modal.alert((_gsLayerInfo && _gsLayerInfo.reason) || 'Nenhuma camada publicável ativa no QGIS.', 'Aviso', 'warning');
-        }
-        return;
-    }
+    if (_gsTryNoActiveLayerUpdate()) return;
 
     var d = _gsCollectFormState();
     if (!d.workspace || !d.datastore) {
@@ -2445,4 +2489,23 @@ function _clickGsSuggestionItem(wrapId, value) {
         }
     }
     return false;
+}
+
+// Volta workspace/datastore pra "Selecione..." de forma garantida - usado por
+// _onGsActiveLayerChanged/tryGsResetForm/tryClearDraft (app.js) quando o destino precisa
+// ser esquecido de vez. _clickGsSuggestionItem('gs-workspace-wrap', '') sozinho FALHA
+// silenciosamente sempre que o wrap está no estado "destino conhecido, lista de
+// workspaces não carregou" (_gsApplyKnownWorkspaceDatastore, ver _gsWorkspaceListFailed -
+// sem sessão, ex.: busca no GeoServer sem login) - esse markup tem só UMA opção (o
+// workspace conhecido), sem nenhum item de valor "" pra clicar; o campo visível ficava
+// travado mostrando o workspace antigo mesmo depois de "limpar". Reconstrói o dropdown do
+// zero (mesmo HTML de _loadGsWorkspaces/erro em _renderGsWorkspaces) quando o clique falha,
+// garantindo o estado vazio independente de qual markup estava montado até então.
+function _gsResetWorkspaceDatastoreSelection() {
+    if (_clickGsSuggestionItem('gs-workspace-wrap', '')) return;
+    var wrap = document.getElementById('gs-workspace-wrap');
+    if (!wrap) return;
+    wrap.innerHTML = '<select id="gs-workspace" onchange="onGsWorkspaceChange(this.value)"><option value="">Selecione um workspace...</option></select>';
+    initCustomSelects();
+    onGsWorkspaceChange('');
 }

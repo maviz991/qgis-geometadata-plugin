@@ -29,10 +29,10 @@ class GeoServerBridge(QObject):
     gs_destination_saved = pyqtSignal(bool)  # db_ok - "Continuar Depois" do painel GeoServer
     gs_sync_checked = pyqtSignal('QVariant')  # resultado de check_gs_sync (ver _GsSyncCheckWorker)
     gs_styles_ready = pyqtSignal(list, str)  # [{'name':..., 'workspace': ''|ws}], error - ver list_styles
-    gs_style_updated = pyqtSignal(bool, str)  # sucesso, erro - "Serviços > Atualizar Estilo" (ver update_style)
     gs_layer_pulled = pyqtSignal(bool, 'QVariant', str)  # sucesso, dados, erro - "Serviços > Baixar Camada" (ver pull_layer_from_server)
     gs_rest_configured = pyqtSignal(bool, str)  # ok, username - resultado de configure_gs_rest_credentials
     gs_layer_info_ready = pyqtSignal('QVariant')  # resultado de get_active_layer_publish_info (ver _GsActiveLayerInfoWorker)
+    gs_search_ready = pyqtSignal(list, str)  # camadas (filtradas pela query), erro - ver search_geoserver
 
     # Cache de camadas do GeoServer (carregado uma vez por sessão)
     _geoserver_layers_cache = None
@@ -56,11 +56,12 @@ class GeoServerBridge(QObject):
         # worker anterior terminar. Ver _GsActiveLayerInfoWorker/get_active_layer_publish_info.
         self._layer_info_workers = []
         self._styles_worker = None
-        self._apply_style_worker = None
         self._gs_rest_worker = None
         self._pull_layer_worker = None
         self._pull_by_wms_worker = None
         self._update_metadata_worker = None
+        self._search_layers_worker = None
+        self._pending_search_query = None  # ver search_geoserver
         self._last_db_offline_notice = 0.0  # ver _notify_db_offline
 
 
@@ -656,84 +657,14 @@ class GeoServerBridge(QObject):
 
         return d_src, d_nm, d_ws, adds_json
 
-    @pyqtSlot(str, str, str, str, str, 'QVariant', str)
-    def update_style(self, workspace, datastore, published_name, title, abstract, keywords, style_json):
-        """"Serviços > Atualizar Estilo": aplica o estilo da aba Estilos a uma camada JÁ
-        publicada, sem republicar o FeatureType (publicar de novo daria "já existe"). O
-        preparo (exportar SLD do QGIS/ler arquivo) roda aqui na UI thread; o tráfego REST
-        vai pro _GsApplyStyleWorker (RNF02). Emite gs_style_updated(ok, error) ao final -
-        em caso de sucesso, grava a escolha (fonte/nome/adicionais) em geoserver_publish_xml
-        usando o workspace/datastore/título/resumo/palavras-chave ATUAIS do formulário -
-        não só quando já existia um registro salvo pra essa camada, pra permitir que um
-        técnico em OUTRA máquina recupere a mesma escolha de estilo via banco mesmo numa
-        camada publicada originalmente fora do plugin (sem "Continuar Depois"/"Publicar"
-        prévios)."""
-        import json
-        geoserver_service = getattr(self._dialog, 'geoserver_service', None)
-        if not geoserver_service or not workspace or not published_name:
-            self.gs_style_updated.emit(False, '[UI-002] Destino de publicação incompleto (workspace/nome).')
-            return
-        try:
-            style_cfg = json.loads(style_json) if style_json else {}
-        except ValueError:
-            style_cfg = {}
-        layer = self._active_layer()
-        style_task, error = self._prepare_style_task(style_cfg, layer, workspace)
-        if error:
-            self.gs_style_updated.emit(False, error)
-            return
-        if not style_task:
-            self.gs_style_updated.emit(False, '[UI-003] Escolha um estilo na aba Estilos antes de atualizar.')
-            return
-        if self._worker_busy(self._apply_style_worker):
-            return
-        keywords = list(keywords) if keywords else []
-        from ..core.plugin_config import config_loader
-        from .geoserver_workers import _GsApplyStyleWorker
-        self._apply_style_worker = _GsApplyStyleWorker(
-            geoserver_service, workspace, published_name, style_task, config_loader
-        )
-        self._apply_style_worker.done.connect(
-            lambda ok, err: self._on_style_updated(
-                ok, err, layer, workspace, datastore, published_name, title, abstract, keywords,
-                style_cfg.get('source') or '', style_task
-            )
-        )
-        self._apply_style_worker.start()
-
-    def _on_style_updated(self, ok, error, layer, workspace, datastore, published_name, title, abstract, keywords, style_source, style_task):
-        """Persiste o estilo recém-aplicado no registro do banco (geoserver_publish_xml)
-        ANTES de avisar o JS - com o destino/título/resumo/palavras-chave ATUAIS do
-        formulário (não um registro pré-existente), pra sempre gravar mesmo na primeira
-        vez que o plugin toca essa camada (ver update_style acima)."""
-        if ok and layer:
-            geoserver_service = getattr(self._dialog, 'geoserver_service', None)
-            if geoserver_service:
-                adds_entries = (style_task or {}).get('additional') or []
-                import json
-                adds = [{'source': 'existing' if e.get('mode') == 'existing' else 'create',
-                         'existing_name': e['name'], 'existing_workspace': e.get('style_workspace','')}
-                        if e.get('mode') == 'existing'
-                        else {'source': 'file', 'name': e['name']}
-                        for e in adds_entries]
-
-                def_task = (style_task or {}).get('default') or {}
-                geoserver_service.save_publish_destination(
-                    layer, workspace, datastore, published_name, title, abstract, keywords, published=True,
-                    style_source=style_source, style_name=def_task.get('name') or '',
-                    style_workspace=def_task.get('style_workspace') or '',
-                    style_additional_json=json.dumps(adds) if adds else ''
-                )
-        self.gs_style_updated.emit(ok, error or '')
-
     @pyqtSlot(str, str, str)
     def pull_layer_from_server(self, workspace, datastore, published_name):
         """"Serviços > Baixar Camada" (banner "Atualização disponível", como o GN) -
         PULL, não push: busca o que está DE FATO publicado no GeoServer agora (título/
         resumo/palavras-chave + estilo padrão/adicionais, só leitura - ver
         _GsPullLayerWorker) e devolve pro JS aplicar no formulário local, sobrescrevendo o
-        que estava digitado. Complementa "Publicar Camada" (cria) e "Atualizar Estilo"
-        (push deliberado de um estilo escolhido) - esse aqui existe pro caso oposto:
+        que estava digitado. Complementa "Publicar Camada" (cria OU atualiza, push
+        deliberado do que está no formulário) - esse aqui existe pro caso oposto:
         quando o formulário/banco LOCAL está desatualizado em relação ao que foi
         publicado de verdade (ex.: outro técnico publicou por cima depois que você só
         salvou um destino no banco) - empurrar o local sobrescreveria o trabalho de quem
@@ -925,13 +856,18 @@ class GeoServerBridge(QObject):
     @pyqtSlot(str, str, str, str, str, 'QVariant', str)
     def publish_layer(self, workspace, datastore, published_name, title, abstract, keywords, style_json=''):
         """RF02 - publica (registra) a camada ativa do QGIS como FeatureType no
-        workspace/datastore escolhidos. Reconsulta a camada ativa aqui (não confia em
-        estado antigo vindo do JS) e dispara o worker em background (RNF02). title/
-        abstract/keywords vêm explicitamente do JS (o mesmo valor que get_active_layer_
-        publish_info já tinha calculado e mostrado na tela) - 'name'/'nativeName' seguem
-        a regra de sanitização (RF04), os demais são livres. `style_json` é a configuração
-        da aba Estilos (ver _prepare_style_task) - o preparo (exportar SLD do QGIS/ler
-        arquivo) acontece AQUI, na UI thread, e o worker só faz o tráfego REST."""
+        workspace/datastore escolhidos, OU atualiza se esse destino já está publicado -
+        mesma filosofia do "Publicar Metadados" do GN (uma ação só, cria ou atualiza, o
+        backend decide sozinho) - antes, tentar publicar de novo numa camada já publicada
+        sempre falhava com [GS-409] "Já existe uma camada com esse nome"; a única forma de
+        corrigir SÓ o estilo era um botão à parte ("Serviços > Atualizar Estilo", removido -
+        ver docs_projeto/bugs.md). Reconsulta a camada ativa aqui (não confia em estado
+        antigo vindo do JS) e dispara o worker em background (RNF02). title/abstract/
+        keywords vêm explicitamente do JS (o mesmo valor que get_active_layer_publish_info
+        já tinha calculado e mostrado na tela) - 'name'/'nativeName' seguem a regra de
+        sanitização (RF04), os demais são livres. `style_json` é a configuração da aba
+        Estilos (ver _prepare_style_task) - o preparo (exportar SLD do QGIS/ler arquivo)
+        acontece AQUI, na UI thread, e o worker só faz o tráfego REST."""
         import json
         geoserver_service = getattr(self._dialog, 'geoserver_service', None)
         if not geoserver_service:
@@ -969,9 +905,35 @@ class GeoServerBridge(QObject):
             return
 
         from ..core.plugin_config import config_loader
-        from .geoserver_workers import _GsPublishWorker
         publish_title = title or published_name
         metadata_link_url = self._resolve_metadata_link_url(layer, config_loader)
+
+        # Detecta CRIAR vs ATUALIZAR antes de disparar o worker - uma chamada de leitura a
+        # mais (já usada pelo badge/pull, GET simples), mas evita SEMPRE bater com [GS-409]
+        # numa camada já publicada. Falha nessa checagem (rede/sessão) não impede tentar
+        # criar do jeito de sempre - se REALMENTE já existir, o [GS-409] de sempre cobre.
+        already_published = None
+        try:
+            already_published = geoserver_service.fetch_published_featuretype(workspace, datastore, published_name, config_loader)
+        except Exception as exc:
+            print(f"GeoMetadata [publish_layer] checagem de existência falhou, seguindo com criação: {exc}")
+
+        if already_published is not None:
+            from .geoserver_workers import _GsUpdateMetadataWorker
+            self._publish_worker = _GsUpdateMetadataWorker(
+                geoserver_service, workspace, datastore, published_name, publish_title, abstract, keywords,
+                style_task, config_loader, metadata_link_url
+            )
+            self._publish_worker.done.connect(
+                lambda success, message: self._on_publish_done(
+                    success, message, published_name, workspace, datastore, publish_title, abstract, keywords, layer, config_loader,
+                    style_cfg.get('source') or '', style_task
+                )
+            )
+            self._publish_worker.start()
+            return
+
+        from .geoserver_workers import _GsPublishWorker
         self._publish_worker = _GsPublishWorker(
             geoserver_service, workspace, datastore, info['table'], published_name,
             publish_title, abstract, keywords, config_loader, style_task, srs=srs,
@@ -993,9 +955,10 @@ class GeoServerBridge(QObject):
         grava o destino usado (workspace/datastore/nome/título/resumo/palavras-chave/estilo)
         em geoserver_publish_xml (public.qgis_geometadata_plugin), pra pré-preencher a
         próxima vez mesmo sem rascunho local (ver GeoServerService.save_publish_destination).
-        Com sucesso mas `message` preenchida (aviso: o estilo falhou, ver _GsPublishWorker),
-        os campos de estilo ficam de FORA da gravação - o badge segue acusando a pendência
-        e o usuário pode reaplicar via "Serviços > Atualizar Estilo"."""
+        Com sucesso mas `message` preenchida (aviso: o estilo falhou, ver _GsPublishWorker/
+        _GsUpdateMetadataWorker), os campos de estilo ficam de FORA da gravação - o badge
+        segue acusando a pendência e o usuário pode tentar de novo publicando/atualizando
+        outra vez (a mesma ação "Publicar Camada" cobre os dois casos, ver publish_layer)."""
         wms_url = wfs_url = ''
         if success:
             base_url = config_loader_instance.get_geoserver_url().rstrip('/')
@@ -1026,80 +989,62 @@ class GeoServerBridge(QObject):
                 )
         self.gs_publish_done.emit(success, message, published_name, wms_url, wfs_url)
 
-    @pyqtSlot(str, result='QVariant')
+    @pyqtSlot(str)
     def search_geoserver(self, query: str):
-        """Busca camadas públicas no GeoServer via WMS GetCapabilities (sem autenticação).
-        Usado hoje pelo editor GN (aba 'Recursos associados') pra linkar uma camada
-        existente ao metadado - é o gsBridge quem sabe falar com o GeoServer."""
-        try:
-            import ssl
-            import urllib.request
-            import xml.etree.ElementTree as ET
-            from ..core.plugin_config import config_loader
+        """Busca camadas no GeoServer via WMS GetCapabilities. Usado pelo editor GN (aba
+        'Recursos associados', linkar WMS/WFS - funciona sem login, catálogo público) e
+        pela busca de camadas do painel GS (openGsSearchModal, geoserver.js - "Baixar
+        Camada" sem depender de camada QGIS ativa nem de um pull do GN antes - essa exige
+        login antes de abrir, ver pullGsLayerFromServer).
 
-            base_url = config_loader.get_geoserver_url().rstrip('/')
-            if not base_url:
-                print("GeoMetadata [search_geoserver]: geoserver_url não configurado.")
-                return []
+        Fire-and-forget (RNF02) - resultado chega por gs_search_ready(camadas, erro). Antes
+        rodava direto neste pyqtSlot (bloqueante, `result='QVariant'`) - GetCapabilities é
+        rede, podia demorar vários segundos dependendo do tamanho do catálogo, travando a
+        QWebEngineView inteira: tanto ao abrir a busca quanto a CADA LETRA digitada
+        enquanto a 1ª busca da sessão ainda estava em voo (cada tecla reabria outra busca
+        síncrona por cima, empilhando o travamento). Cache module-level
+        (_geoserver_layers_cache) evita rede de novo em buscas seguintes - essas continuam
+        síncronas (só filtram uma lista já em memória, sem I/O), por isso não precisam de
+        worker. Nota: o cache não distingue sessão anônima de autenticada - se a 1ª busca da
+        sessão do plugin rodar ANTES de logar (ex.: GN "Recursos associados"), fica cacheada
+        só com o que a chamada anônima viu (normalmente 1 workspace liberado), e logar
+        DEPOIS não refaz a busca - só fechar/reabrir o plugin renova o cache."""
+        if GeoServerBridge._geoserver_layers_cache is not None:
+            self._emit_gs_search_results(query)
+            return
+        if self._worker_busy(self._search_layers_worker):
+            # Busca anterior (1ª da sessão) ainda em voo - refaz com a query MAIS RECENTE
+            # quando ela terminar, em vez de disparar outra busca de rede por cima (o que
+            # travava a tela de novo a cada letra digitada nesse meio-tempo).
+            self._pending_search_query = query
+            return
+        from ..core.plugin_config import config_loader
+        from .geoserver_workers import _GsSearchLayersWorker
+        geoserver_service = getattr(self._dialog, 'geoserver_service', None)
+        self._pending_search_query = None
+        self._search_layers_worker = _GsSearchLayersWorker(config_loader.get_geoserver_url(), geoserver_service)
+        self._search_layers_worker.done.connect(
+            lambda layers, err, q=query: self._on_search_layers_done(q, layers, err)
+        )
+        self._search_layers_worker.start()
 
-            is_logged = getattr(getattr(self._dialog, 'plugin', None), 'api_session', None) is not None
+    def _on_search_layers_done(self, query, layers, error):
+        if error:
+            print(f"GeoMetadata [search_geoserver] ERRO: {error}")
+            self.gs_search_ready.emit([], error)
+            self._pending_search_query = None
+            return
+        GeoServerBridge._geoserver_layers_cache = layers
+        effective_query = self._pending_search_query if self._pending_search_query is not None else query
+        self._pending_search_query = None
+        self._emit_gs_search_results(effective_query)
 
-            if GeoServerBridge._geoserver_layers_cache is None:
-                caps_url = f"{base_url}/wms?service=WMS&version=1.3.0&request=GetCapabilities"
-                print(f"GeoMetadata [search_geoserver]: carregando capabilities de {caps_url}")
-
-                ctx = ssl.create_default_context()
-                ctx.check_hostname = False
-                ctx.verify_mode    = ssl.CERT_NONE
-
-                req = urllib.request.Request(caps_url, headers={'User-Agent': 'GeoMetadataPlugin/1.0'})
-                with urllib.request.urlopen(req, context=ctx, timeout=15) as resp:
-                    content = resp.read()
-
-                print(f"GeoMetadata [search_geoserver]: {len(content)} bytes recebidos.")
-
-                root = ET.fromstring(content)
-                all_layers = []
-
-                for layer_el in root.iter():
-                    tag_local = layer_el.tag.split('}')[-1] if '}' in layer_el.tag else layer_el.tag
-                    if tag_local != 'Layer':
-                        continue
-                    name_el = title_el = None
-                    for child in layer_el:
-                        ct = child.tag.split('}')[-1] if '}' in child.tag else child.tag
-                        if ct == 'Name'  and name_el  is None: name_el  = child
-                        if ct == 'Title' and title_el is None: title_el = child
-                    name  = (name_el.text  or '').strip() if name_el  is not None else ''
-                    title = (title_el.text or '').strip() if title_el is not None else ''
-                    if not name or ':' not in name:
-                        continue
-                    workspace = name.split(':', 1)[0]
-                    all_layers.append({
-                        'name':      name,
-                        'workspace': workspace,
-                        'title':     title or name,
-                        'wms_url':   f"{base_url}/{workspace}/wms?service=WMS",
-                        'wfs_url':   f"{base_url}/{workspace}/wfs?service=WFS",
-                    })
-
-                GeoServerBridge._geoserver_layers_cache = all_layers
-                print(f"GeoMetadata [search_geoserver]: {len(all_layers)} camadas indexadas.")
-
-            q = query.lower().strip()
-            cache = GeoServerBridge._geoserver_layers_cache
-            results = [l for l in cache if q in l['name'].lower() or q in l['title'].lower()][:25]
-
-            for r in results:
-                r['wfs_available'] = is_logged
-
-            return results
-
-        except Exception as e:
-            import traceback
-            print(f"GeoMetadata [search_geoserver] ERRO: {e}")
-            traceback.print_exc()
-            return []
+    def _emit_gs_search_results(self, query):
+        is_logged = getattr(getattr(self._dialog, 'plugin', None), 'api_session', None) is not None
+        q = (query or '').lower().strip()
+        cache = GeoServerBridge._geoserver_layers_cache or []
+        results = [dict(l, wfs_available=is_logged) for l in cache if q in l['name'].lower() or q in l['title'].lower()][:25]
+        self.gs_search_ready.emit(results, '')
 
     @pyqtSlot(str, str, str, str, str, 'QVariant', str, str)
     def update_layer_metadata(self, workspace, datastore, published_name, title, abstract, keywords, style_json='', metadata_uuid=''):

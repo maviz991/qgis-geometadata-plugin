@@ -927,10 +927,6 @@ function pullGnRecord(uuid) {
                 data.metadata_uuid || '',
                 JSON.stringify(data)
             );
-            // Guarda wms_data do pull para uso pelo painel GeoServer ("Baixar Camada"
-            // sem camada PostGIS ativa - ver pullGsLayerFromServer em geoserver.js).
-            // window scope: visível ao geoserver.js que carrega no mesmo QWebEngineView.
-            window._gnPullWmsData = data.wms_data || null;
             Modal.alert('Metadado baixado do Geohab com sucesso.<br>Confira os campos preenchidos no formulário.', 'Baixado', 'success');
         });
     }, 'Puxar do Geohab');
@@ -1362,11 +1358,11 @@ function searchGeoServer(q) {
     }
     if (typeof gsBridge !== 'undefined' && gsBridge.search_geoserver) {
         if (spinner) spinner.style.display = 'inline-block';
-        gsBridge.search_geoserver(q, function (results) {
-            if (spinner) spinner.style.display = 'none';
-            _distSugg = results || [];
-            renderDistSugg();
-        });
+        // Fire-and-forget agora (RNF02, ver comentário em search_geoserver/geoserver_bridge.py)
+        // - resposta chega em gs_search_ready, conectado em _initGsBridge (geoserver.js), que
+        // já cuida de esconder o spinner e chamar renderDistSugg() quando #dist-suggestions
+        // existir na tela.
+        gsBridge.search_geoserver(q);
     }
 }
 
