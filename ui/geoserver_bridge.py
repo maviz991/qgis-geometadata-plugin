@@ -22,6 +22,7 @@ class GeoServerBridge(QObject):
     gs_workspaces_ready = pyqtSignal(list, str)  # workspaces, error
     gs_datastores_ready = pyqtSignal(list, str)  # datastores, error
     gs_featuretypes_ready = pyqtSignal(list, str)  # nomes de tabela visíveis no datastore, error
+    gs_published_featuretypes_ready = pyqtSignal(list, str)  # nomes de camadas JÁ PUBLICADAS no datastore, error - ver list_published_featuretypes
     gs_find_datastore_progress = pyqtSignal(str)  # mensagem de status da varredura
     gs_find_datastore_done = pyqtSignal(list, str)  # [{'workspace':..,'datastore':..}, ...], error
     gs_publish_done = pyqtSignal(bool, str, str, str, str)  # sucesso, mensagem (erro OU aviso de estilo), nome_publicado, wms_url, wfs_url
@@ -43,6 +44,7 @@ class GeoServerBridge(QObject):
         self._workspaces_worker = None
         self._datastores_worker = None
         self._featuretypes_worker = None
+        self._published_featuretypes_worker = None
         self._find_datastore_worker = None
         self._publish_worker = None
         # Lista (não slot único) - check_gs_sync pode ser chamado de novo (troca de camada,
@@ -193,6 +195,25 @@ class GeoServerBridge(QObject):
         self._featuretypes_worker = _GsFeatureTypesWorker(geoserver_service, workspace, datastore, config_loader)
         self._featuretypes_worker.done.connect(self.gs_featuretypes_ready.emit)
         self._featuretypes_worker.start()
+
+    @pyqtSlot(str, str)
+    def list_published_featuretypes(self, workspace, datastore):
+        """Lista só as camadas JÁ PUBLICADAS nesse workspace/datastore (sem list=all) em
+        background e emite gs_published_featuretypes_ready(nomes, error) - usado pelo
+        seletor "Selecionar camada publicada" (aba Destino) pra filtrar a lista quando
+        Workspace/Datastore já estão escolhidos (ver GeoServerService.
+        list_published_featuretypes)."""
+        geoserver_service = getattr(self._dialog, 'geoserver_service', None)
+        if not geoserver_service:
+            self.gs_published_featuretypes_ready.emit([], 'Serviço GeoServer não inicializado.')
+            return
+        if self._worker_busy(self._published_featuretypes_worker):
+            return
+        from ..core.plugin_config import config_loader
+        from .geoserver_workers import _GsPublishedFeatureTypesWorker
+        self._published_featuretypes_worker = _GsPublishedFeatureTypesWorker(geoserver_service, workspace, datastore, config_loader)
+        self._published_featuretypes_worker.done.connect(self.gs_published_featuretypes_ready.emit)
+        self._published_featuretypes_worker.start()
 
     @pyqtSlot()
     def find_datastore_for_active_layer(self):
@@ -679,10 +700,11 @@ class GeoServerBridge(QObject):
         if self._worker_busy(self._pull_layer_worker) or self._worker_busy(self._pull_by_wms_worker):
             return
         layer = self._active_layer()
+        geonetwork_service = getattr(self._dialog, 'geonetwork_service', None)
         from ..core.plugin_config import config_loader
         from .geoserver_workers import _GsPullLayerWorker
         self._pull_layer_worker = _GsPullLayerWorker(
-            geoserver_service, workspace, datastore, published_name, config_loader
+            geoserver_service, workspace, datastore, published_name, config_loader, geonetwork_service
         )
         # Salva o contexto no próprio worker para evitar uso de lambda (que causa crash
         # no QWebChannel por executar em DirectConnection na thread de background)
@@ -759,10 +781,11 @@ class GeoServerBridge(QObject):
             return
         if self._worker_busy(self._pull_layer_worker) or self._worker_busy(self._pull_by_wms_worker):
             return
+        geonetwork_service = getattr(self._dialog, 'geonetwork_service', None)
         from ..core.plugin_config import config_loader
         from .geoserver_workers import _GsPullLayerByWmsNameWorker
         self._pull_by_wms_worker = _GsPullLayerByWmsNameWorker(
-            geoserver_service, ws_layer_name, config_loader
+            geoserver_service, ws_layer_name, config_loader, geonetwork_service
         )
         self._pull_by_wms_worker.done.connect(self._on_wms_layer_pulled)
         self._pull_by_wms_worker.start()
@@ -853,8 +876,8 @@ class GeoServerBridge(QObject):
         )
         self.gs_destination_saved.emit(ok)
 
-    @pyqtSlot(str, str, str, str, str, 'QVariant', str)
-    def publish_layer(self, workspace, datastore, published_name, title, abstract, keywords, style_json=''):
+    @pyqtSlot(str, str, str, str, str, 'QVariant', str, str)
+    def publish_layer(self, workspace, datastore, published_name, title, abstract, keywords, style_json='', metadata_uuid=''):
         """RF02 - publica (registra) a camada ativa do QGIS como FeatureType no
         workspace/datastore escolhidos, OU atualiza se esse destino já está publicado -
         mesma filosofia do "Publicar Metadados" do GN (uma ação só, cria ou atualiza, o
@@ -867,7 +890,20 @@ class GeoServerBridge(QObject):
         já tinha calculado e mostrado na tela) - 'name'/'nativeName' seguem a regra de
         sanitização (RF04), os demais são livres. `style_json` é a configuração da aba
         Estilos (ver _prepare_style_task) - o preparo (exportar SLD do QGIS/ler arquivo)
-        acontece AQUI, na UI thread, e o worker só faz o tráfego REST."""
+        acontece AQUI, na UI thread, e o worker só faz o tráfego REST.
+
+        `metadata_uuid` (novo) - mesmo `_gsLayerInfo.metadata_uuid` que a prévia da aba
+        Identificação já mostra pro usuário (ver _on_layer_info_ready/info['metadata_uuid'],
+        que já considera rascunho local + hint da sessão do editor GN, não só o que está
+        salvo no banco pra essa camada). Sem isso, esse método SEMPRE recalculava o link
+        do zero via _resolve_metadata_link_url(layer, ...), que só olha pro banco/sidecar
+        (persistence_service.load(layer)) - se o usuário tinha acabado de "Baixar Metadado"
+        no editor GN pra um registro JÁ existente (fluxo comum: a camada geralmente existe
+        no GeoServer antes do metadado, então o metadado é buscado/vinculado DEPOIS) mas
+        ainda não tinha salvo isso localmente pra essa camada específica, a prévia mostrava
+        o link certo mas a publicação de verdade saía com o campo vazio - as duas fontes
+        de UUID divergiam. Usa o valor explícito quando vier preenchido; cai pro cálculo
+        antigo (banco/sidecar) só se vier vazio."""
         import json
         geoserver_service = getattr(self._dialog, 'geoserver_service', None)
         if not geoserver_service:
@@ -906,7 +942,14 @@ class GeoServerBridge(QObject):
 
         from ..core.plugin_config import config_loader
         publish_title = title or published_name
-        metadata_link_url = self._resolve_metadata_link_url(layer, config_loader)
+        # Prioridade: uuid explícito vindo do JS (prévia já mostrada na tela, pode vir de
+        # um pull do GN nesta sessão que ainda não foi salvo localmente pra esta camada)
+        # > cálculo antigo (banco/sidecar) - ver docstring do método sobre a divergência
+        # que isso corrigia.
+        metadata_link_url = (
+            self._build_metadata_link_url(metadata_uuid, config_loader) if metadata_uuid
+            else self._resolve_metadata_link_url(layer, config_loader)
+        )
 
         # Detecta CRIAR vs ATUALIZAR antes de disparar o worker - uma chamada de leitura a
         # mais (já usada pelo badge/pull, GET simples), mas evita SEMPRE bater com [GS-409]
@@ -988,6 +1031,21 @@ class GeoServerBridge(QObject):
                     style_additional_json=json.dumps(adds) if adds else ''
                 )
         self.gs_publish_done.emit(success, message, published_name, wms_url, wfs_url)
+
+    @pyqtSlot()
+    def invalidate_gs_search_cache(self):
+        """Descarta o cache de camadas do GeoServer (_geoserver_layers_cache) - a próxima
+        chamada a search_geoserver() bate na rede de novo em vez de reusar a lista já
+        guardada. Existe pros dois casos em que essa lista pode ficar presa incompleta:
+        (1) a 1ª busca da sessão rodou ANTES de logar (WMS GetCapabilities anônimo pode
+        enxergar só um subconjunto - ver comentário em search_geoserver) - chamado
+        automaticamente pelo JS quando o login muda de deslogado pra logado
+        (_onGsAuthStateChangedForSync, geoserver.js); (2) o catálogo genuinamente tem mais
+        camadas do que a resposta trouxe (ex.: um erro de serialização no meio do
+        GetCapabilities do lado do servidor - documentado em docs_projeto/bugs.md, Bug 47,
+        nota de infraestrutura sobre um datastore quebrado) - usuário aciona manualmente
+        (botão "↻" no modal de busca/seletor de camada)."""
+        GeoServerBridge._geoserver_layers_cache = None
 
     @pyqtSlot(str)
     def search_geoserver(self, query: str):

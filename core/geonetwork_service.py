@@ -137,6 +137,64 @@ class GeoNetworkService:
         self._fetch_cache[uuid] = (time.time(), result)
         return result
 
+    def find_metadata_uuid_by_layer_reference(self, ws_layer_name, config_loader_instance):
+        """Busca REVERSA: dado o nome de uma camada publicada no GeoServer
+        ('workspace:nome'), procura um registro de metadado no GeoNetwork que a
+        REFERENCIE (link WMS/WFS na Distribuição - mesmo campo que xml_parser.wms_data.
+        geoserver_layer_name lê de um XML individual já baixado, aqui procurado em lote via
+        busca, sem precisar que o usuário já tenha aberto esse registro no editor GN antes).
+
+        Existe pro fluxo mais comum na prática (pedido explícito do usuário, ver
+        docs_projeto/bugs.md Bug 58/59): a camada geralmente é publicada no GeoServer ANTES
+        do metadado existir/ser vinculado a ela - nesse caso a camada NUNCA teve um
+        metadataLink de volta pro GN gravado nela (ver GeoServerService.
+        _extract_metadata_uuid), então perguntar À CAMADA não acha nada; aqui a pergunta é
+        feita ao GeoNetwork, no sentido oposto.
+
+        Mesma abordagem pragmática de _GnRecordSearchWorker (busca por título,
+        geonetwork_workers.py): sem garantia de qual campo exato do índice Elasticsearch do
+        GN guarda o link (varia por versão/config de indexação), busca um lote de registros
+        não-template e procura a string 'workspace:nome' em qualquer lugar do _source
+        indexado inteiro (title, link.url, link.name, overview etc.) em vez de depender de
+        um nome de campo específico. Retorna o primeiro uuid encontrado, ou None (sem
+        registro nenhum referenciando essa camada, ou falha de rede - os dois tratados
+        igual: "não confirmado", ver GeoServerBridge que usa isso como fallback)."""
+        if not ws_layer_name:
+            return None
+        api_session = self.plugin.api_session or requests.Session()
+        gn_base = (config_loader_instance.get_geonetwork_base_url() or '').rstrip('/')
+        if not gn_base:
+            return None
+        try:
+            es_url = f"{gn_base}/srv/api/search/records/_search"
+            payload = {"size": 500, "query": {"term": {"isTemplate": "n"}}}
+            with HTTP_SESSION_LOCK:
+                resp = api_session.post(
+                    es_url, json=payload, timeout=15, verify=False,
+                    headers={'Accept': 'application/json'}
+                )
+            if resp.status_code != 200:
+                return None
+            hits = resp.json().get('hits', {}).get('hits', [])
+            needle = ws_layer_name.strip().lower()
+            for hit in hits:
+                src = hit.get('_source') or {}
+                uuid = src.get('uuid') or ''
+                if not uuid:
+                    continue
+                if needle in json.dumps(src, ensure_ascii=False).lower():
+                    return uuid
+            return None
+        except Exception:
+            # SEM print() aqui de propósito - esse método é chamado de dentro de QThreads
+            # de background (_GsPullLayerWorker/_GsPullLayerByWmsNameWorker,
+            # geoserver_workers.py), que só têm o override seguro de print() (no-op) no
+            # PRÓPRIO módulo delas - chamar o print() builtin de dentro de uma função
+            # definida aqui (core/geonetwork_service.py, sem esse override) já causou o
+            # QGIS inteiro fechar antes (Bug 41/55, docs_projeto/bugs.md). Falha aqui é
+            # tratada igual "não encontrado" pelo chamador de qualquer forma.
+            return None
+
     def translate_http_error(self, error_text):
         """Traduz mensagens comuns do GeoNetwork"""
         lower_error = error_text.lower()

@@ -524,15 +524,17 @@ function _updateHomeLoginBanner() {
     banner.style.display = _isLogged ? 'none' : 'flex';
 }
 
-// Badge "Ativo"/"Instável"/"Offline" dos cards da Home (ver bridge.service_status_ready/
-// check_services_status, main_bridge.py) - substitui o texto "Ativo" fixo de antes, que
-// não refletia se o servidor estava de pé de verdade. Sem depender de login (ping simples).
-// data-title = tooltip pelo sistema global (ver initGlobalTooltips, mais abaixo neste
-// arquivo) - mesmo padrão dos badges de sync GN/GS, não o title nativo do navegador.
+// Badge "Ativo"/"Instável"/"Indisponível"/"Offline" dos cards da Home (ver
+// bridge.service_status_ready/check_services_status, main_bridge.py) - substitui o texto
+// "Ativo" fixo de antes, que não refletia se o servidor estava de pé de verdade. Sem
+// depender de login (ping simples). data-title = tooltip pelo sistema global (ver
+// initGlobalTooltips, mais abaixo neste arquivo) - mesmo padrão dos badges de sync GN/GS,
+// não o title nativo do navegador.
 var _HOME_SERVICE_STATUS = {
     checking: { label: 'Verificando…', cls: 'badge-checking', title: 'Verificando se o servidor está respondendo agora...' },
     active: { label: 'Ativo', cls: 'badge-active', title: 'Servidor respondendo normalmente.' },
     unstable: { label: 'Instável', cls: 'badge-unstable', title: 'Servidor respondeu, mas devagar ou com erro - pode haver instabilidade agora.' },
+    unavailable: { label: 'Indisponível', cls: 'badge-unavailable', title: 'O servidor respondeu 503 - o serviço está fora do ar no momento (não é problema de rede/VPN daqui).' },
     offline: { label: 'Offline', cls: 'badge-offline', title: 'Não foi possível conectar a este servidor agora (rede/VPN ou servidor fora do ar).' }
 };
 function _updateHomeServiceBadge(service, status) {
@@ -633,7 +635,7 @@ function _showActionLoading(message) {
         el = document.createElement('div');
         el.id = 'action-loading';
         el.className = 'action-loading';
-        el.innerHTML = '<span class="suggestion-spinner"></span><span id="action-loading-text"></span>';
+        el.innerHTML = '<div class="action-loading-box"><span class="suggestion-spinner"></span><span id="action-loading-text"></span></div>';
         document.body.appendChild(el);
     }
     document.getElementById('action-loading-text').textContent = message;
@@ -728,6 +730,14 @@ function tryClearDraft() {
                 if (abstractEl) abstractEl.value = '';
                 var preview = document.getElementById('gs-layer-name-preview');
                 if (preview) preview.textContent = '';
+                // Link de Metadados (aba Identificação) - ficava preso mostrando o uuid
+                // antigo depois de "Limpar Rascunho", já que nada aqui tocava _gnSyncUuid
+                // nem a prévia (#gs-metadata-link-preview) - só os campos "normais" do
+                // formulário eram limpos.
+                if (typeof _gnSyncUuid !== 'undefined') _gnSyncUuid = null;
+                if (typeof _gsMetadataLinkUrl !== 'undefined') _gsMetadataLinkUrl = '';
+                var metaLinkBox = document.getElementById('gs-metadata-link-preview');
+                if (metaLinkBox) metaLinkBox.innerHTML = '';
                 _gsResetWorkspaceDatastoreSelection(); // volta workspace/datastore pra "Selecione..."
                 _gsResetStyleControls(); // volta a aba Estilos pro default
                 // _loadGsDraft() (não só updateGsFormProgress()) - o rascunho acabou de
@@ -961,9 +971,13 @@ function initCustomSelects() {
         // poucas opções fixas (ex.: "Estilo principal", 4 itens) só ocupa espaço à toa.
         // SEARCH_THRESHOLD decide isso pelo Nº de opções, não por select específico - se
         // um select curto crescer (ou um comprido encolher) o comportamento se ajusta
-        // sozinho, sem precisar marcar cada `<select>` manualmente.
+        // sozinho, sem precisar marcar cada `<select>` manualmente. data-force-search é o
+        // escape hatch pra quando a busca precisa aparecer SEMPRE, mesmo com poucas opções
+        // no momento (ex.: "Selecionar camada publicada" filtrado por datastore, geoserver.js -
+        // a lista pode ter poucos itens agora mas crescer, ou o usuário só quer o mesmo
+        // padrão de digitar-pra-filtrar de sempre independente da contagem).
         var SEARCH_THRESHOLD = 6;
-        var needsSearch = select.options.length > SEARCH_THRESHOLD;
+        var needsSearch = select.options.length > SEARCH_THRESHOLD || select.hasAttribute('data-force-search');
 
         // Mesmo espírito da busca de contatos do editor GN, só embutido no dropdown em
         // vez de um modal separado. Substitui, pras listas compridas, o antigo "digitar

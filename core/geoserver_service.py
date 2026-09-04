@@ -181,6 +181,33 @@ class GeoServerService:
             names = [names]  # GeoServer devolve string solta (não array) quando só tem 1 item
         return names
 
+    def list_published_featuretypes(self, workspace, datastore, config_loader_instance):
+        """Lista só as camadas JÁ PUBLICADAS nesse workspace/datastore (sem `list=all` - ao
+        contrário de list_featuretypes, que também inclui tabelas nunca publicadas, pensado
+        pra validar ANTES de publicar). Usado pelo seletor "Selecionar camada publicada"
+        (aba Destino) pra filtrar a lista quando o usuário já escolheu Workspace/Datastore -
+        pedido do usuário: sem isso a lista mostra TODAS as camadas do GeoServer inteiro
+        (via WMS, ver GeoServerBridge.search_geoserver), mesmo as de outros datastores."""
+        api_session = self._get_rest_session()
+
+        base_url = config_loader_instance.get_geoserver_url().rstrip('/')
+        if not base_url:
+            raise ValueError("A URL do GeoServer não está definida corretamente no config.json.")
+
+        with HTTP_SESSION_LOCK:
+            response = api_session.get(
+                f"{base_url}/rest/workspaces/{workspace}/datastores/{datastore}/featuretypes.json",
+                headers={'Accept': 'application/json'},
+                timeout=20,
+                verify=False
+            )
+        response.raise_for_status()
+        data = response.json()
+        entries = (data.get('featureTypes') or {}).get('featureType') or []
+        if isinstance(entries, dict):
+            entries = [entries]
+        return [e.get('name') for e in entries if e.get('name')]
+
     def find_datastore_for_table(self, table_name, config_loader_instance, progress_callback=None):
         """Varre todos os workspaces/datastores do GeoServer procurando onde a tabela
         `table_name` está visível (list=all) - usado pelo botão "Detectar automaticamente"
@@ -431,7 +458,32 @@ class GeoServerService:
             'title': ft.get('title') or '',
             'abstract': ft.get('abstract') or '',
             'keywords': keywords_raw,
+            # uuid do metadado GN de fato vinculado a ESSA camada no GeoServer agora (não
+            # um palpite vindo de estado de sessão solto tipo _gnSyncUuid, JS) - extraído
+            # do próprio metadataLinks que register_postgis_featuretype/
+            # update_published_featuretype gravaram na publicação (formato
+            # "{records_url}/{uuid}/formatters/xml", ver _build_metadata_link_url,
+            # geoserver_bridge.py). Fonte confiável pro fallback "sem camada ativa" (Bug 57)
+            # - o pull TRAZ o uuid real vinculado, em vez de depender de o usuário ter
+            # acabado de puxar o MESMO registro no editor GN nesta sessão.
+            'metadata_uuid': self._extract_metadata_uuid(ft),
         }
+
+    @staticmethod
+    def _extract_metadata_uuid(feature_type):
+        """Extrai o uuid do primeiro metadataLink de um featureType (resposta REST do
+        GeoServer) - reverso de _build_metadata_link_url (geoserver_bridge.py):
+        "{records_url}/{uuid}/formatters/xml" -> uuid. Vazio se não houver link nenhum, ou
+        se o formato não bater (link de metadados manual, formato antigo, etc.)."""
+        links = ((feature_type or {}).get('metadataLinks') or {}).get('metadataLink') or []
+        if isinstance(links, dict):
+            links = [links]
+        for link in links:
+            content = (link or {}).get('content') or ''
+            match = re.search(r'/([0-9a-fA-F-]{36})/formatters/xml/?$', content)
+            if match:
+                return match.group(1)
+        return ''
 
     # ── Estilos (SLD) ───────────────────────────────────────────────────────────
 

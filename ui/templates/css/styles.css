@@ -511,14 +511,22 @@ body {
     }
 }
 
-/* ── Indicador de carregamento central genérico (publicar/salvar - GN ou GS) ─── */
+/* ── Indicador de carregamento central genérico (publicar/salvar - GN ou GS) ───
+   Fundo escuro cobrindo a tela (mesmo tom de .modal-overlay, modals.css) - sem isso o
+   indicador se perdia no meio da tela, sem destaque nenhum (pedido do usuário: mesmo
+   comportamento de "esconder a tela" que os alerts/confirms já têm). */
 .action-loading {
     display: none;
     position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    inset: 0;
     z-index: 9000;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.45);
+}
+
+.action-loading-box {
+    display: flex;
     align-items: center;
     gap: 10px;
     background: var(--surface);

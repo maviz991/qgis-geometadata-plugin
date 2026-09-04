@@ -162,6 +162,80 @@ def _gs_augment_404(exc, workspace=None, datastore=None, published_name=None):
     return message
 
 
+def _build_gn_metadata_link_url(uuid, config_loader_instance):
+    """Mesma fórmula de GeoServerBridge._build_metadata_link_url (geoserver_bridge.py) -
+    duplicada aqui (não importada) pra evitar import circular (geoserver_bridge.py já
+    importa deste módulo). As duas precisam concordar - é o mesmo link que a publicação de
+    verdade grava no GeoServer."""
+    if not uuid:
+        return ''
+    records_url = (config_loader_instance.get_geonetwork_url() or {}).get('records_url')
+    if not records_url:
+        return ''
+    return f"{records_url}/{uuid}/formatters/xml"
+
+
+def _resolve_gn_metadata_uuid(candidate_uuid, ws_layer_name, geonetwork_service, config_loader_instance):
+    """Resolve o metadado GN pra uma camada puxada do GeoServer, em duas etapas: (1)
+    confirma o candidato vindo do próprio metadataLinks da camada (existe só quando ela JÁ
+    foi publicada por este plugin com o link certo gravado) buscando o registro completo
+    (fetch_from_geonetwork); (2) se não achou nada (camada nunca teve esse link - o caso
+    mais comum na prática, publicada ANTES do metadado existir, pedido explícito do
+    usuário: "se puxar GS tenta no GN"), cai pra uma busca REVERSA no GeoNetwork por um
+    registro que referencie essa camada (GeoNetworkService.
+    find_metadata_uuid_by_layer_reference) - não precisa que o usuário tenha aberto esse
+    registro no editor GN antes.
+
+    Retorna (uuid, record) - record é o dict completo (mesmo formato de
+    xml_parser.parse_xml_to_dict: title/abstract/MD_Keywords/etc.) do registro confirmado,
+    pra popular o formulário GS sozinho com o que está de fato no GeoNetwork (pedido do
+    usuário - já que o vínculo foi confirmado, usa o conteúdo em vez de só mostrar o link).
+    ('', None) se não achou/confirmou nada em nenhuma das duas etapas."""
+    uuid = (candidate_uuid or '').strip()
+    if uuid and geonetwork_service:
+        try:
+            record = geonetwork_service.fetch_from_geonetwork(uuid, config_loader_instance)
+        except Exception as exc:
+            print(f"GeoMetadata [_resolve_gn_metadata_uuid] falha ao confirmar uuid {uuid!r}: {exc}")
+            record = None
+        if record:
+            return uuid, record
+    if not geonetwork_service or not ws_layer_name:
+        return '', None
+    try:
+        found_uuid = geonetwork_service.find_metadata_uuid_by_layer_reference(ws_layer_name, config_loader_instance)
+    except Exception as exc:
+        print(f"GeoMetadata [_resolve_gn_metadata_uuid] busca reversa falhou pra {ws_layer_name!r}: {exc}")
+        found_uuid = None
+    if not found_uuid:
+        return '', None
+    try:
+        record = geonetwork_service.fetch_from_geonetwork(found_uuid, config_loader_instance)
+    except Exception as exc:
+        print(f"GeoMetadata [_resolve_gn_metadata_uuid] falha ao buscar conteúdo de {found_uuid!r}: {exc}")
+        record = None
+    return (found_uuid, record) if record else ('', None)
+
+
+def _apply_gn_metadata_to_remote(remote, gn_uuid, gn_record, config_loader_instance):
+    """Aplica o resultado de _resolve_gn_metadata_uuid direto no dict que os workers de
+    pull devolvem pro JS - `metadata_uuid`/`metadata_link_url` (mesma fórmula usada na
+    publicação de verdade, pra prévia bater com o que vai ser gravado) sempre, e
+    título/resumo/palavras-chave do registro GN só quando o GeoServer não tinha NADA
+    preenchido pra esses campos (pedido do usuário: "popular formulário auto" já que o
+    vínculo foi confirmado - mas sem sobrescrever um título/resumo que a própria camada no
+    GeoServer já tinha, mais provável de já ser intencional)."""
+    remote['metadata_uuid'] = gn_uuid
+    remote['metadata_link_url'] = _build_gn_metadata_link_url(gn_uuid, config_loader_instance)
+    if gn_record:
+        if not remote.get('title') and gn_record.get('title'):
+            remote['title'] = gn_record['title']
+        if not remote.get('abstract') and gn_record.get('abstract'):
+            remote['abstract'] = gn_record['abstract']
+        if not remote.get('keywords') and gn_record.get('MD_Keywords'):
+            remote['keywords'] = gn_record['MD_Keywords']
+
+
 class _GsWorkspacesWorker(QThread):
     """Lista os workspaces do GeoServer em background (RF01)."""
     done = pyqtSignal(list, str)  # workspaces, error
@@ -213,6 +287,29 @@ class _GsFeatureTypesWorker(QThread):
     def run(self):
         try:
             names = self._service.list_featuretypes(self._workspace, self._datastore, self._config)
+            self.done.emit(names, '')
+        except Exception as exc:
+            self.done.emit([], str(exc))
+
+
+class _GsPublishedFeatureTypesWorker(QThread):
+    """Lista só as camadas JÁ PUBLICADAS de um datastore em background - usado pelo
+    seletor "Selecionar camada publicada" (aba Destino) pra filtrar a lista quando
+    Workspace/Datastore já estão escolhidos (ver GeoServerService.
+    list_published_featuretypes - diferente de _GsFeatureTypesWorker/list_featuretypes,
+    que usa list=all e inclui tabelas nunca publicadas)."""
+    done = pyqtSignal(list, str)  # nomes, error
+
+    def __init__(self, geoserver_service, workspace, datastore, config_loader_instance):
+        super().__init__()
+        self._service = geoserver_service
+        self._workspace = workspace
+        self._datastore = datastore
+        self._config = config_loader_instance
+
+    def run(self):
+        try:
+            names = self._service.list_published_featuretypes(self._workspace, self._datastore, self._config)
             self.done.emit(names, '')
         except Exception as exc:
             self.done.emit([], str(exc))
@@ -313,13 +410,15 @@ class _GsPullLayerWorker(QThread):
     apontar o erro toda vez."""
     done = pyqtSignal(bool, 'QVariant', str)  # sucesso, dados (title/abstract/keywords/default_style/...), erro
 
-    def __init__(self, geoserver_service, workspace, datastore, published_name, config_loader_instance):
+    def __init__(self, geoserver_service, workspace, datastore, published_name, config_loader_instance,
+                 geonetwork_service=None):
         super().__init__()
         self._service = geoserver_service
         self._workspace = workspace
         self._datastore = datastore
         self._published_name = published_name
         self._config = config_loader_instance
+        self._geonetwork_service = geonetwork_service
 
     def run(self):
         try:
@@ -354,6 +453,17 @@ class _GsPullLayerWorker(QThread):
                 remote['workspace'] = self._workspace
                 remote['datastore'] = datastore
                 remote['published_name'] = self._published_name
+            # Resolve o metadado GN pra essa camada - confirma o candidato do metadataLinks
+            # (link gravado numa publicação anterior por este plugin) e, se não achar nada
+            # (caso mais comum: camada publicada ANTES do metadado existir), cai pra busca
+            # reversa no GN por quem referencia essa camada (Bug 58/59, docs_projeto/
+            # bugs.md - pedido explícito do usuário: "se puxar GS tenta no GN"). Popula
+            # título/resumo/palavras-chave vazios com o conteúdo do GN confirmado.
+            gn_uuid, gn_record = _resolve_gn_metadata_uuid(
+                remote.get('metadata_uuid'), f"{self._workspace}:{self._published_name}",
+                self._geonetwork_service, self._config
+            )
+            _apply_gn_metadata_to_remote(remote, gn_uuid, gn_record, self._config)
             # Estilo isolado em try/except próprio - mesmo raciocínio de _GsSyncCheckWorker:
             # uma falha aqui não pode jogar fora o título/resumo/palavras-chave já obtidos.
             styles = None
@@ -382,11 +492,12 @@ class _GsPullLayerByWmsNameWorker(QThread):
     progress = pyqtSignal(str)   # mensagem de status para _showActionLoading no JS
     done = pyqtSignal(bool, 'QVariant', str)  # sucesso, dados, erro
 
-    def __init__(self, geoserver_service, ws_layer_name, config_loader_instance):
+    def __init__(self, geoserver_service, ws_layer_name, config_loader_instance, geonetwork_service=None):
         super().__init__()
         self._service = geoserver_service
         self._ws_layer_name = ws_layer_name      # 'workspace:published_name' do link WMS
         self._config = config_loader_instance
+        self._geonetwork_service = geonetwork_service
         self._workspace = ''
         self._datastore = ''
         self._published_name = ''
@@ -430,6 +541,14 @@ class _GsPullLayerByWmsNameWorker(QThread):
                     'durante a busca. Tente novamente ou verifique o GeoServer.'
                 ))
                 return
+            # Resolve o metadado GN (confirma o candidato do metadataLinks, cai pra busca
+            # reversa se não achar, popula título/resumo/palavras-chave vazios - mesmo
+            # raciocínio de _GsPullLayerWorker, ver Bug 58/59, docs_projeto/bugs.md).
+            gn_uuid, gn_record = _resolve_gn_metadata_uuid(
+                remote.get('metadata_uuid'), f"{workspace}:{published_name}",
+                self._geonetwork_service, self._config
+            )
+            _apply_gn_metadata_to_remote(remote, gn_uuid, gn_record, self._config)
             styles = None
             try:
                 styles = self._service.fetch_layer_styles(workspace, published_name, self._config)

@@ -28,7 +28,7 @@ class MainBridge(QObject):
     login_error    = pyqtSignal(str)            # Erro de autenticação
     layer_changed  = pyqtSignal(str)            # Nome da camada ativa mudou
     toast          = pyqtSignal(str, str, str)  # message, title, type
-    service_status_ready = pyqtSignal(str, str)  # service ('geonetwork'|'geoserver'), status ('active'|'unstable'|'offline') - ver check_services_status
+    service_status_ready = pyqtSignal(str, str)  # service ('geonetwork'|'geoserver'), status ('active'|'unstable'|'unavailable'|'offline') - ver check_services_status
 
     def __init__(self, dialog, parent=None):
         super().__init__(parent)

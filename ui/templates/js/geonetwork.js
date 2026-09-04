@@ -378,9 +378,10 @@ function _loadFormForLayer(sessionDraft) {
         populateForm(sessionDraft);
         checkGnSync(sessionDraft.metadata_uuid, sessionDraft.dateStamp || '');
         _applyPendingGsDistLayerIfAny();
+        _applyPendingGnPullIfAny();
         return;
     }
-    if (typeof gnBridge === 'undefined') { _removeGnSkeleton(); _applyPendingGsDistLayerIfAny(); return; }
+    if (typeof gnBridge === 'undefined') { _removeGnSkeleton(); _applyPendingGsDistLayerIfAny(); _applyPendingGnPullIfAny(); return; }
     var _expectedLayer = _activeLayerName;
     gnBridge.load_draft(function (draft) {
         if (_activeLayerName !== _expectedLayer) return; // camada trocou enquanto carregava - resposta obsoleta
@@ -393,6 +394,7 @@ function _loadFormForLayer(sessionDraft) {
             // novo aqui.
             checkGnSync(draft.metadata_uuid, draft.dateStamp || '');
             _applyPendingGsDistLayerIfAny();
+            _applyPendingGnPullIfAny();
         } else {
             gnBridge.load_layer_metadata(function (saved) {
                 if (_activeLayerName !== _expectedLayer) return; // idem
@@ -405,6 +407,7 @@ function _loadFormForLayer(sessionDraft) {
                 if (saved) { populateForm(saved); } else { _removeGnSkeleton(); }
                 checkGnSync(saved && saved.metadata_uuid, (saved && saved.dateStamp) || '');
                 _applyPendingGsDistLayerIfAny();
+                _applyPendingGnPullIfAny();
             });
         }
     });
@@ -902,45 +905,77 @@ function _renderGnSearchResults(results) {
     }).join('');
 }
 
+// Puxa de fato (sem confirmação nenhuma) - separado de pullGnRecord() pra
+// _applyPendingGnPullIfAny() poder decidir SE pergunta antes (e com que mensagem) sem
+// duplicar essa lógica toda.
+function _doPullGnRecord(uuid) {
+    gnBridge.pull_from_gn(uuid, function (data) {
+        if (!data) {
+            Modal.alert('Não foi possível carregar esse registro do Geohab.', 'Erro', 'error');
+            return;
+        }
+        resetEditorForm();
+        populateForm(data);
+        _saveDraftNow();
+        // Após um pull, o formulário É por definição o que está no Geohab agora -
+        // não faz sentido chamar checkGnSync aqui: o _GnSyncCheckWorker compararia
+        // o remoto contra o que está *salvo localmente* (banco/sidecar), que pode
+        // estar vazio (sem camada ativa ou sem save anterior), resultando sempre em
+        // divergência e badge falso-positivo "Atualização disponível". O padrão
+        // correto é o mesmo de gn_publish_succeeded: setar sys_synced diretamente,
+        // já que sabemos com certeza que o formulário bate com o servidor.
+        // Pull só está disponível quando logado → nível sistema (sys_*) é correto.
+        _gnLastCheckedLayerKey = null; // invalida cache pra eventual refresh manual
+        _gnSyncUuid = data.metadata_uuid || null;
+        _gnSyncUuidLayerName = _gnSyncUuid ? _activeLayerName : null;
+        setGnBadge('sys_synced');
+        // Persiste o baseline de comparação (Bug 40): fechar e reabrir o plugin
+        // volta a chamar checkGnSync do zero, e sem um save local (banco/sidecar)
+        // o worker compararia remoto vs {} e acusaria divergência. O baseline
+        // salva os dados completos do pull para que check_gn_sync use como
+        // referência quando saved={} - o worker acha remoto == baseline → sys_synced.
+        // IMPORTANTE: deve ser o `data` COMPLETO (não só title/abstract/keywords):
+        // _onGnSyncChecked chama _gnSnapshotFor(saved) que popula o formulário inteiro
+        // com `saved` e faz collectFormData() - se `saved` tiver só 3 campos, todos os
+        // outros ficam vazios no snapshot e ele nunca bate com o draft real → sys_modified.
+        gnBridge.save_pull_baseline(
+            data.metadata_uuid || '',
+            JSON.stringify(data)
+        );
+        // Caminho oposto de _pendingGnPullUuid (geoserver.js - GS puxa, popula o GN):
+        // esse registro pode já ter um link WMS/WFS gravado (Distribuição - "camada
+        // geoserver_layer_name" veio do próprio XML) apontando pra uma camada
+        // publicada no GeoServer - se tiver, oferece popular o painel GS com ela
+        // também na próxima vez que abrir, mesmo padrão (pendente + confirmação antes
+        // de sobrescrever, ver _applyPendingGsPullIfAny/pullGsLayerByName,
+        // geoserver.js). Pedido do usuário: "o caminho oposto é verdade também".
+        var wmsRef = (data.wms_data && data.wms_data.geoserver_layer_name) || '';
+        if (wmsRef && wmsRef.indexOf(':') !== -1) {
+            window._pendingGsPullWsLayerName = wmsRef;
+        }
+        Modal.alert('Metadado baixado do Geohab com sucesso.<br>Confira os campos preenchidos no formulário.', 'Baixado', 'success');
+    });
+}
+
+// Puxa manualmente (busca/clique do usuário) - sempre confirma antes, mensagem genérica
+// (o usuário escolheu isso de propósito, não precisa de contexto extra).
 function pullGnRecord(uuid) {
     Modal.close();
     Modal.confirm('Isso vai substituir os dados atuais do formulário. Continuar?', function () {
-        gnBridge.pull_from_gn(uuid, function (data) {
-            if (!data) {
-                Modal.alert('Não foi possível carregar esse registro do Geohab.', 'Erro', 'error');
-                return;
-            }
-            resetEditorForm();
-            populateForm(data);
-            _saveDraftNow();
-            // Após um pull, o formulário É por definição o que está no Geohab agora -
-            // não faz sentido chamar checkGnSync aqui: o _GnSyncCheckWorker compararia
-            // o remoto contra o que está *salvo localmente* (banco/sidecar), que pode
-            // estar vazio (sem camada ativa ou sem save anterior), resultando sempre em
-            // divergência e badge falso-positivo "Atualização disponível". O padrão
-            // correto é o mesmo de gn_publish_succeeded: setar sys_synced diretamente,
-            // já que sabemos com certeza que o formulário bate com o servidor.
-            // Pull só está disponível quando logado → nível sistema (sys_*) é correto.
-            _gnLastCheckedLayerKey = null; // invalida cache pra eventual refresh manual
-            _gnSyncUuid = data.metadata_uuid || null;
-            _gnSyncUuidLayerName = _gnSyncUuid ? _activeLayerName : null;
-            setGnBadge('sys_synced');
-            // Persiste o baseline de comparação (Bug 40): fechar e reabrir o plugin
-            // volta a chamar checkGnSync do zero, e sem um save local (banco/sidecar)
-            // o worker compararia remoto vs {} e acusaria divergência. O baseline
-            // salva os dados completos do pull para que check_gn_sync use como
-            // referência quando saved={} - o worker acha remoto == baseline → sys_synced.
-            // IMPORTANTE: deve ser o `data` COMPLETO (não só title/abstract/keywords):
-            // _onGnSyncChecked chama _gnSnapshotFor(saved) que popula o formulário inteiro
-            // com `saved` e faz collectFormData() - se `saved` tiver só 3 campos, todos os
-            // outros ficam vazios no snapshot e ele nunca bate com o draft real → sys_modified.
-            gnBridge.save_pull_baseline(
-                data.metadata_uuid || '',
-                JSON.stringify(data)
-            );
-            Modal.alert('Metadado baixado do Geohab com sucesso.<br>Confira os campos preenchidos no formulário.', 'Baixado', 'success');
-        });
+        _doPullGnRecord(uuid);
     }, 'Puxar do Geohab');
+}
+
+// true se o badge de sync do editor GN está em qualquer estado "Sincronizado" (sys_/db_) -
+// usado por _applyPendingGnPullIfAny (auto-populate cross-link) pra decidir se precisa
+// perguntar antes de sobrescrever: sincronizado = o formulário já bate com o que está
+// salvo, nada a perder popular por cima direto; qualquer outro estado (Modificado, Não
+// salvo, Não Encontrado) pode ter algo digitado que ainda não foi salvo em lugar nenhum.
+function _gnIsSyncedNow() {
+    var badge = document.getElementById('gn-sync-badge');
+    if (!badge || badge.style.display === 'none') return false;
+    var state = badge.className.replace('gn-sync-badge', '').trim();
+    return state.indexOf('_synced') !== -1;
 }
 
 
@@ -1520,6 +1555,45 @@ function _applyPendingGsDistLayerIfAny() {
     if (linked.length) parts.push('Vinculada automaticamente aqui em Distribuição (' + linked.join(' + ') + ').');
     if (thumbFilled) parts.push('Miniatura gerada automaticamente na aba Classificação.');
     Modal.alert(parts.join('<br>'), 'Sucesso', 'success');
+}
+
+// Direção oposta de _applyPendingGsDistLayerIfAny (GS publica -> vincula no GN): aqui é
+// GS PUXA uma camada -> se esse pull confirmar um metadado vinculado no GeoNetwork (ver
+// GeoServerBridge/geoserver_workers._resolve_gn_metadata_uuid, Bug 58/59 - o uuid só
+// entra em window._pendingGnPullUuid quando o vínculo foi de fato CONFIRMADO, verificação
+// direta ou busca reversa), oferece popular o Editor de Metadados com esse registro
+// automaticamente (pedido do usuário) - sem perguntar à toa se o editor já está mostrando
+// justamente ESSE mesmo registro (_gnSyncUuid). Mesmo padrão de "aplica só quando o
+// editor terminar de carregar" de _applyPendingGsDistLayerIfAny - chamada do mesmo lugar
+// (_loadFormForLayer).
+//
+// Pergunta antes de sobrescrever SÓ quando há algo real em risco (pedido do usuário:
+// "a pergunta tá vaga... só perguntar se o formulário estiver populado/modificado/não
+// salvo, se estiver sincronizado [já é o que está salvo] não precisa") - se o badge
+// atual já está "Sincronizado" (_gnIsSyncedNow), o formulário JÁ bate com o que está
+// salvo/publicado, então popular por cima não perde nada de verdade: pula direto pra
+// _doPullGnRecord() sem perguntar. Em qualquer outro estado (Modificado, Não salvo, Não
+// Encontrado - todos implicam algo digitado que ainda não tem garantia de estar salvo em
+// lugar nenhum), pergunta com uma mensagem ESPECÍFICA (menciona o UUID encontrado e o
+// motivo - achado automaticamente a partir de um pull no GeoServer -, não o texto
+// genérico "isso vai substituir os dados atuais" de pullGnRecord()).
+function _applyPendingGnPullIfAny() {
+    var uuid = window._pendingGnPullUuid;
+    window._pendingGnPullUuid = null;
+    if (!uuid) return;
+    if (!document.getElementById('f-title')) return; // editor não está mais aberto, desiste
+    if (uuid === _gnSyncUuid) return; // editor já está nesse mesmo registro - nada a fazer
+    if (_gnIsSyncedNow()) {
+        _doPullGnRecord(uuid);
+        return;
+    }
+    Modal.confirm(
+        'A camada que você acabou de puxar no GeoServer está vinculada ao metadado "<strong>' +
+        escHtml(uuid) + '</strong>" no Geohab. O Editor de Metadados tem conteúdo ainda não ' +
+        'sincronizado - trazer esse registro vai substituir o que está no formulário agora. Continuar?',
+        function () { _doPullGnRecord(uuid); },
+        'Metadado Vinculado Encontrado'
+    );
 }
 
 // Gera uma miniatura (WMS GetMap) a partir da camada do GeoServer recém-associada em

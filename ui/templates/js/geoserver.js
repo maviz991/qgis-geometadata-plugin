@@ -22,6 +22,7 @@ var _gsDbHasStyle = false; // true se o banco já resolveu o estilo (info.saved_
 var _gsLayerInfoInFlightLayer = null; // nome da camada com um get_active_layer_publish_info já pedido, ainda sem resposta - ver _requestGsLayerInfo
 var _gsLayerInfoPending = []; // [{expectedLayer, onReady}] - quem pediu get_active_layer_publish_info e ainda espera resposta (ver gs_layer_info_ready, _initGsBridge)
 var _gsPendingSyncedBaselineCapture = false; // ver _gsCaptureSyncedBaselineIfPending
+var _gsMetadataLinkUrl = ''; // URL completa do Link de Metadados (fallback "sem camada ativa") - ver gs_layer_pulled/_saveGsDraftNow/_loadGsDraft
 var _gsSyncSourceIsDb = false; // true só quando _gsSyncHasRecord veio do banco de verdade (info.saved_workspace, _renderGsLayerCard) - ver _checkGsSyncNow
 
 // Pede get_active_layer_publish_info de forma assíncrona (resultado chega pelo sinal
@@ -46,6 +47,9 @@ function _initGsBridge() {
     });
     gsBridge.gs_featuretypes_ready.connect(function (names, error) {
         _renderGsTableCheck(names, error);
+    });
+    gsBridge.gs_published_featuretypes_ready.connect(function (names, error) {
+        _renderGsLayerPickerFiltered(names, error);
     });
     gsBridge.gs_find_datastore_progress.connect(function (msg) {
         _setGsAutoDetectStatus(msg);
@@ -73,29 +77,16 @@ function _initGsBridge() {
             return;
         }
         // Publicado - o destino já foi gravado no banco (GeoServerBridge._on_publish_done),
-        // então o rascunho local não faz mais sentido aqui.
+        // então o rascunho local não faz mais sentido aqui. clearTimeout aqui é
+        // necessário: se o usuário editou um campo e clicou "Publicar" dentro de 1.5s
+        // (debounce de _scheduleGsDraftSave), o timer pendente disparava DEPOIS desse
+        // clear_draft() e recriava o rascunho que acabou de ser apagado.
+        clearTimeout(_gsDraftTimer);
         gsBridge.clear_draft();
-        _gsSyncHasRecord = true;
-        var snapObj = _gsCollectFormState();
-        if (message) {
-            // Sucesso com `message` = a camada publicou mas o ESTILO falhou - o banco ficou
-            // sem os campos de estilo de propósito (ver GeoServerBridge._on_publish_done),
-            // então o snapshot também fica sem, pro badge acusar a pendência ("Modificado")
-            // em vez de "Sincronizado".
-            snapObj.style_source = '';
-            snapObj.style_name = '';
-        }
-        _gsSyncSnapshot = JSON.stringify(snapObj);
-        _gsCaptureSnapshotRawNames();
-        _gsSyncIsPublished = true; // publicação de verdade - GeoServer já tem isso
-        _gsApplyFieldLockState();
         _gsInvalidatePendingLiveCheck(); // ver definição - descarta checagem ao vivo desatualizada de antes da publicação
         _flashGsRefreshBtn(); // ver definição - deixa o botão "↻" visível por uns instantes, momento onde erros de rede mais apareceram nos testes
         if (message) {
-            _checkGsSyncNow();
             Modal.alert(message, 'Publicado com Ressalvas', 'warning');
-        } else {
-            setGsBadge((_isLogged ? 'sys' : 'db') + '_synced');
         }
         // Invalida o cache do status GS no badge combinado do editor (ver
         // _gsLastCheckedLayerKey, geonetwork.js) - senão, ao navegar pro editor logo em
@@ -112,7 +103,27 @@ function _initGsBridge() {
                 title: publishedName
             };
         }
-        navigate('editor');
+        // Re-busca do banco em vez de reconstruir o snapshot na mão a partir do formulário
+        // (como era antes) - o formulário tem campos que só resolvem de forma assíncrona
+        // (nome sanitizado via RF04, ~200ms depois de preenchidos) e o snapshot podia ser
+        // capturado antes disso terminar, deixando o badge preso em "Modificado" mesmo com
+        // a publicação tendo dado certo (usuário só via "Sincronizado" de verdade fechando
+        // e reabrindo o plugin, que força tudo a vir fresco do banco). _loadGsLayerInfo()
+        // relê get_active_layer_publish_info() - a MESMA fonte de verdade usada ao reabrir
+        // o plugin - e _renderGsLayerCard() (chamado por ela) já monta o snapshot a partir
+        // de info.saved_* (via _gsSnapshotFromSaved), nunca do formulário cru, então não
+        // sofre dessa corrida; cobre style_source/style_name vazios sozinho no caso
+        // "Publicado com Ressalvas" também, já que _on_publish_done (Python) só grava esses
+        // campos no banco quando o estilo realmente aplicou. O navigate('editor') PRECISA
+        // esperar esse callback - _renderGsLayerCard() (chamado por _loadGsLayerInfo) só
+        // atualiza o estado de sync se #gs-layer-card ainda existir; navegar ANTES da
+        // resposta assíncrona chegar destruía o painel GS e a atualização virava um no-op
+        // silencioso (era exatamente por causa dessa ordem que o badge só corrigia sozinho
+        // fechando e reabrindo o plugin de novo).
+        _loadGsLayerInfo(function () {
+            _loadGsDraft();
+            navigate('editor');
+        });
     });
     gsBridge.gs_destination_saved.connect(function (dbOk) {
         if (dbOk) {
@@ -212,9 +223,44 @@ function _initGsBridge() {
         });
         _renderGsAdditionalStyles();
         
+        // uuid do metadado GN: prioriza o que veio JUNTO com o pull (data.metadata_uuid -
+        // extraído do metadataLink REAL já gravado nessa camada no GeoServor, ver
+        // GeoServerService._extract_metadata_uuid/fetch_published_featuretype) em vez de
+        // _gnSyncUuid cru (variável de sessão setada pelo editor GN em "Baixar Metadado" -
+        // podia ser de OUTRO registro qualquer puxado antes no GN, sem relação nenhuma com
+        // ESSA camada específica; usuário confirmou ver dois UUIDs diferentes pra mesma
+        // camada, um existindo de verdade no GN e outro não). Também RESSINCRONIZA
+        // _gnSyncUuid com esse valor de verdade - próximas ações (Atualizar Dados,
+        // _gsTryNoActiveLayerUpdate) e o rascunho (_saveGsDraftNow, logo abaixo) passam a
+        // usar o uuid certo daqui pra frente, não só a prévia.
+        if (typeof _gnSyncUuid !== 'undefined' && data.metadata_uuid) {
+            _gnSyncUuid = data.metadata_uuid;
+        }
+        // Pedido do usuário: se esse pull CONFIRMOU um metadado vinculado no GeoNetwork
+        // (data.metadata_uuid só vem preenchido depois de uma verificação/busca reversa
+        // de verdade - ver _resolve_gn_metadata_uuid, geoserver_workers.py), oferece
+        // popular o Editor de Metadados com esse registro automaticamente na próxima vez
+        // que ele carregar (mesmo padrão de window._pendingGsDistLayer - GS publica ->
+        // vincula Distribuição no GN - só que na direção oposta: GS puxa -> popula o GN).
+        // _applyPendingGnPullIfAny (geonetwork.js) sempre confirma antes de sobrescrever o
+        // formulário (reusa pullGnRecord, mesmo aviso de sempre) - nunca substitui nada
+        // sem perguntar.
+        if (data.metadata_uuid) {
+            window._pendingGnPullUuid = data.metadata_uuid;
+        }
+        // Mesmo formato de link clicável que a prévia com camada ativa usa
+        // (_renderGsLayerCard, info.metadata_link_url) - antes essa aqui só mostrava
+        // "UUID xxx" cru, sem link nenhum, inconsistente com a outra.
+        _gsMetadataLinkUrl = data.metadata_link_url || _gsMetadataLinkUrl;
         var metaLinkBox = document.getElementById('gs-metadata-link-preview');
-        if (metaLinkBox && typeof _gnSyncUuid !== 'undefined' && _gnSyncUuid) {
-            metaLinkBox.innerHTML = 'Será vinculado ao atualizar: UUID ' + escHtml(_gnSyncUuid);
+        if (metaLinkBox) {
+            if (_gsMetadataLinkUrl) {
+                metaLinkBox.innerHTML = 'Será vinculado ao atualizar: <a href="' + escHtml(_gsMetadataLinkUrl) + '" target="_blank">' + escHtml(_gsMetadataLinkUrl) + '</a>';
+            } else if (typeof _gnSyncUuid !== 'undefined' && _gnSyncUuid) {
+                // Fallback raro: uuid restaurado de um rascunho antigo (salvo antes desse
+                // fix) sem a URL completa junto - mostra ao menos o uuid cru.
+                metaLinkBox.innerHTML = 'Será vinculado ao atualizar: UUID ' + escHtml(_gnSyncUuid);
+            }
         }
         
         // _gsSyncHasRecord/_gsSyncIsPublished PRECISAM ser setados ANTES de
@@ -229,6 +275,13 @@ function _initGsBridge() {
         _gsSyncSnapshot = JSON.stringify(_gsCollectFormState());
         _gsCaptureSnapshotRawNames();
         _gsSyncIsPublished = true;
+        // Faltava aqui (bug: pull nunca travava Nome/Título com cadeado, mesmo confirmando
+        // que a camada JÁ está publicada de verdade no GeoServer - único outro chamador de
+        // _gsApplyFieldLockState() era o handler de sucesso de "Publicar Camada", nunca o
+        // de pull). _gsSyncIsPublished acabou de virar true incondicionalmente em QUALQUER
+        // pull bem-sucedido, então Nome sempre trava (usuário pediu explicitamente isso) e
+        // Título trava junto quando a camada já tinha um de verdade.
+        _gsApplyFieldLockState();
         _gsInvalidatePendingLiveCheck(); // ver definição - senão uma checagem em voo de ANTES do pull chega depois com "Modificado" desatualizado e o banner "Atualização disponível" reaparece
         // Preenchimento programático não dispara input/change (o que aciona o rascunho
         // por debounce) - salva na hora, mesmo motivo de pullGsAbstractKeywordsFromGn.
@@ -237,14 +290,26 @@ function _initGsBridge() {
         setGsBadge((_isLogged ? 'sys' : 'db') + '_synced');
         _gsLastCheckedLayerKey = null; // idem publish_done/destination_saved - invalida o cache do badge combinado do editor
         updateGsFormProgress();
+        // Sincroniza o seletor "Selecionar camada publicada" (aba Destino) com o destino
+        // que acabou de ser puxado - incondicional, não só quando data.workspace vem
+        // preenchido (só acontece se _GsPullLayerByWmsNameWorker/redetecção rodaram; o
+        // caminho mais comum de "Serviços > Baixar Camada"/"Atualizar agora" com destino
+        // já conhecido não redetecta nada, então essa sincronização não rodaria sozinha
+        // sem essa chamada explícita aqui). Workspace/Datastore/Nome já estão todos
+        // aplicados no formulário nesse ponto - lê o estado atual, não precisa de dado
+        // extra do pull.
+        var pickerWs = document.getElementById('gs-workspace');
+        var pickerDs = document.getElementById('gs-datastore');
+        _gsRefreshLayerPickerForDestination(pickerWs ? pickerWs.value : '', pickerDs ? pickerDs.value : '');
         Modal.alert('Formulário atualizado com o que está publicado no GeoServer agora.', 'Camada Atualizada', 'success');
     });
     // Resultado de search_geoserver (fire-and-forget, RNF02 - antes era bloqueante na main
     // thread e travava a tela ao abrir a busca ou digitar enquanto a 1ª busca da sessão
-    // ainda estava em voo). Dois consumidores possíveis, cada um só atualiza se o próprio
+    // ainda estava em voo). Três consumidores possíveis, cada um só atualiza se o próprio
     // elemento existir na tela agora: a aba "Recursos associados" do editor GN
-    // (#dist-suggestions, searchGeoServer/geonetwork.js) e a busca de camadas do painel GS
-    // (#gs-search-results, openGsSearchModal, mais abaixo neste arquivo).
+    // (#dist-suggestions, searchGeoServer/geonetwork.js), a busca de camadas do painel GS
+    // via modal (#gs-search-results, openGsSearchModal) e o seletor embutido na aba
+    // Destino (#gs-layer-picker-wrap, _renderGsLayerPicker, mais abaixo neste arquivo).
     gsBridge.gs_search_ready.connect(function (results, error) {
         if (document.getElementById('dist-suggestions')) {
             var spinner = document.getElementById('dist-spinner');
@@ -254,6 +319,9 @@ function _initGsBridge() {
         }
         if (document.getElementById('gs-search-results')) {
             _renderGsSearchResults(results, error);
+        }
+        if (document.getElementById('gs-layer-picker-wrap')) {
+            _renderGsLayerPicker(results, error);
         }
     });
 }
@@ -276,6 +344,12 @@ function _onGeoServerPanelLoaded() {
     showTab('gs-destino', destinoBtn);
     _wireGsDraftListeners();
     _loadGsWorkspaces();
+    // Popula o seletor "Selecionar camada publicada" (aba Destino) - mesma busca (WMS
+    // GetCapabilities, pública, sem exigir login) do modal "Baixar Camada"/aba Recursos
+    // associados do GN, só que direto aqui, sem precisar abrir nada - pedido do usuário
+    // pra deixar essa aba 100% independente de camada QGIS ativa. Cacheada no lado Python
+    // (GeoServerBridge._geoserver_layers_cache) - só a 1ª chamada da sessão bate na rede.
+    if (typeof gsBridge !== 'undefined' && gsBridge.search_geoserver) gsBridge.search_geoserver('');
     // Prioridade de preenchimento: online (GN, dentro de info.title/abstract/keywords já
     // resolvido no lado Python) > banco (info.saved_*, get_active_layer_publish_info) >
     // rascunho local - nessa ordem, independente de estar logado ou não (o banco só
@@ -284,7 +358,43 @@ function _onGeoServerPanelLoaded() {
     // apenas os campos que o banco deixou vazios (camada nunca salva/publicada de verdade).
     _loadGsLayerInfo(function () {
         _loadGsDraft();
+        _applyPendingGsPullIfAny();
     });
+}
+
+// Caminho oposto de window._pendingGnPullUuid (geonetwork.js - GS puxa, popula o GN): um
+// pull de metadado no editor GN pode ter achado um link WMS/WFS já gravado (Distribuição)
+// apontando pra uma camada publicada no GeoServer - se achou, oferece popular o painel GS
+// com ela também, na próxima vez que abrir (mesmo padrão de "pendente + só aplica quando
+// o painel termina de carregar" já usado nos outros dois casos). Pedido do usuário: "o
+// caminho oposto é verdade também". Confirmação condicional ao estado do badge de sync
+// (mesmo raciocínio de _applyPendingGnPullIfAny em geonetwork.js): se o painel GS já está
+// sincronizado, popula direto (nada a perder); senão confirma com mensagem específica.
+function _applyPendingGsPullIfAny() {
+    var wsLayerName = window._pendingGsPullWsLayerName;
+    window._pendingGsPullWsLayerName = null;
+    if (!wsLayerName) return;
+    if (!document.getElementById('gs-layer-card')) return; // painel já foi trocado
+    if (!_isLogged) return; // sem sessão não dá pra buscar no GeoServer mesmo
+    var sep = wsLayerName.indexOf(':');
+    if (sep < 0) return;
+    var workspace = wsLayerName.slice(0, sep);
+    var name = wsLayerName.slice(sep + 1);
+    // Já é esse mesmo destino no formulário (ex.: puxou no GN um registro que já
+    // corresponde à camada ativa/já preenchida) - nada a fazer, evita perguntar à toa.
+    if (_gsCurrentLayerPickerKey() === wsLayerName) return;
+    if (_gsIsSyncedNow()) {
+        _doPullGsLayerByName(workspace, name);
+        return;
+    }
+    Modal.confirm(
+        'O metadado que você acabou de puxar no Geohab está vinculado à camada "<strong>' +
+        escHtml(wsLayerName) + '</strong>" no GeoServer. O painel de Configurar Camada tem ' +
+        'conteúdo ainda não sincronizado - trazer essa camada vai substituir o que está no ' +
+        'formulário agora. Continuar?',
+        function () { _doPullGsLayerByName(workspace, name); },
+        'Camada Vinculada Encontrada'
+    );
 }
 
 // - Rascunho local (workspace/datastore/nome/título/resumo/palavras-chave) ────
@@ -355,7 +465,10 @@ function _saveGsDraftNow() {
         // aqui pra "Atualizar Metadados" (fallback sem camada ativa) continuar sabendo pra
         // qual registro montar o Link de Metadados mesmo depois de reabrir o plugin (ver
         // update_layer_metadata/_build_metadata_link_url).
-        metadata_uuid: (typeof _gnSyncUuid !== 'undefined' && _gnSyncUuid) || ''
+        metadata_uuid: (typeof _gnSyncUuid !== 'undefined' && _gnSyncUuid) || '',
+        // URL completa (não só o uuid) - permite restaurar o link CLICÁVEL na prévia sem
+        // precisar puxar de novo (ver _loadGsDraft/gs_layer_pulled).
+        metadata_link_url: _gsMetadataLinkUrl || ''
     };
     // Estilo não entra em hasContent de propósito: a fonte default ('qgis') existe em
     // qualquer formulário recém-aberto - contaria como "conteúdo" e salvaria rascunho
@@ -477,6 +590,17 @@ function _loadGsDraft(callback) {
             // de abrir o painel GS (mais recente que o rascunho) não deve ser sobrescrito.
             if (draft.metadata_uuid && typeof _gnSyncUuid !== 'undefined' && !_gnSyncUuid) {
                 _gnSyncUuid = draft.metadata_uuid;
+                _gsMetadataLinkUrl = draft.metadata_link_url || '';
+                // Reflete na prévia também (mesmo formato de link clicável de
+                // gs_layer_pulled) - sem isso, o uuid restaurava certo internamente (pra
+                // "Atualizar Dados" funcionar), mas a aba Identificação ficava sem mostrar
+                // nada até puxar de novo.
+                var restoredMetaLinkBox = document.getElementById('gs-metadata-link-preview');
+                if (restoredMetaLinkBox) {
+                    restoredMetaLinkBox.innerHTML = _gsMetadataLinkUrl
+                        ? ('Será vinculado ao atualizar: <a href="' + escHtml(_gsMetadataLinkUrl) + '" target="_blank">' + escHtml(_gsMetadataLinkUrl) + '</a>')
+                        : ('Será vinculado ao atualizar: UUID ' + escHtml(_gnSyncUuid));
+                }
             }
             // Reavalia o badge: título/resumo/palavras-chave do rascunho podem ter acabado
             // de sobrepor o que o banco preencheu (ver acima) - ou, numa camada nunca salva
@@ -551,6 +675,11 @@ function _gsApplyKnownWorkspaceDatastore(workspace, datastore) {
     }
     initCustomSelects();
     _updateGsPublishButton();
+    // Esse caminho monta o <select> via innerHTML direto (não dispara 'change' nenhum),
+    // então onGsDatastoreChange() nunca roda sozinho aqui - chama o filtro do seletor
+    // "Selecionar camada publicada" manualmente, senão ele ficava preso na lista completa
+    // (sem filtro) sempre que o destino resolve por esse caminho (ex.: sem sessão REST).
+    _gsRefreshLayerPickerForDestination(workspace, datastore);
     // Workspace E datastore acabaram de ser aplicados de forma síncrona (opção única,
     // sem depender de lista nenhuma) - settling point real pro baseline adiado (ver
     // _gsCaptureSyncedBaselineIfPending). Precisa vir ANTES de _markGsModifiedIfNeeded()
@@ -589,6 +718,7 @@ function _onGsActiveLayerChanged() {
     _gsResetStyleControls(); // estilo também é por camada
     _loadGsLayerInfo(function () {
         _loadGsDraft();
+        _applyPendingGsPullIfAny();
     });
 }
 
@@ -692,7 +822,11 @@ function _renderGsLayerCard(info) {
     _removeGsSkeleton(); // remove skeleton antes de preencher os dados reais
 
     if (!info || !info.publishable) {
-        card.innerHTML = '<span class="gs-status-text gs-warning-text">' + escHtml((info && info.reason) || 'Nenhuma camada ativa suportada.') + '</span>';
+        // Mesmo retângulo tracejado usado pros outros avisos do painel (.gs-status-box,
+        // ver #gs-layer-name-mismatch/#gs-autodetect-box) - antes era um <span> solto, sem
+        // destaque nenhum, deixando esse aviso (o mais comum: nenhuma camada ativa, ou
+        // camada não vem do PostgreSQL) se perder no meio da aba.
+        card.innerHTML = '<div class="gs-status-box gs-warning-text">' + escHtml((info && info.reason) || 'Nenhuma camada ativa suportada.') + '</div>';
         _updateGsPublishButton();
         return;
     }
@@ -972,12 +1106,32 @@ function onGsDatastoreChange(datastore) {
     _updateGsPublishButton();
     var wsEl = document.getElementById('gs-workspace');
     var workspace = wsEl ? wsEl.value : '';
+    _gsRefreshLayerPickerForDestination(workspace, datastore);
     if (!datastore || !workspace || !_gsLayerInfo || !_gsLayerInfo.table) {
         _setGsTableCheck(null, '');
         return;
     }
     _setGsTableCheck(null, 'Verificando se a tabela "' + _gsLayerInfo.table + '" existe neste datastore...');
     gsBridge.list_featuretypes(workspace, datastore);
+}
+
+// Filtra o seletor "Selecionar camada publicada" (aba Destino) pro Workspace/Datastore
+// atual - pedido do usuário: sem isso a lista mostra TODAS as camadas do GeoServer
+// inteiro, mesmo as de outros datastores. Com os dois preenchidos, busca só as JÁ
+// PUBLICADAS nesse datastore específico (list_published_featuretypes, REST - sem título,
+// só o nome técnico, já que essa lista não vem do WMS); sem os dois, volta pra lista
+// completa de sempre (search_geoserver, cacheada, resposta instantânea a partir da 2ª vez).
+function _gsRefreshLayerPickerForDestination(workspace, datastore) {
+    if (!document.getElementById('gs-layer-picker-wrap') || typeof gsBridge === 'undefined') return;
+    if (workspace && datastore) {
+        var wrap = document.getElementById('gs-layer-picker-wrap');
+        if (wrap) {
+            wrap.innerHTML = '<select id="gs-layer-picker"><option value="">Carregando camadas desse datastore...</option></select>';
+        }
+        if (gsBridge.list_published_featuretypes) gsBridge.list_published_featuretypes(workspace, datastore);
+    } else if (gsBridge.search_geoserver) {
+        gsBridge.search_geoserver('');
+    }
 }
 
 function _renderGsTableCheck(names, error) {
@@ -1866,6 +2020,16 @@ function _renderGsSearchResults(results, error) {
 // (já descobre o datastore automaticamente) e o mesmo handler gs_layer_pulled de sempre,
 // exatamente como o caminho "via Metadado" (pullGsLayerFromServer). Exige login aqui (não
 // na busca) - fetch_published_featuretype/fetch_layer_styles usam a sessão REST.
+// Puxa de fato (sem confirmação nenhuma) - separado de pullGsLayerByName() pra
+// _applyPendingGsPullIfAny() poder decidir SE pergunta antes (e com que mensagem) sem
+// duplicar essa lógica toda.
+function _doPullGsLayerByName(workspace, name) {
+    _showActionLoading('Buscando datastore e dados publicados no GeoServer...');
+    gsBridge.pull_gs_layer_by_wms_name(workspace + ':' + name);
+}
+
+// Puxa manualmente (busca/clique do usuário) - sempre confirma antes, mensagem genérica
+// (o usuário escolheu isso de propósito, não precisa de contexto extra).
 function pullGsLayerByName(workspace, name) {
     if (!_isLogged) {
         Modal.alert('Faça login no Geohab antes de baixar a camada - essa ação busca os dados direto do GeoServer.', 'Login Necessário', 'warning');
@@ -1876,12 +2040,97 @@ function pullGsLayerByName(workspace, name) {
     Modal.confirm(
         'Isso vai trazer o que está DE FATO publicado agora em "<strong>' + escHtml(wsLayerName) + '</strong>" ' +
         '(título/resumo/palavras-chave/estilo), substituindo o formulário atual. Continuar?',
-        function () {
-            _showActionLoading('Buscando datastore e dados publicados no GeoServer...');
-            gsBridge.pull_gs_layer_by_wms_name(wsLayerName);
-        },
+        function () { _doPullGsLayerByName(workspace, name); },
         'Baixar Camada'
     );
+}
+
+// true se o badge de sync do painel GS está em qualquer estado "Sincronizado" (sys_/db_) -
+// mesmo raciocínio de _gnIsSyncedNow (geonetwork.js): usado por _applyPendingGsPullIfAny
+// (auto-populate cross-link) pra decidir se precisa perguntar antes de sobrescrever.
+function _gsIsSyncedNow() {
+    var badge = document.getElementById('gs-sync-badge');
+    if (!badge || badge.style.display === 'none') return false;
+    var state = badge.className.replace('gn-sync-badge', '').trim();
+    return state.indexOf('_synced') !== -1;
+}
+
+// Seletor "Selecionar camada publicada" (aba Destino) - dropdown com busca embutida
+// (initCustomSelects, mesmo componente do Workspace/Estilo existente - listas com mais de
+// 6 opções ganham a caixa de busca automaticamente) listando TODAS as camadas do
+// GeoServer, populado pelo mesmo resultado de gsBridge.search_geoserver() já usado pelo
+// modal "Baixar Camada"/aba Recursos associados do GN (ver gs_search_ready, mais acima) -
+// pedido do usuário: deixar a aba Destino "100% independente", sem precisar abrir um
+// modal separado nem ter camada QGIS ativa pra escolher/puxar uma camada.
+// "workspace:nome_publicado" do destino ATUALMENTE no formulário (mesma chave usada nos
+// values do seletor) - usado pra pré-selecionar a opção certa depois de (re)montar a
+// lista (persistência pedida pelo usuário: a seleção não deve resetar sozinha).
+function _gsCurrentLayerPickerKey() {
+    var wsEl = document.getElementById('gs-workspace');
+    var nameEl = document.getElementById('gs-layer-name');
+    var workspace = wsEl ? wsEl.value : '';
+    var name = nameEl ? (nameEl.dataset.sanitized || nameEl.value.trim()) : '';
+    return (workspace && name) ? (workspace + ':' + name) : '';
+}
+
+function _renderGsLayerPicker(results, error) {
+    var wrap = document.getElementById('gs-layer-picker-wrap');
+    if (!wrap) return; // painel/aba já foi trocado
+    if (error) {
+        wrap.innerHTML = '<select id="gs-layer-picker"><option value="">Falha ao buscar: ' + escHtml(error) + '</option></select>';
+        initCustomSelects();
+        return;
+    }
+    var current = _gsCurrentLayerPickerKey();
+    var options = '<option value="">Selecione uma camada...</option>';
+    (results || []).forEach(function (r) {
+        var name = (r.name || '').split(':').pop();
+        var workspace = r.workspace || '';
+        if (!name || !workspace) return;
+        var value = workspace + ':' + name;
+        var label = workspace + ' - ' + (r.title || name);
+        options += '<option value="' + escHtml(value) + '"' + (value === current ? ' selected' : '') + '>' + escHtml(label) + '</option>';
+    });
+    wrap.innerHTML = '<select id="gs-layer-picker" data-force-search="1" onchange="onGsLayerPickerChange(this.value)">' + options + '</select>';
+    initCustomSelects();
+}
+
+// Mesma lista, mas filtrada só pras camadas JÁ PUBLICADAS no Workspace/Datastore
+// atualmente escolhidos (gsBridge.list_published_featuretypes, REST - sem título, só o
+// nome técnico, diferente da busca via WMS que _renderGsLayerPicker usa) - disparada por
+// _gsRefreshLayerPickerForDestination sempre que os dois campos têm valor.
+function _renderGsLayerPickerFiltered(names, error) {
+    var wrap = document.getElementById('gs-layer-picker-wrap');
+    if (!wrap) return; // painel/aba já foi trocado
+    if (error) {
+        wrap.innerHTML = '<select id="gs-layer-picker"><option value="">Falha ao buscar: ' + escHtml(error) + '</option></select>';
+        initCustomSelects();
+        return;
+    }
+    var wsEl = document.getElementById('gs-workspace');
+    var workspace = wsEl ? wsEl.value : '';
+    var current = _gsCurrentLayerPickerKey();
+    var uniqueNames = (names || []).filter(function (n, i, arr) { return n && arr.indexOf(n) === i; }).sort();
+    var options = uniqueNames.length
+        ? '<option value="">Selecione uma camada...</option>'
+        : '<option value="">Nenhuma camada publicada nesse datastore</option>';
+    uniqueNames.forEach(function (name) {
+        var value = workspace + ':' + name;
+        options += '<option value="' + escHtml(value) + '"' + (value === current ? ' selected' : '') + '>' + escHtml(name) + '</option>';
+    });
+    wrap.innerHTML = '<select id="gs-layer-picker" data-force-search="1" onchange="onGsLayerPickerChange(this.value)">' + options + '</select>';
+    initCustomSelects();
+}
+
+// Escolheu uma camada no seletor da aba Destino - reusa pullGsLayerByName (mesma ação do
+// modal/aba Recursos associados: confirma, resolve o datastore sozinho, traz workspace/
+// datastore/nome/título/resumo/palavras-chave/estilo/link de metadados - tudo pelo mesmo
+// caminho já existente, sem lógica nova de pull aqui).
+function onGsLayerPickerChange(value) {
+    if (!value) return;
+    var sep = value.indexOf(':');
+    if (sep < 0) return;
+    pullGsLayerByName(value.slice(0, sep), value.slice(sep + 1));
 }
 
 
@@ -2306,6 +2555,18 @@ function _onGsAuthStateChangedForSync() {
     }
     if (_isLogged) {
         _checkGsSyncOnline(_gsLayerInfo);
+        // A busca de camadas (modal "Baixar Camada"/seletor "Selecionar camada
+        // publicada") pode ter rodado a 1ª vez ANTES de logar - WMS GetCapabilities
+        // anônimo enxerga um subconjunto menor (segurança de dados por workspace do
+        // GeoServer), e o cache (GeoServerBridge._geoserver_layers_cache) fica preso
+        // nesse resultado incompleto pro resto da sessão (usuário reportou: sempre os
+        // mesmos ~25 itens, digitar um nome que existe de verdade não acha). Login é um
+        // gatilho claro de "a lista pode estar incompleta agora" - descarta e busca de
+        // novo.
+        if (typeof gsBridge !== 'undefined' && gsBridge.invalidate_gs_search_cache) {
+            gsBridge.invalidate_gs_search_cache();
+            gsBridge.search_geoserver('');
+        }
     }
     // Se a lista de workspaces/datastores já tinha falhado por falta de sessão
     // (_gsWorkspaceListFailed, ver _renderGsWorkspaces/_gsApplyKnownWorkspaceDatastore) e
@@ -2467,7 +2728,13 @@ function confirmGsPublish() {
         function () {
             _gsLastPublishWorkspace = d.workspace;
             _showActionLoading('Publicando no GeoServer...');
-            gsBridge.publish_layer(d.workspace, d.datastore, d.published_name, d.title, d.abstract, d.keywords, JSON.stringify(style));
+            // metadata_uuid: mesmo uuid já usado pra montar a prévia do "Link de
+            // Metadados" (aba Identificação, _gsLayerInfo.metadata_uuid - ver
+            // _on_layer_info_ready/geoserver_bridge.py) - sem passar isso, publish_layer
+            // recalculava o link do zero só a partir do banco/sidecar local, divergindo da
+            // prévia sempre que o uuid só estava disponível via um pull do GN feito nesta
+            // sessão (fluxo comum: a camada existe no GeoServer antes do metadado).
+            gsBridge.publish_layer(d.workspace, d.datastore, d.published_name, d.title, d.abstract, d.keywords, JSON.stringify(style), (_gsLayerInfo && _gsLayerInfo.metadata_uuid) || '');
         },
         'Confirmar Publicação'
     );

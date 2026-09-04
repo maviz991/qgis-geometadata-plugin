@@ -460,6 +460,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
                     w.wait(10000)
             for attr in (
                 '_workspaces_worker', '_datastores_worker', '_featuretypes_worker',
+                '_published_featuretypes_worker',
                 '_find_datastore_worker', '_publish_worker', '_styles_worker',
                 '_gs_rest_worker', '_pull_layer_worker',
                 '_pull_by_wms_worker', '_update_metadata_worker', '_search_layers_worker',

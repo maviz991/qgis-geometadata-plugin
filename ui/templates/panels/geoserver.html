@@ -83,6 +83,16 @@
                     <div id="gs-autodetect-candidates" class="gs-autodetect-candidates" style="display:none"></div>
                 </div>
             </div>
+
+            <div class="form-group span-2">
+                <label for="gs-layer-picker">Selecionar camada publicada <button class="help-btn"
+                        data-tip="Busca uma camada já publicada no GeoServer (com ou sem camada ativa no QGIS) e traz o Workspace/Datastore/Nome/Título/Resumo/Palavras-chave/Estilo/Link de Metadados dela pra cá - mesma ação de 'Serviços > Baixar Camada', direto aqui na aba.">?</button></label>
+                <div id="gs-layer-picker-wrap">
+                    <select id="gs-layer-picker" onchange="onGsLayerPickerChange(this.value)">
+                        <option value="">Carregando camadas do GeoServer...</option>
+                    </select>
+                </div>
+            </div>
         </div>
     </div>
 

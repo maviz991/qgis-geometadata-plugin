@@ -30,11 +30,14 @@ def print(*args, **kwargs):
 class _ServiceStatusWorker(QThread):
     """Verificação simples, sem exigir login (serve tanto deslogado quanto logado) - só
     confirma se dá pra acessar a URL base do serviço (.../geoserver ou .../geonetwork) e
-    ela responde. Classifica em 3 estados:
-      'active'   - respondeu com status 200 (exatamente - é o "acessou normal" de verdade).
-      'unstable' - respondeu, mas com outro código (redirect que não fechou em 200, 4xx,
-                   5xx, etc.) - o servidor está de pé, mas não do jeito esperado.
-      'offline'  - não respondeu nada (timeout, conexão recusada, DNS, SSL, etc.)."""
+    ela responde. Classifica em 4 estados:
+      'active'      - respondeu com status 200 (exatamente - "acessou normal" de verdade).
+      'unstable'    - respondeu, mas com outro código (redirect que não fechou em 200, 4xx,
+                      outro 5xx, etc.) - o servidor está de pé, mas não do jeito esperado.
+      'unavailable' - respondeu 503 - o próprio gateway/proxy avisando que o backend real
+                      está fora do ar agora, classe própria (não é só "instável", nem é
+                      "offline" - a conexão de rede em si funcionou).
+      'offline'     - não respondeu nada (timeout, conexão recusada, DNS, SSL, etc.)."""
     done = pyqtSignal(str, str)  # service ('geonetwork'|'geoserver'), status
 
     _TIMEOUT_S = 6
@@ -52,9 +55,16 @@ class _ServiceStatusWorker(QThread):
             resp = requests.get(self._url, timeout=self._TIMEOUT_S, verify=False)
             if resp.status_code == 200:
                 status = 'active'
+            elif resp.status_code == 503:
+                # 503 é o próprio gateway/proxy avisando que o backend real está fora do ar
+                # (diferente de um 401/403/redirect/outro 5xx, onde algo respondeu mas só não
+                # do jeito esperado) - classe própria, não "instável" (não é só devagar/com
+                # erro) nem "offline" (a rede respondeu, só não com o serviço de pé).
+                print(f"GeoMetadata [_ServiceStatusWorker] {self._service} ({self._url!r}): status 503")
+                status = 'unavailable'
             else:
                 # Servidor respondeu, só não com 200 (ex.: redirect pra uma página de erro
-                # do gateway, 401/403 num endpoint que não deveria exigir isso, 5xx) -
+                # do gateway, 401/403 num endpoint que não deveria exigir isso, outro 5xx) -
                 # ainda é "está de pé", mas não o esperado -> instável, não offline.
                 print(f"GeoMetadata [_ServiceStatusWorker] {self._service} ({self._url!r}): status {resp.status_code}")
                 status = 'unstable'
