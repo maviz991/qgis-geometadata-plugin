@@ -52,7 +52,7 @@ class HomePanel(QWidget):
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(4)
 
-        title = QLabel("Bem-vindo ao Geohab Plugin")
+        title = QLabel("Geohab Plugin")
         title.setObjectName("HomeTitle")
 
         subtitle = QLabel(
