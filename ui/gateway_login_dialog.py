@@ -242,9 +242,18 @@ class GatewaySSOWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        # Profile isolado (não persiste em disco) - evita misturar cookies
-        # dessa tentativa de login com o resto da UI do plugin.
-        self._profile = QWebEngineProfile(self)
+        # Profile ISOLADO (nome próprio, storage dedicado - não usa/mistura com o profile
+        # da QWebEngineView principal do plugin) mas PERSISTENTE (pedido do usuário: digitar
+        # o e-mail toda vez é cansativo e nem sugestão de autofill aparecia). Um
+        # QWebEngineProfile(storageName, parent) com nome fica persistente em disco por
+        # padrão (cookies + dados de formulário do Chromium) - sem storageName, seria
+        # off-the-record (é o que tinha antes). Mantém a sessão/cookie do Azure AD entre
+        # aberturas do plugin (login SSO tende a pular direto pra MFA ou nem pedir nada, se
+        # a sessão do Azure ainda for válida) e permite ao Chromium sugerir/preencher o
+        # e-mail já usado. Seguro em máquinas de uso individual (confirmado com o usuário) -
+        # não recomendado sem revisão nesse ponto se a máquina for compartilhada entre
+        # pessoas com o mesmo perfil do Windows.
+        self._profile = QWebEngineProfile("geometadata_sso_login", self)
         self._profile.cookieStore().cookieAdded.connect(self._on_cookie_added)
         # QWebEngineView embutida não herda o idioma do sistema como o navegador
         # padrão faz (Accept-Language) - sem isso a página do Azure AD vem em

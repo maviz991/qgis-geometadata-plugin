@@ -22,6 +22,7 @@ var _gsDbHasStyle = false; // true se o banco já resolveu o estilo (info.saved_
 var _gsLayerInfoInFlightLayer = null; // nome da camada com um get_active_layer_publish_info já pedido, ainda sem resposta - ver _requestGsLayerInfo
 var _gsLayerInfoPending = []; // [{expectedLayer, onReady}] - quem pediu get_active_layer_publish_info e ainda espera resposta (ver gs_layer_info_ready, _initGsBridge)
 var _gsPendingSyncedBaselineCapture = false; // ver _gsCaptureSyncedBaselineIfPending
+var _gsSyncSourceIsDb = false; // true só quando _gsSyncHasRecord veio do banco de verdade (info.saved_workspace, _renderGsLayerCard) - ver _checkGsSyncNow
 
 // Pede get_active_layer_publish_info de forma assíncrona (resultado chega pelo sinal
 // gs_layer_info_ready, ver _initGsBridge) - dois lugares no app chamam essa mesma info
@@ -437,6 +438,13 @@ function _loadGsDraft(callback) {
             if (!_gsSyncHasRecord && draft.synced_tier) {
                 _gsSyncHasRecord = true;
                 _gsSyncIsPublished = true;
+                // Esse baseline vem de um PULL (REST do GeoServer), nunca do banco - sem
+                // isso, _checkGsSyncNow rotulava esse estado como "db_*" (ver comentário
+                // lá) mesmo sem nenhum registro em geoserver_publish_xml, mostrando
+                // "Sincronizado (banco)" quando o usuário reabria o plugin sem estar
+                // logado - afirmação falsa (nem banco nem GeoServer foram checados de
+                // verdade nesse momento).
+                _gsSyncSourceIsDb = false;
                 _gsPendingSyncedBaselineCapture = true;
             }
             if (!_gsDbHasWorkspace && draft.workspace) {
@@ -477,9 +485,20 @@ function _loadGsDraft(callback) {
             // partir do banco ou do estado pós-auto-preenchimento) continua intocado, então
             // _checkGsSyncNow() aqui compara direito contra a fonte de verdade e vira
             // "Modificado" quando for o caso.
-            _markGsModifiedIfNeeded();
             updateGsFormProgress();
         }
+        // _checkGsSyncNow() (não _markGsModifiedIfNeeded()) de propósito, e FORA do
+        // `if (draft)` acima - roda sempre, mesmo sem draft nenhum (usuário nunca salvou
+        // nada) ou sem camada ativa/synced_tier pra restaurar. _markGsModifiedIfNeeded()
+        // tem uma guarda (`if (_gsSyncSnapshot === null) return;`) pensada pra digitação
+        // (evita recomputar a cada tecla antes do formulário carregar) - mas como TODOS os
+        // outros chamadores de _checkGsSyncNow() têm essa mesma guarda (ou já garantem um
+        // snapshot não-nulo), o caso "sem camada ativa e sem rascunho nenhum" nunca batia
+        // em lugar nenhum que de fato mostrasse o badge 'offline' ("Não salvo") - o painel
+        // ficava sem badge nenhum na tela (display:none de _loadGsLayerInfo, nunca
+        // desfeito). _checkGsSyncNow() aqui, sempre, garante que pelo menos um estado
+        // (mesmo que seja 'offline') apareça.
+        _checkGsSyncNow();
         if (callback) callback();
     });
 }
@@ -799,6 +818,7 @@ function _renderGsLayerCard(info) {
     // _gsQueueWorkspaceDatastore), o "change" disparado por essa seleção reavalia de novo
     // via _gsOnFieldChanged - não precisa esperar aqui.
     _gsSyncHasRecord = !!info.saved_workspace;
+    _gsSyncSourceIsDb = _gsSyncHasRecord; // registro de verdade no banco (geoserver_publish_xml) - ver _checkGsSyncNow
     _gsSyncSnapshot = _gsSyncHasRecord ? _gsSnapshotFromSaved(info) : JSON.stringify(_gsCollectFormState());
     _gsCaptureSnapshotRawNames();
     _gsSyncIsPublished = !!info.saved_published;
@@ -1921,6 +1941,7 @@ var _gsOnlineInFlightKey = null; // key com uma checagem AO VIVO já pedida ao P
 // funcionar (ver GeoServerService.load_publish_destination).
 var _GS_SYNC_LABELS = {
     offline: 'Não salvo',
+    sys_offline: 'Não verificado',
     db_not_found: 'Não Encontrado (DB)',
     db_synced: 'Sincronizado (DB)',
     db_modified: 'Modificado (DB)',
@@ -1932,6 +1953,7 @@ var _GS_SYNC_LABELS = {
 
 var _GS_SYNC_TOOLTIPS = {
     offline: 'Destino de publicação ainda não salvo em lugar nenhum.',
+    sys_offline: 'Sincronizado da última vez (pull do GeoServer), mas sem sessão agora pra confirmar de novo. Faça login pra verificar.',
     db_not_found: 'Nenhum destino salvo no banco ainda (sem login no Geohab).',
     db_modified: 'Editado desde o último salvamento no banco (sem login no Geohab).',
     sys_not_found: 'Nenhum destino de publicação salvo ainda.',
@@ -1949,6 +1971,7 @@ var _GS_SYNC_TOOLTIPS = {
 // severidade do modal - por isso não têm "message" fixo aqui, só título/tipo.
 var _GS_SYNC_MODALS = {
     offline: { title: 'Não salvo', type: 'info', message: 'Destino de publicação ainda não salvo em lugar nenhum.<br><br>Use "Arquivo > Continuar Depois" pra salvar sem publicar, ou publique direto em "Serviços > Publicar Camada".' },
+    sys_offline: { title: 'Não verificado', type: 'info', message: 'Esse destino veio de um pull do GeoServer confirmado numa sessão anterior (Workspace/Datastore/Nome à direita), mas não tem sessão ativa agora pra confirmar de novo contra o GeoServer.<br><br>Faça login pra verificar se ainda está sincronizado.' },
     db_not_found: { title: 'Não Encontrado (DB)', type: 'warning', message: 'Nenhum destino de publicação salvo no banco pra esta camada ainda.<br><br>⚠️ Verificado sem login no Geohab.<br>Faça login para verificação Online.<br><br>Use:<br>"Arquivo > Continuar Depois" pra salvar no banco, ou<br>faça login e publique direto em "Serviços > Publicar Camada".' },
     db_modified: { title: 'Modificado (DB)', type: 'warning', message: 'O formulário atual foi editado desde o último salvamento no banco.<br><br>⚠️ Verificado sem login no Geohab.<br>Faça login para verificação Online.<br><br>Use:<br>"Arquivo > Continuar Depois" pra salvar, ou<br>"Arquivo > Descartar Alterações" pra voltar ao último salvo.' },
     db_synced: { title: 'Sincronizado (DB)', type: 'success' },
@@ -2076,10 +2099,20 @@ function _gsSnapshotFromSaved(info) {
 // preenchimento se nada foi salvo ainda - ver _gsSyncHasRecord/_renderGsLayerCard) e
 // escolhe o rótulo certo. O nível (sys_/db_) só reflete se há sessão agora (_isLogged) - a
 // comparação em si é sempre contra o banco (geoserver_publish_xml), que não depende de
-// login (ver load_publish_destination).
+// login (ver load_publish_destination). EXCEÇÃO: o baseline "sem camada ativa" restaurado
+// de um pull antigo (_gsSyncSourceIsDb false - ver _loadGsDraft/synced_tier, Bug 45/52)
+// não tem NENHUM registro no banco por trás (save_publish_destination exige um
+// QgsMapLayer de verdade) - é 100% dependente da sessão REST do GeoServer. Sem login,
+// rotular isso como "db_*" seria afirmar uma confirmação que nunca existiu (nem contra o
+// banco, que não tem essa linha, nem contra o GeoServer, que exige login) - cai pro
+// mesmo "offline" usado quando não há snapshot nenhum.
 function _checkGsSyncNow() {
     if (_gsSyncSnapshot === null) {
         setGsBadge('offline');
+        return;
+    }
+    if (!_isLogged && !_gsSyncSourceIsDb) {
+        setGsBadge('sys_offline');
         return;
     }
     var tierPrefix = _isLogged ? 'sys' : 'db';

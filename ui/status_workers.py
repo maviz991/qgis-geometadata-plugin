@@ -15,6 +15,17 @@ try:
 except ImportError:
     requests = None
 
+# Overrides built-in print pra evitar crash nativo do QGIS - mesmo motivo de
+# geoserver_workers.py/geonetwork_workers.py (ver docs_projeto/bugs.md, Bug 41): chamar
+# print() de dentro de run() (QThread de background) já causou o QGIS inteiro fechar sem
+# crash dump nesse ambiente. Este módulo (status_workers.py) tinha ficado de fora dos dois
+# quando o Bug 41 corrigiu os outros dois - print() aqui roda toda vez que o ping de
+# status da Home (check_services_status) recebe algo != 200 ou uma exceção de rede
+# (comum logo após reiniciar/recarregar o plugin, quando um dos serviços ainda não
+# respondeu de forma limpa).
+def print(*args, **kwargs):
+    pass
+
 
 class _ServiceStatusWorker(QThread):
     """Verificação simples, sem exigir login (serve tanto deslogado quanto logado) - só

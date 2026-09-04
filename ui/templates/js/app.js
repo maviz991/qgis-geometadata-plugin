@@ -730,7 +730,13 @@ function tryClearDraft() {
                 if (preview) preview.textContent = '';
                 _gsResetWorkspaceDatastoreSelection(); // volta workspace/datastore pra "Selecione..."
                 _gsResetStyleControls(); // volta a aba Estilos pro default
-                _loadGsLayerInfo(function () { updateGsFormProgress(); }); // recarrega do banco (ou vazio) - sem rascunho
+                // _loadGsDraft() (não só updateGsFormProgress()) - o rascunho acabou de
+                // ser apagado, então não vai restaurar nada, mas é o único lugar que
+                // termina chamando _checkGsSyncNow() incondicionalmente (Bug 53) e faz o
+                // badge reaparecer como "Não salvo" - sem isso, o badge sumia (ficava
+                // preso no display:none que _loadGsLayerInfo aplica no início) depois de
+                // "Limpar Rascunho" numa camada sem registro no banco.
+                _loadGsLayerInfo(function () { _loadGsDraft(); updateGsFormProgress(); });
             }
             Modal.alert('Rascunhos apagados.', 'Concluído', 'success');
         },

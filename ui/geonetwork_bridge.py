@@ -184,9 +184,19 @@ class GeoNetworkBridge(QObject):
         gn_base = config_loader.get_geonetwork_base_url()
         if not gn_base:
             return
+        # Rejeita (não sobrescreve) enquanto o worker anterior dessa MESMA busca ainda
+        # está rodando - digitação rápida (busca por tecla) podia disparar uma chamada
+        # nova antes da anterior terminar; sobrescrever self._gn_workers[key] derrubava a
+        # única referência Python do worker antigo enquanto ele ainda `isRunning()` (quit()
+        # não interrompe de verdade um run() síncrono bloqueante em requests, só sinaliza
+        # o event loop PRÓPRIO da thread - nenhum desses workers roda um) - Qt destrói a
+        # QThread ainda em execução e chama std::terminate(), fechando o QGIS inteiro sem
+        # crash dump (mesma causa raiz de outros bugs deste arquivo, ver docs_projeto/
+        # bugs.md). A busca mais recente é perdida nesse caso raro (digitação MUITO
+        # rápida) - aceitável, o usuário só precisa de uma tecla a mais pra reenviar.
         old = self._gn_workers.get(key)
         if old and old.isRunning():
-            old.quit()
+            return
         worker = _GnContactsWorker(session, key, query, gn_base)
         worker.done.connect(lambda k, q, r: self.gn_contacts_ready.emit(k, q, r))
         self._gn_workers[key] = worker
@@ -428,8 +438,13 @@ class GeoNetworkBridge(QObject):
             self.gn_metadata_search_ready.emit([])
             return
         from .geonetwork_workers import _GnRecordSearchWorker
+        # Rejeita (não sobrescreve) enquanto a busca anterior ainda está rodando - mesma
+        # causa raiz corrigida em search_contacts_gn logo acima (quit() não interrompe de
+        # verdade um run() síncrono bloqueante; sobrescrever a referência derrubava a
+        # QThread antiga ainda em execução -> std::terminate() -> QGIS fecha inteiro).
+        # Digitação rápida no campo de busca ("Baixar Metadado") podia disparar isso.
         if self._gn_search_worker and self._gn_search_worker.isRunning():
-            self._gn_search_worker.quit()
+            return
         worker = _GnRecordSearchWorker(session, query, gn_base)
         worker.done.connect(lambda results: self.gn_metadata_search_ready.emit(results))
         self._gn_search_worker = worker

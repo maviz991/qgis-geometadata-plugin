@@ -141,13 +141,19 @@
 
 /* Bare "nada salvo em lugar nenhum ainda" - só usado pelo painel GeoServer (geoserver.js),
    distinto de offline_saved/offline_modified (GN): lá sempre existe ALGO local pra
-   comparar (o rascunho); aqui, nem isso ainda. */
-.gn-sync-badge.offline {
+   comparar (o rascunho); aqui, nem isso ainda.
+   sys_offline (mesmo visual, texto diferente - ver setGsBadge/_GS_SYNC_LABELS): baseline
+   "sem camada ativa" restaurado de um pull antigo (Bug 45/52), sem login agora pra
+   confirmar contra o GeoServer - diferente de "offline" puro, aqui EXISTE um destino
+   conhecido, só não dá pra verificar nesse momento. */
+.gn-sync-badge.offline,
+.gn-sync-badge.sys_offline {
     background: #f1f5f9;
     color: var(--fg-muted);
 }
 
-.gn-sync-badge.offline .gn-sync-dot {
+.gn-sync-badge.offline .gn-sync-dot,
+.gn-sync-badge.sys_offline .gn-sync-dot {
     background: #94a3b8;
 }
 
@@ -1228,6 +1234,7 @@
 }
 
 :root[data-theme="dark"] .gn-sync-badge.offline,
+:root[data-theme="dark"] .gn-sync-badge.sys_offline,
 :root[data-theme="dark"] .gn-sync-badge.offline_saved {
     background: rgba(255, 255, 255, 0.06);
 }
