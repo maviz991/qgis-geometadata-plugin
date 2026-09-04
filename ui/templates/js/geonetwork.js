@@ -216,6 +216,11 @@ function _onEditorPanelLoaded() {
 // ─── Ações de exportação (chamadas pelo header) ───────────────────────────────
 
 function tryExportXml() {
+    // Navega pro Editor de Metadados em vez de deixar collectFormData() falhar em
+    // silêncio (pedido do usuário: itens do header devem levar direto pra UI certa, não
+    // travar/não fazer nada) - a exportação em si não dispara sozinha, só leva pra UI;
+    // usuário clica "Exportar Metadado" de novo já no painel.
+    if (!document.getElementById('f-title')) { navigate('editor'); return; }
     var data = collectFormData();
     if (!data) return;
     var missing = validateForm(data, true); // silent: não toca o DOM agora
@@ -228,6 +233,10 @@ function tryExportXml() {
 }
 
 function tryExportGeohab() {
+    // Mesmo raciocínio de tryExportXml() acima - inclusive pra "Publicar Metadado": só
+    // leva pra UI, quem publica de fato é um clique deliberado do usuário depois, já vendo
+    // o formulário (nunca dispara publicação sozinho atrás de um item de menu).
+    if (!document.getElementById('f-title')) { navigate('editor'); return; }
     var data = collectFormData();
     if (!data) return;
     var missing = validateForm(data, true);
@@ -295,7 +304,8 @@ function _tryGnResetForm() {
 }
 
 function tryImportXml() {
-    if (!_requireEditorOpen('importar um metadado')) return;
+    // Navega em vez de só avisar "abra X antes" (mesmo padrão de tryExportXml acima).
+    if (!document.getElementById('f-title')) { navigate('editor'); return; }
     if (typeof gnBridge === 'undefined') return;
     gnBridge.import_xml_file(function (data) {
         if (!data) return; // usuário cancelou o diálogo, ou o arquivo não pôde ser lido
@@ -845,7 +855,8 @@ function dismissGnUpdateBanner() {
 }
 
 function openGnSearchModal() {
-    if (!_requireEditorOpen('buscar um metadado')) return;
+    // Navega em vez de só avisar "abra X antes" (mesmo padrão de tryExportXml/tryImportXml).
+    if (!document.getElementById('f-title')) { navigate('editor'); return; }
     if (typeof gnBridge === 'undefined') return;
     // Registros públicos aparecem mesmo sem login (o Python já busca com sessão anônima
     // nesse caso) - badge com tooltip avisa que logar dá acesso aos do setor também.
@@ -933,12 +944,17 @@ function pullGnRecord(uuid) {
 }
 
 
-// Guard comum pra qualquer ação do menu Arquivo que dependa do editor estar aberto -
-// mesmo toast "Ação Necessária" pra todas (exportar, importar, buscar, descartar).
+// Checagem SILENCIOSA (sem alert, sem navegar) de que o editor está aberto -
+// collectFormData() usa isso, e collectFormData() é chamado de MUITOS lugares que não são
+// clique direto do usuário (setGnBadge, _markGnModifiedIfNeeded, sinais assíncronos como
+// local_save_succeeded/gn_sync_checked) - qualquer efeito colateral aqui (alert OU navigate)
+// dispararia à toa toda vez que uma dessas respostas chega depois do usuário já ter saído
+// do editor. Os itens de menu que precisam de fato levar o usuário pro editor quando ele
+// não está aberto (tryImportXml/tryExportXml/tryExportGeohab/openGnSearchModal/
+// _tryGnResetForm) fazem essa checagem+navigate ELES MESMOS, antes de chamar
+// collectFormData()/_requireEditorOpen.
 function _requireEditorOpen(actionVerb) {
-    if (document.getElementById("f-title")) return true;
-    Modal.alert('Abra "Catálogo > Editor de Metadados" antes de ' + actionVerb + '.', 'Ação Necessária', 'warning');
-    return false;
+    return !!document.getElementById("f-title");
 }
 
 function collectFormData() {

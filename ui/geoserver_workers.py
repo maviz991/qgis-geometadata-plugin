@@ -136,19 +136,27 @@ class _GsSearchLayersWorker(QThread):
 
 
 
-def _gs_augment_404(exc):
+def _gs_augment_404(exc, workspace=None, datastore=None, published_name=None):
     """Acrescenta uma dica acionável quando o erro de uma ação de "Atualizar" (Camada ou
     Estilo - as duas só fazem sentido numa camada JÁ publicada, via PUT) vem de um 404
     ([GS-404], ver GeoServerService.translate_gs_error): nesse contexto específico, "não
     encontrado" quase sempre significa que a camada não existe de fato nesse Workspace/
     Datastore no GeoServer (nunca foi publicada, ou foi removida/renomeada desde a última
-    vez) - não um erro genérico de configuração. Não mexe no texto de outros erros."""
+    vez) - não um erro genérico de configuração. Não mexe no texto de outros erros.
+
+    workspace/datastore/published_name (opcionais) - quando informados, entram na mensagem
+    pra deixar claro EXATAMENTE qual destino foi tentado (facilita diagnosticar se o valor
+    restaurado do rascunho/formulário está errado, em vez de um "não encontrado" genérico
+    sem dizer o quê)."""
     message = str(exc)
     if '[GS-404]' in message:
+        target = ''
+        if workspace or datastore or published_name:
+            target = f' ("{workspace or "?"}/{datastore or "?"}/{published_name or "?"}")'
         message += (
-            '<br><br>Isso costuma significar que essa camada não existe de fato nesse '
-            'Workspace/Datastore no GeoServer agora (nunca foi publicada, ou foi removida/'
-            'renomeada desde a última vez). Confira a aba Destino e use "Serviços > '
+            f'<br><br>Isso costuma significar que essa camada{target} não existe de fato '
+            'nesse Workspace/Datastore no GeoServer agora (nunca foi publicada, ou foi '
+            'removida/renomeada desde a última vez). Confira a aba Destino e use "Serviços > '
             'Publicar Camada" se for o caso.'
         )
     return message
@@ -291,7 +299,18 @@ class _GsPullLayerWorker(QThread):
     camada, "diferente do servidor" pode significar que ALGUÉM MAIS publicou depois de
     você - nesse caso empurrar o formulário local (desatualizado) sobrescreveria o
     trabalho de quem publicou por último. Ver GeoServerService.fetch_published_featuretype/
-    fetch_layer_styles."""
+    fetch_layer_styles.
+
+    workspace/datastore vêm do FORMULÁRIO (aba Destino - pode ter sido restaurado de um
+    rascunho antigo, ver docs_projeto/bugs.md Bug 52), não recalculados a cada vez -
+    diferente de _GsPullLayerByWmsNameWorker (busca/link WMS do GN), que sempre re-descobre
+    o datastore do zero via find_datastore_for_published_name. Se o datastore salvo não
+    bater mais (nome mudou, ou o rascunho ficou com um valor desatualizado/errado), CAI
+    NESSE MESMO mecanismo de re-descoberta como fallback, em vez de falhar de cara - usa
+    workspace+published_name (o "id" estável, ver comentário do usuário nos bugs) pra
+    re-achar o datastore atual, e reporta o valor CORRIGIDO de volta (remote['datastore'])
+    pro JS reaplicar no formulário/rascunho - autocorrige o desalinhamento em vez de só
+    apontar o erro toda vez."""
     done = pyqtSignal(bool, 'QVariant', str)  # sucesso, dados (title/abstract/keywords/default_style/...), erro
 
     def __init__(self, geoserver_service, workspace, datastore, published_name, config_loader_instance):
@@ -304,16 +323,37 @@ class _GsPullLayerWorker(QThread):
 
     def run(self):
         try:
+            datastore = self._datastore
             remote = self._service.fetch_published_featuretype(
-                self._workspace, self._datastore, self._published_name, self._config
+                self._workspace, datastore, self._published_name, self._config
             )
+            redetected = False
+            if remote is None:
+                try:
+                    fresh_datastore = self._service.find_datastore_for_published_name(
+                        self._workspace, self._published_name, self._config
+                    )
+                except Exception as exc:
+                    fresh_datastore = None
+                    print(f"GeoMetadata [_GsPullLayerWorker] re-detecção de datastore falhou: {exc}")
+                if fresh_datastore and fresh_datastore != datastore:
+                    datastore = fresh_datastore
+                    redetected = True
+                    remote = self._service.fetch_published_featuretype(
+                        self._workspace, datastore, self._published_name, self._config
+                    )
             if remote is None:
                 self.done.emit(False, {}, (
-                    '[GS-404] Essa camada não foi encontrada nesse Workspace/Datastore no '
-                    'GeoServer agora - pode nunca ter sido publicada, ou ter sido removida/'
-                    'renomeada. Confira a aba Destino e use "Serviços > Publicar Camada" se for o caso.'
+                    f'[GS-404] "{self._workspace}/{self._datastore}/{self._published_name}" não foi '
+                    'encontrada no GeoServer agora - pode nunca ter sido publicada, ou ter sido '
+                    'removida/renomeada. Confira a aba Destino e use "Serviços > Publicar Camada" se '
+                    'for o caso.'
                 ))
                 return
+            if redetected:
+                remote['workspace'] = self._workspace
+                remote['datastore'] = datastore
+                remote['published_name'] = self._published_name
             # Estilo isolado em try/except próprio - mesmo raciocínio de _GsSyncCheckWorker:
             # uma falha aqui não pode jogar fora o título/resumo/palavras-chave já obtidos.
             styles = None
@@ -645,7 +685,7 @@ class _GsUpdateMetadataWorker(QThread):
                 metadata_link_url=self._metadata_link_url
             )
         except Exception as exc:
-            self.done.emit(False, _gs_augment_404(exc))
+            self.done.emit(False, _gs_augment_404(exc, self._workspace, self._datastore, self._published_name))
             return
 
         style_warning = ''

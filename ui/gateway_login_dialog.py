@@ -410,5 +410,8 @@ class GatewaySSOWidget(QWidget):
         # inteiro sem crash dump (mesma causa raiz de GeoMetadataDialog.closeEvent).
         if self._verify_worker and self._verify_worker.isRunning():
             self._verify_worker.quit()
-            self._verify_worker.wait(2000)
+            # 10s (não 2s) - mesmo raciocínio de GeoMetadataDialog.closeEvent: quit() não
+            # interrompe de verdade um run() síncrono fazendo request bloqueante, só
+            # wait() dá tempo real da chamada terminar sozinha antes do widget ser destruído.
+            self._verify_worker.wait(10000)
         self.login_failed.emit("Login cancelado.")

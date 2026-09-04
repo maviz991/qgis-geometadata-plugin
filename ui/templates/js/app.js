@@ -664,7 +664,10 @@ function trySaveMetadata() {
         saveGsDraftNow();
         return;
     }
-    Modal.alert('Abra "Catálogo > Editor de Metadados" ou "Serviços > Publicar Camada" antes de "Continuar Depois".', 'Ação Necessária', 'warning');
+    // Nenhum painel aberto ainda pra saber se era pra ser GN ou GS - navega pro Editor de
+    // Metadados (GN, 1º item do menu Catálogo) em vez de só avisar "abra X antes" - pedido
+    // do usuário: ações do header devem levar direto pra UI certa, não travar com msg.
+    navigate('editor');
 }
 
 // "Arquivo > Descartar Alterações" (main.html) - mesmo dispatcher genérico de
@@ -680,7 +683,9 @@ function tryResetForm() {
         tryGsResetForm();
         return;
     }
-    Modal.alert('Abra "Catálogo > Editor de Metadados" ou "Serviços > Configurar Camada" antes de descartar alterações.', 'Ação Necessária', 'warning');
+    // Mesmo raciocínio de trySaveMetadata() acima - navega pro Editor de Metadados em vez
+    // de só avisar "abra X antes".
+    navigate('editor');
 }
 
 // "Arquivo > Limpar Rascunho (GN + GS)" (main.html) - diferente de "Descartar Alterações"

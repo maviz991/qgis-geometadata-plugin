@@ -218,7 +218,10 @@ class LoginDialog(QDialog):
                 w = getattr(bridge, attr, None)
                 if w and w.isRunning():
                     w.quit()
-                    w.wait(2000)
+                    # 10s (não 2s) - mesmo raciocínio de GeoMetadataDialog.closeEvent: quit()
+                    # não interrompe de verdade um run() síncrono bloqueante (request/pip),
+                    # só wait() dá tempo real da chamada terminar sozinha.
+                    w.wait(10000)
         super().closeEvent(event)
 
 

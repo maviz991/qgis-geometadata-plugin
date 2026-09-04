@@ -21,6 +21,7 @@ var _gsPendingExistingStyle = null; // valor ('ws:nome' ou 'nome') a selecionar 
 var _gsDbHasStyle = false; // true se o banco já resolveu o estilo (info.saved_style_source) - evita o rascunho local pisar em cima (prioridade: banco > rascunho, igual _gsDbHasWorkspace)
 var _gsLayerInfoInFlightLayer = null; // nome da camada com um get_active_layer_publish_info já pedido, ainda sem resposta - ver _requestGsLayerInfo
 var _gsLayerInfoPending = []; // [{expectedLayer, onReady}] - quem pediu get_active_layer_publish_info e ainda espera resposta (ver gs_layer_info_ready, _initGsBridge)
+var _gsPendingSyncedBaselineCapture = false; // ver _gsCaptureSyncedBaselineIfPending
 
 // Pede get_active_layer_publish_info de forma assíncrona (resultado chega pelo sinal
 // gs_layer_info_ready, ver _initGsBridge) - dois lugares no app chamam essa mesma info
@@ -215,14 +216,22 @@ function _initGsBridge() {
             metaLinkBox.innerHTML = 'Será vinculado ao atualizar: UUID ' + escHtml(_gnSyncUuid);
         }
         
-        // Preenchimento programático não dispara input/change (o que aciona o rascunho
-        // por debounce) - salva na hora, mesmo motivo de pullGsAbstractKeywordsFromGn.
-        _saveGsDraftNow();
+        // _gsSyncHasRecord/_gsSyncIsPublished PRECISAM ser setados ANTES de
+        // _saveGsDraftNow() - synced_tier (rascunho, ver Bug 45) é calculado a partir
+        // desses dois flags NO MOMENTO do save; salvar antes de setá-los (like era antes)
+        // gravava synced_tier vazio sempre que o pull era o PRIMEIRO dessa camada (flags
+        // ainda no valor pré-pull, false/false) - o badge "Sincronizado" recém-obtido se
+        // perdia ao navegar pra outro painel e voltar, ou reabrir o plugin (voltava
+        // "Modificado" sem motivo, já que o rascunho não tinha como saber que era pra
+        // restaurar sincronizado).
         _gsSyncHasRecord = true;
         _gsSyncSnapshot = JSON.stringify(_gsCollectFormState());
         _gsCaptureSnapshotRawNames();
         _gsSyncIsPublished = true;
         _gsInvalidatePendingLiveCheck(); // ver definição - senão uma checagem em voo de ANTES do pull chega depois com "Modificado" desatualizado e o banner "Atualização disponível" reaparece
+        // Preenchimento programático não dispara input/change (o que aciona o rascunho
+        // por debounce) - salva na hora, mesmo motivo de pullGsAbstractKeywordsFromGn.
+        _saveGsDraftNow();
         _flashGsRefreshBtn();
         setGsBadge((_isLogged ? 'sys' : 'db') + '_synced');
         _gsLastCheckedLayerKey = null; // idem publish_done/destination_saved - invalida o cache do badge combinado do editor
@@ -376,7 +385,22 @@ function _loadGsDraft(callback) {
             var nameEl = document.getElementById('gs-layer-name');
             if (nameEl && !nameEl.value && draft.published_name) {
                 nameEl.value = draft.published_name;
-                onGsLayerNameInput(draft.published_name);
+                // NÃO usa onGsLayerNameInput() aqui - essa função existe pra pré-visualizar
+                // a sanitização (RF04: minúsculas/sem acento) de um nome NOVO que o usuário
+                // está digitando pra publicar, então gsBridge.sanitize_layer_name() sempre
+                // devolve minúsculo. draft.published_name aqui já É o nome de uma camada
+                // JÁ publicada (veio de um pull) - passar pela "pré-visualização de
+                // sanitização" TROCAVA o valor usado de fato (_gsCollectFormState()
+                // prioriza dataset.sanitized sobre .value) pela versão minúscula, mesmo
+                // com o campo mostrando a capitalização certa na tela - "Atualizar agora"
+                // então tentava um nome diferente do real no GeoServer (ex.:
+                // "Favela_Moinho_Muro" na tela, "favela_moinho_muro" no PUT/GET -> [GS-404]
+                // mesmo a camada existindo). dataset.sanitized setado direto, mesmo padrão
+                // do handler gs_layer_pulled (pull de verdade) - sem re-sanitizar um nome
+                // que já é exato.
+                nameEl.dataset.sanitized = draft.published_name;
+                var namePreview = document.getElementById('gs-layer-name-preview');
+                if (namePreview) namePreview.textContent = 'Nome final: ' + draft.published_name;
             }
             // Título/resumo/palavras-chave: diferente do nome/workspace/destino (banco
             // sempre vence, ver acima), esses são só texto descritivo, sem nenhuma
@@ -395,8 +419,30 @@ function _loadGsDraft(callback) {
                 _gsKeywords = draft.keywords.slice();
                 _renderGsKeywords();
             }
+            // Sem registro no banco (_gsSyncHasRecord ainda false aqui - _renderGsLayerCard
+            // não roda esse trecho sem camada ativa), mas o rascunho veio de um pull
+            // confirmado (draft.synced_tier) - usa o próprio estado recém-restaurado como
+            // baseline (mesma ideia do "pull baseline" do GN, Bug 40), em vez de deixar o
+            // badge sem status nenhum até o usuário puxar de novo. A flag é setada ANTES de
+            // _gsQueueWorkspaceDatastore (logo abaixo) de propósito - workspace/datastore
+            // podem resolver de forma SÍNCRONA (_gsWorkspaceListFailed) ou ASSÍNCRONA (lista
+            // ainda carregando); setando a flag primeiro, o settling point que rodar
+            // primeiro (síncrono aqui mesmo, ou um dos assíncronos em
+            // _gsApplyKnownWorkspaceDatastore/_renderGsWorkspaces/_renderGsDatastores) já
+            // encontra a flag `true` e captura no momento CERTO - capturar cedo demais
+            // (workspace/datastore ainda vazios/"Carregando...") gravava um baseline
+            // incompleto, e quando a lista finalmente respondia e preenchia os campos de
+            // verdade, a comparação seguinte acusava "Modificado" à toa (ver
+            // _gsCaptureSyncedBaselineIfPending).
+            if (!_gsSyncHasRecord && draft.synced_tier) {
+                _gsSyncHasRecord = true;
+                _gsSyncIsPublished = true;
+                _gsPendingSyncedBaselineCapture = true;
+            }
             if (!_gsDbHasWorkspace && draft.workspace) {
                 _gsQueueWorkspaceDatastore(draft.workspace, draft.datastore);
+            } else {
+                _gsCaptureSyncedBaselineIfPending(); // nada pra restaurar/aguardar - resolve na hora
             }
             // Estilo do rascunho: só entra se o banco não resolveu (_gsDbHasStyle, mesma
             // prioridade banco > rascunho dos outros campos).
@@ -424,20 +470,6 @@ function _loadGsDraft(callback) {
             if (draft.metadata_uuid && typeof _gnSyncUuid !== 'undefined' && !_gnSyncUuid) {
                 _gnSyncUuid = draft.metadata_uuid;
             }
-            // Sem registro no banco (_gsSyncHasRecord ainda false aqui - _renderGsLayerCard
-            // não roda esse trecho sem camada ativa), mas o rascunho veio de um pull
-            // confirmado (draft.synced_tier) - usa o próprio estado recém-restaurado como
-            // baseline (mesma ideia do "pull baseline" do GN, Bug 40), em vez de deixar o
-            // badge sem status nenhum até o usuário puxar de novo. Captura o snapshot DEPOIS
-            // de todo o resto acima já ter restaurado os campos, senão a comparação em
-            // _checkGsSyncNow (mais abaixo) acusaria "Modificado" comparando o formulário
-            // ainda vazio contra o snapshot.
-            if (!_gsSyncHasRecord && draft.synced_tier) {
-                _gsSyncHasRecord = true;
-                _gsSyncIsPublished = true;
-                _gsSyncSnapshot = JSON.stringify(_gsCollectFormState());
-                _gsCaptureSnapshotRawNames();
-            }
             // Reavalia o badge: título/resumo/palavras-chave do rascunho podem ter acabado
             // de sobrepor o que o banco preencheu (ver acima) - ou, numa camada nunca salva
             // de verdade, o rascunho preencheu campos que o banco deixou vazios. Em
@@ -462,7 +494,7 @@ function _loadGsDraft(callback) {
 // assíncronas independentes, então essa função pode rodar ANTES ou DEPOIS da lista
 // resolver, nessa ordem ou na outra.
 function _gsQueueWorkspaceDatastore(workspace, datastore) {
-    if (!workspace) return;
+    if (!workspace) { _gsCaptureSyncedBaselineIfPending(); return; } // nada pra restaurar - resolve na hora (defesa extra, ver _loadGsDraft)
     if (_gsWorkspaceListFailed) {
         _gsApplyKnownWorkspaceDatastore(workspace, datastore);
         return;
@@ -473,6 +505,7 @@ function _gsQueueWorkspaceDatastore(workspace, datastore) {
     if (alreadyPopulated) {
         if (!_clickGsSuggestionItem('gs-workspace-wrap', workspace)) {
             _gsPendingAutoDatastore = null;
+            _gsCaptureSyncedBaselineIfPending(); // clique falhou - nada mais vai resolver isso, encerra aqui
         }
     } else {
         _gsPendingDraftWorkspace = workspace;
@@ -488,7 +521,7 @@ function _gsQueueWorkspaceDatastore(workspace, datastore) {
 // badge acusava "Modificado (DB)" à toa numa camada que não mudou nada.
 function _gsApplyKnownWorkspaceDatastore(workspace, datastore) {
     var wrap = document.getElementById('gs-workspace-wrap');
-    if (!wrap) return;
+    if (!wrap) { _gsCaptureSyncedBaselineIfPending(); return; } // painel já foi trocado - nada mais vai resolver isso
     wrap.innerHTML = '<select id="gs-workspace" onchange="onGsWorkspaceChange(this.value)">' +
         '<option value="' + escHtml(workspace) + '" selected>' + escHtml(workspace) + '</option></select>';
     var dsWrap = document.getElementById('gs-datastore-wrap');
@@ -499,6 +532,11 @@ function _gsApplyKnownWorkspaceDatastore(workspace, datastore) {
     }
     initCustomSelects();
     _updateGsPublishButton();
+    // Workspace E datastore acabaram de ser aplicados de forma síncrona (opção única,
+    // sem depender de lista nenhuma) - settling point real pro baseline adiado (ver
+    // _gsCaptureSyncedBaselineIfPending). Precisa vir ANTES de _markGsModifiedIfNeeded()
+    // pra já comparar contra o snapshot certo, não contra null.
+    _gsCaptureSyncedBaselineIfPending();
     _markGsModifiedIfNeeded();
     updateGsFormProgress();
 }
@@ -658,7 +696,22 @@ function _renderGsLayerCard(info) {
     if (nameEl && !nameEl.value) {
         var defaultName = info.saved_published_name || info.table || info.name;
         nameEl.value = defaultName;
-        onGsLayerNameInput(defaultName);
+        if (info.saved_published_name) {
+            // Nome de uma camada JÁ publicada (banco) - precisa ficar EXATO, sem passar
+            // pela pré-visualização de sanitização (onGsLayerNameInput/RF04, sempre
+            // minúscula) - senão dataset.sanitized (fonte usada de fato por
+            // _gsCollectFormState() pra "Atualizar agora"/publicar) diverge do nome real
+            // no GeoServer mesmo com a tela mostrando a capitalização certa (mesma causa
+            // do [GS-404] corrigido em _loadGsDraft() acima, ver docs_projeto/bugs.md).
+            nameEl.dataset.sanitized = defaultName;
+            var defaultPreview = document.getElementById('gs-layer-name-preview');
+            if (defaultPreview) defaultPreview.textContent = 'Nome final: ' + defaultName;
+        } else {
+            // Nome NUNCA publicado (vem da tabela/camada QGIS) - aqui sim a
+            // pré-visualização de sanitização é o comportamento certo, o nome final
+            // publicado pode legitimamente diferir (RF04).
+            onGsLayerNameInput(defaultName);
+        }
     }
     var titleEl = document.getElementById('gs-layer-title');
     if (titleEl && !titleEl.value) {
@@ -819,6 +872,7 @@ function _renderGsWorkspaces(workspaces, error) {
         _gsPendingAutoDatastore = null; // workspace salvo não existe mais - datastore pendente também não faz sentido
     }
     onGsWorkspaceChange('');
+    _gsCaptureSyncedBaselineIfPending(); // workspace salvo não existe mais na lista - nada mais vai resolver isso
 }
 
 function onGsWorkspaceChange(workspace) {
@@ -855,11 +909,13 @@ function _renderGsDatastores(datastores, error) {
                 '<option value="' + escHtml(knownDs) + '" selected>' + escHtml(knownDs) + '</option></select>';
             initCustomSelects();
             _updateGsPublishButton();
+            _gsCaptureSyncedBaselineIfPending(); // datastore acabou de ser aplicado - settling point
             _markGsModifiedIfNeeded();
             updateGsFormProgress();
         } else {
             dsWrap.innerHTML = '<select id="gs-datastore"><option value="">Erro ao carregar datastores</option></select>';
             initCustomSelects();
+            _gsCaptureSyncedBaselineIfPending(); // sem datastore conhecido pra aplicar - nada mais vai resolver isso
         }
         Modal.alert(error, 'Erro', 'error');
         return;
@@ -881,6 +937,11 @@ function _renderGsDatastores(datastores, error) {
             _clickGsSuggestionItem('gs-datastore-wrap', target);
         }
     }
+    // Settling point do baseline adiado (ver _gsCaptureSyncedBaselineIfPending) - a lista
+    // de datastores terminou de carregar e o valor pendente (se algum) já foi aplicado
+    // (ou não existia mais na lista) - de qualquer forma, o formulário não vai mudar mais
+    // por causa dessa restauração específica.
+    _gsCaptureSyncedBaselineIfPending();
 }
 
 // Ao escolher o datastore, confere na hora se a tabela da camada ativa está mesmo
@@ -1662,7 +1723,10 @@ function _gsTryNoActiveLayerUpdate() {
 // Por isso a direção certa é trazer o servidor pra cá, não o contrário.
 function pullGsLayerFromServer() {
     if (!document.getElementById('gs-layer-card')) {
-        Modal.alert('Abra "Serviços > Configurar Camada" antes de atualizar a camada.', 'Ação Necessária', 'warning');
+        // Navega pro painel em vez de só avisar "abra X antes" (pedido do usuário, mesmo
+        // padrão de _requireEditorOpen/geonetwork.js) - a ação em si não dispara sozinha,
+        // só leva pra UI certa; usuário clica "Baixar Camada" de novo já no painel.
+        navigate('geoserver');
         return;
     }
     // Login exigido logo aqui, ANTES de abrir busca/confirm - baixar uma camada de verdade
@@ -1681,6 +1745,16 @@ function pullGsLayerFromServer() {
         openGsSearchModal();
         return;
     }
+    _gsPullKnownDestination();
+}
+
+// Puxa DIRETO o destino já preenchido no formulário (Workspace/Datastore/Nome, aba
+// Destino/Identificação) - sem busca, sem escolha, só confirma e traz o que está DE FATO
+// publicado agora. Usado pelo fim de pullGsLayerFromServer() (camada ativa já preenche o
+// destino sozinha) e por applyGsLayerUpdate() (banner "Atualizar agora" - a divergência já
+// foi detectada contra ESSE destino específico, não faz sentido oferecer buscar outra
+// camada ali, ver Bug 50/52).
+function _gsPullKnownDestination() {
     var d = _gsCollectFormState();
     if (!d.workspace || !d.datastore || !d.published_name) {
         Modal.alert('Preencha Workspace/Datastore (aba Destino) e o Nome da camada publicada (aba Identificação) antes de atualizar.', 'Aviso', 'warning');
@@ -1960,11 +2034,15 @@ function setGsBadge(state) {
     }
 }
 
-// Botão "Atualizar agora" do banner (ver setGsBadge) - reusa a mesma ação e confirmação
-// do menu "Serviços > Baixar Camada", só entrando por um atalho visível direto no
-// painel quando a divergência já foi detectada.
+// Botão "Atualizar agora" do banner (ver setGsBadge) - a divergência já foi detectada
+// contra um destino ESPECÍFICO e conhecido (já preenchido no formulário), diferente do
+// menu "Serviços > Baixar Camada" (pullGsLayerFromServer), que sem camada ativa abre uma
+// busca (Bug 50 - não faz sentido oferecer buscar OUTRA camada aqui, o banner já sabe
+// exatamente qual). Chama _gsPullKnownDestination() direto, sem login-gate/navigate
+// próprios - o banner só aparece dentro do próprio painel GeoServer já aberto e logado
+// (setGsBadge/_checkGsSyncOnline exigem sessão pra chegar no estado 'sys_modified').
 function applyGsLayerUpdate() {
-    pullGsLayerFromServer();
+    _gsPullKnownDestination();
 }
 
 function dismissGsUpdateBanner() {
@@ -2223,6 +2301,29 @@ function _markGsModifiedIfNeeded() {
     _checkGsSyncNow();
 }
 
+// Captura o baseline (_gsSyncSnapshot) do "pull baseline" sem camada ativa (Bug 45/52,
+// ver _loadGsDraft) - SÓ quando workspace/datastore já estiverem de fato resolvidos no
+// DOM, não na hora em que draft.synced_tier é lido. _gsQueueWorkspaceDatastore (chamado
+// pouco antes, em _loadGsDraft) pode ser TOTALMENTE assíncrono (lista de workspaces/
+// datastores ainda não carregou - o caso comum logo após reabrir o plugin): capturar o
+// snapshot ali mesmo, de forma síncrona, guardava um baseline com workspace/datastore
+// ainda vazios/"Carregando..." - quando a lista finalmente respondia e preenchia os
+// campos de verdade (instantes depois), o próximo _markGsModifiedIfNeeded() comparava o
+// formulário (agora certo) contra esse baseline incompleto e acusava "Modificado" à toa,
+// mesmo sem nenhuma edição real do usuário. Por isso a captura de verdade é ADIADA (flag
+// _gsPendingSyncedBaselineCapture, setada em _loadGsDraft) até essa função ser chamada de
+// algum dos pontos onde workspace/datastore REALMENTE terminaram de se resolver -
+// _gsApplyKnownWorkspaceDatastore, _renderGsDatastores (sucesso e erro) e os dois
+// desfechos síncronos de _gsQueueWorkspaceDatastore/_renderGsWorkspaces quando não há
+// datastore nenhum pra esperar. Idempotente - só age na primeira chamada (flag zera).
+function _gsCaptureSyncedBaselineIfPending() {
+    if (!_gsPendingSyncedBaselineCapture) return;
+    _gsPendingSyncedBaselineCapture = false;
+    _gsSyncSnapshot = JSON.stringify(_gsCollectFormState());
+    _gsCaptureSnapshotRawNames();
+    _markGsModifiedIfNeeded();
+}
+
 function onGsSyncBadgeClick() {
     var badge = document.getElementById('gs-sync-badge');
     if (!badge) return;
@@ -2340,12 +2441,14 @@ function confirmGsPublish() {
 }
 
 // "Serviços > Publicar Camada" (main.html) - mesmo padrão de tryExportGeohab() (GN,
-// "Catálogo > Publicar Metadado"): só funciona com o painel já aberto; senão, avisa pra
-// abrir "Configurar Camada" primeiro em vez de navegar sozinho (usuário decide quando
-// quer ver a tela, igual o editor de metadado não abre nada sozinho).
+// "Catálogo > Publicar Metadado", via _requireEditorOpen): sem o painel aberto, NAVEGA
+// pra "Configurar Camada" em vez de só avisar "abra X antes" - mas para por aí, não
+// dispara a publicação sozinho: quem publica de fato é um clique deliberado do usuário
+// já vendo o formulário preenchido, não algo automático escondido atrás de um item de
+// menu (pedido explícito do usuário pra esse caso, diferente dos demais itens do header).
 function tryPublishGeoServerLayer() {
     if (!document.getElementById('gs-layer-card')) {
-        Modal.alert('Abra "Serviços > Configurar Camada" antes de publicar.', 'Ação Necessária', 'warning');
+        navigate('geoserver');
         return;
     }
     confirmGsPublish();

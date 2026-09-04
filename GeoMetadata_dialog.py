@@ -426,10 +426,26 @@ class GeoMetadataDialog(QtWidgets.QDialog):
         um refactor anterior - _push_worker/_fetch_worker/_sync_worker não existem mais em
         GeoNetworkBridge -, então esse bloco não limpava nada de fato).
 
-        Padrão: quit() sinaliza encerramento ao event loop da thread; wait(2000) espera
-        até 2 s e depois abandona (não bloqueia o QGIS indefinidamente em casos extremos
-        como um timeout de 10 s no requests ainda em andamento — o processo Qt já vai
-        encerrar de qualquer forma, e 2 s é suficiente para a maioria dos workers).
+        Padrão: quit() + wait(N). IMPORTANTE - quit() só sinaliza encerramento ao event
+        loop PRÓPRIO da thread (QThread.exec_()); NENHUM desses workers roda um - todos
+        são só um run() síncrono fazendo uma chamada de rede bloqueante (requests/
+        urllib), então quit() aqui não interrompe nada de verdade; wait(N) é quem faz o
+        trabalho de fato, bloqueando essa thread (a UI) até a QThread terminar sozinha (ou
+        até o timeout de wait() estourar, o que vier primeiro). N era 2000 (2s) - baixo
+        demais: várias chamadas REST usam timeout de até 15-60s (ex.: _GsSearchLayersWorker,
+        GetCapabilities documentado como lento nesse servidor - ver docs_projeto/bugs.md,
+        Bug 47), e mesmo uma chamada "normal" bem-sucedida pode levar mais de 2s sob carga.
+        Um fechamento normal do QGIS (X da janela) tolera esse abandono (o processo inteiro
+        acaba, o SO recupera tudo, o std::terminate() nem chega a rodar de verdade) - mas
+        "Plugin Reloader" NÃO fecha o QGIS, só descarrega/reimporta o módulo do plugin
+        dentro do MESMO processo ainda rodando: se um worker sobrevive ao wait(2000) e
+        segue rodando quando o reload continua, o std::terminate() derruba o QGIS inteiro
+        de verdade (não é um "processo que ia fechar mesmo" nesse caso). N subiu pra 10000
+        (10s) - cobre a esmagadora maioria dos casos reais (a maior parte das chamadas
+        termina bem antes disso); ainda existe uma janela residual pra um worker
+        GENUINAMENTE preso além de 10s (raro, e sem uma forma seria de cancelar uma
+        requests.get()/urlopen() já em voo sem fechar o socket na mão) - risco reduzido,
+        não eliminado por completo.
         """
         # --- Bridges GeoServer (múltiplas listas de workers) ---
         gs_bridge = getattr(self, 'gs_bridge', None)
@@ -437,11 +453,11 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             for w in list(getattr(gs_bridge, '_sync_check_workers', [])):
                 if w and w.isRunning():
                     w.quit()
-                    w.wait(2000)
+                    w.wait(10000)
             for w in list(getattr(gs_bridge, '_layer_info_workers', [])):
                 if w and w.isRunning():
                     w.quit()
-                    w.wait(2000)
+                    w.wait(10000)
             for attr in (
                 '_workspaces_worker', '_datastores_worker', '_featuretypes_worker',
                 '_find_datastore_worker', '_publish_worker', '_styles_worker',
@@ -451,7 +467,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
                 w = getattr(gs_bridge, attr, None)
                 if w and w.isRunning():
                     w.quit()
-                    w.wait(2000)
+                    w.wait(10000)
 
         # --- Bridges GeoNetwork ---
         gn_bridge = getattr(self, 'gn_bridge', None)
@@ -459,26 +475,26 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             for w in list(getattr(gn_bridge, '_gn_workers', {}).values()):
                 if w and w.isRunning():
                     w.quit()
-                    w.wait(2000)
+                    w.wait(10000)
             for w in list(getattr(gn_bridge, '_enrich_workers', [])):
                 if w and w.isRunning():
                     w.quit()
-                    w.wait(2000)
+                    w.wait(10000)
             for w in list(getattr(gn_bridge, '_sync_check_workers', [])):
                 if w and w.isRunning():
                     w.quit()
-                    w.wait(2000)
+                    w.wait(10000)
             w = getattr(gn_bridge, '_gn_search_worker', None)
             if w and w.isRunning():
                 w.quit()
-                w.wait(2000)
+                w.wait(10000)
 
         # --- Worker de publicação no GeoNetwork (vive no próprio diálogo, não no gn_bridge -
         # ver exportar_to_geo) ---
         gn_publish_worker = getattr(self, '_gn_publish_worker', None)
         if gn_publish_worker and gn_publish_worker.isRunning():
             gn_publish_worker.quit()
-            gn_publish_worker.wait(2000)
+            gn_publish_worker.wait(10000)
 
         # --- MainBridge (status dos cards da Home + login admin do GeoServer) ---
         bridge = getattr(self, 'bridge', None)
@@ -486,11 +502,11 @@ class GeoMetadataDialog(QtWidgets.QDialog):
             for w in list(getattr(bridge, '_status_workers', [])):
                 if w and w.isRunning():
                     w.quit()
-                    w.wait(2000)
+                    w.wait(10000)
             adm_worker = getattr(bridge, '_adm_worker', None)
             if adm_worker and adm_worker.isRunning():
                 adm_worker.quit()
-                adm_worker.wait(2000)
+                adm_worker.wait(10000)
 
         # --- GatewaySSOWidget (login SSO embutido no content_stack) ---
         stack = getattr(self, 'content_stack', None)
@@ -502,7 +518,7 @@ class GeoMetadataDialog(QtWidgets.QDialog):
                     if vw and vw.isRunning():
                         widget._done = True   # cancela retries pendentes
                         vw.quit()
-                        vw.wait(2000)
+                        vw.wait(10000)
 
         super().closeEvent(event)
 
